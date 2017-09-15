@@ -107,9 +107,23 @@ public class GridSearch {
             parseParams(this.rawParams);
         }
 
+        if(this.hasHyperParam()) {
+            for(Map<String, Object> params: this.flattenParams) {
+                validate(params);
+            }
+        } else {
+            validate(this.rawParams);
+        }
+
         checkParamsThreshold();
     }
 
+    /**
+     * Parse params read from grid search config file. Result is stored in return value.
+     * 
+     * @param configFileContent
+     * @return
+     */
     private List<Map<String, Object>> parseParams(List<String> configFileContent) {
         if(configFileContent != null) {
             Map<String, MetaItem> metaWarehouse = MetaFactory.getModelConfigMeta();
@@ -146,6 +160,11 @@ public class GridSearch {
         return paramsMap;
     }
 
+    /**
+     * Parse params read in ModelConfig.json. Result is stored in {@link #flattenParams} if this is grid search.
+     * 
+     * @param params
+     */
     @SuppressWarnings("rawtypes")
     private void parseParams(Map<String, Object> params) {
         // use sorted map to sort all parameters by natural order, this makes all flatten parameters sorted and fixed
@@ -179,11 +198,8 @@ public class GridSearch {
             }
         }
 
-        // TODO parameter validation
-
         if(hasHyperParam()) {
             // compute all kinds hyper parameter composite and set into flatten Params
-            // TODO, do we need a threshold like 30 since the cost of grid search is high
             this.flattenParamsCount = 1;
             for(Integer cnt: hyperParamCntList) {
                 this.flattenParamsCount *= cnt;
@@ -282,7 +298,7 @@ public class GridSearch {
         itemValueStr = itemValueStr.trim();
         if(itemMeta.getType().equals("text")) {
             return itemValueStr;
-        } else if(itemMeta.getType().equals("integer")) {
+        } else if(itemMeta.getType().equals("integer") || itemMeta.getType().equals("int")) {
             try {
                 return Integer.parseInt(itemValueStr);
             } catch (NumberFormatException e) {
@@ -332,6 +348,45 @@ public class GridSearch {
         }
         throw new ShifuException(ShifuErrorCode.ERROR_GRID_SEARCH_FILE_CONFIG,
                 "Train param and value not recognized: " + itemKey + ":" + itemValueStr);
+    }
+
+    /**
+     * Validate a single combination of train params.
+     * 
+     * @param params
+     */
+    private void validate(Map<String, Object> params) {
+        for(Map.Entry<String, Object> entry: params.entrySet()) {
+            String validateResult = null;
+            try {
+                validateResult = validate(getItemKeyInMeta(entry.getKey()), entry.getValue());
+            } catch (Exception e) {
+                throw new ShifuException(ShifuErrorCode.ERROR_GRIDCONFIG_NOT_VALIDATION, e,
+                        "Train param and value pair " + entry.getKey() + ":" + entry.getValue()
+                                + " did not pass the validation.");
+            }
+            if(validateResult == null || !validateResult.equals(MetaFactory.VALIDATE_OK)) {
+                throw new ShifuException(ShifuErrorCode.ERROR_GRIDCONFIG_NOT_VALIDATION, "Train param and value pair "
+                        + entry.getKey() + ":" + entry.getValue() + " did not pass the validation.");
+            }
+        }
+    }
+
+    /**
+     * Validate a single key value pair.
+     * Call {@link MetaFactory#validate(boolean, String, Object)} to validate.
+     * Set isGridSearch to false as this is flattened params.
+     * 
+     * @param itemKey
+     *            - the key to locate MetaItem
+     * @param itemValue
+     *            - the value to validate
+     * @return
+     * @throws Exception
+     *             any exception in validation
+     */
+    private String validate(String itemKey, Object itemValue) throws Exception {
+        return MetaFactory.validate(false, itemKey, itemValue);
     }
 
     /**

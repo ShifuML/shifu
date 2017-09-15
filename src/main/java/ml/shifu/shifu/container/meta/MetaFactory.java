@@ -68,6 +68,7 @@ public class MetaFactory {
     private static final String NORMALIZE_TAG = "normalize";
     private static final String TRAIN_TAG = "train";
     private static final String EVALS_TAG = "evals";
+    private static final String TRAIN_PARAM_TAG = "params";
 
     // default MetaConfig input file
     public static final String MODEL_META_STORE_FILE = "store/ModelConfigMeta.json";
@@ -342,20 +343,16 @@ public class MetaFactory {
         return false;
     }
 
-    static Set<String> filterSet = Sets.newHashSet(new String[] { "NumHiddenLayers", "ActivationFunc", "NumHiddenNodes",
-            "LearningRate", "DropoutRate", "RegularizedConstant", "L1orL2", "MaxDepth", "MinInstancesPerNode",
-            "MinInfoGain", "MaxStatsMemoryMB", "TreeNum", "Impurity", "FeatureSubsetStrategy", "Loss", "LearningDecay",
-            "Propagation", "GBTSampleWithReplacement", "Kernel", "Const", "Gamma", "EnableEarlyStop",
-            "ValidationTolerance", "MaxLeaves", "MaxBatchSplitSize" });
-
-    // ugly code for grid search
+    /**
+     * Filter out train params because param value may be set to list to enable grid search.
+     * Validation for train params is done at {@link GridSearch}.
+     * 
+     * @param itemKey
+     *            - the key to locate MetaItem
+     * @return
+     */
     private static boolean filterOut(String itemKey) {
-        String str = itemKey;
-        if(str.contains("#")) {
-            String[] strList = str.split("#");
-            str = strList[strList.length - 1];
-        }
-        return filterSet.contains(str);
+        return itemKey.matches(TRAIN_TAG + ITEM_KEY_SEPERATOR + TRAIN_PARAM_TAG + ITEM_KEY_SEPERATOR + ".+");
     }
 
     /**
