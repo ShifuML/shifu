@@ -98,7 +98,7 @@ public class VariableSelector {
         if(modelConfig.getVarSelectFilterNum() > 0) {
             return;
         }
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), columnConfigList);
         int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         Float filterOutRatio = modelConfig.getVarSelect().getFilterOutRatio();
         int targetCnt = (int) (inputNodeCount * (1.0f - filterOutRatio));

@@ -280,9 +280,11 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     if(CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
                         // for multiple classification, binPosRate means rate of such category over all counts, reuse
                         // binPosRate for normalize
-                        Double normVal = Normalizer.normalize(config, val, cutoff, normType,
+                        List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
                                 this.categoryMissingNormType);
-                        tuple.append(df.format(normVal));
+                        for ( Double normVal : normVals ) {
+                            tuple.append(df.format(normVal));
+                        }
                         // if(this.isForExpressions) {
                         // for(int j = 0; j < dataPurifiers.size(); j++) {
                         // ColumnConfig extConfig = columnConfigList.get(input.size() * j + i);
@@ -315,8 +317,10 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     }
                     tuple.append(type);
                 } else if(CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
-                    Double normVal = Normalizer.normalize(config, val, cutoff, normType, this.categoryMissingNormType);
-                    tuple.append(df.format(normVal));
+                    List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType, this.categoryMissingNormType);
+                    for ( Double normVal : normVals ) {
+                        tuple.append(df.format(normVal));
+                    }
                 } else {
                     tuple.append(config.isMeta() ? val : null);
                 }
@@ -380,7 +384,16 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         schemaStr.append(config.getColumnName() + ":chararray" + ",");
                     } else {
                         // for others, set to float, no matter LR/NN categorical or filter out feature with null
-                        schemaStr.append(config.getColumnName() + ":float" + ",");
+                        if ( modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT) ) {
+                            if ( CommonUtils.isGoodCandidate(config) ) {
+                                for (int i = 0; i < config.getBinCategory().size(); i++) {
+                                    schemaStr.append(config.getColumnName() + "_" + i + ":float" + ",");
+                                }
+                            }
+                            schemaStr.append(config.getColumnName() + "_missing" + ":float" + ",");
+                        } else {
+                            schemaStr.append(config.getColumnName() + ":float" + ",");
+                        }
                     }
                 }
             }
