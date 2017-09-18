@@ -378,7 +378,7 @@ public final class DTrainUtils {
         if ( modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT) ) {
             int inputCount = 0;
             for ( ColumnConfig columnConfig : columnConfigList ) {
-                if ( columnConfig.isFinalSelect() ) {
+                if ( columnConfig.isFinalSelect() && featureSet.contains(columnConfig.getColumnNum()) ) {
                     if ( columnConfig.isNumerical() ) {
                         inputCount += 1;
                     } else {
