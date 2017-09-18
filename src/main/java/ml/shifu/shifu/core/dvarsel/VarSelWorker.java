@@ -185,7 +185,10 @@ public class VarSelWorker
 
             int i = 0;
             for(Integer columnId: this.trainingDataSet.getDataColumnIdList()) {
-                inputs[i++] = Normalizer.normalize(columnConfigList.get(columnId), fields[columnId]);
+                List<Double> normalizedData = Normalizer.normalize(columnConfigList.get(columnId), fields[columnId]);
+                for ( Double normalValue : normalizedData ) {
+                    inputs[i++] = normalValue;
+                }
             }
 
             trainingDataSet.addTrainingRecord(new TrainingRecord(inputs, ideal, significance));

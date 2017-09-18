@@ -1667,7 +1667,7 @@ public final class CommonUtils {
                                 inputList.add(index * 1d);
                             }
                         } else {
-                            inputList.add(computeNumericNormResult(modelConfig, cutoff, config, val));
+                            inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val));
                         }
                     }
                 } else {
@@ -1683,7 +1683,7 @@ public final class CommonUtils {
                                 inputList.add(index * 1d);
                             }
                         } else {
-                            inputList.add(computeNumericNormResult(modelConfig, cutoff, config, val));
+                            inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val));
                         }
                     }
                 }
@@ -1792,7 +1792,7 @@ public final class CommonUtils {
                             inputList.add(index * 1d);
                         }
                     } else {
-                        inputList.add(computeNumericNormResult(modelConfig, cutoff, config, val));
+                        inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val));
                     }
                 }
             }
@@ -1847,14 +1847,14 @@ public final class CommonUtils {
         return (candidateCnt > 0);
     }
 
-    private static double computeNumericNormResult(ModelConfig modelConfig, double cutoff, ColumnConfig config,
+    private static List<Double> computeNumericNormResult(ModelConfig modelConfig, double cutoff, ColumnConfig config,
             String val) {
-        Double normalizeValue = null;
+        List<Double> normalizeValue = null;
         if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
             try {
-                normalizeValue = Double.parseDouble(val);
+                normalizeValue = Arrays.asList(new Double[]{Double.parseDouble(val)});
             } catch (Exception e) {
-                normalizeValue = Normalizer.defaultMissingValue(config);
+                normalizeValue = Arrays.asList(new Double[]{Normalizer.defaultMissingValue(config)});
             }
         } else {
             normalizeValue = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType());
@@ -1927,8 +1927,8 @@ public final class CommonUtils {
                 // add log for debug purpose
                 // log.info("key: " + key + ", raw_value " + rawDataMap.get(key).toString() + ", zscl_value: " +
                 String val = nsDataMap.get(key) == null ? null : nsDataMap.get(key).toString();
-                Double normalizeValue = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType());
-                inputList.add(normalizeValue);
+                List<Double> normVals = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType());
+                inputList.addAll(normVals);
             }
         }
 

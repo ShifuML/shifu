@@ -33,6 +33,7 @@ import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.guagua.worker.WorkerContext.WorkerCompletionCallBack;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
@@ -257,6 +258,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      */
     protected Set<Integer> subFeatureSet;
 
+    protected int featureInputsCnt;
+
     /**
      * Dropout rate which is in [0, 1], default it is 0
      */
@@ -312,10 +315,10 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 trainingFile.toString(), testingFile.toString());
 
         this.trainingData = new BufferedFloatMLDataSet(new File(trainingFile.toString()));
-        ((BufferedFloatMLDataSet) this.trainingData).beginLoad(this.subFeatures.size(), getOutputNodeCount());
+        ((BufferedFloatMLDataSet) this.trainingData).beginLoad(this.featureInputsCnt, getOutputNodeCount());
 
         this.validationData = new BufferedFloatMLDataSet(new File(testingFile.toString()));
-        ((BufferedFloatMLDataSet) this.validationData).beginLoad(this.subFeatures.size(), getOutputNodeCount());
+        ((BufferedFloatMLDataSet) this.validationData).beginLoad(this.featureInputsCnt, getOutputNodeCount());
     }
 
     @Override
@@ -364,7 +367,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         }
         LOG.info("'dropoutRate' in worker is :{}", this.dropoutRate);
 
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         // if is one vs all classification, outputNodeCount is set to 1
         this.outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1]
@@ -387,6 +390,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         }
         this.subFeatureSet = new HashSet<Integer>(this.subFeatures);
         LOG.info("subFeatures size is {}", subFeatures.size());
+        this.featureInputsCnt = DTrainUtils.getFeatureInputsCnt(this.modelConfig, this.columnConfigList, this.subFeatureSet);
 
         this.isDry = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(CommonConstants.SHIFU_DRY_DTRAIN));
@@ -418,15 +422,15 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
                     // fixed 0.6 and 0.4 of max memory for trainingData and validationData
                     this.trainingData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * 0.6), DTrainUtils
-                            .getTrainingFile().toString(), this.subFeatures.size(), this.outputNodeCount);
+                            .getTrainingFile().toString(), this.featureInputsCnt, this.outputNodeCount);
                     this.validationData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * 0.4), DTrainUtils
-                            .getTestingFile().toString(), this.subFeatures.size(), this.outputNodeCount);
+                            .getTestingFile().toString(), this.featureInputsCnt, this.outputNodeCount);
                 } else {
                     this.trainingData = new MemoryDiskFloatMLDataSet(
                             (long) (memoryStoreSize * (1 - crossValidationRate)), DTrainUtils.getTrainingFile()
-                                    .toString(), this.subFeatures.size(), this.outputNodeCount);
+                                    .toString(), this.featureInputsCnt, this.outputNodeCount);
                     this.validationData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * crossValidationRate),
-                            DTrainUtils.getTestingFile().toString(), this.subFeatures.size(), this.outputNodeCount);
+                            DTrainUtils.getTestingFile().toString(), this.featureInputsCnt, this.outputNodeCount);
                 }
                 // cannot find a good place to close these two data set, using Shutdown hook
                 Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
@@ -521,7 +525,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
-        BasicNetwork network = DTrainUtils.generateNetwork(this.subFeatures.size(), this.outputNodeCount, numLayers,
+        BasicNetwork network = DTrainUtils.generateNetwork(this.featureInputsCnt, this.outputNodeCount, numLayers,
                 actFunc, hiddenNodeList, false, this.dropoutRate);
         // use the weights from master
         network.getFlat().setWeights(weights);
