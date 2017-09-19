@@ -24,7 +24,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.math.DoubleMath;
 
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelBasicConf;
@@ -36,15 +43,6 @@ import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.container.obj.ModelVarSelectConf;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.Constants;
-
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Sets;
-import com.google.common.math.DoubleMath;
 
 /**
  * MetaFactory class
@@ -68,6 +66,7 @@ public class MetaFactory {
     private static final String NORMALIZE_TAG = "normalize";
     private static final String TRAIN_TAG = "train";
     private static final String EVALS_TAG = "evals";
+    private static final String TRAIN_PARAM_TAG = "params";
 
     // default MetaConfig input file
     public static final String MODEL_META_STORE_FILE = "store/ModelConfigMeta.json";
@@ -135,7 +134,8 @@ public class MetaFactory {
     public static ValidateResult validate(ModelConfig modelConfig) throws Exception {
         ValidateResult result = new ValidateResult(true);
 
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(),
+                modelConfig.getTrain().getGridConfigFileContent());
 
         Class<?> cls = modelConfig.getClass();
         Field[] fields = cls.getDeclaredFields();
@@ -341,20 +341,16 @@ public class MetaFactory {
         return false;
     }
 
-    static Set<String> filterSet = Sets.newHashSet(new String[] { "NumHiddenLayers", "ActivationFunc",
-            "NumHiddenNodes", "LearningRate", "DropoutRate", "RegularizedConstant", "L1orL2", "MaxDepth",
-            "MinInstancesPerNode", "MinInfoGain", "MaxStatsMemoryMB", "TreeNum", "Impurity", "FeatureSubsetStrategy",
-            "Loss", "LearningDecay", "Propagation", "GBTSampleWithReplacement", "Kernel", "Const", "Gamma",
-            "EnableEarlyStop", "ValidationTolerance", "MaxLeaves", "MaxBatchSplitSize" });
-
-    // ugly code for grid search
+    /**
+     * Filter out train params because param value may be set to list to enable grid search.
+     * Validation for train params is done at {@link GridSearch}.
+     * 
+     * @param itemKey
+     *            - the key to locate MetaItem
+     * @return
+     */
     private static boolean filterOut(String itemKey) {
-        String str = itemKey;
-        if(str.contains("#")) {
-            String[] strList = str.split("#");
-            str = strList[strList.length - 1];
-        }
-        return filterSet.contains(str);
+        return itemKey.matches(TRAIN_TAG + ITEM_KEY_SEPERATOR + TRAIN_PARAM_TAG + ITEM_KEY_SEPERATOR + ".+");
     }
 
     /**
@@ -410,6 +406,35 @@ public class MetaFactory {
                 if(!isOptionValue) {
                     return itemKey + " - the value couldn't be found in the option value list - "
                             + convertOptionIntoString(itemMeta.getOptions());
+                }
+            }
+        } else if(itemMeta.getType().equals("integer") || itemMeta.getType().equals("int")) {
+            if(itemValue == null) {
+                if(CollectionUtils.isNotEmpty(itemMeta.getOptions())) {
+                    return itemKey + " - the value couldn't be null.";
+                }
+            } else {
+                Integer value = null;
+                try {
+                    value = Integer.valueOf(itemValue.toString());
+                } catch (NumberFormatException e) {
+                    return itemKey + " - the value is not integer format.";
+                }
+
+                if(value != null && CollectionUtils.isNotEmpty(itemMeta.getOptions())) {
+                    boolean isOptionValue = false;
+                    for(ValueOption itemOption: itemMeta.getOptions()) {
+                        Integer optValue = Integer.valueOf(itemOption.getValue().toString());
+                        if(value.equals(optValue)) {
+                            isOptionValue = true;
+                            break;
+                        }
+                    }
+
+                    if(!isOptionValue) {
+                        return itemKey + " - the value couldn't be found in the option value list - "
+                                + convertOptionIntoString(itemMeta.getOptions());
+                    }
                 }
             }
         } else if(itemMeta.getType().equals("number")) {

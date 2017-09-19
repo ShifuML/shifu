@@ -175,7 +175,7 @@ public class ModelInspectorTest {
         config.getTrain().getParams().put(CommonConstants.NUM_HIDDEN_NODES, hiddenNodes);
         List<String> activateFuncs = new ArrayList<String>();
         activateFuncs.add("tanh");
-        activateFuncs.add("sigmod");
+        activateFuncs.add("sigmoid");
         activateFuncs.add("tanh");
         config.getTrain().getParams().put(CommonConstants.ACTIVATION_FUNC, activateFuncs);
         result = instance.probe(config, ModelStep.TRAIN);
