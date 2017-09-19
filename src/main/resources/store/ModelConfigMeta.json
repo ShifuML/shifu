@@ -374,12 +374,15 @@
                 "options": [
                     {"label":"old zscale mode", "value":"OLD_ZSCALE"},
                     {"label":"zscale mode", "value":"ZSCALE"},
+                    {"label":"same as zscale mode", "value":"ZSCORE"},
                     {"label":"woe mode", "value":"WOE"},
                     {"label":"weight woe mode", "value":"WEIGHT_WOE"},
                     {"label":"hybrid mode", "value":"HYBRID"},
                     {"label":"weight hybrid mode", "value":"WEIGHT_HYBRID"},
-                    {"label":"woe zscore mode", "value":"WOE_ZSCORE"},
-                    {"label":"weight woe zscore mode", "value":"WEIGHT_WOE_ZSCORE"}
+                    {"label":"woe zscale mode", "value":"WOE_ZSCALE"},
+                    {"label":"same as woe zscale mode", "value":"WOE_ZSCORE"},
+                    {"label":"weight woe zscale mode", "value":"WEIGHT_WOE_ZSCALE"},
+                    {"label":"same as weight woe zscale mode", "value":"WEIGHT_WOE_ZSCORE"}
                 ]
             }, {
                 "name": "stdDevCutOff",
