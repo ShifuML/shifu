@@ -257,8 +257,8 @@ public final class CommonUtils {
      */
     public static ModelConfig loadModelConfig(String path, SourceType sourceType) throws IOException {
         ModelConfig modelConfig = loadJSON(path, sourceType, ModelConfig.class);
-        if(modelConfig.getTrain().getGridConfigFile() != null) {
-            String gridConfigPath = modelConfig.getTrain().getGridConfigFile();
+        if(StringUtils.isNotBlank(modelConfig.getTrain().getGridConfigFile())) {
+            String gridConfigPath = modelConfig.getTrain().getGridConfigFile().trim();
             if(sourceType == SourceType.HDFS) {
                 // gridsearch config file is uploaded to modelset path
                 gridConfigPath = new PathFinder(modelConfig).getPathBySourceType(
