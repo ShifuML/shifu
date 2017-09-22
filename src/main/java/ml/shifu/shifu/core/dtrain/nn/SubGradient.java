@@ -26,7 +26,6 @@ import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataPair;
 import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataSet;
 
 import org.encog.engine.network.activation.ActivationFunction;
-import org.encog.mathutil.error.ErrorCalculation;
 import org.encog.neural.error.ErrorFunction;
 import org.encog.neural.flat.FlatNetwork;
 
@@ -44,7 +43,7 @@ public class SubGradient implements Callable<double[]> {
     /**
      * The error calculation method.
      */
-    private final ErrorCalculation errorCalculation = new ErrorCalculation();
+    private ErrorCalculation errorCalculation = new SquaredErrorCalculation();
 
     /**
      * The actual values from the neural network.
@@ -160,7 +159,7 @@ public class SubGradient implements Callable<double[]> {
 
     public SubGradient(final FloatFlatNetwork theNetwork, final FloatMLDataSet theTraining, long trainLow,
             long trainHigh, final FloatMLDataSet theTesting, long testLow, long testHigh, final double[] flatSpot,
-            ErrorFunction ef, boolean isCrossOver, ParallelGradient owner, Random dropoutRandomSource) {
+            boolean isCrossOver, ParallelGradient owner, Random dropoutRandomSource) {
         this.network = theNetwork;
         this.training = theTraining;
         this.trainLow = trainLow;
@@ -170,11 +169,12 @@ public class SubGradient implements Callable<double[]> {
         this.testHigh = testHigh;
         this.isCrossOver = isCrossOver;
         this.flatSpot = flatSpot;
-        this.errorFunction = ef;
         this.owner = owner;
+        this.errorFunction = this.owner.createEFInstance();
         this.layerDropoutRates = theNetwork.getLayerDropoutRates();
         this.dropoutRandomSource = dropoutRandomSource;
         this.initNetworkParams();
+        this.errorCalculation = this.owner.createECInstance();
     }
 
     private void initNetworkParams() {
@@ -217,9 +217,16 @@ public class SubGradient implements Callable<double[]> {
         this.errorCalculation.updateError(this.actual, doubleIdeal, s);
         this.errorFunction.calculateError(doubleIdeal, actual, this.getLayerDelta());
 
-        for(int i = 0; i < this.actual.length; i++) {
-            this.getLayerDelta()[i] = ((this.getNetwork().getActivationFunctions()[0].derivativeFunction(
-                    this.layerSums[i], this.layerOutput[i]) + this.flatSpot[0])) * (this.getLayerDelta()[i] * s);
+        // TODO this logic should be moved the ErrorFunction
+        if(this.errorFunction instanceof LogErrorFunction) {
+            for(int i = 0; i < this.actual.length; i++) {
+                this.getLayerDelta()[i] *= s;
+            }
+        } else {
+            for(int i = 0; i < this.actual.length; i++) {
+                this.getLayerDelta()[i] = ((this.getNetwork().getActivationFunctions()[0].derivativeFunction(
+                        this.layerSums[i], this.layerOutput[i]) + this.flatSpot[0])) * (this.getLayerDelta()[i] * s);
+            }
         }
 
         int beginTraining = this.getNetwork().getBeginTraining();
