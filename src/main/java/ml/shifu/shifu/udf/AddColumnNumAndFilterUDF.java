@@ -67,10 +67,13 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
 
     public AddColumnNumAndFilterUDF(String source, String pathModelConfig, String pathColumnConfig,
             String withScoreStr, String isAppendRandom) throws Exception {
+        this(source, pathModelConfig, pathColumnConfig, withScoreStr, isAppendRandom, "");
+    }
+
+    public AddColumnNumAndFilterUDF(String source, String pathModelConfig, String pathColumnConfig,
+            String withScoreStr, String isAppendRandom, String filterExpressions) throws Exception {
         super(source, pathModelConfig, pathColumnConfig, withScoreStr);
         this.isAppendRandom = Boolean.TRUE.toString().equalsIgnoreCase(isAppendRandom);
-
-        String filterExpressions = "";
 
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
             filterExpressions = UDFContext.getUDFContext().getJobConf().get("shifu.segment.expressions");
@@ -136,6 +139,15 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
             }
         }
 
+        List<Boolean> filterResultList = null;
+        if(this.isForExpressions) {
+            filterResultList = new ArrayList<Boolean>();
+            for(int j = 0; j < this.dataPurifiers.size(); j++) {
+                DataPurifier dataPurifier = this.dataPurifiers.get(j);
+                filterResultList.add(dataPurifier.isFilter(input));
+            }
+        }
+
         for(int i = 0; i < size; i++) {
             ColumnConfig config = columnConfigList.get(i);
             // all columns can be stats
@@ -154,14 +166,12 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
                 continue;
             }
 
-            Tuple tuple = buildTuple(input, tupleFactory, tag, i, i, null);
-            bag.add(tuple);
+            bag.add(buildTuple(input, tupleFactory, tag, i, i));
             if(this.isForExpressions) {
                 for(int j = 0; j < this.dataPurifiers.size(); j++) {
-                    DataPurifier dataPurifier = this.dataPurifiers.get(j);
-                    Tuple newTuple = buildTuple(input, tupleFactory, tag, i, (j + 1) * size + i, dataPurifier);
-                    if(newTuple != null) {
-                        bag.add(newTuple);
+                    Boolean isFilter = filterResultList.get(j);
+                    if(isFilter != null && isFilter) {
+                        bag.add(buildTuple(input, tupleFactory, tag, i, (j + 1) * size + i));
                     }
                 }
             }
@@ -169,16 +179,8 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
         return bag;
     }
 
-    private Tuple buildTuple(Tuple input, TupleFactory tupleFactory, String tag, int i, int finalIndex,
-            DataPurifier dataPurifier) throws ExecException {
-        if(dataPurifier != null) {
-            Boolean isFilter = dataPurifier.isFilter(input);
-            // if not effective in filter
-            if(!isFilter) {
-                return null;
-            }
-        }
-
+    private Tuple buildTuple(Tuple input, TupleFactory tupleFactory, String tag, int i, int finalIndex)
+            throws ExecException {
         Tuple tuple = tupleFactory.newTuple(TOTAL_COLUMN_CNT);
         tuple.set(COLUMN_ID_INDX, finalIndex);
         // Set Data

@@ -112,7 +112,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
     /**
      * Convergence threshold setting.
      */
-    private double convergenceThreshold = 0d;
+    private double convergenceThreshold = Double.MIN_VALUE;
 
     /**
      * Convergence judger instance for convergence checking.
@@ -355,7 +355,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         }
 
         int trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
+                .getGridConfigFileContent());
         validParams = this.modelConfig.getTrain().getParams();
         if(gs.hasHyperParam()) {
             validParams = gs.getParams(trainerId);
@@ -393,7 +394,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         LOG.info("'learningDecay' in master is :{}", learningDecay);
 
         Double threshold = this.modelConfig.getTrain().getConvergenceThreshold();
-        this.convergenceThreshold = threshold == null ? 0d : threshold.doubleValue();
+        this.convergenceThreshold = threshold == null ? Double.MIN_VALUE : threshold.doubleValue();
         LOG.info("Convergence threshold in master is :{}", this.convergenceThreshold);
 
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
