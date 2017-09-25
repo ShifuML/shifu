@@ -135,7 +135,7 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
                     // Return null to skip such record.
                     return null;
                 }
-            } else if(!CommonUtils.isGoodCandidate(config)) {
+            } else if(!CommonUtils.isGoodCandidate(config, super.hasCandidates)) {
                 retDouList.add(null);
             } else {
                 String val = (rfs[i] == null) ? "" : rfs[i];

@@ -50,8 +50,9 @@ public class ValidationConductorTest {
                 RawSourceData.SourceType.LOCAL);
 
         List<Integer> columnIdList = new ArrayList<Integer>();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for ( ColumnConfig columnConfig : columnConfigList ) {
-            if ( columnConfig.isCandidate() ) {
+            if ( columnConfig.isCandidate(hasCandidates) ) {
                 columnIdList.add(columnConfig.getColumnNum());
             }
         }
@@ -112,8 +113,9 @@ public class ValidationConductorTest {
                 RawSourceData.SourceType.LOCAL);
 
         List<Integer> columnIdList = new ArrayList<Integer>();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for ( ColumnConfig columnConfig : columnConfigList ) {
-            if ( CommonUtils.isGoodCandidate(columnConfig) ) {
+            if ( CommonUtils.isGoodCandidate(columnConfig, hasCandidates) ) {
                 columnIdList.add(columnConfig.getColumnNum());
             }
         }

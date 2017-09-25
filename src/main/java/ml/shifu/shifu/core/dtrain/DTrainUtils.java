@@ -189,8 +189,10 @@ public final class DTrainUtils {
      */
     public static int[] getNumericAndCategoricalInputAndOutputCounts(List<ColumnConfig> columnConfigList) {
         int numericInput = 0, categoricalInput = 0, output = 0, numericCandidateInput = 0, categoricalCandidateInput = 0;
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
+
         for(ColumnConfig config: columnConfigList) {
-            if(!config.isTarget() && !config.isMeta() && CommonUtils.isGoodCandidate(config)) {
+            if(!config.isTarget() && !config.isMeta() && CommonUtils.isGoodCandidate(config, hasCandidates)) {
                 if(config.isNumerical()) {
                     numericCandidateInput += 1;
                 }

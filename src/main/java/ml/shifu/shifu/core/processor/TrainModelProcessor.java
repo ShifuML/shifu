@@ -435,7 +435,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
             // set required field list to make sure we only load selected columns.
             RequiredFieldList requiredFieldList = new RequiredFieldList();
-
+            boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
             for(ColumnConfig columnConfig: super.columnConfigList) {
                 if(columnConfig.isTarget()) {
                     requiredFieldList.add(new RequiredField(columnConfig.getColumnName(), columnConfig.getColumnNum(),
@@ -444,7 +444,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     if(inputNodeCount == candidateCount) {
                         // no any variables are selected
                         if(!columnConfig.isMeta() && !columnConfig.isTarget()
-                                && CommonUtils.isGoodCandidate(columnConfig)) {
+                                && CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
                             requiredFieldList.add(new RequiredField(columnConfig.getColumnName(), columnConfig
                                     .getColumnNum(), null, DataType.FLOAT));
                         }

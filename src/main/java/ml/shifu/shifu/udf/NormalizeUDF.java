@@ -277,7 +277,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     }
                 } else {
                     // append normalize data. exclude data clean, for data cleaning, no need check good or bad candidate
-                    if(CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
+                    if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
                         // for multiple classification, binPosRate means rate of such category over all counts, reuse
                         // binPosRate for normalize
                         List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
@@ -316,7 +316,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         return null;
                     }
                     tuple.append(type);
-                } else if(CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
+                } else if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
                     List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType, this.categoryMissingNormType);
                     for ( Double normVal : normVals ) {
                         tuple.append(df.format(normVal));
@@ -385,7 +385,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     } else {
                         // for others, set to float, no matter LR/NN categorical or filter out feature with null
                         if ( modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT) ) {
-                            if ( CommonUtils.isGoodCandidate(config) ) {
+                            if ( CommonUtils.isGoodCandidate(config, super.hasCandidates) ) {
                                 for (int i = 0; i < config.getBinCategory().size(); i++) {
                                     schemaStr.append(config.getColumnName() + "_" + i + ":float" + ",");
                                 }

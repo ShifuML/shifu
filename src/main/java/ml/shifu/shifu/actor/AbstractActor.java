@@ -20,6 +20,7 @@ import java.util.List;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import akka.actor.UntypedActor;
+import ml.shifu.shifu.util.CommonUtils;
 
 /**
  * AbstractActor class
@@ -35,6 +36,7 @@ public abstract class AbstractActor extends UntypedActor {
     protected AkkaExecStatus akkaStatus;
 
     protected int targetColumnNum = -1;
+    protected boolean hasCandidates;
 
     public AbstractActor(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList,
             AkkaExecStatus akkaStatus) {
@@ -52,6 +54,8 @@ public abstract class AbstractActor extends UntypedActor {
         if(targetColumnNum == -1) {
             throw new RuntimeException("No Valid Target.");
         }
+
+        this.hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
     }
 
     /**
