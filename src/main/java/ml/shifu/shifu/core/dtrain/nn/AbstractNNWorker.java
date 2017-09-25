@@ -265,6 +265,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      */
     private double dropoutRate = 0d;
 
+    private String lossStr;
+
     protected boolean isUpSampleEnabled() {
         // only enabled in regression
         return this.upSampleRng != null
@@ -329,7 +331,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         loadConfigFiles(context.getProps());
 
         this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
+                .getGridConfigFileContent());
         this.validParams = this.modelConfig.getTrain().getParams();
         if(gs.hasHyperParam()) {
             this.validParams = gs.getParams(trainerId);
@@ -391,6 +394,10 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         this.subFeatureSet = new HashSet<Integer>(this.subFeatures);
         LOG.info("subFeatures size is {}", subFeatures.size());
         this.featureInputsCnt = DTrainUtils.getFeatureInputsCnt(this.modelConfig, this.columnConfigList, this.subFeatureSet);
+
+        Object lossObj = validParams.get("Loss");
+        this.lossStr = lossObj != null ? lossObj.toString() : "squared";
+        LOG.info("Loss str is {}", this.lossStr);
 
         this.isDry = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(CommonConstants.SHIFU_DRY_DTRAIN));
@@ -540,7 +547,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         LOG.info("Gradient computing thread count is {}.", modelConfig.getTrain().getWorkerThreadCount());
 
         this.gradient = new ParallelGradient((FloatFlatNetwork) flat, training, testing, flatSpot,
-                new LinearErrorFunction(), isCrossOver, modelConfig.getTrain().getWorkerThreadCount(), this.isELM);
+                new LinearErrorFunction(), isCrossOver, modelConfig.getTrain().getWorkerThreadCount(), this.isELM,
+                this.lossStr);
     }
 
     private NNParams buildEmptyNNParams(WorkerContext<NNParams, NNParams> workerContext) {

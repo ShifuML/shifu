@@ -153,10 +153,11 @@ public class NNModelEvalAndScoreTest {
                 dataMap.put(fn, value);
             }
 
+            @SuppressWarnings("unused")
             Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(dataMap);
-            for(Map.Entry<FieldName, Double> entry: regressionTerm.entrySet()) {
-                System.out.println(entry.getValue() + " " + map.get("diagnosis"));
-            }
+            // for(Map.Entry<FieldName, Double> entry: regressionTerm.entrySet()) {
+            // System.out.println(entry.getValue() + " " + map.get("diagnosis"));
+            // }
         }
     }
 

@@ -23,7 +23,8 @@ public enum ShifuErrorCode {
     /**
      * Configuration Error 400 ~ 500
      */
-    ERROR_SHIFU_CONFIG(400, "Errors happen when loading shifuconfig"),
+    ERROR_SHIFU_CONFIG(400, "Errors happen when loading shifuconfig"),ERROR_GRID_SEARCH_FILE_CONFIG(501,
+            "Errors happen when loading grid search file config"),
 
     /**
      * Configuration Error 500 ~ 600
@@ -56,7 +57,8 @@ public enum ShifuErrorCode {
     ERROR_MODELCONFIG_NOT_VALIDATION(1051, "The ModelConfig file did not pass the validation."), ERROR_UNSUPPORT_ALG(
             1052, "Un-support algorithm, make sure your ModelConfig.json -> algorithm is NN/SVM/LR/DT/RF/GBT"), ERROR_UNSUPPORT_MODE(
             1053, "Un-support mode, make sure your ModelConfig.json -> mode is \"local\" or \"mapred\"."), ERROR_UNSUPPORT_RUNMODE(
-            1054, "Un-support running mode, make sure your ModelConfig.json -> runMode is pig or akka"),
+            1054, "Un-support running mode, make sure your ModelConfig.json -> runMode is pig or akka"), ERROR_GRIDCONFIG_NOT_VALIDATION(
+            1055, "The grid search config file did not pass the validation."),
 
     /*
      * ColumnConfig validated 1101 - 1150

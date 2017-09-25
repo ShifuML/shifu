@@ -383,13 +383,22 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             }
         }
 
+        List<Boolean> filterResults = null;
+        if(this.isForExpressions) {
+            filterResults = new ArrayList<Boolean>();
+            for(int j = 0; j < this.expressionDataPurifiers.size(); j++) {
+                DataPurifier dp = this.expressionDataPurifiers.get(j);
+                filterResults.add(dp.isFilter(valueStr));
+            }
+        }
+
         // valid data process
         for(int i = 0; i < units.length; i++) {
             populateStats(units, tag, weight, i, i);
             if(this.isForExpressions) {
                 for(int j = 0; j < this.expressionDataPurifiers.size(); j++) {
-                    DataPurifier dp = this.expressionDataPurifiers.get(j);
-                    if(dp.isFilter(valueStr)) {
+                    Boolean filter = filterResults.get(j);
+                    if(filter != null && filter) {
                         populateStats(units, tag, weight, i, (j + 1) * units.length + i);
                     }
                 }
@@ -484,7 +493,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 isMissingValue = true;
             } else {
                 String str = StringUtils.trim(units[columnIndex]);
-                binNum = quickLocateCategoricalBin(this.categoricalBinMap.get(columnIndex), str);
+                binNum = quickLocateCategoricalBin(this.categoricalBinMap.get(newCCIndex), str);
                 if(binNum < 0) {
                     isInvalidValue = true;
                 }

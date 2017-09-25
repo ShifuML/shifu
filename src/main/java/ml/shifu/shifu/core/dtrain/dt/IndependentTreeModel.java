@@ -294,7 +294,7 @@ public class IndependentTreeModel {
      */
     public double convertToProb(double score) {
         // sigmoid function to covert to [0, 1], TODO, how to make it configuable for users
-        return 1 / (1 + Math.min(1.0E19, Math.exp(-score)));
+        return 1 / (1 + Math.min(1.0E19, Math.exp(-20 * score)));
     }
 
     private double predictNode(Node topNode, double[] data) {

@@ -912,7 +912,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
         int trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
         // If grid search, select valid paramters, if not parameters is what in ModelConfig.json
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
         Map<String, Object> validParams = this.modelConfig.getTrain().getParams();
         if(gs.hasHyperParam()) {
             validParams = gs.getParams(trainerId);
