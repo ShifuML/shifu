@@ -229,7 +229,7 @@ public class LogisticRegressionOutput extends
                 isKFoldCV = true;
             }
 
-            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
             this.isGsMode = gs.hasHyperParam();
         }
 

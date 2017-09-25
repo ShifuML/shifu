@@ -165,12 +165,12 @@
         "metaList": [
             {
                 "name": "maxNumBin",
-                "type": "number",
+                "type": "integer",
                 "directive": "input",
                 "defval" : 10
             }, {
                 "name": "cateMaxNumBin",
-                "type": "number",
+                "type": "integer",
                 "directive": "input",
                 "defval" : -1
             }, {
@@ -209,7 +209,7 @@
                 "defval" : false
             }, {
                 "name": "binningAutoTypeThreshold",
-                "type": "number",
+                "type": "integer",
                 "directive": "input",
                 "defval" : 5
             }, {
@@ -264,7 +264,7 @@
                 "defval" : true
             }, {
                 "name": "filterNum",
-                "type": "number",
+                "type": "integer",
                 "directive": "input"
             }, {
                 "name": "filterOutRatio",
@@ -335,17 +335,17 @@
                       "defval" : 0.1
                     }, {
                       "name" : "population_multiply_cnt",
-                      "type" : "number",
+                      "type" : "integer",
                       "directive": "input",
                       "defval" : 100
                     }, {
                       "name" : "population_live_size",
-                      "type" : "number",
+                      "type" : "integer",
                       "directive": "input",
                       "defval" : 500
                     }, {
                       "name" : "expect_variable_cnt",
-                      "type" : "number",
+                      "type" : "integer",
                       "directive": "input",
                       "defval" : 300
                     }, {
@@ -374,12 +374,15 @@
                 "options": [
                     {"label":"old zscale mode", "value":"OLD_ZSCALE"},
                     {"label":"zscale mode", "value":"ZSCALE"},
+                    {"label":"same as zscale mode", "value":"ZSCORE"},
                     {"label":"woe mode", "value":"WOE"},
                     {"label":"weight woe mode", "value":"WEIGHT_WOE"},
                     {"label":"hybrid mode", "value":"HYBRID"},
                     {"label":"weight hybrid mode", "value":"WEIGHT_HYBRID"},
-                    {"label":"woe zscore mode", "value":"WOE_ZSCORE"},
-                    {"label":"weight woe zscore mode", "value":"WEIGHT_WOE_ZSCORE"},
+                    {"label":"woe zscale mode", "value":"WOE_ZSCALE"},
+                    {"label":"same as woe zscale mode", "value":"WOE_ZSCORE"},
+                    {"label":"weight woe zscale mode", "value":"WEIGHT_WOE_ZSCALE"},
+                    {"label":"same as weight woe zscale mode", "value":"WEIGHT_WOE_ZSCORE"},
                     {"label":"zscore and onehot for categorical", "value":"ZSCALE_ONEHOT"}
                 ]
             }, {
@@ -409,7 +412,7 @@
         "metaList": [
             {
                 "name": "baggingNum",
-                "type": "number",
+                "type": "integer",
                 "directive": "input",
                 "defval" : 5
             }, {
@@ -424,7 +427,7 @@
                 "defval": 0.8
             }, {
                 "name": "baggingSampleSeed",
-                "type": "number",
+                "type": "integer",
                 "directive": "input",
                 "defval": -1
             }, {
@@ -444,7 +447,7 @@
                 "defval": false
             }, {
                 "name": "numKFold",
-                "type": "number",
+                "type": "integer",
                 "directive": "input",
                 "defval" : -1
             }, {
@@ -459,7 +462,7 @@
                 "defval": false
             }, {
                 "name": "numTrainEpochs",
-                "type": "number",
+                "type": "integer",
                 "directive": "input",
                 "defval": 100
             }, {
@@ -474,7 +477,7 @@
                 "defval" : ""
             }, {
                 "name": "epochsPerIteration",
-                "type": "number",
+                "type": "integer",
                 "directive": "input",
                 "defval" : 1
             }, {
@@ -489,7 +492,7 @@
                 "defval": false
             }, {              
                 "name": "workerThreadCount",
-                "type": "number",
+                "type": "integer",
                 "directive":"input",
                 "defval": 4
             }, {
@@ -500,8 +503,8 @@
                 "options": [
                     {"label":"NATIVE", "value":"NATIVE"},
                     {"label":"ONEVSALL", "value":"ONEVSALL"},
-                    {"label":"ONVVSREST", "value":"ONVVSREST"},
-                    {"label":"ONVVSONE", "value":"ONVVSONE"}
+                    {"label":"ONEVSREST", "value":"ONEVSREST"},
+                    {"label":"ONEVSONE", "value":"ONEVSONE"}
                 ]
             }, {
                 "name": "upSampleWeight",
@@ -522,13 +525,18 @@
                     {"label": "Gradient Boost Decision Tree", "value":"GBT"}
                 ]
             }, {
+                "name": "gridConfigFile",
+                "type": "text",
+                "directive": "input",
+                "defval": ""
+            }, {
                 "name": "params",
                 "type": "map",
                 "directive": "input",
                 "element": [
                     {
                         "name" : "NumHiddenLayers",
-                        "type" : "number",
+                        "type" : "integer",
                         "directive": "input",
                         "defval" : 2
                     }, {
@@ -556,11 +564,11 @@
                         "name" : "NumHiddenNodes",
                         "type" : "list",
                         "directive": "input",
-                        "elementType" : "number",
-                        "element": [ 
+                        "elementType" : "integer",
+                        "element": [
                             {
                                 "name": "dummy",
-                                "type": "number",
+                                "type": "integer",
                                 "directive": "input",
                                 "defval": 45
                             }                            
@@ -582,22 +590,22 @@
                         "defval" : "NONE"
                     }, {
                         "name" : "MaxDepth",
-                        "type" : "number",
+                        "type" : "integer",
                         "directive": "input",
                         "defval" : 10
                     }, {
                         "name" : "MaxLeaves",
-                        "type" : "number",
+                        "type" : "integer",
                         "directive": "input",
                         "defval" : -1
                     }, {
                         "name" : "MaxBatchSplitSize",
-                        "type" : "number",
+                        "type" : "integer",
                         "directive": "input",
                         "defval" : -1
                     }, {
                         "name" : "MinInstancesPerNode",
-                        "type" : "number",
+                        "type" : "integer",
                         "directive": "input",
                         "defval" : 1
                     }, {
@@ -607,12 +615,12 @@
                         "defval" : 0.0
                     }, {
                         "name" : "MaxStatsMemoryMB",
-                        "type" : "number",
+                        "type" : "integer",
                         "directive": "input",
                         "defval" : 512
                     }, {
                         "name" : "TreeNum",
-                        "type" : "number",
+                        "type" : "integer",
                         "directive": "input",
                         "defval" : 5
                     }, {
@@ -831,7 +839,7 @@
                 ]
             }, {
                 "name" : "performanceBucketNum",
-                "type" : "number",
+                "type" : "integer",
                 "directive": "input",
                 "defval" : 10
              }, { 

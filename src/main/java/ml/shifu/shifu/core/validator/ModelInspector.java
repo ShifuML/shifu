@@ -532,11 +532,22 @@ public class ModelInspector {
             }
         }
 
-        GridSearch gs = new GridSearch(train.getParams());
+        GridSearch gs = new GridSearch(train.getParams(), train.getGridConfigFileContent());
         // such parameter validation only in regression and not grid search mode
         if(modelConfig.isRegression() && !gs.hasHyperParam()) {
             if(train.getAlgorithm().equalsIgnoreCase("nn")) {
                 Map<String, Object> params = train.getParams();
+
+                Object loss = params.get("Loss");
+                if(loss != null && !"log".equalsIgnoreCase(loss.toString())
+                        && !"squared".equalsIgnoreCase(loss.toString())
+                        && !"absolute".equalsIgnoreCase(loss.toString())) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add("Loss should be in [log,squared,absolute].");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+
                 int layerCnt = (Integer) params.get(CommonConstants.NUM_HIDDEN_LAYERS);
                 if(layerCnt < 0) {
                     ValidateResult tmpResult = new ValidateResult(true);
@@ -658,7 +669,7 @@ public class ModelInspector {
                             && !"absolute".equalsIgnoreCase(loss.toString())) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("Loss should be in [log,squared,absolute].");
+                        tmpResult.getCauses().add("Loss should be in [log,squared,halfgradsquared,absolute].");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
 

@@ -54,8 +54,8 @@ public class ModelTrainConf {
     @JsonDeserialize(using = MultipleClassificationDeserializer.class)
     public static enum MultipleClassification {
         NATIVE, // means using NN regression or RF classification, not one vs all or one vs one
-        ONEVSALL, ONVVSREST, // the same as ONEVSALL
-        ONVVSONE; // ONEVSONE is not impl yet.
+        ONEVSALL, ONEVSREST, // the same as ONEVSALL
+        ONEVSONE; // ONEVSONE is not impl yet.
         /*
          * Get {@link MultipleClassification} by string, case can be ignored.
          */
@@ -171,6 +171,18 @@ public class ModelTrainConf {
      * Model params for training like learning rate, tree depth ...
      */
     private Map<String, Object> params;
+    
+    /**
+     * Grid search params config file path.
+     */
+    private String gridConfigFile = null;
+    
+    /**
+     * Grid search params in config file.
+     * Read from {@link #gridConfigFile} after loading {@link ModelConfig} from JSON file.
+     */
+    @JsonIgnore
+    private List<String> gridConfigFileContent = null;
 
     /**
      * Multiple classification method: NATIVE or ONEVSALL(ONEVSREST)
@@ -267,6 +279,24 @@ public class ModelTrainConf {
 
     public void setParams(Map<String, Object> params) {
         this.params = params;
+    }
+
+    @JsonIgnore
+    public String getGridConfigFile() {
+        return gridConfigFile;
+    }
+
+    @JsonProperty
+    public void setGridConfigFile(String gridConfigFile) {
+        this.gridConfigFile = gridConfigFile;
+    }
+
+    public List<String> getGridConfigFileContent() {
+        return gridConfigFileContent;
+    }
+
+    public void setGridConfigFileContent(List<String> gridConfigFileContent) {
+        this.gridConfigFileContent = gridConfigFileContent;
     }
 
     public Map<String, String> getCustomPaths() {
@@ -405,7 +435,7 @@ public class ModelTrainConf {
     @JsonIgnore
     public boolean isOneVsAll() {
         return this.multiClassifyMethod == MultipleClassification.ONEVSALL
-                || this.multiClassifyMethod == MultipleClassification.ONVVSREST;
+                || this.multiClassifyMethod == MultipleClassification.ONEVSREST;
     }
 
     /**

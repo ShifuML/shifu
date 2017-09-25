@@ -1,4 +1,4 @@
-[<img src="images/logo/shifu.png" alt="Shifu" align="left">](http://shifu.ml)<div align="right">[![Build Status](https://travis-ci.org/ShifuML/shifu.svg?branch=master)](https://travis-ci.org/ShifuML/shifu)</div>
+[<img src="images/logo/shifu.png" alt="Shifu" align="left">](http://shifu.ml)<div align="right"><div>[![Build Status](https://travis-ci.org/ShifuML/shifu.svg)](https://travis-ci.org/ShifuML/shifu)</div><div>[![Maven Central](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu/badge.svg)](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu)</div></div>
 
 #
 
@@ -13,7 +13,7 @@ Shifu is an open-source, end-to-end machine learning and data mining framework b
 
 One of Shifu's pros is an end-to-end modeling pipeline in machine learning. With only configurations settings, a whole machine pipeline can be built and model can be much more easy to develop and push to production. The pipeline defined in Shifu is in below:
 
-![Shifu Pipeline](https://github.com/ShifuML/shifu/blob/develop/images/wiki/pipline.png)
+![Shifu Pipeline](https://raw.githubusercontent.com/wiki/ShifuML/shifu/images/new-shifu-pipeline.png)
 
 Shifu provides a simple command-line interface for each step of the model building process, including
 

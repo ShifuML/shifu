@@ -20,10 +20,7 @@ import org.encog.engine.network.activation.ActivationTANH;
 import org.encog.neural.networks.layers.BasicLayer;
 
 /**
- * TODO
- * 
- * @author pengzhang
- * 
+ * A new {@link BasicLayer} to add dropout support.
  */
 public class BasicDropoutLayer extends BasicLayer {
 
