@@ -123,6 +123,7 @@ public class VariableSelector {
         List<Tuple> paretoList = new ArrayList<Tuple>();
 
         Set<NSColumn> candidateColumns = CommonUtils.loadCandidateColumns(modelConfig);
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
 
         int cntSelected = 0;
 
@@ -141,8 +142,9 @@ public class VariableSelector {
                     cntSelected++;
                     cntByForce++;
                 }
-            } else if(!CommonUtils.isGoodCandidate(config)) {
-                log.info("\t Incomplete info(please check KS, IV, Mean, or StdDev fields): " + config.getColumnName());
+            } else if(!CommonUtils.isGoodCandidate(config, hasCandidates)) {
+                log.info("\t Incomplete info(please check KS, IV, Mean, or StdDev fields): " + config.getColumnName()
+                    + " or it is not in candidate list");
             } else if (CollectionUtils.isNotEmpty(candidateColumns)
                     && !candidateColumns.contains(new NSColumn(config.getColumnName()))) {
                 log.info("\t Not in candidate list, Skip: " + config.getColumnName());

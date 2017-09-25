@@ -73,8 +73,9 @@ public class WrapperWorkerConductorTest {
 
     public TrainingDataSet genTrainingDataSet(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) throws IOException {
         List<Integer> columnIdList = new ArrayList<Integer>();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for (ColumnConfig columnConfig : columnConfigList) {
-            if (columnConfig.isCandidate()) {
+            if (columnConfig.isCandidate(hasCandidates)) {
                 columnIdList.add(columnConfig.getColumnNum());
             }
         }

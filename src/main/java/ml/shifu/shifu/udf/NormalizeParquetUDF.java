@@ -121,7 +121,7 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
             }
 
             // append normalize data.
-            if(!CommonUtils.isGoodCandidate(config)) {
+            if(!CommonUtils.isGoodCandidate(config, super.hasCandidates)) {
                 tuple.append((Double) null);
             } else {
                 if(CommonUtils.isTreeModel(this.alg)) {

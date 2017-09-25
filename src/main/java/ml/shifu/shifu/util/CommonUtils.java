@@ -1640,6 +1640,7 @@ public final class CommonUtils {
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
 
         List<Double> inputList = new ArrayList<Double>();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for(ColumnConfig config: columnConfigList) {
             if(config == null) {
                 continue;
@@ -1671,7 +1672,7 @@ public final class CommonUtils {
                         }
                     }
                 } else {
-                    if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
+                    if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config, hasCandidates)) {
                         String val = getNSVariableVal(rawNsDataMap, key);
                         if(CommonUtils.isTreeModel(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
@@ -1808,6 +1809,14 @@ public final class CommonUtils {
         return new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
     }
 
+    /**
+     * Get all available feature ids from ColumnConfig list.
+     * There are two situations for this: 1) when training model, get all available features before start
+     * 2) get all available features before doing variable selection
+     * @param columnConfigList - ColumnConfig list to check
+     * @param isAfterVarSelect - true for training, false for variable selection
+     * @return - available feature list
+     */
     public static List<Integer> getAllFeatureList(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect) {
         boolean hasCandidate = hasCandidateColumns(columnConfigList);
 
@@ -1836,6 +1845,12 @@ public final class CommonUtils {
         return features;
     }
 
+    /**
+     * Check whether candidates are set or not
+     * @param columnConfigList - ColumnConfig list to check
+     * @return
+     *        - true if use set candidate columns, or false
+     */
     public static boolean hasCandidateColumns(List<ColumnConfig> columnConfigList) {
         int candidateCnt = 0;
         for(ColumnConfig config: columnConfigList) {
@@ -2372,22 +2387,17 @@ public final class CommonUtils {
         return rawDataNsMap;
     }
 
-    public static boolean isGoodCandidate(boolean isBinaryClassification, ColumnConfig columnConfig) {
+    public static boolean isGoodCandidate(ColumnConfig columnConfig, boolean hasCandidate,
+                                          boolean isBinaryClassification) {
         if(columnConfig == null) {
             return false;
         }
 
         if(isBinaryClassification) {
-            return columnConfig.isCandidate()
-                    && (columnConfig.getKs() != null && columnConfig.getKs() > 0 && columnConfig.getIv() != null
-                            && columnConfig.getIv() > 0 && columnConfig.getMean() != null
-                            && columnConfig.getStdDev() != null && ((columnConfig.isCategorical()
-                            && columnConfig.getBinCategory() != null && columnConfig.getBinCategory().size() > 1) || (columnConfig
-                            .isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary()
-                            .size() > 1)));
+            return isGoodCandidate(columnConfig, hasCandidate);
         } else {
             // multiple classification
-            return columnConfig.isCandidate()
+            return columnConfig.isCandidate(hasCandidate)
                     && (columnConfig.getMean() != null && columnConfig.getStdDev() != null && ((columnConfig
                             .isCategorical() && columnConfig.getBinCategory() != null && columnConfig.getBinCategory()
                             .size() > 1) || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null && columnConfig
@@ -2395,7 +2405,7 @@ public final class CommonUtils {
         }
     }
 
-    public static boolean isGoodCandidate(ColumnConfig columnConfig) {
+/*    public static boolean isGoodCandidate(ColumnConfig columnConfig) {
         if(columnConfig == null) {
             return false;
         }
@@ -2406,7 +2416,7 @@ public final class CommonUtils {
                         && columnConfig.getStdDev() != null && ((columnConfig.isCategorical()
                         && columnConfig.getBinCategory() != null && columnConfig.getBinCategory().size() > 1) || (columnConfig
                         .isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
-    }
+    }*/
 
     public static boolean isGoodCandidate(ColumnConfig columnConfig, boolean hasCandidate) {
         if(columnConfig == null) {
