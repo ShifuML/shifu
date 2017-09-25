@@ -201,8 +201,9 @@ public class VarSelWorker
 
     private List<Integer> getNormalizedColumnIdList() {
         List<Integer> normalizedColumnIdList = new ArrayList<Integer>();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for(ColumnConfig config: columnConfigList) {
-            if(CommonUtils.isGoodCandidate(config)) {
+            if(CommonUtils.isGoodCandidate(config, hasCandidates)) {
                 normalizedColumnIdList.add(config.getColumnNum());
             }
         }

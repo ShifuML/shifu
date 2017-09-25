@@ -415,6 +415,8 @@ public class LogisticRegressionWorker
         int index = 0, inputIndex = 0, outputIndex = 0;
         long hashcode = 0;
         double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
+
         for(String unit: splitter.split(line)) {
             // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
             float floatValue = unit.length() == 0 ? 0f : NumberFormatUtils.getFloat(unit, 0f);
@@ -448,7 +450,7 @@ public class LogisticRegressionWorker
                     if(this.inputNum == this.candidateNum) {
                         // no variable selected, good candidate but not meta and not target choosed
                         if(!columnConfig.isMeta() && !columnConfig.isTarget()
-                                && CommonUtils.isGoodCandidate(columnConfig)) {
+                                && CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
                             inputData[inputIndex++] = floatValue;
                             hashcode = hashcode * 31 + Float.valueOf(floatValue).hashCode();
                         }

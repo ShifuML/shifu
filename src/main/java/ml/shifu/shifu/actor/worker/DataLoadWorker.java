@@ -237,7 +237,7 @@ public class DataLoadWorker extends AbstractWorkerActor {
                     } else {
                         if(this.inputNodeCount == this.candidateCount) {
                             // all variables are not set final-select
-                            if(CommonUtils.isGoodCandidate(columnConfig)) {
+                            if(CommonUtils.isGoodCandidate(columnConfig, super.hasCandidates)) {
                                 inputs[inputsIndex++] = doubleValue;
                             }
                         } else {
