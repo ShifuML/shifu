@@ -18,8 +18,11 @@ package ml.shifu.shifu.core.dtrain;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.FloatNeuralStructure;
 import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
@@ -146,18 +149,23 @@ public final class DTrainUtils {
      * @throws NullPointerException
      *             if columnConfigList or ColumnConfig object in columnConfigList is null.
      */
-    public static int[] getInputOutputCandidateCounts(List<ColumnConfig> columnConfigList) {
+    public static int[] getInputOutputCandidateCounts(ModelNormalizeConf.NormType normType, List<ColumnConfig> columnConfigList) {
         @SuppressWarnings("unused")
         int input = 0, output = 0, totalCandidate = 0, goodCandidate = 0;
+        boolean hasCandidate = CommonUtils.hasCandidateColumns(columnConfigList);
         for(ColumnConfig config: columnConfigList) {
             if(!config.isTarget() && !config.isMeta()) {
                 totalCandidate += 1;
-                if(CommonUtils.isGoodCandidate(config)) {
+                if(CommonUtils.isGoodCandidate(config, hasCandidate)) {
                     goodCandidate += 1;
                 }
             }
             if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
-                input += 1;
+                if ( normType.equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT) && config.isCategorical()) {
+                    input += config.getBinCategory().size() + 1;
+                } else {
+                    input += 1;
+                }
             }
             if(config.isTarget()) {
                 output += 1;
@@ -165,7 +173,6 @@ public final class DTrainUtils {
         }
         return new int[] { input, output, goodCandidate };
     }
-
     /**
      * Get numeric and categorical input nodes number (final select) and output nodes number from column config, and
      * candidate input node number.
@@ -182,8 +189,10 @@ public final class DTrainUtils {
      */
     public static int[] getNumericAndCategoricalInputAndOutputCounts(List<ColumnConfig> columnConfigList) {
         int numericInput = 0, categoricalInput = 0, output = 0, numericCandidateInput = 0, categoricalCandidateInput = 0;
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
+
         for(ColumnConfig config: columnConfigList) {
-            if(!config.isTarget() && !config.isMeta() && CommonUtils.isGoodCandidate(config)) {
+            if(!config.isTarget() && !config.isMeta() && CommonUtils.isGoodCandidate(config, hasCandidates)) {
                 if(config.isNumerical()) {
                     numericCandidateInput += 1;
                 }
@@ -366,4 +375,22 @@ public final class DTrainUtils {
         return new Random();
     }
 
+
+    public static int getFeatureInputsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Set<Integer> featureSet) {
+        if ( modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT) ) {
+            int inputCount = 0;
+            for ( ColumnConfig columnConfig : columnConfigList ) {
+                if ( columnConfig.isFinalSelect() && featureSet.contains(columnConfig.getColumnNum()) ) {
+                    if ( columnConfig.isNumerical() ) {
+                        inputCount += 1;
+                    } else {
+                        inputCount += (columnConfig.getBinCategory().size() + 1);
+                    }
+                }
+            }
+            return inputCount;
+        } else {
+            return featureSet.size();
+        }
+    }
 }

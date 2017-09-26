@@ -120,8 +120,9 @@ public class BinaryNNSerializer {
         }
 
         if(columnIndexNameMapping.size() == 0) {
+            boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
             for(ColumnConfig columnConfig: columnConfigList) {
-                if(CommonUtils.isGoodCandidate(columnConfig)) {
+                if(CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
                     columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
                 }
             }
@@ -133,11 +134,13 @@ public class BinaryNNSerializer {
         Map<Integer, Integer> columnMapping = new HashMap<Integer, Integer>(columnConfigList.size(), 1f);
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(columnConfigList);
         boolean isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         int index = 0;
         for(int i = 0; i < columnConfigList.size(); i++) {
             ColumnConfig columnConfig = columnConfigList.get(i);
             if(!isAfterVarSelect) {
-                if(!columnConfig.isMeta() && !columnConfig.isTarget() && CommonUtils.isGoodCandidate(columnConfig)) {
+                if(!columnConfig.isMeta() && !columnConfig.isTarget()
+                        && CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
                     columnMapping.put(columnConfig.getColumnNum(), index);
                     index += 1;
                 }

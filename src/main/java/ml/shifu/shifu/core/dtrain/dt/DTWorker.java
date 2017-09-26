@@ -955,6 +955,7 @@ public class DTWorker
 
     private List<Integer> getAllValidFeatures() {
         List<Integer> features = new ArrayList<Integer>();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for(ColumnConfig config: columnConfigList) {
             if(isAfterVarSelect) {
                 if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
@@ -966,7 +967,7 @@ public class DTWorker
                     }
                 }
             } else {
-                if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
+                if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config, hasCandidates)) {
                     // only select numerical feature with getBinBoundary().size() larger than 1
                     // or categorical feature with getBinCategory().size() larger than 0
                     if((config.isNumerical() && config.getBinBoundary().size() > 1)
@@ -1107,6 +1108,7 @@ public class DTWorker
         // use NNConstants.NN_DEFAULT_COLUMN_SEPARATOR to replace getModelConfig().getDataSetDelimiter(), super follows
         // the function in akka mode.
         int index = 0, inputIndex = 0;
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for(String input: DEFAULT_SPLITTER.split(currentValue.getWritable().toString())) {
             if(index == this.columnConfigList.size()) {
                 // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
@@ -1133,7 +1135,7 @@ public class DTWorker
                     if(!isAfterVarSelect) {
                         // no variable selected, good candidate but not meta and not target chose
                         if(!columnConfig.isMeta() && !columnConfig.isTarget()
-                                && CommonUtils.isGoodCandidate(columnConfig)) {
+                                && CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
                             if(columnConfig.isNumerical()) {
                                 float floatValue = getFloatValue(input);
                                 // cast is safe as we limit max bin to Short.MAX_VALUE

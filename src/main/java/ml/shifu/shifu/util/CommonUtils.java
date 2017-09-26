@@ -1694,6 +1694,7 @@ public final class CommonUtils {
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
 
         List<Double> inputList = new ArrayList<Double>();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for(ColumnConfig config: columnConfigList) {
             if(config == null) {
                 continue;
@@ -1721,11 +1722,11 @@ public final class CommonUtils {
                                 inputList.add(index * 1d);
                             }
                         } else {
-                            inputList.add(computeNumericNormResult(modelConfig, cutoff, config, val));
+                            inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val));
                         }
                     }
                 } else {
-                    if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
+                    if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config, hasCandidates)) {
                         String val = getNSVariableVal(rawNsDataMap, key);
                         if(CommonUtils.isTreeModel(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
@@ -1737,7 +1738,7 @@ public final class CommonUtils {
                                 inputList.add(index * 1d);
                             }
                         } else {
-                            inputList.add(computeNumericNormResult(modelConfig, cutoff, config, val));
+                            inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val));
                         }
                     }
                 }
@@ -1846,7 +1847,7 @@ public final class CommonUtils {
                             inputList.add(index * 1d);
                         }
                     } else {
-                        inputList.add(computeNumericNormResult(modelConfig, cutoff, config, val));
+                        inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val));
                     }
                 }
             }
@@ -1862,7 +1863,17 @@ public final class CommonUtils {
         return new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
     }
 
+    /**
+     * Get all available feature ids from ColumnConfig list.
+     * There are two situations for this: 1) when training model, get all available features before start
+     * 2) get all available features before doing variable selection
+     * @param columnConfigList - ColumnConfig list to check
+     * @param isAfterVarSelect - true for training, false for variable selection
+     * @return - available feature list
+     */
     public static List<Integer> getAllFeatureList(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect) {
+        boolean hasCandidate = hasCandidateColumns(columnConfigList);
+
         List<Integer> features = new ArrayList<Integer>();
         for(ColumnConfig config: columnConfigList) {
             if(isAfterVarSelect) {
@@ -1875,7 +1886,7 @@ public final class CommonUtils {
                     }
                 }
             } else {
-                if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
+                if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config, hasCandidate)) {
                     // only select numerical feature with getBinBoundary().size() larger than 1
                     // or categorical feature with getBinCategory().size() larger than 0
                     if((config.isNumerical() && config.getBinBoundary().size() > 1)
@@ -1888,14 +1899,31 @@ public final class CommonUtils {
         return features;
     }
 
-    private static double computeNumericNormResult(ModelConfig modelConfig, double cutoff, ColumnConfig config,
+    /**
+     * Check whether candidates are set or not
+     * @param columnConfigList - ColumnConfig list to check
+     * @return
+     *        - true if use set candidate columns, or false
+     */
+    public static boolean hasCandidateColumns(List<ColumnConfig> columnConfigList) {
+        int candidateCnt = 0;
+        for(ColumnConfig config: columnConfigList) {
+            if (ColumnConfig.ColumnFlag.Candidate.equals(config.getColumnFlag())) {
+                candidateCnt++;
+            }
+        }
+
+        return (candidateCnt > 0);
+    }
+
+    private static List<Double> computeNumericNormResult(ModelConfig modelConfig, double cutoff, ColumnConfig config,
             String val) {
-        Double normalizeValue = null;
+        List<Double> normalizeValue = null;
         if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
             try {
-                normalizeValue = Double.parseDouble(val);
+                normalizeValue = Arrays.asList(new Double[]{Double.parseDouble(val)});
             } catch (Exception e) {
-                normalizeValue = Normalizer.defaultMissingValue(config);
+                normalizeValue = Arrays.asList(new Double[]{Normalizer.defaultMissingValue(config)});
             }
         } else {
             normalizeValue = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType());
@@ -1968,8 +1996,8 @@ public final class CommonUtils {
                 // add log for debug purpose
                 // log.info("key: " + key + ", raw_value " + rawDataMap.get(key).toString() + ", zscl_value: " +
                 String val = nsDataMap.get(key) == null ? null : nsDataMap.get(key).toString();
-                Double normalizeValue = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType());
-                inputList.add(normalizeValue);
+                List<Double> normVals = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType());
+                inputList.addAll(normVals);
             }
         }
 
@@ -2413,41 +2441,50 @@ public final class CommonUtils {
         return rawDataNsMap;
     }
 
-    public static boolean isGoodCandidate(boolean isBinaryClassification, ColumnConfig columnConfig) {
+    public static boolean isGoodCandidate(ColumnConfig columnConfig, boolean hasCandidate,
+                                          boolean isBinaryClassification) {
         if(columnConfig == null) {
             return false;
         }
 
         if(isBinaryClassification) {
-            return columnConfig.isCandidate() && (columnConfig.getKs() != null && columnConfig.getKs() > 0
-                    && columnConfig.getIv() != null && columnConfig.getIv() > 0 && columnConfig.getMean() != null
-                    && columnConfig.getStdDev() != null
-                    && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
-                            && columnConfig.getBinCategory().size() > 1)
-                            || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
-                                    && columnConfig.getBinBoundary().size() > 1)));
+            return isGoodCandidate(columnConfig, hasCandidate);
         } else {
             // multiple classification
-            return columnConfig.isCandidate() && (columnConfig.getMean() != null && columnConfig.getStdDev() != null
+            return columnConfig.isCandidate(hasCandidate)
+                    && (columnConfig.getMean() != null && columnConfig.getStdDev() != null
                     && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
-                            && columnConfig.getBinCategory().size() > 1)
-                            || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
-                                    && columnConfig.getBinBoundary().size() > 1)));
+                    && columnConfig.getBinCategory().size() > 1)
+                    || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
+                    && columnConfig.getBinBoundary().size() > 1)));
         }
     }
 
-    public static boolean isGoodCandidate(ColumnConfig columnConfig) {
+    /*public static boolean isGoodCandidate(ColumnConfig columnConfig) {
+        if(columnConfig == null) {
+            return false;
+        }
+        return columnConfig.isCandidate()
+                && (columnConfig.getKs() != null && columnConfig.getKs() > 0 && columnConfig.getIv() != null
+                        && columnConfig.getIv() > 0 && columnConfig.getMean() != null
+                        && columnConfig.getStdDev() != null && ((columnConfig.isCategorical()
+                        && columnConfig.getBinCategory() != null && columnConfig.getBinCategory().size() > 1) || (columnConfig
+                        .isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
+    }*/
+
+    public static boolean isGoodCandidate(ColumnConfig columnConfig, boolean hasCandidate) {
         if(columnConfig == null) {
             return false;
         }
 
-        return columnConfig.isCandidate() && (columnConfig.getKs() != null && columnConfig.getKs() > 0
-                && columnConfig.getIv() != null && columnConfig.getIv() > 0 && columnConfig.getMean() != null
-                && columnConfig.getStdDev() != null
+        return columnConfig.isCandidate(hasCandidate)
+                && (columnConfig.getKs() != null && columnConfig.getKs() > 0
+                && columnConfig.getIv() != null && columnConfig.getIv() > 0
+                && columnConfig.getMean() != null && columnConfig.getStdDev() != null
                 && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
-                        && columnConfig.getBinCategory().size() > 1)
-                        || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
-                                && columnConfig.getBinBoundary().size() > 1)));
+                && columnConfig.getBinCategory().size() > 1)
+                || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
+                && columnConfig.getBinBoundary().size() > 1)));
     }
 
     /**

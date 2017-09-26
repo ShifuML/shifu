@@ -225,12 +225,14 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
                 tuple.append(raw);
             } else {
                 ColumnConfig columnConfig = this.columnConfigMap.get(name);
-                Double value = Normalizer.normalize(columnConfig, raw, this.modelConfig.getNormalizeStdDevCutOff(),
+                List<Double> normVals = Normalizer.normalize(columnConfig, raw, this.modelConfig.getNormalizeStdDevCutOff(),
                         this.modelConfig.getNormalizeType());
                 if(this.isOutputRaw) {
                     tuple.append(raw);
                 }
-                tuple.append(value);
+                for(Double normVal: normVals) {
+                    tuple.append(normVal);
+                }
             }
         }
 
