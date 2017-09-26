@@ -31,6 +31,7 @@ import ml.shifu.shifu.message.AkkaActorInputMessage;
 import ml.shifu.shifu.message.ExceptionMessage;
 import ml.shifu.shifu.message.ScanStatsRawDataMessage;
 import ml.shifu.shifu.message.StatsResultMessage;
+import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.JSONUtils;
 import org.slf4j.Logger;
@@ -69,7 +70,7 @@ public class CalculateStatsActor extends AbstractActor {
         // actors for stats calculation
         columnNumToActorMap = new HashMap<Integer, ActorRef>();
         for (ColumnConfig config : columnConfigList) {
-            if (config.isCandidate()) {
+            if (config.isCandidate(super.hasCandidates)) {
                 ActorRef actor = getContext().actorOf(new Props(new UntypedActorFactory() {
                     private static final long serialVersionUID = -6498732060654560116L;
 

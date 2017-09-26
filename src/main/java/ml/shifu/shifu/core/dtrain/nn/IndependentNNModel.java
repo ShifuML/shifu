@@ -409,7 +409,7 @@ public class IndependentNNModel {
             }
         }
         double cutoff = Normalizer.checkCutOff(this.cutOffMap.get(columnNum));
-        return Normalizer.computeZScore(rawValue, mean, stddev, cutoff);
+        return Normalizer.computeZScore(rawValue, mean, stddev, cutoff)[0];
     }
 
     private double getCategoricalPosRateZScoreValue(Integer columnNum, Object obj) {
@@ -428,7 +428,7 @@ public class IndependentNNModel {
         double mean = this.numerMeanMap.get(columnNum);
         double stddev = this.numerStddevMap.get(columnNum);
         double cutoff = Normalizer.checkCutOff(this.cutOffMap.get(columnNum));
-        return Normalizer.computeZScore(value, mean, stddev, cutoff);
+        return Normalizer.computeZScore(value, mean, stddev, cutoff)[0];
     }
 
     private double getHybridWoeZScoreValue(Integer columnNum, Object obj, boolean isWeighted) {
@@ -437,7 +437,7 @@ public class IndependentNNModel {
         Map<Integer, Double> woeStddevs = isWeighted ? this.wgtWoeStddevMap : this.woeStddevMap;
         double mean = woeMeans.get(columnNum), stddev = woeStddevs.get(columnNum);
         double cutoff = Normalizer.checkCutOff(this.cutOffMap.get(columnNum));
-        return Normalizer.computeZScore(woe, mean, stddev, cutoff);
+        return Normalizer.computeZScore(woe, mean, stddev, cutoff)[0];
     }
 
     private double getNumericalWoeZScoreValue(Integer columnNum, Object obj, boolean isWeighted) {
@@ -446,7 +446,7 @@ public class IndependentNNModel {
         Map<Integer, Double> woeStddevs = isWeighted ? this.wgtWoeStddevMap : this.woeStddevMap;
         double mean = woeMeans.get(columnNum), stddev = woeStddevs.get(columnNum);
         double cutoff = Normalizer.checkCutOff(this.cutOffMap.get(columnNum));
-        return Normalizer.computeZScore(woe, mean, stddev, cutoff);
+        return Normalizer.computeZScore(woe, mean, stddev, cutoff)[0];
     }
 
     private double getCategoricalWoeZScoreValue(Integer columnNum, Object obj, boolean isWeighted) {
@@ -455,7 +455,7 @@ public class IndependentNNModel {
         Map<Integer, Double> woeStddevs = isWeighted ? this.wgtWoeStddevMap : this.woeStddevMap;
         double mean = woeMeans.get(columnNum), stddev = woeStddevs.get(columnNum);
         double cutoff = Normalizer.checkCutOff(cutOffMap.get(columnNum));
-        return Normalizer.computeZScore(woe, mean, stddev, cutoff);
+        return Normalizer.computeZScore(woe, mean, stddev, cutoff)[0];
     }
 
     private double getCategoricalWoeValue(Integer columnNum, Object obj, boolean isWeighted) {
