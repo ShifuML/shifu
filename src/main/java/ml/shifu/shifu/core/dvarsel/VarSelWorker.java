@@ -185,7 +185,10 @@ public class VarSelWorker
 
             int i = 0;
             for(Integer columnId: this.trainingDataSet.getDataColumnIdList()) {
-                inputs[i++] = Normalizer.normalize(columnConfigList.get(columnId), fields[columnId]);
+                List<Double> normalizedData = Normalizer.normalize(columnConfigList.get(columnId), fields[columnId]);
+                for ( Double normalValue : normalizedData ) {
+                    inputs[i++] = normalValue;
+                }
             }
 
             trainingDataSet.addTrainingRecord(new TrainingRecord(inputs, ideal, significance));
@@ -198,8 +201,9 @@ public class VarSelWorker
 
     private List<Integer> getNormalizedColumnIdList() {
         List<Integer> normalizedColumnIdList = new ArrayList<Integer>();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for(ColumnConfig config: columnConfigList) {
-            if(CommonUtils.isGoodCandidate(config)) {
+            if(CommonUtils.isGoodCandidate(config, hasCandidates)) {
                 normalizedColumnIdList.add(config.getColumnNum());
             }
         }

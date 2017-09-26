@@ -31,6 +31,7 @@ import ml.shifu.shifu.message.AkkaActorInputMessage;
 import ml.shifu.shifu.message.ExceptionMessage;
 import ml.shifu.shifu.message.ScanEvalDataMessage;
 import ml.shifu.shifu.message.StatsResultMessage;
+import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.JSONUtils;
 import org.slf4j.Logger;
@@ -70,7 +71,7 @@ public class PostTrainActor extends AbstractActor {
         // actors to calculate the average score for each column binning
         columnNumToActorMap = new HashMap<Integer, ActorRef>();
         for (ColumnConfig config : columnConfigList) {
-            if (config.isCandidate() && config.isFinalSelect()) {
+            if (config.isCandidate(super.hasCandidates) && config.isFinalSelect()) {
                 expectedResultCnt++;
                 ActorRef actor = getContext().actorOf(new Props(new UntypedActorFactory() {
                     private static final long serialVersionUID = -4461572845675918681L;

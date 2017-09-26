@@ -212,8 +212,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     }
                 } else {
                     // multiple classification, select all candidate at first, TODO add SE for multi-classification
+                    boolean hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
                     for(ColumnConfig config: this.columnConfigList) {
-                        if(CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
+                        if(CommonUtils.isGoodCandidate(config, hasCandidates, modelConfig.isRegression())) {
                             config.setFinalSelect(true);
                         }
                     }
@@ -398,11 +399,12 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // FIXME, how to set iteration number
         int forceSelectCount = 0;
         int candidateCount = 0;
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for(ColumnConfig columnConfig: columnConfigList) {
             if(columnConfig.isForceSelect()) {
                 forceSelectCount++;
             }
-            if(CommonUtils.isGoodCandidate(columnConfig)) {
+            if(CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
                 candidateCount++;
             }
         }

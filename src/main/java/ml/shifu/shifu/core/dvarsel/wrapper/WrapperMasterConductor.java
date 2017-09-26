@@ -55,8 +55,9 @@ public class WrapperMasterConductor extends AbstractMasterConductor {
         super(modelConfig, columnConfigList);
 
         List<Integer> variables = new ArrayList<Integer>(columnConfigList.size());
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for (ColumnConfig columnConfig : columnConfigList) {
-            if ( CommonUtils.isGoodCandidate(columnConfig) ) {
+            if ( CommonUtils.isGoodCandidate(columnConfig, hasCandidates) ) {
                 variables.add(columnConfig.getColumnNum());
             }
         }

@@ -425,11 +425,12 @@ public class ModelInspector {
         boolean isZScore = modelConfig.getNormalize().getNormType() == NormType.ZSCALE
                 || modelConfig.getNormalize().getNormType() == NormType.ZSCORE
                 || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCALE
-                || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCORE;
+                || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCORE
+                || modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT);
 
-        if(modelConfig.isClassification() && !isZScore) {
+        if(modelConfig.isClassification() && !isZScore ) {
             ValidateResult tmpResult = new ValidateResult(false);
-            tmpResult.getCauses().add("NormType 'ZSCALE|ZSCORE' is the only norm type for multiple classification.");
+            tmpResult.getCauses().add("NormType 'ZSCALE|ZSCORE|ZSCALE_ONEHOT' is the only norm type for multiple classification.");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 

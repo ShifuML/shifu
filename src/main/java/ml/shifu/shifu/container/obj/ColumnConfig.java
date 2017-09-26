@@ -175,10 +175,16 @@ public class ColumnConfig {
         return ColumnFlag.Target.equals(columnFlag);
     }
 
-    @JsonIgnore
+/*    @JsonIgnore
     public boolean isCandidate() {
         return ColumnFlag.Candidate.equals(columnFlag)
                 || (!isForceRemove() && !isMeta() && !isTarget());
+    }*/
+
+    @JsonIgnore
+    public boolean isCandidate(boolean hasCandidate) {
+        return ( hasCandidate
+                ? ColumnFlag.Candidate.equals(columnFlag) : (!isForceRemove() && !isMeta() && !isTarget()));
     }
 
     @JsonIgnore
