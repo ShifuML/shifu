@@ -165,7 +165,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         loadModel();
         this.filterBy = context.getConfiguration()
                 .get(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE, Constants.FILTER_BY_SE);
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         if(this.model instanceof BasicFloatNetwork) {
             this.inputs = new double[((BasicFloatNetwork) this.model).getFeatureSet().size()];

@@ -16,11 +16,7 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.master.AbstractMasterComputable;
@@ -320,7 +316,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
     private NNParams initWeights() {
         NNParams params = new NNParams();
 
-        int[] inputAndOutput = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int[] inputAndOutput = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
+        int featureInputsCnt = DTrainUtils.getFeatureInputsCnt(modelConfig, this.columnConfigList, new HashSet<Integer>(this.subFeatures));
         @SuppressWarnings("unused")
         int inputNodeCount = inputAndOutput[0] == 0 ? inputAndOutput[2] : inputAndOutput[0];
         // if is one vs all classification, outputNodeCount is set to 1
@@ -330,7 +327,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
-        BasicNetwork network = DTrainUtils.generateNetwork(this.subFeatures.size(), outputNodeCount, numLayers,
+        BasicNetwork network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers,
                 actFunc, hiddenNodeList, this.dropoutRate);
 
         params.setTrainError(0);

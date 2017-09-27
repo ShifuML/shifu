@@ -104,7 +104,7 @@ public class Scorer {
         this.modelConfig = modelConfig;
 
         if(this.columnConfigList != null) {
-            int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+            int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
             int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
             int candidateCount = inputOutputIndex[2];
             this.noVarSelect = (inputNodeCount == candidateCount);
@@ -192,11 +192,12 @@ public class Scorer {
                 final MLDataPair networkPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
                         columnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet());
 
-                if(network.getFeatureSet().size() != networkPair.getInput().size()) {
+                /*if(network.getFeatureSet().size() != networkPair.getInput().size()) {
                     log.error("Network and input size mismatch: Network Size = " + network.getFeatureSet().size()
                             + "; Input Size = " + networkPair.getInput().size());
                     continue;
-                }
+                }*/
+                log.info("Network input count = {}, while input size = {}", network.getInputCount(), networkPair.getInput().size());
 
                 final boolean isOutputFirstHiddenLayer = outputFirstHiddenLayer;
                 tasks.add(new Callable<MLData>() {
