@@ -30,12 +30,12 @@ public class NormalizerTest {
 
     @Test
     public void computeZScore() {
-        Assert.assertEquals(0.0, Normalizer.computeZScore(2, 2, 1, 6.0));
-        Assert.assertEquals(6.0, Normalizer.computeZScore(12, 2, 1, 6.0));
-        Assert.assertEquals(-2.0, Normalizer.computeZScore(2, 4, 1, 2));
+        Assert.assertEquals(0.0, Normalizer.computeZScore(2, 2, 1, 6.0)[0]);
+        Assert.assertEquals(6.0, Normalizer.computeZScore(12, 2, 1, 6.0)[0]);
+        Assert.assertEquals(-2.0, Normalizer.computeZScore(2, 4, 1, 2)[0]);
 
         // If stdDev == 0, return 0
-        Assert.assertEquals(0.0, Normalizer.computeZScore(12, 2, 0, 6.0));
+        Assert.assertEquals(0.0, Normalizer.computeZScore(12, 2, 0, 6.0)[0]);
     }
 
     @Test
@@ -44,9 +44,9 @@ public class NormalizerTest {
         config.setMean(2.0);
         config.setStdDev(1.0);
         config.setColumnType(ColumnType.N);
-        Assert.assertEquals(0.0, Normalizer.normalize(config, "2", 6.0));
+        Assert.assertEquals(0.0, Normalizer.normalize(config, "2", 6.0).get(0));
 
-        Assert.assertEquals(0.0, Normalizer.normalize(config, "ABC", 0.1));
+        Assert.assertEquals(0.0, Normalizer.normalize(config, "ABC", 0.1).get(0));
     }
 
     @Test
@@ -55,7 +55,7 @@ public class NormalizerTest {
         config.setMean(2.0);
         config.setStdDev(1.0);
         config.setColumnType(ColumnType.N);
-        Assert.assertEquals(-4.0, Normalizer.normalize(config, "-3", null));
+        Assert.assertEquals(-4.0, Normalizer.normalize(config, "-3", null).get(0));
     }
 
     @Test
@@ -66,7 +66,7 @@ public class NormalizerTest {
         config.setStdDev(1.0);
         config.setBinCategory(Arrays.asList(new String[] { "1", "2", "3", "4", "ABC" }));
         config.setBinPosCaseRate(Arrays.asList(new Double[] { 0.1, 2.0, 0.3, 0.1 }));
-        Assert.assertEquals(0.0, Normalizer.normalize(config, "2", 0.1));
+        Assert.assertEquals(0.0, Normalizer.normalize(config, "2", 0.1).get(0));
 
 //        Assert.assertEquals(0.0, Normalizer.normalize(config, "5", 0.1);
     }
@@ -78,7 +78,7 @@ public class NormalizerTest {
         config.setMean(2.0);
         config.setStdDev(1.0);
         config.setColumnType(ColumnType.N);
-        Assert.assertEquals(0.0, n.normalize("2"));
+        Assert.assertEquals(0.0, n.normalize("2").get(0));
     }
 
     @Test
@@ -98,37 +98,37 @@ public class NormalizerTest {
         config.setColumnBinning(cbin);
 
         // Test zscore normalization
-        Assert.assertEquals(Normalizer.normalize(config, "5.0", 4.0, NormType.ZSCALE), 3.0);
-        Assert.assertEquals(Normalizer.normalize(config, "5.0", null, NormType.ZSCALE), 3.0);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 4.0, NormType.ZSCALE), 0.0);
-        Assert.assertEquals(Normalizer.normalize(config, null, 4.0, NormType.ZSCALE), 0.0);
+        Assert.assertEquals(Normalizer.normalize(config, "5.0", 4.0, NormType.ZSCALE).get(0), 3.0);
+        Assert.assertEquals(Normalizer.normalize(config, "5.0", null, NormType.ZSCALE).get(0), 3.0);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 4.0, NormType.ZSCALE).get(0), 0.0);
+        Assert.assertEquals(Normalizer.normalize(config, null, 4.0, NormType.ZSCALE).get(0), 0.0);
 
         // Test old zscore normalization
-        Assert.assertEquals(Normalizer.normalize(config, "5.0", 4.0, NormType.OLD_ZSCALE), 3.0);
-        Assert.assertEquals(Normalizer.normalize(config, "5.0", null, NormType.OLD_ZSCALE), 3.0);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 4.0, NormType.OLD_ZSCALE), 0.0);
-        Assert.assertEquals(Normalizer.normalize(config, null, 4.0, NormType.OLD_ZSCALE), 0.0);
+        Assert.assertEquals(Normalizer.normalize(config, "5.0", 4.0, NormType.OLD_ZSCALE).get(0), 3.0);
+        Assert.assertEquals(Normalizer.normalize(config, "5.0", null, NormType.OLD_ZSCALE).get(0), 3.0);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 4.0, NormType.OLD_ZSCALE).get(0), 0.0);
+        Assert.assertEquals(Normalizer.normalize(config, null, 4.0, NormType.OLD_ZSCALE).get(0), 0.0);
 
         // Test woe normalization
-        Assert.assertEquals(Normalizer.normalize(config, "3.0", null, NormType.WEIGHT_WOE), 21.0);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WEIGHT_WOE), 16.5);
-        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WEIGHT_WOE), 16.5);
+        Assert.assertEquals(Normalizer.normalize(config, "3.0", null, NormType.WEIGHT_WOE).get(0), 21.0);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WEIGHT_WOE).get(0), 16.5);
+        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WEIGHT_WOE).get(0), 16.5);
 
-        Assert.assertEquals(Normalizer.normalize(config, "3.0", null, NormType.WOE), 11.0);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WOE), 6.5);
-        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WOE), 6.5);
+        Assert.assertEquals(Normalizer.normalize(config, "3.0", null, NormType.WOE).get(0), 11.0);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WOE).get(0), 6.5);
+        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WOE).get(0), 6.5);
 
         // Test hybrid normalization, for numerical use zscore.
-        Assert.assertEquals(Normalizer.normalize(config, "5.0", 4.0, NormType.HYBRID), 3.0);
-        Assert.assertEquals(Normalizer.normalize(config, "5.0", null, NormType.HYBRID), 3.0);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 4.0, NormType.HYBRID), 0.0);
-        Assert.assertEquals(Normalizer.normalize(config, null, 4.0, NormType.HYBRID), 0.0);
+        Assert.assertEquals(Normalizer.normalize(config, "5.0", 4.0, NormType.HYBRID).get(0), 3.0);
+        Assert.assertEquals(Normalizer.normalize(config, "5.0", null, NormType.HYBRID).get(0), 3.0);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 4.0, NormType.HYBRID).get(0), 0.0);
+        Assert.assertEquals(Normalizer.normalize(config, null, 4.0, NormType.HYBRID).get(0), 0.0);
 
         // Currently WEIGHT_HYBRID and HYBRID act same for numerical value, both calculate zscore.
-        Assert.assertEquals(Normalizer.normalize(config, "5.0", 4.0, NormType.WEIGHT_HYBRID), 3.0);
-        Assert.assertEquals(Normalizer.normalize(config, "5.0", null, NormType.WEIGHT_HYBRID), 3.0);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 4.0, NormType.WEIGHT_HYBRID), 0.0);
-        Assert.assertEquals(Normalizer.normalize(config, null, 4.0, NormType.WEIGHT_HYBRID), 0.0);
+        Assert.assertEquals(Normalizer.normalize(config, "5.0", 4.0, NormType.WEIGHT_HYBRID).get(0), 3.0);
+        Assert.assertEquals(Normalizer.normalize(config, "5.0", null, NormType.WEIGHT_HYBRID).get(0), 3.0);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 4.0, NormType.WEIGHT_HYBRID).get(0), 0.0);
+        Assert.assertEquals(Normalizer.normalize(config, null, 4.0, NormType.WEIGHT_HYBRID).get(0), 0.0);
 
         // Test woe zscore normalization
         // Assert.assertEquals(Normalizer.normalize(config, "3.0", 10.0, NormType.WOE_ZSCORE), 0.2);
@@ -158,34 +158,34 @@ public class NormalizerTest {
         config.setColumnBinning(cbin);
 
         // Test zscore normalization
-        Assert.assertEquals(Normalizer.normalize(config, "b", 4.0, NormType.ZSCALE), 0.2);
-        Assert.assertEquals(Normalizer.normalize(config, "b", null, NormType.ZSCALE), 0.2);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 4.0, NormType.ZSCALE, CategoryMissingNormType.MEAN), 0.0);
-        Assert.assertEquals(Normalizer.normalize(config, null, 4.0, NormType.ZSCALE, CategoryMissingNormType.MEAN), 0.0);
+        Assert.assertEquals(Normalizer.normalize(config, "b", 4.0, NormType.ZSCALE).get(0), 0.2);
+        Assert.assertEquals(Normalizer.normalize(config, "b", null, NormType.ZSCALE).get(0), 0.2);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 4.0, NormType.ZSCALE, CategoryMissingNormType.MEAN).get(0), 0.0);
+        Assert.assertEquals(Normalizer.normalize(config, null, 4.0, NormType.ZSCALE, CategoryMissingNormType.MEAN).get(0), 0.0);
 
         // Test old zscore normalization
-        Assert.assertEquals(Normalizer.normalize(config, "b", 4.0, NormType.OLD_ZSCALE), 0.2);
-        Assert.assertEquals(Normalizer.normalize(config, "b", null, NormType.OLD_ZSCALE), 0.2);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 4.0, NormType.OLD_ZSCALE, CategoryMissingNormType.MEAN), 0.0);
-        Assert.assertEquals(Normalizer.normalize(config, null, 4.0, NormType.OLD_ZSCALE, CategoryMissingNormType.MEAN), 0.0);
+        Assert.assertEquals(Normalizer.normalize(config, "b", 4.0, NormType.OLD_ZSCALE).get(0), 0.2);
+        Assert.assertEquals(Normalizer.normalize(config, "b", null, NormType.OLD_ZSCALE).get(0), 0.2);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 4.0, NormType.OLD_ZSCALE, CategoryMissingNormType.MEAN).get(0), 0.0);
+        Assert.assertEquals(Normalizer.normalize(config, null, 4.0, NormType.OLD_ZSCALE, CategoryMissingNormType.MEAN).get(0), 0.0);
 
         // Test woe normalization
-        Assert.assertEquals(Normalizer.normalize(config, "c", null, NormType.WEIGHT_WOE), 22.0);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WEIGHT_WOE), 16.5);
-        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WEIGHT_WOE), 16.5);
+        Assert.assertEquals(Normalizer.normalize(config, "c", null, NormType.WEIGHT_WOE).get(0), 22.0);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WEIGHT_WOE).get(0), 16.5);
+        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WEIGHT_WOE).get(0), 16.5);
 
-        Assert.assertEquals(Normalizer.normalize(config, "c", null, NormType.WOE), 12.0);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WOE), 6.5);
-        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WOE), 6.5);
+        Assert.assertEquals(Normalizer.normalize(config, "c", null, NormType.WOE).get(0), 12.0);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WOE).get(0), 6.5);
+        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WOE).get(0), 6.5);
 
         // Test hybrid normalization, for categorical value use [weight]woe.
-        Assert.assertEquals(Normalizer.normalize(config, "a", null, NormType.HYBRID), 10.0);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.HYBRID), 6.5);
-        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.HYBRID), 6.5);
+        Assert.assertEquals(Normalizer.normalize(config, "a", null, NormType.HYBRID).get(0), 10.0);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.HYBRID).get(0), 6.5);
+        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.HYBRID).get(0), 6.5);
 
-        Assert.assertEquals(Normalizer.normalize(config, "a", null, NormType.WEIGHT_HYBRID), 20.0);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WEIGHT_HYBRID), 16.5);
-        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WEIGHT_HYBRID), 16.5);
+        Assert.assertEquals(Normalizer.normalize(config, "a", null, NormType.WEIGHT_HYBRID).get(0), 20.0);
+        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", null, NormType.WEIGHT_HYBRID).get(0), 16.5);
+        Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WEIGHT_HYBRID).get(0), 16.5);
 
         // Test woe zscore normalization
         // Assert.assertEquals(Normalizer.normalize(config, "b", 12.0, NormType.WOE_ZSCORE), 0.2);

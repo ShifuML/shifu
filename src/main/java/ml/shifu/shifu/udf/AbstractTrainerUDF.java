@@ -50,6 +50,8 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
 
     protected int maxCategorySize = Constants.MAX_CATEGORICAL_BINC_COUNT;
 
+    protected boolean hasCandidates;
+
     /**
      * Constructor with SourceType, ModelConfig path and ColumnConfig path
      * 
@@ -98,6 +100,8 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
             this.maxCategorySize = Environment.getInt(Constants.SHIFU_MAX_CATEGORY_SIZE,
                     Constants.MAX_CATEGORICAL_BINC_COUNT);
         }
+
+        this.hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
     }
 
     /**
