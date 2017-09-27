@@ -114,7 +114,7 @@ public class MapReduceShuffle {
             // TODO copy or move ??
             ShifuFileUtils.copy(this.pathFinder.getShuffleDataPath(), srcDataPath, source);
         } else {
-            throw new RuntimeException("MapReduce Correlation Computing Job failed.");
+            throw new RuntimeException("MapReduce Shuffle Computing Job Failed.");
         }
     }
 
@@ -160,8 +160,7 @@ public class MapReduceShuffle {
 
         // calculate data shuffle size based on user's prefer
         Long preferPartSize = Environment.getLong(Constants.SHIFU_NORM_PREFER_PART_SIZE);
-        Long actualFileSize = ShifuFileUtils
-                .getFileOrDirectorySize(srcDataPath, sourceType);
+        Long actualFileSize = ShifuFileUtils.getFileOrDirectorySize(srcDataPath, sourceType);
 
         if(preferPartSize != null && actualFileSize != null && preferPartSize != 0) {
             int dataShuffleSize = (int) (actualFileSize / preferPartSize);

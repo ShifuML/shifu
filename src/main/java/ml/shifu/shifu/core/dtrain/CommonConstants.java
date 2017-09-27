@@ -65,7 +65,7 @@ public interface CommonConstants {
      * Version 4: chang trees in IndependentTreeModel to support bagging of RF and GBDT
      */
     public static final int TREE_FORMAT_VERSION = 4;
-    
+
     public static final int NN_FORMAT_VERSION = 1;
 
     public static final String NUM_HIDDEN_LAYERS = "NumHiddenLayers";
@@ -87,5 +87,9 @@ public interface CommonConstants {
     public static final String NAMESPACE_DELIMITER = "::";
 
     public static final long NOT_CONFIGURED_BAGGING_SEED = -1L;
+
+    public static final long MAX_RECORDS_PER_WORKER = 50000L;
+    
+    public static final int PART_FILE_COUNT_THRESHOLD = 50;
 
 }

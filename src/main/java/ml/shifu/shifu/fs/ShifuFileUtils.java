@@ -413,6 +413,35 @@ public class ShifuFileUtils {
     }
 
     /**
+     * Move src file to dst file in the same FileSystem. Such as move local source to local destination,
+     * move hdfs source to hdfs dest.
+     * 
+     * @param srcPath
+     *            - source file to move
+     * @param destPath
+     *            - destination file
+     * @param sourceType
+     *            - local/hdfs
+     * @throws IOException
+     *             - if any I/O exception in processing
+     */
+    public static void move(String srcPath, String destPath, SourceType sourceType) throws IOException {
+        if(StringUtils.isEmpty(srcPath) || StringUtils.isEmpty(destPath) || sourceType == null) {
+            throw new IllegalArgumentException(String.format(
+                    "Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", srcPath, destPath,
+                    sourceType));
+        }
+
+        FileSystem fs = getFileSystemBySourceType(sourceType);
+        // delete all files in dst firstly because of different folder if has dstDataPath
+        if(!fs.delete(new Path(destPath), true)) {
+            // ignore delete failed, it's ok.
+        }
+
+        fs.rename(new Path(srcPath), new Path(destPath));
+    }
+
+    /**
      * According to SourceType to check whether file exists.
      * 
      * @param path
@@ -571,6 +600,18 @@ public class ShifuFileUtils {
     public static int getFilePartCount(String filePath, SourceType sourceType) throws IOException {
         FileStatus[] fileStatsArr = getFilePartStatus(filePath, sourceType);
         return fileStatsArr.length;
+    }
+
+    public static boolean isPartFileAllGzip(String filePath, SourceType sourceType) throws IOException {
+        FileStatus[] fileStatsArr = getFilePartStatus(filePath, sourceType);
+
+        boolean isGzip = true;
+        for(FileStatus fileStatus: fileStatsArr) {
+            if(!fileStatus.getPath().toString().endsWith("gz") && !fileStatus.getPath().toString().endsWith("gz")) {
+                isGzip = false;
+            }
+        }
+        return isGzip;
     }
 
     public static long getFileOrDirectorySize(String filePath, SourceType sourceType) throws IOException {
