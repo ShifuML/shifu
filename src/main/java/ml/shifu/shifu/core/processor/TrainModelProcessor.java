@@ -358,7 +358,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                             + " is parquet format. Please keep isParquet and re-run norm again or change isParquet directly to true.");
         }
 
-        GridSearch gridSearch = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
+        GridSearch gridSearch = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
+                .getGridConfigFileContent());
         if(!LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)
                 && !NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) && !CommonUtils.isTreeModel(alg)
                 && gridSearch.hasHyperParam()) {
@@ -383,7 +384,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         final List<String> args = new ArrayList<String>();
 
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
+                .getGridConfigFileContent());
 
         prepareCommonParams(gs.hasHyperParam(), args, sourceType);
 
@@ -1059,7 +1061,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 NNOutput.class.getName()));
     }
 
-    private void prepareCommonParams(boolean isGsMode, final List<String> args, final SourceType sourceType) {
+    private void prepareCommonParams(boolean isGsMode, final List<String> args, final SourceType sourceType) throws IOException {
         String alg = super.getModelConfig().getTrain().getAlgorithm();
 
         args.add("-libjars");
@@ -1223,7 +1225,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         return features;
     }
 
-    private void setHeapSizeAndSplitSize(final List<String> args) {
+    private void setHeapSizeAndSplitSize(final List<String> args) throws IOException {
         // can be override by shifuconfig, ok for hard code
         if(this.isDebug()) {
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
@@ -1261,7 +1263,20 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 2 * 1000L));
     }
 
-    private long computeDynamicCombineSize() {
+    private long computeDynamicCombineSize() throws IOException {
+        // how many part-m-*.gz file in for gzip file, norm depends on how many gzip files
+        int filePartCnt = ShifuFileUtils.getFilePartCount(super.pathFinder.getNormalizedDataPath(), SourceType.HDFS);
+        long actualFileSize = ShifuFileUtils.getFileOrDirectorySize(super.pathFinder.getNormalizedDataPath(),
+                SourceType.HDFS);
+        boolean isGzip = ShifuFileUtils.isPartFileAllGzip(this.pathFinder.getNormalizedDataPath(), SourceType.HDFS);
+        long avgFileSize = actualFileSize / filePartCnt;
+
+        if(isGzip && filePartCnt <= 20) {
+            // only 20 files, just set each one as a worker, 1.2 * avgFileSize is to make sure
+            return (long) (avgFileSize * 1.2d);
+            // otherwise, let dynamic combine size works
+        }
+
         // set to dynamic to save mappers, sometimes maybe OOM, users should tune guagua.split.maxCombinedSplitSize
         // in shifuconfig; by default it is 200M, consider in some cases user selects only a half of features, this
         // number should be 400m
@@ -1278,7 +1293,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             // 0.85 is a factor if selected ratio is 0.5 and only be effective if selected ratio over 2
             ratio = 0.85 * ratio;
         }
-        return Double.valueOf((maxCombineSize * 1d * (ratio))).longValue();
+        long finalCombineSize = Double.valueOf((maxCombineSize * 1d * (ratio))).longValue();
+
+        if(actualFileSize / finalCombineSize < 25) {
+            // we can leverage more workers.
+            finalCombineSize /= 2;
+        }
+        return finalCombineSize;
     }
 
     private void copyModelToLocal(String modelName, Path modelPath, SourceType sourceType) throws IOException {

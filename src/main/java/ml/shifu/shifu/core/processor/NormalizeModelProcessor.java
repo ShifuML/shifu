@@ -23,7 +23,9 @@ import java.util.Map;
 import java.util.Scanner;
 
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
+import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.shuffle.MapReduceShuffle;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
@@ -73,6 +75,8 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                 case MAPRED:
                     runPigNormalize();
 
+                    autoCheckShuffleAndShuffleSize();
+
                     if(this.isToShuffleData) {
                         // shuffling normalized data, to make data random
                         MapReduceShuffle shuffler = new MapReduceShuffle(this.modelConfig);
@@ -96,6 +100,26 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         }
         log.info("Step Finished: normalize with {} ms", (System.currentTimeMillis() - start));
         return 0;
+    }
+
+    private void autoCheckShuffleAndShuffleSize() throws IOException {
+        ColumnConfig targetColumnConfig = CommonUtils.findTargetColumn(columnConfigList);
+        long totalCount = targetColumnConfig.getTotalCount();
+        // how many part-m-*.gz file in for gzip file, norm depends on how many gzip files
+        int filePartCnt = ShifuFileUtils.getFilePartCount(this.pathFinder.getNormalizedDataPath(), SourceType.HDFS);
+        // average count is over threshold, try to do shuffle to avoid big worker there
+        if(filePartCnt > 0 && filePartCnt <= CommonConstants.PART_FILE_COUNT_THRESHOLD
+                && totalCount * 1.0d / filePartCnt >= CommonConstants.MAX_RECORDS_PER_WORKER
+                && ShifuFileUtils.isPartFileAllGzip(this.pathFinder.getNormalizedDataPath(), SourceType.HDFS)) {
+            long shuffleSize = totalCount / CommonConstants.MAX_RECORDS_PER_WORKER;
+            log.info("New shiffle size is {}.", shuffleSize);
+
+            this.isToShuffleData = true;
+            Integer shuffleSizeInteger = Environment.getInt(Constants.SHIFU_NORM_SHUFFLE_SIZE);
+            if(shuffleSizeInteger == null) {
+                Environment.setProperty(Constants.SHIFU_NORM_SHUFFLE_SIZE, shuffleSize + "");
+            }
+        }
     }
 
     /**
@@ -146,10 +170,10 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         paramsMap.put("sampleRate", modelConfig.getNormalizeSampleRate().toString());
         paramsMap.put("sampleNegOnly", ((Boolean) modelConfig.isNormalizeSampleNegOnly()).toString());
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
-        
+
         String expressionsAsString = super.modelConfig.getSegmentFilterExpressionsAsString();
         Environment.getProperties().put("shifu.segment.expressions", expressionsAsString);
-        
+
         try {
             String normPigPath = null;
             if(modelConfig.getNormalize().getIsParquet()) {
