@@ -319,7 +319,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
     @SuppressWarnings("unchecked")
     private void initNetwork(MasterContext<NNParams, NNParams> context) {
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
         @SuppressWarnings("unused")
         int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         // if is one vs all classification, outputNodeCount is set to 1
@@ -343,7 +343,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             }
         }
 
-        this.network = DTrainUtils.generateNetwork(this.subFeatures.size(), outputNodeCount, numLayers, actFunc,
+        int featureInputsCnt = DTrainUtils.getFeatureInputsCnt(modelConfig, columnConfigList, this.subFeatures);
+
+        this.network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers, actFunc,
                 hiddenNodeList, false, this.dropoutRate);
         ((BasicFloatNetwork) this.network).setFeatureSet(this.subFeatures);
 

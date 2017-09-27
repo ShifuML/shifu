@@ -25,6 +25,7 @@ import ml.shifu.guagua.io.GuaguaFileSplit;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLData;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLDataPair;
 import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataPair;
@@ -55,7 +56,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
             LOG.info("Read {} records.", super.count);
         }
 
-        float[] inputs = new float[super.subFeatures.size()];
+        float[] inputs = new float[super.featureInputsCnt];
         float[] ideal = new float[super.outputNodeCount];
 
         if(super.isDry) {
@@ -70,13 +71,15 @@ public class NNWorker extends AbstractNNWorker<Text> {
         // use NNConstants.NN_DEFAULT_COLUMN_SEPARATOR to replace getModelConfig().getDataSetDelimiter(), super follows
         // the function in akka mode.
         int index = 0, inputsIndex = 0, outputIndex = 0;
-        for(String input: DEFAULT_SPLITTER.split(currentValue.getWritable().toString())) {
+        String[] fields = currentValue.getWritable().toString().split("\\|", -1);
+        for ( int pos = 0; pos < fields.length; ) {
+            String input = fields[pos];
             // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
             float floatValue = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(input, 0f);
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
             floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
 
-            if(index == super.columnConfigList.size()) {
+            if(pos == fields.length - 1) {
                 // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
                 // weight, how to process???
                 if(StringUtils.isBlank(modelConfig.getWeightColumnName())) {
@@ -107,14 +110,37 @@ public class NNWorker extends AbstractNNWorker<Text> {
                             // tags like [0, 1, 2, 3] compared with ["a", "b", "c", "d"]
                             ideal[outputIndex++] = Float.compare(floatValue, trainerId) == 0 ? 1f : 0f;
                         } else {
+                            LOG.info("target value is {}", floatValue);
                             int ideaIndex = (int) floatValue;
                             ideal[ideaIndex] = 1f;
                         }
                     }
+                    pos ++;
                 } else {
                     if(subFeatureSet.contains(index)) {
-                        inputs[inputsIndex++] = floatValue;
+                        if ( columnConfig.isCategorical() && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT) ) {
+                               for ( int k = 0; k < columnConfig.getBinCategory().size() + 1; k ++ ) {
+                                   String tval = fields[pos];
+                                   // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+                                   float fval = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
+                                   // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
+                                   fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? 0f : fval;
+                                   inputs[inputsIndex++] = fval;
+                                   pos ++;
+                               }
+                        } else {
+                            inputs[inputsIndex++] = floatValue;
+                            pos ++;
+                        }
                         hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
+                    } else {
+                        if ( columnConfig.isCategorical()
+                                && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
+                                && columnConfig.getBinCategory().size() > 1 ) {
+                            pos = pos + columnConfig.getBinCategory().size() + 1;
+                        } else {
+                            pos ++;
+                        }
                     }
                 }
             }
