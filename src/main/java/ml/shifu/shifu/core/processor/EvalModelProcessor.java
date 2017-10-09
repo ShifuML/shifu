@@ -299,7 +299,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         PathFinder pathFinder = new PathFinder(modelConfig);
         String evalSetPath = pathFinder.getEvalSetPath(config, SourceType.LOCAL);
         FileUtils.forceMkdir(new File(evalSetPath));
-        syncDataToHdfs(config.getDataSet().getSource());
+        // syncDataToHdfs(config.getDataSet().getSource());
 
         switch(modelConfig.getBasic().getRunMode()) {
             case DIST:
@@ -777,7 +777,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             validateEvalColumnConfig(evalConfig);
             String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
             FileUtils.forceMkdir(new File(evalSetPath));
-            syncDataToHdfs(evalConfig.getDataSet().getSource());
+            // syncDataToHdfs(evalConfig.getDataSet().getSource());
         }
 
         // each one sleep 8s to avoid conflict in initialization
