@@ -221,6 +221,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      *             any io exception
      */
     private void runScore(List<EvalConfig> evalSetList) throws IOException {
+        // do it only once
+        syncDataToHdfs(evalSetList);
+
         if(Environment.getBoolean(Constants.SHIFU_EVAL_PARALLEL, true) && modelConfig.isMapReduceRunMode()
                 && evalSetList.size() > 1) {
             // run in parallel
@@ -599,6 +602,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      *             any exception in running pig evaluation or akka evaluation
      */
     private void runEval(List<EvalConfig> evalSetList) throws IOException {
+        // do it only once
+        syncDataToHdfs(evalSetList);
+
         // validation for score column
         for(EvalConfig evalConfig: evalSetList) {
             List<String> scoreMetaColumns = evalConfig.getScoreMetaColumns(modelConfig);
