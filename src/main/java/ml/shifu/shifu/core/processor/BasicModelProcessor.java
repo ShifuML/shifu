@@ -37,6 +37,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.shuffle.MapReduceShuffle;
 import ml.shifu.shifu.core.validator.ModelInspector;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
@@ -350,7 +351,7 @@ public class BasicModelProcessor {
             if(!param.containsKey("Propagation")) {
                 param = new LinkedHashMap<String, Object>();
 
-                param.put("Propagation", "Q");
+                param.put("Propagation", "R");
                 param.put("LearningRate", 0.1);
                 param.put("NumHiddenLayers", 2);
 
@@ -385,10 +386,13 @@ public class BasicModelProcessor {
             if(!param.containsKey("MaxDepth")) {
                 param = new LinkedHashMap<String, Object>();
 
-                param.put("FeatureSubsetStrategy", "all");
-                param.put("MaxDepth", 10);
-                param.put("MaxStatsMemoryMB", 256);
+                param.put("TreeNum", 10);
+                param.put("FeatureSubsetStrategy", "TWOTHIRDS");
+                param.put("MaxDepth", 14);
+                param.put("MinInstancesPerNode", 1);
+                param.put("MinInfoGain", 0.0);
                 param.put("Impurity", "entropy");
+                param.put("Loss", "squared");
 
                 modelConfig.setParams(param);
                 saveModelConfig();
@@ -397,13 +401,17 @@ public class BasicModelProcessor {
             if(!param.containsKey("MaxDepth")) {
                 param = new LinkedHashMap<String, Object>();
 
-                param.put("FeatureSubsetStrategy", "all");
-                param.put("MaxDepth", 10);
-                param.put("MaxStatsMemoryMB", 256);
-                param.put("Impurity", "entropy");
+                param.put("TreeNum", "100");
+                param.put("FeatureSubsetStrategy", "TWOTHIRDS");
+                param.put("MaxDepth", 7);
+                param.put("MinInstancesPerNode", 5);
+                param.put("MinInfoGain", 0.0);
+                param.put("DropoutRate", 0.0);
+                param.put("Impurity", "variance");
+                param.put(CommonConstants.LEARNING_RATE, 0.05);
                 param.put("Loss", "squared");
-
                 modelConfig.setParams(param);
+                modelConfig.getTrain().setNumTrainEpochs(10000);
                 saveModelConfig();
             }
         } else {
