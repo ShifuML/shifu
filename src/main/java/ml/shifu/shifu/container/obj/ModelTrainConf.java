@@ -557,7 +557,6 @@ public class ModelTrainConf {
             params.put("MinInfoGain", 0.0);
             params.put("Impurity", "variance");
             params.put("Loss", "squared");
-            trainConf.setNumTrainEpochs(1000);
         } else if(ALGORITHM.GBT.equals(alg)) {
             params.put("TreeNum", "100");
             params.put("FeatureSubsetStrategy", "TWOTHIRDS");
@@ -568,7 +567,6 @@ public class ModelTrainConf {
             params.put("Impurity", "variance");
             params.put(CommonConstants.LEARNING_RATE, 0.05);
             params.put("Loss", "squared");
-            trainConf.setNumTrainEpochs(1000);
         } else if(ALGORITHM.LR.equals(alg)) {
             params.put(LogisticRegressionTrainer.LEARNING_RATE, 0.1);
             params.put("RegularizedConstant", 0.0);

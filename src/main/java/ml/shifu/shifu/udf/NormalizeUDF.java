@@ -177,10 +177,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         if(input == null || input.size() == 0) {
             return null;
         }
-        // update total valid count, remove such counter as it is in PurifyDataUDF
-        // if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT")) {
-        // PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1);
-        // }
 
         Object tag = input.get(tagColumnNum);
         if(tag == null) {
@@ -280,17 +276,9 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         // binPosRate for normalize
                         List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
                                 this.categoryMissingNormType);
-                        for ( Double normVal : normVals ) {
+                        for(Double normVal: normVals) {
                             tuple.append(df.format(normVal));
                         }
-                        // if(this.isForExpressions) {
-                        // for(int j = 0; j < dataPurifiers.size(); j++) {
-                        // ColumnConfig extConfig = columnConfigList.get(input.size() * j + i);
-                        // Double extNormVal = Normalizer.normalize(extConfig, val, cutoff, normType,
-                        // this.categoryMissingNormType);
-                        // tuple.append(df.format(extNormVal));
-                        // }
-                        // }
                     } else {
                         tuple.append(config.isMeta() ? val : null);
                     }
@@ -315,8 +303,9 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     }
                     tuple.append(type);
                 } else if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
-                    List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType, this.categoryMissingNormType);
-                    for ( Double normVal : normVals ) {
+                    List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
+                            this.categoryMissingNormType);
+                    for(Double normVal: normVals) {
                         tuple.append(df.format(normVal));
                     }
                 } else {
@@ -382,9 +371,9 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         schemaStr.append(config.getColumnName() + ":chararray" + ",");
                     } else {
                         // for others, set to float, no matter LR/NN categorical or filter out feature with null
-                        if ( modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT) ) {
-                            if ( CommonUtils.isGoodCandidate(config, super.hasCandidates) ) {
-                                for (int i = 0; i < config.getBinCategory().size(); i++) {
+                        if(modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT)) {
+                            if(CommonUtils.isGoodCandidate(config, super.hasCandidates)) {
+                                for(int i = 0; i < config.getBinCategory().size(); i++) {
                                     schemaStr.append(config.getColumnName() + "_" + i + ":float" + ",");
                                 }
                             }
