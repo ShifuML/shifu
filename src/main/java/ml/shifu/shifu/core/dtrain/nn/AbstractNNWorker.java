@@ -33,7 +33,6 @@ import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.guagua.worker.WorkerContext.WorkerCompletionCallBack;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
