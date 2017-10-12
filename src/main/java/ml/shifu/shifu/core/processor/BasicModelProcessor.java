@@ -34,6 +34,7 @@ import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.meta.ValidateResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -267,6 +268,23 @@ public class BasicModelProcessor {
                 scanner.close();
             }
         }
+    }
+
+    /**
+     * Sync data into HDFS for list of EvalConfig,
+     * @param evalConfigList - EvalConfig list to sync
+     * @return true if synced to HDFS
+     * @throws IOException
+     */
+    protected boolean syncDataToHdfs(List<EvalConfig> evalConfigList) throws IOException{
+        if ( CollectionUtils.isNotEmpty(evalConfigList) ) {
+            for ( EvalConfig evalConfig : evalConfigList ) {
+                if ( SourceType.HDFS.equals(evalConfig.getDataSet().getSource()) ) {
+                    return syncDataToHdfs(evalConfig.getDataSet().getSource());
+                }
+            }
+        }
+        return false;
     }
 
     /**
