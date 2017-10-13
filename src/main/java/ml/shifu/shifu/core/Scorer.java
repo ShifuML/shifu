@@ -77,9 +77,9 @@ public class Scorer {
     private ExecutorManager<MLData> executorManager;
 
     /**
-     * For neural network, if output the first
+     * For neural network, if output the hidden neurons
      */
-    private boolean outputFirstHiddenLayer = false;
+    private int outputHiddenLayerIndex = 0;
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig) {
         this(models, columnConfigList, algorithm, modelConfig, 4.0d);
@@ -87,11 +87,11 @@ public class Scorer {
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
             Double cutoff) {
-        this(models, columnConfigList, algorithm, modelConfig, cutoff, false);
+        this(models, columnConfigList, algorithm, modelConfig, cutoff, 0);
     }
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
-            Double cutoff, boolean outputFirstHiddenLayer) {
+            Double cutoff, int outputHiddenLayerIndex) {
         if(modelConfig == null) {
             throw new IllegalArgumentException("modelConfig should not be null");
         }
@@ -104,7 +104,8 @@ public class Scorer {
         this.modelConfig = modelConfig;
 
         if(this.columnConfigList != null) {
-            int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
+            int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                    this.columnConfigList);
             int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
             int candidateCount = inputOutputIndex[2];
             this.noVarSelect = (inputNodeCount == candidateCount);
@@ -146,7 +147,7 @@ public class Scorer {
             }
         }));
 
-        this.outputFirstHiddenLayer = outputFirstHiddenLayer;
+        this.outputHiddenLayerIndex = outputHiddenLayerIndex;
     }
 
     /**
@@ -192,30 +193,32 @@ public class Scorer {
                 final MLDataPair networkPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
                         columnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet());
 
-                /*if(network.getFeatureSet().size() != networkPair.getInput().size()) {
-                    log.error("Network and input size mismatch: Network Size = " + network.getFeatureSet().size()
-                            + "; Input Size = " + networkPair.getInput().size());
-                    continue;
-                }*/
-                log.info("Network input count = {}, while input size = {}", network.getInputCount(), networkPair.getInput().size());
+                /*
+                 * if(network.getFeatureSet().size() != networkPair.getInput().size()) {
+                 * log.error("Network and input size mismatch: Network Size = " + network.getFeatureSet().size()
+                 * + "; Input Size = " + networkPair.getInput().size());
+                 * continue;
+                 * }
+                 */
+                log.info("Network input count = {}, while input size = {}", network.getInputCount(), networkPair
+                        .getInput().size());
 
-                final boolean isOutputFirstHiddenLayer = outputFirstHiddenLayer;
+                final int fnlOutputHiddenLayerIndex = outputHiddenLayerIndex;
                 tasks.add(new Callable<MLData>() {
                     @Override
                     public MLData call() throws Exception {
                         MLData finalOutput = network.compute(networkPair.getInput());
 
-                        if(!isOutputFirstHiddenLayer) {
+                        if(fnlOutputHiddenLayerIndex == 0) {
                             return finalOutput;
                         }
 
-                        // append output values in first hidden layer
-                        double[] firstHiddenOutputs = network.getLayerOutput(1);
-                        double[] outputs = new double[finalOutput.getData().length + firstHiddenOutputs.length];
+                        // append output values in hidden layer
+                        double[] hiddenOutputs = network.getLayerOutput(fnlOutputHiddenLayerIndex);
+                        double[] outputs = new double[finalOutput.getData().length + hiddenOutputs.length];
 
                         System.arraycopy(finalOutput.getData(), 0, outputs, 0, finalOutput.getData().length);
-                        System.arraycopy(firstHiddenOutputs, 0, outputs, finalOutput.getData().length,
-                                firstHiddenOutputs.length);
+                        System.arraycopy(hiddenOutputs, 0, outputs, finalOutput.getData().length, hiddenOutputs.length);
                         return new BasicMLData(outputs);
                     }
                 });
@@ -285,8 +288,7 @@ public class Scorer {
                 return null;
             }
 
-            if(this.outputFirstHiddenLayer) {
-
+            if(this.outputHiddenLayerIndex != 0) {
                 hiddenOutputs = new TreeMap<String, Double>(new Comparator<String>() {
 
                     @Override
@@ -302,7 +304,15 @@ public class Scorer {
                         } else {
                             int hidden1Index = Integer.parseInt(split1[2]);
                             int hidden2Index = Integer.parseInt(split2[2]);
-                            return Integer.valueOf(hidden1Index).compareTo(Integer.valueOf(hidden2Index));
+                            if(hidden1Index > hidden2Index) {
+                                return 1;
+                            } else if(hidden1Index < hidden2Index) {
+                                return -1;
+                            } else {
+                                int hidden11Index = Integer.parseInt(split1[3]);
+                                int hidden22Index = Integer.parseInt(split2[3]);
+                                return Integer.valueOf(hidden11Index).compareTo(Integer.valueOf(hidden22Index));
+                            }
                         }
                     }
                 });
@@ -314,9 +324,10 @@ public class Scorer {
                 if(model instanceof BasicNetwork || model instanceof NNModel) {
                     if(modelConfig != null && modelConfig.isRegression()) {
                         scores.add(toScore(score.getData(0)));
-                        if(this.outputFirstHiddenLayer) {
+                        if(this.outputHiddenLayerIndex != 0) {
                             for(int j = 1; j < score.getData().length; j++) {
-                                hiddenOutputs.put("model_" + i + "_" + (j - 1), score.getData()[j]);
+                                hiddenOutputs.put("model_" + i + "_" + this.outputHiddenLayerIndex + "_" + (j - 1),
+                                        score.getData()[j]);
                             }
                         }
                     } else if(modelConfig != null && modelConfig.isClassification()
