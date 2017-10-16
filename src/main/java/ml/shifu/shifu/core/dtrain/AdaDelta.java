@@ -17,7 +17,7 @@ public class AdaDelta {
 	private static final Logger LOGGER = LoggerFactory.getLogger(AdaDelta.class);
 
 	private static final double DEFAULT_DECAY = 0.95D;
-	private static final double DEFAULT_EPSILON = 1.0D;
+	private static final double DEFAULT_EPSILON = Math.pow(10.0D, -8D);
 
 	private final double decay;
 	private final double epsilon;
@@ -83,6 +83,11 @@ public class AdaDelta {
 			prevSquaredAverageDeltas = newEmptyArray(length);
 		}
 
+		if (length != prevGradients.length || length != prevSquaredAverageDeltas.length) {
+			throw new IllegalArgumentException("Cannot adjust grdients' size during runtime: " + prevGradients.length
+					+ " -> " + length + " or " + prevSquaredAverageDeltas.length + " -> " + length);
+		}
+
 		/* Calculate current deltas. */
 		double[] rmsGradients = new double[length];
 		double[] prevRMSDeltas = new double[length];
@@ -97,9 +102,9 @@ public class AdaDelta {
 					+ (1 - decay) * Math.pow(currDeltas[i], 2);
 
 			if (LOGGER.isDebugEnabled()) {
-				LOGGER.debug("Calculate current deltas: index=" + i + "&rmsGradient=" + rmsGradients[i]
-						+ "&prevRMSDelta=" + prevRMSDeltas[i] + "&currDelta=" + currDeltas[i]
-						+ "&prevSquaredAverageDelta=" + prevSquaredAverageDeltas[i]);
+				LOGGER.debug("Calculate current deltas: index=" + i + "&currGradient=" + currGradients[i]
+						+ "&rmsGradient=" + rmsGradients[i] + "&prevRMSDelta=" + prevRMSDeltas[i] + "&currDelta="
+						+ currDeltas[i] + "&prevSquaredAverageDelta=" + prevSquaredAverageDeltas[i]);
 			}
 		}
 

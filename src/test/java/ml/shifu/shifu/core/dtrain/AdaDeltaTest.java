@@ -17,7 +17,7 @@ public class AdaDeltaTest {
 
 	@Test
 	public void testCalculateDeltas() {
-		AdaDelta delta = new AdaDelta();
+		AdaDelta delta = new AdaDelta(0.95D, 1.0D);
 
 		/* ----- round 1 ----- */
 		double[] gradients = new double[] { 0.0D };
