@@ -3,8 +3,6 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
-import java.util.Arrays;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,15 +10,12 @@ import org.slf4j.LoggerFactory;
  * @author xchen7
  *
  */
-public class AdaDelta {
+public class AdaDelta extends AbstractAdaptiveLearningRate {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(AdaDelta.class);
 
 	private static final double DEFAULT_DECAY = 0.95D;
 	private static final double DEFAULT_EPSILON = Math.pow(10.0D, -8D);
-
-	private final double decay;
-	private final double epsilon;
 
 	private double[] prevSquaredAverageDeltas;
 	private double[] prevGradients;
@@ -29,40 +24,22 @@ public class AdaDelta {
 	 * Default constructor.
 	 */
 	public AdaDelta() {
-		decay = DEFAULT_DECAY;
-		epsilon = DEFAULT_EPSILON;
+		this(DEFAULT_DECAY, DEFAULT_EPSILON);
 	}
 
 	/**
 	 * Constructor.
 	 * 
-	 * @param decay
-	 *            the decay which should be (0, 1)
-	 * @param epsilon
-	 *            the epsilon which should be > 0
+	 * @see {@linkplain AbstractAdaptiveLearningRate#AbstractAdaptiveLearningRate(double, double, double)}
 	 */
 	public AdaDelta(double decay, double epsilon) {
-		if (decay <= 0 || decay >= 1) {
-			throw new IllegalArgumentException("Invalid decay: " + decay);
-		}
-		if (epsilon <= 0) {
-			throw new IllegalArgumentException("Invalid epsilon: " + epsilon);
-		}
-		this.decay = decay;
-		this.epsilon = epsilon;
-
-		if (LOGGER.isDebugEnabled()) {
-			LOGGER.debug("Initialized with decay " + decay + " and epsilon " + epsilon);
-		}
+		/*
+		 * AdaDelta doesn't need learning rate anyway give it a positive value.
+		 */
+		super(decay, epsilon, 1.0D);
 	}
 
-	/**
-	 * Calculate deltas.
-	 * 
-	 * @param currGradients
-	 *            the current gradients
-	 * @return the deltas in array
-	 */
+	@Override
 	public double[] calculateDeltas(double[] currGradients) {
 		if (null == currGradients || 0 == currGradients.length) {
 			throw new IllegalArgumentException("Current gradients are null or empty: " + currGradients);
@@ -114,31 +91,4 @@ public class AdaDelta {
 		return currDeltas;
 	}
 
-	/**
-	 * Calculate RMS gradient.
-	 * 
-	 * @param prevGradient
-	 *            the previous gradient
-	 * @param currGradient
-	 *            the current gradient
-	 * @return the RMS gradient
-	 */
-	private double calculateRMSGradient(double prevGradient, double currGradient) {
-		double squaredAverage = decay * Math.pow(prevGradient, 2) + (1 - decay) * Math.pow(currGradient, 2);
-		double rmsGradient = Math.sqrt(squaredAverage + epsilon);
-		return rmsGradient;
-	}
-
-	/**
-	 * New empty double array with all the elements set to 0.
-	 * 
-	 * @param length
-	 *            the array length
-	 * @return the empty double array
-	 */
-	private static double[] newEmptyArray(int length) {
-		double[] array = new double[length];
-		Arrays.fill(array, 0.0D);
-		return array;
-	}
 }
