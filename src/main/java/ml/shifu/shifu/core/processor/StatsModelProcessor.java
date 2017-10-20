@@ -470,6 +470,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
      *             any IOException to write correlation value to csv file.
      */
     private void computeCorrValue(SortedMap<Integer, CorrelationWritable> corrMap) throws IOException {
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
         String localCorrelationCsv = super.pathFinder.getLocalCorrelationCsvPath();
         ShifuFileUtils.createFileIfNotExists(localCorrelationCsv, SourceType.LOCAL);
         BufferedWriter writer = null;
@@ -483,7 +484,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
             for(Entry<Integer, CorrelationWritable> entry: corrMap.entrySet()) {
                 ColumnConfig xColumnConfig = this.columnConfigList.get(entry.getKey());
-                if(xColumnConfig.getColumnFlag() == ColumnFlag.Meta) {
+                if(xColumnConfig.getColumnFlag() == ColumnFlag.Meta ||
+                        ( hasCandidates && !ColumnFlag.Candidate.equals(xColumnConfig.getColumnFlag()))) {
                     continue;
                 }
                 CorrelationWritable xCw = corrMap.get(entry.getKey());

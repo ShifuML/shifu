@@ -143,6 +143,7 @@ public class BasicUpdater {
         switch(step) {
             case INIT:
             case STATS:
+            case NORMALIZE:
                 updater = new BasicUpdater(modelConfig);
                 break;
             case VARSELECT:

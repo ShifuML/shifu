@@ -574,7 +574,7 @@ public class ShifuCLI {
 
         Option opt_list = OptionBuilder.hasArg(false).create(LIST);
         Option opt_delete = OptionBuilder.hasArg().create(DELETE);
-        Option opt_score = OptionBuilder.hasArg().create(SCORE);
+        Option opt_score = OptionBuilder.hasOptionalArg().create(SCORE);
         Option opt_confmat = OptionBuilder.hasArg().create(CONFMAT);
         Option opt_perf = OptionBuilder.hasArg().create(PERF);
         Option opt_norm = OptionBuilder.hasArg().create(NORM);
