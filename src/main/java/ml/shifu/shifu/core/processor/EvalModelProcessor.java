@@ -299,9 +299,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runScore(EvalConfig config) throws IOException {
         // create evalset home directory firstly in local file system
-        PathFinder pathFinder = new PathFinder(modelConfig);
-        String evalSetPath = pathFinder.getEvalSetPath(config, SourceType.LOCAL);
-        FileUtils.forceMkdir(new File(evalSetPath));
+        // PathFinder pathFinder = new PathFinder(modelConfig);
+        // String evalSetPath = pathFinder.getEvalSetPath(config, SourceType.LOCAL);
+        // FileUtils.forceMkdir(new File(evalSetPath));
         // syncDataToHdfs(config.getDataSet().getSource());
 
         switch(modelConfig.getBasic().getRunMode()) {
@@ -781,8 +781,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         // create evalset home directory firstly in local file system
         synchronized(this) {
             validateEvalColumnConfig(evalConfig);
-            String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
-            FileUtils.forceMkdir(new File(evalSetPath));
+            // String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
+            // FileUtils.forceMkdir(new File(evalSetPath));
             // syncDataToHdfs(evalConfig.getDataSet().getSource());
         }
 
