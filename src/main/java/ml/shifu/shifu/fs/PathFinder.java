@@ -698,8 +698,17 @@ public class PathFinder {
      *            - score column
      * @return path of evaluation score
      */
-    public String getEvalScorePath(EvalConfig evalConfig, String metaColumn) {
-        return new Path(getEvalScorePath(evalConfig, evalConfig.getDataSet().getSource()), metaColumn).toString();
+    public String getEvalMetaScorePath(EvalConfig evalConfig, String metaColumn) {
+        SourceType sourceType = evalConfig.getDataSet().getSource();
+
+        String scoreMetaPath = getPreferPath(evalConfig.getCustomPaths(), Constants.KEY_SCORE_PATH);
+        if(StringUtils.isBlank(scoreMetaPath)) {
+            scoreMetaPath = getEvalFilePath(evalConfig.getName(), Constants.EVAL_META_SCORE, sourceType);
+        } else {
+            scoreMetaPath = new Path(scoreMetaPath, Constants.EVAL_META_SCORE).toString();
+        }
+
+        return new Path(scoreMetaPath, metaColumn).toString();
     }
 
     /**
@@ -754,13 +763,21 @@ public class PathFinder {
         return new Path(scorePath, Constants.PIG_HEADER).toString();
     }
 
-    public String getEvalPerformancePath(EvalConfig evalConfig, String metaColumn) {
+    /**
+     * Get the path of evaluation set performance for EvalMetaScore column
+     * @param evalConfig
+     * @param metaColumn
+     * @return
+     */
+    public String getEvalMetaPerformancePath(EvalConfig evalConfig, String metaColumn) {
         String evalPerformancePath = getPreferPath(evalConfig.getCustomPaths(), Constants.KEY_PERFORMANCE_PATH);
+
         if(StringUtils.isBlank(evalPerformancePath)) {
-            return getEvalFilePath(evalConfig.getName(), metaColumn + Path.SEPARATOR + Constants.EVAL_PERFORMANCE,
-                    evalConfig.getDataSet().getSource());
+            String evalMetaPerfPath = getEvalFilePath(evalConfig.getName(),
+                    Constants.EVAL_META_SCORE, evalConfig.getDataSet().getSource());
+            return new Path(evalMetaPerfPath, metaColumn + Constants.EVAL_PERFORMANCE).toString();
         } else {
-            return new Path(evalPerformancePath, metaColumn + Path.SEPARATOR + Constants.EVAL_PERFORMANCE).toString();
+            return new Path(evalPerformancePath, metaColumn + Constants.EVAL_PERFORMANCE).toString();
         }
     }
 
