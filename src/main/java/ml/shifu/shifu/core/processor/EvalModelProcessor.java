@@ -299,9 +299,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runScore(EvalConfig config) throws IOException {
         // create evalset home directory firstly in local file system
-        PathFinder pathFinder = new PathFinder(modelConfig);
-        String evalSetPath = pathFinder.getEvalSetPath(config, SourceType.LOCAL);
-        FileUtils.forceMkdir(new File(evalSetPath));
+        // PathFinder pathFinder = new PathFinder(modelConfig);
+        // String evalSetPath = pathFinder.getEvalSetPath(config, SourceType.LOCAL);
+        // FileUtils.forceMkdir(new File(evalSetPath));
         // syncDataToHdfs(config.getDataSet().getSource());
 
         switch(modelConfig.getBasic().getRunMode()) {
@@ -781,8 +781,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         // create evalset home directory firstly in local file system
         synchronized(this) {
             validateEvalColumnConfig(evalConfig);
-            String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
-            FileUtils.forceMkdir(new File(evalSetPath));
+            // String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
+            // FileUtils.forceMkdir(new File(evalSetPath));
             // syncDataToHdfs(evalConfig.getDataSet().getSource());
         }
 
@@ -850,8 +850,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             ScoreStatus newScoreStatus = runDistMetaScore(evalConfig, metaScoreColumn);
 
             PerformanceResult championModelPerformance = runConfusionMatrix(evalConfig, newScoreStatus,
-                    pathFinder.getEvalScorePath(evalConfig, metaScoreColumn),
-                    pathFinder.getEvalPerformancePath(evalConfig, metaScoreColumn), false, false, 0, 1, 2);
+                    pathFinder.getEvalMetaScorePath(evalConfig, metaScoreColumn),
+                    pathFinder.getEvalMetaPerformancePath(evalConfig, metaScoreColumn), false, false, 0, 1, 2);
             prList.add(championModelPerformance);
         }
 
@@ -929,14 +929,14 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         SourceType sourceType = evalConfig.getDataSet().getSource();
 
         // clean up output directories
-        ShifuFileUtils.deleteFile(pathFinder.getEvalScorePath(evalConfig, metaScore), sourceType);
+        ShifuFileUtils.deleteFile(pathFinder.getEvalMetaScorePath(evalConfig, metaScore), sourceType);
 
         // prepare special parameters and execute pig
         Map<String, String> paramsMap = new HashMap<String, String>();
 
         paramsMap.put(Constants.SOURCE_TYPE, sourceType.toString());
         paramsMap.put("pathEvalRawData", evalConfig.getDataSet().getDataPath());
-        paramsMap.put("pathSortScoreData", pathFinder.getEvalScorePath(evalConfig, metaScore));
+        paramsMap.put("pathSortScoreData", pathFinder.getEvalMetaScorePath(evalConfig, metaScore));
         paramsMap.put("eval_set_name", evalConfig.getName());
         paramsMap.put("delimiter", evalConfig.getDataSet().getDataDelimiter());
         paramsMap.put("column_name", metaScore);
