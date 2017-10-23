@@ -60,6 +60,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
     private static final String SHIFU_NN_OUTPUT_FIRST_HIDDENLAYER = "shifu.nn.output.first.hiddenlayer";
 
+    private static final String SHIFU_NN_OUTPUT_HIDDENLAYER_INDEX = "shifu.nn.output.hiddenlayer.index";
+
     private static final String SCHEMA_PREFIX = "shifu::";
 
     private EvalConfig evalConfig;
@@ -82,6 +84,11 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
      * For neural network, if output the first
      */
     private boolean outputFirstHiddenLayer = false;
+
+    /**
+     * Hidden layer output index
+     */
+    private int outputHiddenLayerIndex = 0;
 
     /**
      * Helper fields for #outputFirstHiddenLayer
@@ -134,7 +141,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
         // only check if output first hidden layer in regression and NN
         if(modelConfig.isRegression() && Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())) {
-            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
+            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
+                    .getGridConfigFileContent());
             Map<String, Object> validParams = this.modelConfig.getTrain().getParams();
             if(gs.hasHyperParam()) {
                 validParams = gs.getParams(0);
@@ -147,10 +155,28 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                     this.outputFirstHiddenLayer = Boolean.TRUE.toString().equalsIgnoreCase(
                             UDFContext.getUDFContext().getJobConf()
                                     .get(SHIFU_NN_OUTPUT_FIRST_HIDDENLAYER, Boolean.FALSE.toString()));
+                    this.outputHiddenLayerIndex = UDFContext.getUDFContext().getJobConf()
+                            .getInt(SHIFU_NN_OUTPUT_HIDDENLAYER_INDEX, 0);
                 } else {
                     this.outputFirstHiddenLayer = Boolean.TRUE.toString().equalsIgnoreCase(
                             Environment.getProperty(SHIFU_NN_OUTPUT_FIRST_HIDDENLAYER, Boolean.FALSE.toString()));
+                    this.outputHiddenLayerIndex = Environment.getInt(SHIFU_NN_OUTPUT_HIDDENLAYER_INDEX, 0);
                 }
+
+                if(outputFirstHiddenLayer) {
+                    this.outputHiddenLayerIndex = 1;
+                }
+
+                if(this.outputHiddenLayerIndex == 1) {
+                    this.outputFirstHiddenLayer = true;
+                }
+
+                if(this.outputHiddenLayerIndex < -1 || this.outputHiddenLayerIndex > this.hiddenNodeList.size()) {
+                    throw new IllegalArgumentException("outputHiddenLayerIndex should in [-1, hidden layers]");
+                }
+
+                // TODO validation
+                log.info("DEBUG: outputHiddenLayerIndex is " + outputHiddenLayerIndex);
             }
         }
     }
@@ -162,7 +188,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig, evalConfig.getDataSet()
                     .getSource(), evalConfig.getGbtConvertToProb());
             this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
-                    .getDataDelimiter(), models, this.outputFirstHiddenLayer);
+                    .getDataDelimiter(), models, this.outputHiddenLayerIndex);
 
             List<ModelSpec> subModels = CommonUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
                     evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb());
@@ -230,7 +256,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         if(modelConfig.isRegression()) {
             if(CollectionUtils.isNotEmpty(cs.getScores())) {
                 appendModelScore(tuple, cs, true);
-                if(this.outputFirstHiddenLayer) {
+                if(this.outputHiddenLayerIndex != 0) {
                     appendFirstHiddenOutputScore(tuple, cs.getHiddenLayerScores(), true);
                 }
             }
@@ -438,11 +464,12 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                     addModelSchema(tupleSchema, this.modelCnt, "");
                 }
 
-                if(this.outputFirstHiddenLayer) {
+                if(this.outputHiddenLayerIndex != 0) {
                     for(int i = 0; i < this.modelCnt; i++) {
                         // +1 to add bias neuron
-                        for(int j = 0; j < (hiddenNodeList.get(0) + 1); j++) {
-                            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "model_" + i + "_" + j, DataType.DOUBLE));
+                        for(int j = 0; j < (hiddenNodeList.get(outputHiddenLayerIndex - 1) + 1); j++) {
+                            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "model_" + i + "_" + outputHiddenLayerIndex
+                                    + "_" + j, DataType.DOUBLE));
                         }
                     }
                 }
