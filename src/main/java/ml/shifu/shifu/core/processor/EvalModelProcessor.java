@@ -850,8 +850,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             ScoreStatus newScoreStatus = runDistMetaScore(evalConfig, metaScoreColumn);
 
             PerformanceResult championModelPerformance = runConfusionMatrix(evalConfig, newScoreStatus,
-                    pathFinder.getEvalScorePath(evalConfig, metaScoreColumn),
-                    pathFinder.getEvalPerformancePath(evalConfig, metaScoreColumn), false, false, 0, 1, 2);
+                    pathFinder.getEvalMetaScorePath(evalConfig, metaScoreColumn),
+                    pathFinder.getEvalMetaPerformancePath(evalConfig, metaScoreColumn), false, false, 0, 1, 2);
             prList.add(championModelPerformance);
         }
 
@@ -929,14 +929,14 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         SourceType sourceType = evalConfig.getDataSet().getSource();
 
         // clean up output directories
-        ShifuFileUtils.deleteFile(pathFinder.getEvalScorePath(evalConfig, metaScore), sourceType);
+        ShifuFileUtils.deleteFile(pathFinder.getEvalMetaScorePath(evalConfig, metaScore), sourceType);
 
         // prepare special parameters and execute pig
         Map<String, String> paramsMap = new HashMap<String, String>();
 
         paramsMap.put(Constants.SOURCE_TYPE, sourceType.toString());
         paramsMap.put("pathEvalRawData", evalConfig.getDataSet().getDataPath());
-        paramsMap.put("pathSortScoreData", pathFinder.getEvalScorePath(evalConfig, metaScore));
+        paramsMap.put("pathSortScoreData", pathFinder.getEvalMetaScorePath(evalConfig, metaScore));
         paramsMap.put("eval_set_name", evalConfig.getName());
         paramsMap.put("delimiter", evalConfig.getDataSet().getDataDelimiter());
         paramsMap.put("column_name", metaScore);
