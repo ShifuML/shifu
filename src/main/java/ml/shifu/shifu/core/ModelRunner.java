@@ -60,17 +60,17 @@ public class ModelRunner {
 
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
             String dataDelimiter, List<BasicML> models) {
-        this(modelConfig, columnConfigList, header, dataDelimiter, models, false);
+        this(modelConfig, columnConfigList, header, dataDelimiter, models, 0);
     }
 
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
-            String dataDelimiter, List<BasicML> models, boolean outputFirstHiddenLayer) {
+            String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex) {
         this.modelConfig = modelConfig;
         this.columnConfigList = columnConfigList;
         this.header = header;
         this.dataDelimiter = dataDelimiter;
         this.scorer = new Scorer(models, columnConfigList, modelConfig.getAlgorithm(), modelConfig,
-                modelConfig.getNormalizeStdDevCutOff(), outputFirstHiddenLayer);
+                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex);
     }
 
     /**

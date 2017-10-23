@@ -54,7 +54,7 @@ public class MapReduceShuffle {
         this.pathFinder = new PathFinder(this.modelConfig);
     }
 
-    public void run(String srcDataPath) throws IOException, ClassNotFoundException, InterruptedException {
+    public void run(String rawNormPath) throws IOException, ClassNotFoundException, InterruptedException {
         RawSourceData.SourceType source = this.modelConfig.getDataSet().getSource();
         Configuration conf = new Configuration();
 
@@ -85,7 +85,7 @@ public class MapReduceShuffle {
             }
         }
 
-        int shuffleSize = getDataShuffleSize(srcDataPath, source);
+        int shuffleSize = getDataShuffleSize(rawNormPath, source);
         log.info("Try to shuffle data into - {} parts.", shuffleSize);
         conf.set(Constants.SHIFU_NORM_SHUFFLE_SIZE, Integer.toString(shuffleSize));
 
@@ -103,7 +103,7 @@ public class MapReduceShuffle {
         job.setOutputValueClass(Text.class);
         job.setNumReduceTasks(shuffleSize);
 
-        FileInputFormat.setInputPaths(job, srcDataPath);
+        FileInputFormat.setInputPaths(job, rawNormPath);
         FileOutputFormat.setOutputPath(job, new Path(this.pathFinder.getShuffleDataPath()));
 
         // clean output firstly
@@ -111,8 +111,8 @@ public class MapReduceShuffle {
 
         // submit job
         if(job.waitForCompletion(true)) {
-            // TODO copy or move ??
-            ShifuFileUtils.copy(this.pathFinder.getShuffleDataPath(), srcDataPath, source);
+            ShifuFileUtils.deleteFile(rawNormPath, source);
+            ShifuFileUtils.move(this.pathFinder.getShuffleDataPath(), rawNormPath, source);
         } else {
             throw new RuntimeException("MapReduce Shuffle Computing Job Failed.");
         }

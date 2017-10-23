@@ -15,7 +15,6 @@
  */
 package ml.shifu.shifu.core;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -28,7 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * TODO
+ * Util normalization class which is used for any kind of transformation.
  */
 public class Normalizer {
 
@@ -176,7 +175,7 @@ public class Normalizer {
             case MaxMin:
                 return Arrays.asList(getMaxMinScore(config, raw));
             default:
-                return Arrays.asList(new Double[]{0.0});
+                return Arrays.asList(new Double[] { 0.0 });
         }
     }
 
@@ -194,8 +193,8 @@ public class Normalizer {
             // TODO, doesn't support
         } else {
             Double value = Double.parseDouble(raw);
-            return new Double[]{(value - config.getColumnStats().getMin())
-                    / (config.getColumnStats().getMax() - config.getColumnStats().getMin())};
+            return new Double[] { (value - config.getColumnStats().getMin())
+                    / (config.getColumnStats().getMax() - config.getColumnStats().getMin()) };
         }
         return null;
     }
@@ -220,8 +219,8 @@ public class Normalizer {
      *            missing categorical value norm type
      * @return normalized value. If normType parameter is invalid, then the ZSCALE will be used as default.
      */
-    public static List<Double> normalize(ColumnConfig config, String raw, Double cutoff, ModelNormalizeConf.NormType type,
-            CategoryMissingNormType categoryMissingNormType) {
+    public static List<Double> normalize(ColumnConfig config, String raw, Double cutoff,
+            ModelNormalizeConf.NormType type, CategoryMissingNormType categoryMissingNormType) {
         switch(type) {
             case WOE:
                 return woeNormalize(config, raw, false);
@@ -239,6 +238,8 @@ public class Normalizer {
                 return woeZScoreNormalize(config, raw, cutoff, true);
             case ZSCALE_ONEHOT:
                 return woeOneHotNormalize(config, raw, cutoff, categoryMissingNormType);
+            case DISCRETE_ZSCALE:
+                return discreteZScoreNormalize(config, raw, cutoff, categoryMissingNormType);
             case OLD_ZSCALE:
             case OLD_ZSCORE:
             case ZSCALE:
@@ -249,15 +250,15 @@ public class Normalizer {
     }
 
     private static List<Double> woeOneHotNormalize(ColumnConfig config, String raw, Double cutoff,
-                                                   CategoryMissingNormType categoryMissingNormType) {
-        if ( config.isNumerical() ) {
+            CategoryMissingNormType categoryMissingNormType) {
+        if(config.isNumerical()) {
             return zScoreNormalize(config, raw, cutoff, categoryMissingNormType);
         } else {
             Double[] normVals = new Double[config.getBinCategory().size() + 1];
             Arrays.fill(normVals, 0.0d);
 
             int binNum = CommonUtils.getBinNum(config, raw);
-            if ( binNum < 0 ) {
+            if(binNum < 0) {
                 binNum = config.getBinCategory().size();
             }
             normVals[binNum] = 1.0d;
@@ -283,7 +284,8 @@ public class Normalizer {
      *            normalization type of ModelNormalizeConf.NormType
      * @return normalized value. If normType parameter is invalid, then the ZSCALE will be used as default.
      */
-    public static List<Double> normalize(ColumnConfig config, String raw, Double cutoff, ModelNormalizeConf.NormType type) {
+    public static List<Double> normalize(ColumnConfig config, String raw, Double cutoff,
+            ModelNormalizeConf.NormType type) {
         return normalize(config, raw, cutoff, type, CategoryMissingNormType.POSRATE);
     }
 
@@ -304,6 +306,44 @@ public class Normalizer {
             CategoryMissingNormType categoryMissingNormType) {
         double stdDevCutOff = checkCutOff(cutoff);
         double value = parseRawValue(config, raw, categoryMissingNormType);
+        return Arrays.asList(computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff));
+    }
+
+    /**
+     * Compute the zscore value after do discreting in each bin for numerical value, for categorical feature, use
+     * positive rate.
+     * 
+     * @param config
+     *            ColumnConfig info
+     * @param raw
+     *            input column value
+     * @param cutoff
+     *            standard deviation cut off
+     * @param categoryMissingNormType
+     *            missing categorical value norm type
+     * @return normalized value for ZScore method.
+     */
+    private static List<Double> discreteZScoreNormalize(ColumnConfig config, String raw, Double cutoff,
+            CategoryMissingNormType categoryMissingNormType) {
+        double stdDevCutOff = checkCutOff(cutoff);
+        double value = 0;
+        if(config.isCategorical()) {
+            value = parseRawValue(config, raw, categoryMissingNormType);
+        } else {
+            int binIndex = CommonUtils.getBinNum(config, raw);
+            if(binIndex < 0 || binIndex >= config.getBinBoundary().size()) {
+                // missing value, use mean value, after zscore, it is 0
+                value = config.getMean();
+            } else {
+                List<Double> binBoundaries = config.getBinBoundary();
+                if(binIndex == 0) {
+                    // the first bin, use min value
+                    value = config.getColumnStats().getMin();
+                } else {
+                    value = binBoundaries.get(binIndex);
+                }
+            }
+        }
         return Arrays.asList(computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff));
     }
 
@@ -428,9 +468,9 @@ public class Normalizer {
         }
         if(binIndex == -1) {
             // The last bin in woeBins is the miss value bin.
-            return Arrays.asList(new Double[]{woeBins.get(woeBins.size() - 1)});
+            return Arrays.asList(new Double[] { woeBins.get(woeBins.size() - 1) });
         } else {
-            return Arrays.asList(new Double[]{woeBins.get(binIndex)});
+            return Arrays.asList(new Double[] { woeBins.get(binIndex) });
         }
     }
 
@@ -448,7 +488,8 @@ public class Normalizer {
      *            if use weighted woe
      * @return normalized value for woe zscore method.
      */
-    private static List<Double> woeZScoreNormalize(ColumnConfig config, String raw, Double cutoff, boolean isWeightedNorm) {
+    private static List<Double> woeZScoreNormalize(ColumnConfig config, String raw, Double cutoff,
+            boolean isWeightedNorm) {
         double stdDevCutOff = checkCutOff(cutoff);
         double woe = woeNormalize(config, raw, isWeightedNorm).get(0);
         // TODO cache such computing to avoid computing each time
@@ -563,9 +604,9 @@ public class Normalizer {
         }
 
         if(stdDev > 0.00001) {
-            return new Double[]{(var - mean) / stdDev};
+            return new Double[] { (var - mean) / stdDev };
         } else {
-            return new Double[]{0.0};
+            return new Double[] { 0.0 };
         }
     }
 

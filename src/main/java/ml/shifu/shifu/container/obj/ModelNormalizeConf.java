@@ -34,7 +34,11 @@ public class ModelNormalizeConf {
         OLD_ZSCORE, OLD_ZSCALE, // the same one for user friendly
         ZSCORE, ZSCALE, // the same one for user friendly
         WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID, WOE_ZSCORE, WOE_ZSCALE, WEIGHT_WOE_ZSCORE, WEIGHT_WOE_ZSCALE,
-        ZSCALE_ONEHOT;
+        ZSCALE_ONEHOT,
+        DISCRETE_ZSCORE, DISCRETE_ZSCALE // for numerical feature, use low bondwary in each bin, the first bin use min 
+                        // value, missing value use raw mean value, then do zscale by raw mean and raw std-dev;
+                        // for categorical feature, pos rate is used.
+        ;
 
         public boolean isWoe() {
             return this == WOE || this == WEIGHT_WOE || this == WOE_ZSCORE || this == WOE_ZSCALE
@@ -43,7 +47,7 @@ public class ModelNormalizeConf {
     }
 
     /**
-     * Different correlation computing methods. TODO move to stats?
+     * Different correlation computing methods.
      * 
      * @author Zhang David (pengzhang@paypal.com)
      */

@@ -424,7 +424,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 Environment.getProperty(Constants.SHIFU_DTRAIN_PARALLEL, SHIFU_DEFAULT_DTRAIN_PARALLEL)).booleanValue();
         GuaguaMapReduceClient guaguaClient;
 
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                this.columnConfigList);
         int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         int candidateCount = inputOutputIndex[2];
 
@@ -910,7 +911,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         BasicML basicML = CommonUtils.loadModel(this.modelConfig, modelPath, fileSystem);
         BasicFloatNetwork model = (BasicFloatNetwork) CommonUtils.getBasicNetwork(basicML);
 
-        int[] outputCandidateCounts = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), getColumnConfigList());
+        int[] outputCandidateCounts = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                getColumnConfigList());
         int inputs = outputCandidateCounts[0] == 0 ? outputCandidateCounts[2] : outputCandidateCounts[0];
         boolean isInputOutConsistent = model.getInputCount() == inputs
                 && model.getOutputCount() == outputCandidateCounts[1];
@@ -1061,7 +1063,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 NNOutput.class.getName()));
     }
 
-    private void prepareCommonParams(boolean isGsMode, final List<String> args, final SourceType sourceType) throws IOException {
+    private void prepareCommonParams(boolean isGsMode, final List<String> args, final SourceType sourceType)
+            throws IOException {
         String alg = super.getModelConfig().getTrain().getAlgorithm();
 
         args.add("-libjars");
@@ -1280,7 +1283,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // set to dynamic to save mappers, sometimes maybe OOM, users should tune guagua.split.maxCombinedSplitSize
         // in shifuconfig; by default it is 200M, consider in some cases user selects only a half of features, this
         // number should be 400m
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                this.columnConfigList);
         int candidateCount = inputOutputIndex[2];
         // 1. set benchmark
         long maxCombineSize = CommonUtils.isTreeModel(modelConfig.getAlgorithm()) ? 209715200L : 168435456L;

@@ -15,11 +15,13 @@
  */
 package ml.shifu.shifu.actor;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
-import akka.actor.UntypedActor;
-import akka.actor.UntypedActorFactory;
-import akka.routing.RoundRobinRouter;
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+
 import ml.shifu.shifu.actor.worker.DataLoadWorker;
 import ml.shifu.shifu.actor.worker.DataPrepareWorker;
 import ml.shifu.shifu.actor.worker.PostTrainWorker;
@@ -31,18 +33,17 @@ import ml.shifu.shifu.message.AkkaActorInputMessage;
 import ml.shifu.shifu.message.ExceptionMessage;
 import ml.shifu.shifu.message.ScanEvalDataMessage;
 import ml.shifu.shifu.message.StatsResultMessage;
-import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.JSONUtils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
+import akka.actor.ActorRef;
+import akka.actor.Props;
+import akka.actor.UntypedActor;
+import akka.actor.UntypedActorFactory;
+import akka.routing.RoundRobinRouter;
 
 /**
  * PostTrainActor class do the post train for models. Post-Train is used the
