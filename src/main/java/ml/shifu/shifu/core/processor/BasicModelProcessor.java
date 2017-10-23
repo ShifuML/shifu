@@ -55,6 +55,7 @@ import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
@@ -278,8 +279,15 @@ public class BasicModelProcessor {
      */
     protected boolean syncDataToHdfs(List<EvalConfig> evalConfigList) throws IOException{
         if ( CollectionUtils.isNotEmpty(evalConfigList) ) {
+            // create local eval folder
             for ( EvalConfig evalConfig : evalConfigList ) {
-                if ( SourceType.HDFS.equals(evalConfig.getDataSet().getSource()) ) {
+                String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
+                FileUtils.forceMkdir(new File(evalSetPath));
+            }
+
+            // sync files to HDFS
+            for ( EvalConfig evalConfig : evalConfigList ) {
+                if (SourceType.HDFS.equals(evalConfig.getDataSet().getSource())) {
                     return syncDataToHdfs(evalConfig.getDataSet().getSource());
                 }
             }

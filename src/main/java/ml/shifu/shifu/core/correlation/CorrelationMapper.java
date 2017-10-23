@@ -85,6 +85,8 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
      */
     private boolean isComputeAll = false;
 
+    private boolean hasCandidates = false;
+
     // cache tags in set for search
     protected Set<String> posTagSet;
     protected Set<String> negTagSet;
@@ -99,6 +101,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                     context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG), sourceType);
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -175,7 +178,8 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
 
         for(int i = 0; i < this.columnConfigList.size(); i++) {
             ColumnConfig columnConfig = this.columnConfigList.get(i);
-            if(columnConfig.getColumnFlag() == ColumnFlag.Meta) {
+            if(columnConfig.getColumnFlag() == ColumnFlag.Meta ||
+                    ( this.hasCandidates && !ColumnFlag.Candidate.equals(columnConfig.getColumnFlag())) ) {
                 continue;
             }
             CorrelationWritable cw = CorrelationMultithreadedMapper.finalCorrelationMap.get(i);
