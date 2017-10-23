@@ -104,6 +104,7 @@ public interface Constants {
     public static final String EVAL_DIR = "evals";
     public static final String EVAL_NORMALIZED = "EvalNormalized";
     public static final String EVAL_SCORE = "EvalScore";
+    public static final String EVAL_META_SCORE = "EvalMetaScore";
     public static final String EVAL_PERFORMANCE = "EvalPerformance.json";
     public static final String EVAL_MATRIX = "EvalConfusionMatrix";
 

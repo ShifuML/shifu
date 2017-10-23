@@ -85,6 +85,8 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
      */
     private boolean isComputeAll = false;
 
+    private boolean hasCandidates = false;
+
     /**
      * Output key cache to avoid new operation.
      */
@@ -109,6 +111,7 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
                     context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG), sourceType);
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -189,7 +192,8 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
         for(int i = 0; i < this.columnConfigList.size(); i++) {
             long start = System.currentTimeMillis();
             ColumnConfig columnConfig = this.columnConfigList.get(i);
-            if(columnConfig.getColumnFlag() == ColumnFlag.Meta) {
+            if(columnConfig.getColumnFlag() == ColumnFlag.Meta ||
+                    ( this.hasCandidates && !ColumnFlag.Candidate.equals(columnConfig.getColumnFlag()))) {
                 continue;
             }
             CorrelationWritable cw = this.correlationMap.get(i);
