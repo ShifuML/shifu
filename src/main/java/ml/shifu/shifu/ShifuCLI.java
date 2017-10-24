@@ -266,7 +266,7 @@ public class ShifuCLI {
                     // post train step
                     status = postTrainModel();
                     if(status == 0) {
-                        log.info("Do model set post-training successfully. Please configurate your eval set in ModelConfig.json and continue next step by using 'shifu eval' or 'shifu eval -new <eval set>' to create a new eval set.");
+                        log.info("Do model set post-training successfully. Please configure your eval set in ModelConfig.json and continue next step by using 'shifu eval' or 'shifu eval -new <eval set>' to create a new eval set.");
                     } else {
                         log.info("Do model post training with error, please check error message or report issue.");
                     }
@@ -292,7 +292,7 @@ public class ShifuCLI {
                     } else if(cmd.getOptionValue(MODELSET_CMD_NEW) != null) {
                         // create new eval
                         createNewEvalSet(cmd.getOptionValue(MODELSET_CMD_NEW));
-                        log.info("Create eval set successfully. You can configurate EvalConfig.json or directly run 'shifu eval -run <evalSetName>' to get performance info.");
+                        log.info("Create eval set successfully. You can configure EvalConfig.json or directly run 'shifu eval -run <evalSetName>' to get performance info.");
                     } else if(cmd.hasOption(EVAL_CMD_RUN)) {
                         runEvalSet(cmd.getOptionValue(EVAL_CMD_RUN), cmd.hasOption(TRAIN_CMD_DRY));
                         log.info("Finish run eval performance with eval set {}.", cmd.getOptionValue(EVAL_CMD_RUN));
@@ -537,7 +537,7 @@ public class ShifuCLI {
         log.info(String.format("ModelSet %s is copied successfully with ModelConfig.json in %s folder.",
                 newModelSetName, newModelSetName));
         log.info(String
-                .format("Please change your folder to %s and then configurate your ModelConfig.json or dirctly do initilization step by 'shifu init.'",
+                .format("Please change your folder to %s and then configure your ModelConfig.json or directly do initialization step by 'shifu init.'",
                         newModelSetName));
     }
 
@@ -545,7 +545,7 @@ public class ShifuCLI {
         log.info(String.format("ModelSet %s is created successfully with ModelConfig.json in %s folder.", modelName,
                 modelName));
         log.info(String
-                .format("Please change your folder to %s and then configurate your ModelConfig.json or dirctly do initilization step by 'shifu init.'",
+                .format("Please change your folder to %s and then configure your ModelConfig.json or directly do initialization step by 'shifu init.'",
                         modelName));
     }
 
@@ -565,9 +565,9 @@ public class ShifuCLI {
         Option opt_reset = OptionBuilder.hasArg(false).withDescription("Reset all variables to finalSelect = false")
                 .create(RESET);
         Option opt_correlation = OptionBuilder.hasArg(false)
-                .withDescription("Compute corrlation value for all column pairs.").create(CORRELATION);
+                .withDescription("Compute correlation value for all column pairs.").create(CORRELATION);
         Option opt_correlation_short = OptionBuilder.hasArg(false)
-                .withDescription("Compute corrlation value for all column pairs.").create("c");
+                .withDescription("Compute correlation value for all column pairs.").create("c");
         Option opt_shuffle = OptionBuilder.hasArg(false).withDescription("Shuffle data after normalization")
                 .create(SHUFFLE);
         Option opt_resume = OptionBuilder.hasArg(false).withDescription("Resume combo model training.").create(RESUME);
