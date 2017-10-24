@@ -1861,8 +1861,11 @@ public final class CommonUtils {
      * Get all available feature ids from ColumnConfig list.
      * There are two situations for this: 1) when training model, get all available features before start
      * 2) get all available features before doing variable selection
-     * @param columnConfigList - ColumnConfig list to check
-     * @param isAfterVarSelect - true for training, false for variable selection
+     * 
+     * @param columnConfigList
+     *            - ColumnConfig list to check
+     * @param isAfterVarSelect
+     *            - true for training, false for variable selection
      * @return - available feature list
      */
     public static List<Integer> getAllFeatureList(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect) {
@@ -1895,14 +1898,16 @@ public final class CommonUtils {
 
     /**
      * Check whether candidates are set or not
-     * @param columnConfigList - ColumnConfig list to check
+     * 
+     * @param columnConfigList
+     *            - ColumnConfig list to check
      * @return
-     *        - true if use set candidate columns, or false
+     *         - true if use set candidate columns, or false
      */
     public static boolean hasCandidateColumns(List<ColumnConfig> columnConfigList) {
         int candidateCnt = 0;
         for(ColumnConfig config: columnConfigList) {
-            if (ColumnConfig.ColumnFlag.Candidate.equals(config.getColumnFlag())) {
+            if(ColumnConfig.ColumnFlag.Candidate.equals(config.getColumnFlag())) {
                 candidateCnt++;
             }
         }
@@ -1915,9 +1920,9 @@ public final class CommonUtils {
         List<Double> normalizeValue = null;
         if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
             try {
-                normalizeValue = Arrays.asList(new Double[]{Double.parseDouble(val)});
+                normalizeValue = Arrays.asList(new Double[] { Double.parseDouble(val) });
             } catch (Exception e) {
-                normalizeValue = Arrays.asList(new Double[]{Normalizer.defaultMissingValue(config)});
+                normalizeValue = Arrays.asList(new Double[] { Normalizer.defaultMissingValue(config) });
             }
         } else {
             normalizeValue = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType());
@@ -2164,6 +2169,10 @@ public final class CommonUtils {
 
     /**
      * Avoid parsing times, failed parsing is set to NaN
+     * 
+     * @param valStr
+     *            param string
+     * @return double after parsing
      */
     public static double parseNumber(String valStr) {
         if(StringUtils.isBlank(valStr)) {
@@ -2417,10 +2426,13 @@ public final class CommonUtils {
      *            - Tuple of a record
      * @param header
      *            - the column names for all the input data
+     * @param segFilterSize
+     *            segment filter size
      * @return (NSColumn, value) map for the record
      * @throws ExecException
      *             - throw exception when operating tuple
      */
+
     public static Map<NSColumn, String> convertDataIntoNsMap(Tuple tuple, String[] header, int segFilterSize)
             throws ExecException {
         if(tuple == null || tuple.size() == 0 || tuple.size() != header.length) {
@@ -2452,7 +2464,7 @@ public final class CommonUtils {
     }
 
     public static boolean isGoodCandidate(ColumnConfig columnConfig, boolean hasCandidate,
-                                          boolean isBinaryClassification) {
+            boolean isBinaryClassification) {
         if(columnConfig == null) {
             return false;
         }
@@ -2462,25 +2474,26 @@ public final class CommonUtils {
         } else {
             // multiple classification
             return columnConfig.isCandidate(hasCandidate)
-                    && (columnConfig.getMean() != null && columnConfig.getStdDev() != null
-                    && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
-                    && columnConfig.getBinCategory().size() > 1)
-                    || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
-                    && columnConfig.getBinBoundary().size() > 1)));
+                    && (columnConfig.getMean() != null && columnConfig.getStdDev() != null && ((columnConfig
+                            .isCategorical() && columnConfig.getBinCategory() != null && columnConfig.getBinCategory()
+                            .size() > 1) || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null && columnConfig
+                            .getBinBoundary().size() > 1)));
         }
     }
 
-    /*public static boolean isGoodCandidate(ColumnConfig columnConfig) {
-        if(columnConfig == null) {
-            return false;
-        }
-        return columnConfig.isCandidate()
-                && (columnConfig.getKs() != null && columnConfig.getKs() > 0 && columnConfig.getIv() != null
-                        && columnConfig.getIv() > 0 && columnConfig.getMean() != null
-                        && columnConfig.getStdDev() != null && ((columnConfig.isCategorical()
-                        && columnConfig.getBinCategory() != null && columnConfig.getBinCategory().size() > 1) || (columnConfig
-                        .isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
-    }*/
+    /*
+     * public static boolean isGoodCandidate(ColumnConfig columnConfig) {
+     * if(columnConfig == null) {
+     * return false;
+     * }
+     * return columnConfig.isCandidate()
+     * && (columnConfig.getKs() != null && columnConfig.getKs() > 0 && columnConfig.getIv() != null
+     * && columnConfig.getIv() > 0 && columnConfig.getMean() != null
+     * && columnConfig.getStdDev() != null && ((columnConfig.isCategorical()
+     * && columnConfig.getBinCategory() != null && columnConfig.getBinCategory().size() > 1) || (columnConfig
+     * .isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
+     * }
+     */
 
     public static boolean isGoodCandidate(ColumnConfig columnConfig, boolean hasCandidate) {
         if(columnConfig == null) {
@@ -2488,13 +2501,11 @@ public final class CommonUtils {
         }
 
         return columnConfig.isCandidate(hasCandidate)
-                && (columnConfig.getKs() != null && columnConfig.getKs() > 0
-                && columnConfig.getIv() != null && columnConfig.getIv() > 0
-                && columnConfig.getMean() != null && columnConfig.getStdDev() != null
-                && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
-                && columnConfig.getBinCategory().size() > 1)
-                || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
-                && columnConfig.getBinBoundary().size() > 1)));
+                && (columnConfig.getKs() != null && columnConfig.getKs() > 0 && columnConfig.getIv() != null
+                        && columnConfig.getIv() > 0 && columnConfig.getMean() != null
+                        && columnConfig.getStdDev() != null && ((columnConfig.isCategorical()
+                        && columnConfig.getBinCategory() != null && columnConfig.getBinCategory().size() > 1) || (columnConfig
+                        .isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
     }
 
     /**

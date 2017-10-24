@@ -1386,6 +1386,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     /**
      * For RF/GBT model, no need do normalizing, but clean and filter data is needed. Before real training, we have to
      * clean and filter data.
+     * 
+     * @param isToShuffle
+     *            if shuffle data before training
+     * @throws IOException
+     *             the io exception
      */
     protected void checkAndCleanDataForTreeModels(boolean isToShuffle) throws IOException {
         String alg = this.getModelConfig().getTrain().getAlgorithm();
