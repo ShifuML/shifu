@@ -40,6 +40,7 @@ public class BasicDropoutLayer extends BasicLayer {
      *            How many neurons in this layer.
      * @param hasBias
      *            True if this layer has a bias.
+     * @param dropout drop out rate
      */
     public BasicDropoutLayer(final ActivationFunction activationFunction, final boolean hasBias, final int neuronCount,
             double dropout) {
