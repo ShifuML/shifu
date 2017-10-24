@@ -273,21 +273,24 @@ public class BasicModelProcessor {
 
     /**
      * Sync data into HDFS for list of EvalConfig,
-     * @param evalConfigList - EvalConfig list to sync
+     * 
+     * @param evalConfigList
+     *            - EvalConfig list to sync
      * @return true if synced to HDFS
      * @throws IOException
+     *             if exception in creating eval folder
      */
-    protected boolean syncDataToHdfs(List<EvalConfig> evalConfigList) throws IOException{
-        if ( CollectionUtils.isNotEmpty(evalConfigList) ) {
+    protected boolean syncDataToHdfs(List<EvalConfig> evalConfigList) throws IOException {
+        if(CollectionUtils.isNotEmpty(evalConfigList)) {
             // create local eval folder
-            for ( EvalConfig evalConfig : evalConfigList ) {
+            for(EvalConfig evalConfig: evalConfigList) {
                 String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
                 FileUtils.forceMkdir(new File(evalSetPath));
             }
 
             // sync files to HDFS
-            for ( EvalConfig evalConfig : evalConfigList ) {
-                if (SourceType.HDFS.equals(evalConfig.getDataSet().getSource())) {
+            for(EvalConfig evalConfig: evalConfigList) {
+                if(SourceType.HDFS.equals(evalConfig.getDataSet().getSource())) {
                     return syncDataToHdfs(evalConfig.getDataSet().getSource());
                 }
             }
@@ -599,9 +602,14 @@ public class BasicModelProcessor {
     /**
      * save the Column Config
      * 
+     * @param path
+     *            path of column config file
+     * @param columnConfigs
+     *            column config list
      * @throws IOException
      *             an exception in saving column config
      */
+
     protected void saveColumnConfigList(String path, List<ColumnConfig> columnConfigs) throws IOException {
         LOG.info("Saving ColumnConfig into {} ... ", path);
         JSONUtils.writeValue(new File(path), columnConfigs);

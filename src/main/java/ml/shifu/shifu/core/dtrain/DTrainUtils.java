@@ -48,13 +48,13 @@ import org.encog.neural.networks.structure.NeuralStructure;
  * Helper class for NN distributed training.
  */
 public final class DTrainUtils {
-    
+
     public static final String RESILIENTPROPAGATION = "R";
     public static final String SCALEDCONJUGATEGRADIENT = "S";
     public static final String MANHATTAN_PROPAGATION = "M";
     public static final String QUICK_PROPAGATION = "Q";
     public static final String BACK_PROPAGATION = "B";
-    
+
     public static final String IS_ELM = "IsELM";
 
     /**
@@ -143,13 +143,16 @@ public final class DTrainUtils {
      * If number of column in final-select is 0, which means to select all non meta and non target columns. So the input
      * number is set to all candidates.
      * 
+     * @param normType
+     *            normalization type
      * @param columnConfigList
      *            the column config list
      * @return [input, output, candidate]
      * @throws NullPointerException
      *             if columnConfigList or ColumnConfig object in columnConfigList is null.
      */
-    public static int[] getInputOutputCandidateCounts(ModelNormalizeConf.NormType normType, List<ColumnConfig> columnConfigList) {
+    public static int[] getInputOutputCandidateCounts(ModelNormalizeConf.NormType normType,
+            List<ColumnConfig> columnConfigList) {
         @SuppressWarnings("unused")
         int input = 0, output = 0, totalCandidate = 0, goodCandidate = 0;
         boolean hasCandidate = CommonUtils.hasCandidateColumns(columnConfigList);
@@ -161,7 +164,7 @@ public final class DTrainUtils {
                 }
             }
             if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
-                if ( normType.equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT) && config.isCategorical()) {
+                if(normType.equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT) && config.isCategorical()) {
                     input += config.getBinCategory().size() + 1;
                 } else {
                     input += 1;
@@ -173,6 +176,7 @@ public final class DTrainUtils {
         }
         return new int[] { input, output, goodCandidate };
     }
+
     /**
      * Get numeric and categorical input nodes number (final select) and output nodes number from column config, and
      * candidate input node number.
@@ -359,29 +363,29 @@ public final class DTrainUtils {
 
     /**
      * Generate random instance according to sample seed.
-     *
+     * 
      * @param sampleSeed
-     *          sample seed to generate Random instance
+     *            sample seed to generate Random instance
      * @param fallbackValue
-     *          sample seed fall back value
+     *            sample seed fall back value
      * @return Random instance according to the sample seed value
-     *          If the sample seed value not equal to fallbackValue, then will use it to generate Random instance.
-     *          Else take fallback measure: generate Random instance without given seed.
+     *         If the sample seed value not equal to fallbackValue, then will use it to generate Random instance.
+     *         Else take fallback measure: generate Random instance without given seed.
      */
-    public static Random generateRandomBySampleSeed(long sampleSeed, long fallbackValue){
-        if(sampleSeed != fallbackValue){
+    public static Random generateRandomBySampleSeed(long sampleSeed, long fallbackValue) {
+        if(sampleSeed != fallbackValue) {
             return new Random(sampleSeed);
         }
         return new Random();
     }
 
-
-    public static int getFeatureInputsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Set<Integer> featureSet) {
-        if ( modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT) ) {
+    public static int getFeatureInputsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            Set<Integer> featureSet) {
+        if(modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)) {
             int inputCount = 0;
-            for ( ColumnConfig columnConfig : columnConfigList ) {
-                if ( columnConfig.isFinalSelect() && featureSet.contains(columnConfig.getColumnNum()) ) {
-                    if ( columnConfig.isNumerical() ) {
+            for(ColumnConfig columnConfig: columnConfigList) {
+                if(columnConfig.isFinalSelect() && featureSet.contains(columnConfig.getColumnNum())) {
+                    if(columnConfig.isNumerical()) {
                         inputCount += 1;
                     } else {
                         inputCount += (columnConfig.getBinCategory().size() + 1);

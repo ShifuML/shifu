@@ -765,16 +765,19 @@ public class PathFinder {
 
     /**
      * Get the path of evaluation set performance for EvalMetaScore column
+     * 
      * @param evalConfig
+     *            - EvalConfig to find
      * @param metaColumn
-     * @return
+     *            meta column
+     * @return eval meta path
      */
     public String getEvalMetaPerformancePath(EvalConfig evalConfig, String metaColumn) {
         String evalPerformancePath = getPreferPath(evalConfig.getCustomPaths(), Constants.KEY_PERFORMANCE_PATH);
 
         if(StringUtils.isBlank(evalPerformancePath)) {
-            String evalMetaPerfPath = getEvalFilePath(evalConfig.getName(),
-                    Constants.EVAL_META_SCORE, evalConfig.getDataSet().getSource());
+            String evalMetaPerfPath = getEvalFilePath(evalConfig.getName(), Constants.EVAL_META_SCORE, evalConfig
+                    .getDataSet().getSource());
             return new Path(evalMetaPerfPath, metaColumn + Constants.EVAL_PERFORMANCE).toString();
         } else {
             return new Path(evalPerformancePath, metaColumn + Constants.EVAL_PERFORMANCE).toString();
@@ -910,6 +913,8 @@ public class PathFinder {
 
     /**
      * Return local correlation csv path
+     * 
+     * @return the local correlation csv path
      */
     public String getLocalCorrelationCsvPath() {
         return getPathBySourceType(CORRELATION_CSV, SourceType.LOCAL);

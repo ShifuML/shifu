@@ -23,7 +23,7 @@ public interface ErrorCalculation {
     /**
      * Return set size used to compute error.
      * 
-     * @return
+     * @return the data set size
      */
     public int getSetSize();
 
@@ -56,6 +56,8 @@ public interface ErrorCalculation {
      *            The actual number.
      * @param ideal
      *            The ideal number.
+     * @param significance
+     *            weight of the record
      */
     public void updateError(final double[] actual, final double[] ideal, final double significance);
 
