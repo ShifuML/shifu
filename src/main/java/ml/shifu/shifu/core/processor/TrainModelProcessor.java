@@ -1326,6 +1326,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         jars.add(JarManager.findContainingJar(BZip2CompressorInputStream.class));
         // commons-lang-*.jar
         jars.add(JarManager.findContainingJar(StringUtils.class));
+        // common-lang3-*.jar
+        jars.add(JarManager.findContainingJar(org.apache.commons.lang3.StringUtils.class));
         // commons-collections-*.jar
         jars.add(JarManager.findContainingJar(ListUtils.class));
         // common-io-*.jar
