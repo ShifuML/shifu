@@ -79,6 +79,7 @@ public interface Constants {
     public static final String LR = "lr";
     public static final String SVM = "svm";
     public static final String NN = "nn";
+    public static final String GBT = "GBT";
 
     public static final String BZ2_SUFFIX = ".bz2";
     public static final String GZ_SUFFIX = ".gz";
