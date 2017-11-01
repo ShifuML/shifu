@@ -1302,7 +1302,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
         long finalCombineSize = Double.valueOf((maxCombineSize * 1d * (ratio))).longValue();
 
-        if(actualFileSize / finalCombineSize < 25) {
+        if(finalCombineSize != 0L && actualFileSize / finalCombineSize < 25) {
             // we can leverage more workers.
             finalCombineSize /= 2;
         }
