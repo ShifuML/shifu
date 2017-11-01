@@ -1288,6 +1288,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         int candidateCount = inputOutputIndex[2];
         // 1. set benchmark
         long maxCombineSize = CommonUtils.isTreeModel(modelConfig.getAlgorithm()) ? 209715200L : 168435456L;
+        if(modelConfig.isClassification()) {
+            return maxCombineSize;
+        }
         // default 200M for gbt/RF, 150M for NN
         // why nn default is 150M, because of all categorical data is normalized to numeric, which is to save disk
         // for RF/gbt, categorical is still string and so default disk size is 200M
