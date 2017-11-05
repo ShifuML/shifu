@@ -484,8 +484,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
             for(Entry<Integer, CorrelationWritable> entry: corrMap.entrySet()) {
                 ColumnConfig xColumnConfig = this.columnConfigList.get(entry.getKey());
-                if(xColumnConfig.getColumnFlag() == ColumnFlag.Meta ||
-                        ( hasCandidates && !ColumnFlag.Candidate.equals(xColumnConfig.getColumnFlag()))) {
+                if(xColumnConfig.getColumnFlag() == ColumnFlag.Meta
+                        || (hasCandidates && !ColumnFlag.Candidate.equals(xColumnConfig.getColumnFlag()))) {
                     continue;
                 }
                 CorrelationWritable xCw = corrMap.get(entry.getKey());
@@ -578,6 +578,9 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
     /**
      * De-serialize from bytes to object. One should provide the class name before de-serializing the object.
      * 
+     * @param data
+     *            byte array for deserialization
+     * @return {@link CorrelationWritable} instance after deserialization
      * @throws NullPointerException
      *             if className or data is null.
      * @throws RuntimeException
