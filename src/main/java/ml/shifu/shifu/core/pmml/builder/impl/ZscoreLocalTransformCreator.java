@@ -119,14 +119,14 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
         }
 
         String defaultValue = Normalizer.normalize(config, "doesn't exist at all...by paypal", cutoff, normType)
-                .toString();
-        String missingValue = Normalizer.normalize(config, null, cutoff, normType).toString();
+                .get(0).toString();
+        String missingValue = Normalizer.normalize(config, null, cutoff, normType).get(0).toString();
 
         InlineTable inlineTable = new InlineTable();
         for(int i = 0; i < config.getBinCategory().size(); i++) {
             List<String> catVals = CommonUtils.flattenCatValGrp(config.getBinCategory().get(i));
             for(String cval: catVals) {
-                String dval = Normalizer.normalize(config, cval, cutoff, normType).toString();
+                String dval = Normalizer.normalize(config, cval, cutoff, normType).get(0).toString();
 
                 Element out = document.createElementNS(NAME_SPACE_URI, ELEMENT_OUT);
                 out.setTextContent(dval);
