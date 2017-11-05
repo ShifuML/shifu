@@ -170,8 +170,12 @@ public class TreeModel extends BasicML implements MLRegression {
     }
 
     /**
-     * Sort by feature impotance
+     * Sort by feature importance.
      * 
+     * @param unsortMap
+     *            map of raw feature importance
+     * @param order
+     *            descending or ascending
      * @return map of feature importance, key is column index.
      */
     public static Map<Integer, MutablePair<String, Double>> sortByValue(
