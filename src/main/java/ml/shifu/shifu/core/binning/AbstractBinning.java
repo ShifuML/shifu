@@ -81,6 +81,8 @@ public abstract class AbstractBinning<T> {
      * 
      * @param binningNum
      *            the binningNum
+     * @param maxCategorySize
+     *            max size of category list
      */
     public AbstractBinning(int binningNum, int maxCategorySize) {
         this(binningNum, null, maxCategorySize);
@@ -93,6 +95,8 @@ public abstract class AbstractBinning<T> {
      *            the binningNum
      * @param missingValList
      *            the missing value list
+     * @param maxCategorySize
+     *            max size of category list
      */
     public AbstractBinning(int binningNum, List<String> missingValList, int maxCategorySize) {
         this.expectedBinningNum = binningNum;

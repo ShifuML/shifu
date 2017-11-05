@@ -54,6 +54,8 @@ public abstract class AbstractSpecifCreator {
     /**
      * Create the normalized output for model, since the final score should be 0 ~ 1000, instead of 0.o ~ 1.0
      * 
+     * @param id
+     *            output id
      * @return output for model
      */
     protected Output createNormalizedOutput(int id) {

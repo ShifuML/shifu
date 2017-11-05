@@ -1288,6 +1288,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         int candidateCount = inputOutputIndex[2];
         // 1. set benchmark
         long maxCombineSize = CommonUtils.isTreeModel(modelConfig.getAlgorithm()) ? 209715200L : 168435456L;
+        if(modelConfig.isClassification()) {
+            return maxCombineSize;
+        }
         // default 200M for gbt/RF, 150M for NN
         // why nn default is 150M, because of all categorical data is normalized to numeric, which is to save disk
         // for RF/gbt, categorical is still string and so default disk size is 200M
@@ -1299,7 +1302,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
         long finalCombineSize = Double.valueOf((maxCombineSize * 1d * (ratio))).longValue();
 
-        if(actualFileSize / finalCombineSize < 25) {
+        if(finalCombineSize != 0L && actualFileSize / finalCombineSize < 25) {
             // we can leverage more workers.
             finalCombineSize /= 2;
         }
@@ -1326,6 +1329,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         jars.add(JarManager.findContainingJar(BZip2CompressorInputStream.class));
         // commons-lang-*.jar
         jars.add(JarManager.findContainingJar(StringUtils.class));
+        // common-lang3-*.jar
+        jars.add(JarManager.findContainingJar(org.apache.commons.lang3.StringUtils.class));
         // commons-collections-*.jar
         jars.add(JarManager.findContainingJar(ListUtils.class));
         // common-io-*.jar
@@ -1386,6 +1391,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     /**
      * For RF/GBT model, no need do normalizing, but clean and filter data is needed. Before real training, we have to
      * clean and filter data.
+     * 
+     * @param isToShuffle
+     *            if shuffle data before training
+     * @throws IOException
+     *             the io exception
      */
     protected void checkAndCleanDataForTreeModels(boolean isToShuffle) throws IOException {
         String alg = this.getModelConfig().getTrain().getAlgorithm();

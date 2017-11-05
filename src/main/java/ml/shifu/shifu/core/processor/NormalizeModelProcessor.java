@@ -75,7 +75,13 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                 case MAPRED:
                     runPigNormalize();
 
-                    autoCheckShuffleAndShuffleSize();
+                    try {
+                        autoCheckShuffleAndShuffleSize();
+                    } catch (Exception e) {
+                        log.warn(
+                                "warn: exception in autho check shuffle size, exception can be ignored as no big impact",
+                                e);
+                    }
 
                     if(this.isToShuffleData) {
                         // shuffling normalized data, to make data random
@@ -104,7 +110,10 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
 
     private void autoCheckShuffleAndShuffleSize() throws IOException {
         ColumnConfig targetColumnConfig = CommonUtils.findTargetColumn(columnConfigList);
-        long totalCount = targetColumnConfig.getTotalCount();
+        Long totalCount = targetColumnConfig.getTotalCount();
+        if(totalCount == null) {
+            return;
+        }
         // how many part-m-*.gz file in for gzip file, norm depends on how many gzip files
         int filePartCnt = ShifuFileUtils.getFilePartCount(this.pathFinder.getNormalizedDataPath(), SourceType.HDFS);
         // average count is over threshold, try to do shuffle to avoid big worker there
