@@ -175,9 +175,11 @@ public class FastCorrelationMultithreadedMapper extends Mapper<LongWritable, Tex
 
         // after all sub mapper completed, finalCorrelationMap includes global results and send them to reducer.
         // send to reducer with only one merged copy no matter how many threads
-        for(Entry<Integer, CorrelationWritable> entry: finalCorrelationMap.entrySet()) {
-            outputKey.set(entry.getKey());
-            context.write(outputKey, entry.getValue());
+        synchronized(outer) {
+            for(Entry<Integer, CorrelationWritable> entry: finalCorrelationMap.entrySet()) {
+                outputKey.set(entry.getKey());
+                context.write(outputKey, entry.getValue());
+            }
         }
     }
 
