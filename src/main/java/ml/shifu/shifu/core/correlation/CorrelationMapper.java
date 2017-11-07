@@ -221,7 +221,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                     adjustSumY = new double[this.columnConfigList.size()];
                     cw.setAdjustSumY(adjustSumY);
                 }
-                
+
                 for(int j = 0; j < this.columnConfigList.size(); j++) {
                     ColumnConfig otherColumnConfig = this.columnConfigList.get(j);
                     if(otherColumnConfig.getColumnFlag() == ColumnFlag.Meta) {

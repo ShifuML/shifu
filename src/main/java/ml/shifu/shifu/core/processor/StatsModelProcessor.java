@@ -519,6 +519,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                         corrArray[i] = numerator / (denominator1 * denominator2);
                     }
 
+                    // if(corrArray[i] > 1.0005d || (entry.getKey() == 54 && i == 2124)) {
                     if(corrArray[i] > 1.0005d) {
                         log.warn("Correlation value for columns {} {} > 1, below is debug info.", entry.getKey(), i);
                         log.warn("DEBUG: corr {}, value > 1d, numerator " + numerator + " denominator1 " + denominator1

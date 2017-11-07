@@ -56,6 +56,9 @@ public class CorrelationReducer extends Reducer<IntWritable, CorrelationWritable
      */
     private List<ColumnConfig> columnConfigList;
 
+    @SuppressWarnings("unused")
+    private boolean hasCandidates = false;
+
     /**
      * Do initialization like ModelConfig and ColumnConfig loading.
      */
@@ -72,6 +75,7 @@ public class CorrelationReducer extends Reducer<IntWritable, CorrelationWritable
                     Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -81,11 +85,14 @@ public class CorrelationReducer extends Reducer<IntWritable, CorrelationWritable
     protected void reduce(IntWritable key, Iterable<CorrelationWritable> values, Context context) throws IOException,
             InterruptedException {
         // build final correlation column info
-        CorrelationWritable finalCw = initCw();
+        CorrelationWritable finalCw = null;
 
         Iterator<CorrelationWritable> cwIt = values.iterator();
         while(cwIt.hasNext()) {
             CorrelationWritable cw = cwIt.next();
+            if(finalCw == null) {
+                finalCw = initCw(cw.getAdjustCount().length);
+            }
             finalCw.setColumnIndex(cw.getColumnIndex());
             finalCw.combine(cw);
         }
@@ -95,19 +102,19 @@ public class CorrelationReducer extends Reducer<IntWritable, CorrelationWritable
         context.write(outputKey, outputValue);
     }
 
-    private CorrelationWritable initCw() {
+    private CorrelationWritable initCw(int statsCnt) {
         CorrelationWritable finalCw = new CorrelationWritable();
-        double[] xySum = new double[this.columnConfigList.size()];
+        double[] xySum = new double[statsCnt];
         finalCw.setXySum(xySum);
-        double[] xxSum = new double[this.columnConfigList.size()];
+        double[] xxSum = new double[statsCnt];
         finalCw.setXxSum(xxSum);
-        double[] yySum = new double[this.columnConfigList.size()];
+        double[] yySum = new double[statsCnt];
         finalCw.setYySum(yySum);
-        double[] adjustCount = new double[this.columnConfigList.size()];
+        double[] adjustCount = new double[statsCnt];
         finalCw.setAdjustCount(adjustCount);
-        double[] adjustSumX = new double[this.columnConfigList.size()];
+        double[] adjustSumX = new double[statsCnt];
         finalCw.setAdjustSumX(adjustSumX);
-        double[] adjustSumY = new double[this.columnConfigList.size()];
+        double[] adjustSumY = new double[statsCnt];
         finalCw.setAdjustSumY(adjustSumY);
         return finalCw;
     }
