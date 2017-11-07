@@ -40,7 +40,7 @@ guagua.zk.embedbed.isInClient=true
 # if over such threshold three times, kill worker; by default is 60000, change it to 120000 to avoid failures
 guagua.computation.time.threshold=120000
 
-## tunning for rf, in rf, tree models are stored in master memory, if two many models, please tune such parameters 
+## tuning for rf, in rf, tree models are stored in master memory, if two many models, please tune such parameters 
 mapreduce.map.memory.mb=2048
 mapreduce.map.java.opts=-Xms1700m -Xmx1700m -server -XX:MaxPermSize=64M -XX:PermSize=64M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
 
@@ -79,3 +79,6 @@ mapreduce.reduce.java.opts=-Xms2G -Xmx2G
 
 # namespace support - default disable
 shifu.namespace.strict.mode = false
+
+# add worker get result waiting timeout to 10 minutes
+guagua.worker.getresult.timeout=600000
