@@ -19,8 +19,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
 
 import ml.shifu.guagua.GuaguaRuntimeException;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.io.IntWritable;
@@ -47,31 +52,64 @@ public class CorrelationReducer extends Reducer<IntWritable, CorrelationWritable
     private Text outputValue;
 
     /**
+     * Column Config list read from HDFS
+     */
+    private List<ColumnConfig> columnConfigList;
+
+    /**
      * Do initialization like ModelConfig and ColumnConfig loading.
      */
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
         this.outputKey = new IntWritable();
         this.outputValue = new Text();
+        loadConfigFiles(context);
+    }
+
+    private void loadConfigFiles(final Context context) {
+        try {
+            SourceType sourceType = SourceType.valueOf(context.getConfiguration().get(
+                    Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
+            this.columnConfigList = CommonUtils.loadColumnConfigList(
+                    context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     protected void reduce(IntWritable key, Iterable<CorrelationWritable> values, Context context) throws IOException,
             InterruptedException {
         // build final correlation column info
-        CorrelationWritable finalCw = null;
+        CorrelationWritable finalCw = initCw();
+
         Iterator<CorrelationWritable> cwIt = values.iterator();
         while(cwIt.hasNext()) {
             CorrelationWritable cw = cwIt.next();
-            if(finalCw == null) {
-                finalCw = cw;
-            } else {
-                finalCw.combine(cw);
-            }
+            finalCw.setColumnIndex(cw.getColumnIndex());
+            finalCw.combine(cw);
         }
+
         this.outputKey.set(key.get());
         this.outputValue.set(new String(Base64.encodeBase64(objectToBytes(finalCw)), "utf-8"));
         context.write(outputKey, outputValue);
+    }
+
+    private CorrelationWritable initCw() {
+        CorrelationWritable finalCw = new CorrelationWritable();
+        double[] xySum = new double[this.columnConfigList.size()];
+        finalCw.setXySum(xySum);
+        double[] xxSum = new double[this.columnConfigList.size()];
+        finalCw.setXxSum(xxSum);
+        double[] yySum = new double[this.columnConfigList.size()];
+        finalCw.setYySum(yySum);
+        double[] adjustCount = new double[this.columnConfigList.size()];
+        finalCw.setAdjustCount(adjustCount);
+        double[] adjustSumX = new double[this.columnConfigList.size()];
+        finalCw.setAdjustSumX(adjustSumX);
+        double[] adjustSumY = new double[this.columnConfigList.size()];
+        finalCw.setAdjustSumY(adjustSumY);
+        return finalCw;
     }
 
     public byte[] objectToBytes(Writable result) {

@@ -178,10 +178,11 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
 
         for(int i = 0; i < this.columnConfigList.size(); i++) {
             ColumnConfig columnConfig = this.columnConfigList.get(i);
-            if(columnConfig.getColumnFlag() == ColumnFlag.Meta ||
-                    ( this.hasCandidates && !ColumnFlag.Candidate.equals(columnConfig.getColumnFlag())) ) {
+            if(columnConfig.getColumnFlag() == ColumnFlag.Meta
+                    || (this.hasCandidates && !ColumnFlag.Candidate.equals(columnConfig.getColumnFlag()))) {
                 continue;
             }
+
             CorrelationWritable cw = CorrelationMultithreadedMapper.finalCorrelationMap.get(i);
             synchronized(cw) {
                 cw.setColumnIndex(i);
@@ -220,7 +221,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                     adjustSumY = new double[this.columnConfigList.size()];
                     cw.setAdjustSumY(adjustSumY);
                 }
-
+                
                 for(int j = 0; j < this.columnConfigList.size(); j++) {
                     ColumnConfig otherColumnConfig = this.columnConfigList.get(j);
                     if(otherColumnConfig.getColumnFlag() == ColumnFlag.Meta) {
@@ -229,6 +230,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                     if(i > j && !this.isComputeAll) {
                         continue;
                     }
+
                     // only do stats on both valid values
                     if(dValues[i] != Double.MIN_VALUE && dValues[j] != Double.MIN_VALUE) {
                         xySum[j] += dValues[i] * dValues[j];
