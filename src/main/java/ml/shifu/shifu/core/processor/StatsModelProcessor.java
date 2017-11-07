@@ -519,20 +519,21 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                         corrArray[i] = numerator / (denominator1 * denominator2);
                     }
 
-                    if(corrArray[i] > 1.05d) {
-                        log.warn("corr {}, value > 1d, numerator " + numerator + " denominator1 " + denominator1
+                    if(corrArray[i] > 1.0005d) {
+                        log.warn("Correlation value for columns {} {} > 1, below is debug info.", entry.getKey(), i);
+                        log.warn("DEBUG: corr {}, value > 1d, numerator " + numerator + " denominator1 " + denominator1
                                 + " denominator2 " + denominator2 + " {}, {}", numerator
                                 / (denominator1 * denominator2), entry.getKey(), i);
                         log.warn(
-                                "xCw.getAdjustCount()[i] * xCw.getXySum()[i] - xCw.getAdjustSumX()[i]  * xCw.getAdjustSumY()[i] : {} * {} - {} * {} ",
+                                "DEBUG: xCw.getAdjustCount()[i] * xCw.getXySum()[i] - xCw.getAdjustSumX()[i]  * xCw.getAdjustSumY()[i] : {} * {} - {} * {} ",
                                 xCw.getAdjustCount()[i], xCw.getXySum()[i], xCw.getAdjustSumX()[i],
                                 xCw.getAdjustSumY()[i]);
                         log.warn(
-                                "xCw.getAdjustCount()[i] * xCw.getXxSum()[i] - xCw.getAdjustSumX()[i] * xCw.getAdjustSumX()[i] : {} * {} - {} * {} ",
+                                "DEBUG: xCw.getAdjustCount()[i] * xCw.getXxSum()[i] - xCw.getAdjustSumX()[i] * xCw.getAdjustSumX()[i] : {} * {} - {} * {} ",
                                 xCw.getAdjustCount()[i], xCw.getXxSum()[i], xCw.getAdjustSumX()[i],
                                 xCw.getAdjustSumX()[i]);
                         log.warn(
-                                "xCw.getAdjustCount()[i] * xCw.getYySum()[i] - xCw.getAdjustSumY()[i] * xCw.getAdjustSumY()[i] : {} * {} -  {} * {} ",
+                                "DEBUG: xCw.getAdjustCount()[i] * xCw.getYySum()[i] - xCw.getAdjustSumY()[i] * xCw.getAdjustSumY()[i] : {} * {} -  {} * {} ",
                                 xCw.getAdjustCount()[i], xCw.getYySum()[i], xCw.getAdjustSumY()[i],
                                 xCw.getAdjustSumY()[i]);
                     }
