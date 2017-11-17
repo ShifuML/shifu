@@ -44,7 +44,7 @@ public abstract class AbstractSpecifCreator {
 
         OutputField finalResult = createOutputField(FINAL_RESULT, OpType.CONTINUOUS, DataType.DOUBLE,
                 ResultFeatureType.TRANSFORMED_VALUE);
-        finalResult.withExpression(createApplyFunc());
+        finalResult.withExpression(createNormExpr());
 
         output.withOutputFields(finalResult);
 
@@ -66,7 +66,7 @@ public abstract class AbstractSpecifCreator {
 
         OutputField finalResult = createOutputField(FINAL_RESULT + "_" + id, OpType.CONTINUOUS, DataType.DOUBLE,
                 ResultFeatureType.TRANSFORMED_VALUE);
-        finalResult.withExpression(createApplyFunc(id));
+        finalResult.withExpression(createNormExpr(id));
 
         output.withOutputFields(finalResult);
 
@@ -101,33 +101,19 @@ public abstract class AbstractSpecifCreator {
      * 
      * @return Apply
      */
-    protected Apply createApplyFunc() {
-        Apply apply = new Apply();
-
-        apply.withFunction(ROUND_FUNC);
-
+    protected Expression createNormExpr() {
         NormContinuous normContinuous = new NormContinuous();
         normContinuous.withField(new FieldName(RAW_RESULT));
         normContinuous.withLinearNorms(new LinearNorm().withOrig(0).withNorm(0));
         normContinuous.withLinearNorms(new LinearNorm().withOrig(1).withNorm(1000));
-
-        apply.withExpressions(normContinuous);
-
-        return apply;
+        return normContinuous;
     }
 
-    protected Apply createApplyFunc(int id) {
-        Apply apply = new Apply();
-
-        apply.withFunction(ROUND_FUNC);
-
+    protected Expression createNormExpr(int id) {
         NormContinuous normContinuous = new NormContinuous();
         normContinuous.withField(new FieldName(RAW_RESULT + "_" + id));
         normContinuous.withLinearNorms(new LinearNorm().withOrig(0).withNorm(0));
         normContinuous.withLinearNorms(new LinearNorm().withOrig(1).withNorm(1000));
-
-        apply.withExpressions(normContinuous);
-
-        return apply;
+        return normContinuous;
     }
 }
