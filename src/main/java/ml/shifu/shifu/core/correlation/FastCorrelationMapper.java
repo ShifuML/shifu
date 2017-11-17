@@ -192,8 +192,8 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
         for(int i = 0; i < this.columnConfigList.size(); i++) {
             long start = System.currentTimeMillis();
             ColumnConfig columnConfig = this.columnConfigList.get(i);
-            if(columnConfig.getColumnFlag() == ColumnFlag.Meta ||
-                    ( this.hasCandidates && !ColumnFlag.Candidate.equals(columnConfig.getColumnFlag()))) {
+            if(columnConfig.getColumnFlag() == ColumnFlag.Meta
+                    || (this.hasCandidates && !ColumnFlag.Candidate.equals(columnConfig.getColumnFlag()))) {
                 continue;
             }
             CorrelationWritable cw = this.correlationMap.get(i);
@@ -250,6 +250,7 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
                 if(i > j && !this.isComputeAll) {
                     continue;
                 }
+
                 // only do stats on both valid values
                 if(dValues[i] != Double.MIN_VALUE && dValues[j] != Double.MIN_VALUE) {
                     xySum[j] += dValues[i] * dValues[j];
