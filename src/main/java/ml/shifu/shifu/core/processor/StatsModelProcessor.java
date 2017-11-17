@@ -518,6 +518,27 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                     } else {
                         corrArray[i] = numerator / (denominator1 * denominator2);
                     }
+
+                    // if(corrArray[i] > 1.0005d || (entry.getKey() == 54 && i == 2124)) {
+                    if(corrArray[i] > 1.0005d) {
+                        log.warn("Correlation value for columns {} {} > 1, below is debug info.", entry.getKey(), i);
+                        log.warn("DEBUG: corr {}, value > 1d, numerator " + numerator + " denominator1 " + denominator1
+                                + " denominator2 " + denominator2 + " {}, {}", numerator
+                                / (denominator1 * denominator2), entry.getKey(), i);
+                        log.warn(
+                                "DEBUG: xCw.getAdjustCount()[i] * xCw.getXySum()[i] - xCw.getAdjustSumX()[i]  * xCw.getAdjustSumY()[i] : {} * {} - {} * {} ",
+                                xCw.getAdjustCount()[i], xCw.getXySum()[i], xCw.getAdjustSumX()[i],
+                                xCw.getAdjustSumY()[i]);
+                        log.warn(
+                                "DEBUG: xCw.getAdjustCount()[i] * xCw.getXxSum()[i] - xCw.getAdjustSumX()[i] * xCw.getAdjustSumX()[i] : {} * {} - {} * {} ",
+                                xCw.getAdjustCount()[i], xCw.getXxSum()[i], xCw.getAdjustSumX()[i],
+                                xCw.getAdjustSumX()[i]);
+                        log.warn(
+                                "DEBUG: xCw.getAdjustCount()[i] * xCw.getYySum()[i] - xCw.getAdjustSumY()[i] * xCw.getAdjustSumY()[i] : {} * {} -  {} * {} ",
+                                xCw.getAdjustCount()[i], xCw.getYySum()[i], xCw.getAdjustSumY()[i],
+                                xCw.getAdjustSumY()[i]);
+                    }
+
                 }
 
                 // put to current map
