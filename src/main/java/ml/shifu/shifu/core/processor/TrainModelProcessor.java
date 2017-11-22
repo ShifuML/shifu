@@ -1008,7 +1008,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // copy all tmp nn to local, these tmp nn are outputs from
         if(!this.isDryTrain()) {
             if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(tmpModelsDir)) {
-                Path localTmpModelsFolder = new Path(Constants.TMP);
+                Path localTmpModelsFolder = new Path(Constants.MODELS_TMP);
                 HDFSUtils.getLocalFS().delete(localTmpModelsFolder, true);
                 HDFSUtils.getLocalFS().mkdirs(localTmpModelsFolder);
                 ShifuFileUtils.getFileSystemBySourceType(sourceType)
