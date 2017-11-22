@@ -349,6 +349,11 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         String[] units = CommonUtils.split(valueStr, this.dataSetDelimiter);
         // tagColumnNum should be in units array, if not IndexOutofBoundException
+        if ( units.length != this.columnConfigList.size() ) {
+            LOG.error("Data column length doesn't match with ColumnConfig size. Just skip.");
+            return;
+        }
+
         String tag = CommonUtils.trimTag(units[this.tagColumnNum]);
 
         if(modelConfig.isRegression()) {
