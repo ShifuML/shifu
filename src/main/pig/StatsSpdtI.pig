@@ -45,7 +45,7 @@ DEFINE MergeBinningData ml.shifu.shifu.udf.BinningDataMergeUDF('$source_type', '
 DEFINE AddColumnNum     ml.shifu.shifu.udf.AddColumnNumAndFilterUDF('$source_type', '$path_model_config', '$path_column_config', 'false');
 
 -- load and purify data
-data = LOAD '$path_raw_data' USING PigStorage('$delimiter');
+data = LOAD '$path_raw_data' USING PigStorage('$delimiter', '-noschema');
 data = FILTER data BY IsDataFilterOut(*);
 
 -- convert data into column based
