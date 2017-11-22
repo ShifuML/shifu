@@ -54,11 +54,14 @@ import org.apache.pig.tools.pigstats.PigStatusReporter;
  */
 public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
 
+    private static final int MAX_MISMATCH_CNT = 500;
+
     private final boolean isAppendRandom;
 
     private List<DataPurifier> dataPurifiers;
 
     private boolean isForExpressions = false;
+    private int mismatchCnt = 0;
 
     public AddColumnNumAndFilterUDF(String source, String pathModelConfig, String pathColumnConfig, String withScoreStr)
             throws Exception {
@@ -104,12 +107,19 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
         int size = input.size();
 
         if(size == 0 || input.size() != this.columnConfigList.size()) {
-            log.info("the input size - " + input.size() + ", while column size - " + columnConfigList.size());
-            throw new ShifuException(ShifuErrorCode.ERROR_NO_EQUAL_COLCONFIG);
+            log.error("the input size - " + input.size() + ", while column size - " + columnConfigList.size());
+            this.mismatchCnt ++;
+
+            // Throw exceptions if hte mismatch count is greater than MAX_MISMATCH_CNT,
+            //  this could make Shifu could skip some malformed data
+            if ( this.mismatchCnt > MAX_MISMATCH_CNT ) {
+                throw new ShifuException(ShifuErrorCode.ERROR_NO_EQUAL_COLCONFIG);
+            }
+            return null;
         }
 
         if(input.get(tagColumnNum) == null) {
-            log.info("tagColumnNum is " + tagColumnNum + "; input size is " + input.size()
+            log.error("tagColumnNum is " + tagColumnNum + "; input size is " + input.size()
                     + "; columnConfigList.size() is " + columnConfigList.size() + "; tuple is"
                     + input.toDelimitedString("|") + "; tag is " + input.get(tagColumnNum));
             if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {

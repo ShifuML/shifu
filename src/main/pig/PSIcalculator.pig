@@ -28,7 +28,7 @@ DEFINE AddColumnNum      ml.shifu.shifu.udf.AddColumnNumUDF('$source_type', '$pa
 DEFINE PopulationCounter ml.shifu.shifu.udf.PopulationCounterUDF('$source_type', '$path_model_config', '$path_column_config', '1');
 DEFINE PSI               ml.shifu.shifu.udf.PSICalculatorUDF('$source_type', '$path_model_config', '$path_column_config');
 
-data = load 'path_to_data' USING PigStorage('$delimiter');
+data = load 'path_to_data' USING PigStorage('$delimiter', '-noschema');
 
 data_cols = FOREACH data GENERATE AddColumnNum(*);
 data_cols = FILTER data_cols by $0 is not null;
