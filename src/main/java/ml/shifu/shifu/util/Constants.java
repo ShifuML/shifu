@@ -37,6 +37,7 @@ public interface Constants {
     public static final String MODEL_SETS = "ModelSets";
 
     public static final String TMP = "tmp";
+    public static final String MODELS_TMP = "modelsTmp";
 
     public static final String PIG_HEADER = ".pig_header";
 

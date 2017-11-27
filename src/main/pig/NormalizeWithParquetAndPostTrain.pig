@@ -35,7 +35,7 @@ SET mapred.output.compress false;
 DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE Normalize        ml.shifu.shifu.udf.NormalizeParquetUDF('$source_type', '$path_model_config', '$path_column_config');
 
-raw = LOAD '$path_raw_data' USING PigStorage('$delimiter');
+raw = LOAD '$path_raw_data' USING PigStorage('$delimiter', '-noschema');
 filtered = FILTER raw BY IsDataFilterOut(*);
 
 STORE filtered INTO '$pathSelectedRawData' USING PigStorage('$delimiter', '-schema');
