@@ -28,6 +28,7 @@ import ml.shifu.shifu.core.dtrain.dataset.FloatNeuralStructure;
 import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
 import ml.shifu.shifu.core.dtrain.nn.BasicDropoutLayer;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.core.dtrain.random.XaiverRandomizer;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.HDFSUtils;
@@ -39,6 +40,7 @@ import org.encog.engine.network.activation.ActivationLinear;
 import org.encog.engine.network.activation.ActivationSIN;
 import org.encog.engine.network.activation.ActivationSigmoid;
 import org.encog.engine.network.activation.ActivationTANH;
+import org.encog.mathutil.randomize.GaussianRandomizer;
 import org.encog.mathutil.randomize.NguyenWidrowRandomizer;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.layers.BasicLayer;
@@ -56,6 +58,12 @@ public final class DTrainUtils {
     public static final String BACK_PROPAGATION = "B";
 
     public static final String IS_ELM = "IsELM";
+
+    public static final String WGT_INIT_GAUSSIAN = "gaussian";
+
+    public static final String WGT_INIT_DEFAULT = "default";
+
+    public static final String WGT_INIT_XAVIER = "xavier";
 
     /**
      * The POSITIVE ETA value. This is specified by the resilient propagation algorithm. This is the percentage by which
@@ -238,51 +246,14 @@ public final class DTrainUtils {
         return Math.max(epochs / 25, 20);
     }
 
-    public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
-            List<Integer> hiddenNodeList, boolean isRandomizeWeights) {
-        final BasicFloatNetwork network = new BasicFloatNetwork();
-
-        network.addLayer(new BasicLayer(new ActivationLinear(), true, in));
-
-        // int hiddenNodes = 0;
-        for(int i = 0; i < numLayers; i++) {
-            String func = actFunc.get(i);
-            Integer numHiddenNode = hiddenNodeList.get(i);
-            // hiddenNodes += numHiddenNode;
-            if(func.equalsIgnoreCase(NNConstants.NN_LINEAR)) {
-                network.addLayer(new BasicLayer(new ActivationLinear(), true, numHiddenNode));
-            } else if(func.equalsIgnoreCase(NNConstants.NN_SIGMOID)) {
-                network.addLayer(new BasicLayer(new ActivationSigmoid(), true, numHiddenNode));
-            } else if(func.equalsIgnoreCase(NNConstants.NN_TANH)) {
-                network.addLayer(new BasicLayer(new ActivationTANH(), true, numHiddenNode));
-            } else if(func.equalsIgnoreCase(NNConstants.NN_LOG)) {
-                network.addLayer(new BasicLayer(new ActivationLOG(), true, numHiddenNode));
-            } else if(func.equalsIgnoreCase(NNConstants.NN_SIN)) {
-                network.addLayer(new BasicLayer(new ActivationSIN(), true, numHiddenNode));
-            } else if(func.equalsIgnoreCase(NNConstants.NN_RELU)) {
-                network.addLayer(new BasicLayer(new ActivationReLU(), true, numHiddenNode));
-            } else {
-                network.addLayer(new BasicLayer(new ActivationSigmoid(), true, numHiddenNode));
-            }
-        }
-
-        network.addLayer(new BasicLayer(new ActivationSigmoid(), false, out));
-
-        NeuralStructure structure = network.getStructure();
-        if(network.getStructure() instanceof FloatNeuralStructure) {
-            ((FloatNeuralStructure) structure).finalizeStruct();
-        } else {
-            structure.finalizeStructure();
-        }
-        if(isRandomizeWeights) {
-            network.reset();
-        }
-
-        return network;
-    }
+//    public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
+//            List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate) {
+//        return generateNetwork(in, out, numLayers, actFunc, hiddenNodeList, isRandomizeWeights, dropoutRate,
+//                WGT_INIT_DEFAULT);
+//    }
 
     public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
-            List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate) {
+            List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate, String wgtInit) {
         final BasicFloatNetwork network = new BasicFloatNetwork();
 
         network.addLayer(new BasicLayer(new ActivationLinear(), true, in));
@@ -318,7 +289,20 @@ public final class DTrainUtils {
             structure.finalizeStructure();
         }
         if(isRandomizeWeights) {
-            network.reset();
+            if(wgtInit == null || wgtInit.length() == 0) {
+                // default randomization
+                network.reset();
+            } else if(wgtInit.equalsIgnoreCase(WGT_INIT_GAUSSIAN)) {
+                new GaussianRandomizer(0, 1).randomize(network);
+            } else if(wgtInit.equalsIgnoreCase(WGT_INIT_XAVIER)) {
+                new XaiverRandomizer().randomize(network);
+            } else if(wgtInit.equalsIgnoreCase(WGT_INIT_DEFAULT)) {
+                // default randomization
+                network.reset();
+            } else {
+                // default randomization
+                network.reset();
+            }
         }
 
         return network;
@@ -326,16 +310,6 @@ public final class DTrainUtils {
 
     public static boolean isExtremeLearningMachinePropagation(String propagation) {
         return propagation != null && "E".equals(propagation);
-    }
-
-    public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
-            List<Integer> hiddenNodeList, double dropoutRate) {
-        return generateNetwork(in, out, numLayers, actFunc, hiddenNodeList, true, dropoutRate);
-    }
-
-    public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
-            List<Integer> hiddenNodeList) {
-        return generateNetwork(in, out, numLayers, actFunc, hiddenNodeList, true);
     }
 
     /**
@@ -356,7 +330,6 @@ public final class DTrainUtils {
     }
 
     public static void randomize(int seed, double[] weights) {
-        // ConsistentRandomizer randomizer = new ConsistentRandomizer(-1, 1, seed);
         NguyenWidrowRandomizer randomizer = new NguyenWidrowRandomizer(-1, 1);
         randomizer.randomize(weights);
     }

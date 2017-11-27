@@ -264,7 +264,15 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      */
     private double dropoutRate = 0d;
 
+    /**
+     * Loss type: log, squared ...
+     */
     private String lossStr;
+
+    /**
+     * Weight initializer, can be 'default', 'gaussian' or 'xavier'.
+     */
+    private String wgtInit;
 
     protected boolean isUpSampleEnabled() {
         // only enabled in regression
@@ -369,7 +377,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         }
         LOG.info("'dropoutRate' in worker is :{}", this.dropoutRate);
 
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         // if is one vs all classification, outputNodeCount is set to 1
         this.outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1]
@@ -392,7 +401,14 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         }
         this.subFeatureSet = new HashSet<Integer>(this.subFeatures);
         LOG.info("subFeatures size is {}", subFeatures.size());
-        this.featureInputsCnt = DTrainUtils.getFeatureInputsCnt(this.modelConfig, this.columnConfigList, this.subFeatureSet);
+        this.featureInputsCnt = DTrainUtils.getFeatureInputsCnt(this.modelConfig, this.columnConfigList,
+                this.subFeatureSet);
+
+        this.wgtInit = "default";
+        Object wgtInitObj = validParams.get("WeightInitializer");
+        if(wgtInitObj != null) {
+            this.wgtInit = wgtInitObj.toString();
+        }
 
         Object lossObj = validParams.get("Loss");
         this.lossStr = lossObj != null ? lossObj.toString() : "squared";
@@ -532,7 +548,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         List<Integer> hiddenNodeList = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
         BasicNetwork network = DTrainUtils.generateNetwork(this.featureInputsCnt, this.outputNodeCount, numLayers,
-                actFunc, hiddenNodeList, false, this.dropoutRate);
+                actFunc, hiddenNodeList, false, this.dropoutRate, this.wgtInit);
         // use the weights from master
         network.getFlat().setWeights(weights);
 
