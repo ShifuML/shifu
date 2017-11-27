@@ -580,11 +580,21 @@
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.1
-                    },{
+                    }, {
                         "name" : "RegularizedConstant",
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.0
+                    }, {
+                        "name" : "WeightInitializer",
+                        "type" : "text",
+                        "directive": "select",
+                        "defval" : "default",
+                        "options": [
+                            {"label": "Default", "value":"default"},
+                            {"label": "Gaussian", "value":"gaussian"},
+                            {"label": "Xavier", "value":"Xavier"}
+                        ]
                     }, {
                         "name" : "L1orL2",
                         "type" : "text",

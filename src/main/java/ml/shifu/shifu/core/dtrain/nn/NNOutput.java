@@ -133,7 +133,15 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      */
     private double dropoutRate = 0d;
 
+    /**
+     * Binary model path
+     */
     private Path bModel;
+
+    /**
+     * Weight initializer, can be 'default', 'gaussian' or 'xavier'.
+     */
+    private String wgtInit;
 
     @Override
     public void preApplication(MasterContext<NNParams, NNParams> context) {
@@ -264,7 +272,8 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             loadConfigFiles(context.getProps());
             this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
             this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);
-            gridSearch = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
+            gridSearch = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
+                    .getGridConfigFileContent());
             validParams = this.modelConfig.getTrain().getParams();
             if(gridSearch.hasHyperParam()) {
                 validParams = gridSearch.getParams(Integer.parseInt(trainerId));
@@ -280,6 +289,12 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
                 this.dropoutRate = Double.valueOf(dropoutRateObj.toString());
             }
             LOG.info("'dropoutRate' in master output is :{}", this.dropoutRate);
+
+            this.wgtInit = "default";
+            Object wgtInitObj = validParams.get("WeightInitializer");
+            if(wgtInitObj != null) {
+                this.wgtInit = wgtInitObj.toString();
+            }
 
             this.bModel = new Path(context.getProps().getProperty(Constants.SHIFU_NN_BINARY_MODEL_PATH));
 
@@ -319,7 +334,8 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
     @SuppressWarnings("unchecked")
     private void initNetwork(MasterContext<NNParams, NNParams> context) {
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                this.columnConfigList);
         @SuppressWarnings("unused")
         int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         // if is one vs all classification, outputNodeCount is set to 1
@@ -346,7 +362,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         int featureInputsCnt = DTrainUtils.getFeatureInputsCnt(modelConfig, columnConfigList, this.subFeatures);
 
         this.network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers, actFunc,
-                hiddenNodeList, false, this.dropoutRate);
+                hiddenNodeList, false, this.dropoutRate, this.wgtInit);
         ((BasicFloatNetwork) this.network).setFeatureSet(this.subFeatures);
 
         // register here to save models
