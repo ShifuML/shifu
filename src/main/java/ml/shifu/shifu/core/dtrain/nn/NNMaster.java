@@ -154,6 +154,11 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
      */
     private boolean isAfterVarSelect;
 
+    /**
+     * Weight initializer, can be 'default', 'gaussian' or 'xavier'.
+     */
+    private String wgtInit;
+
     @Override
     public NNParams doCompute(MasterContext<NNParams, NNParams> context) {
         if(context.isFirstIteration()) {
@@ -316,8 +321,10 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
     private NNParams initWeights() {
         NNParams params = new NNParams();
 
-        int[] inputAndOutput = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
-        int featureInputsCnt = DTrainUtils.getFeatureInputsCnt(modelConfig, this.columnConfigList, new HashSet<Integer>(this.subFeatures));
+        int[] inputAndOutput = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                this.columnConfigList);
+        int featureInputsCnt = DTrainUtils.getFeatureInputsCnt(modelConfig, this.columnConfigList,
+                new HashSet<Integer>(this.subFeatures));
         @SuppressWarnings("unused")
         int inputNodeCount = inputAndOutput[0] == 0 ? inputAndOutput[2] : inputAndOutput[0];
         // if is one vs all classification, outputNodeCount is set to 1
@@ -327,8 +334,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
-        BasicNetwork network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers,
-                actFunc, hiddenNodeList, this.dropoutRate);
+        BasicNetwork network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers, actFunc,
+                hiddenNodeList, true, this.dropoutRate, this.wgtInit);
 
         params.setTrainError(0);
         params.setTestError(0);
@@ -396,6 +403,12 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         Double threshold = this.modelConfig.getTrain().getConvergenceThreshold();
         this.convergenceThreshold = threshold == null ? Double.MIN_VALUE : threshold.doubleValue();
         LOG.info("Convergence threshold in master is :{}", this.convergenceThreshold);
+
+        this.wgtInit = "default";
+        Object wgtInitObj = validParams.get("WeightInitializer");
+        if(wgtInitObj != null) {
+            this.wgtInit = wgtInitObj.toString();
+        }
 
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
