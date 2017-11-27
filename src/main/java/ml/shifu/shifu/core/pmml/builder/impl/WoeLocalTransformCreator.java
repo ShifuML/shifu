@@ -85,8 +85,8 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
         discretize
                 .withDataType(DataType.DOUBLE)
                 .withField(FieldName.create(CommonUtils.getSimpleColumnName(config)))
-                .withMapMissingTo(Normalizer.normalize(config, null, cutoff, normType).toString())
-                .withDefaultValue(Normalizer.normalize(config, null, cutoff, normType).toString())
+                .withMapMissingTo(Normalizer.normalize(config, null, cutoff, normType).get(0).toString())
+                .withDefaultValue(Normalizer.normalize(config, null, cutoff, normType).get(0).toString())
                 .withDiscretizeBins(discretizeBinList);
 
         // derived field name is consisted of FieldName and "_zscl"

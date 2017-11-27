@@ -35,7 +35,7 @@ DEFINE GenBinningData   ml.shifu.shifu.udf.BinningDataUDF('$source_type', '$path
 DEFINE AddColumnNum     ml.shifu.shifu.udf.AddColumnNumAndFilterUDF('$source_type', '$path_model_config', '$path_column_config', 'false', 'false');
 
 -- load and purify data
-data = LOAD '$path_raw_data' USING PigStorage('$delimiter');
+data = LOAD '$path_raw_data' USING PigStorage('$delimiter', '-noschema');
 data = FILTER data BY IsDataFilterOut(*);
 
 -- convert data into column based
