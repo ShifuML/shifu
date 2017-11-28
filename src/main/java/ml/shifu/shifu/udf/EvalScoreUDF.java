@@ -139,6 +139,10 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
         this.scale = scale;
 
+        int modelSize = CommonUtils.locateBasicModels(modelConfig, evalConfig, evalConfig.getDataSet().getSource())
+                .size();
+        log.info("Run eval " + evalConfig.getName() + " with " + modelSize + " model(s).");
+
         // only check if output first hidden layer in regression and NN
         if(modelConfig.isRegression() && Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())) {
             GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
