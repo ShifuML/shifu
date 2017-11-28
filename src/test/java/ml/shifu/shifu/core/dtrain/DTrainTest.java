@@ -143,7 +143,7 @@ public class DTrainTest {
             }
 
             double[] interWeight = weightCalculator.calculateWeights(globalParams.getWeights(),
-                    globalParams.getGradients());
+                    globalParams.getGradients(), -1);
 
             globalParams.setWeights(interWeight);
 
@@ -247,7 +247,7 @@ public class DTrainTest {
             }
 
             double[] interWeight = weightCalculator.calculateWeights(globalParams.getWeights(),
-                    globalParams.getGradients());
+                    globalParams.getGradients(), -1);
 
             globalParams.setWeights(interWeight);
 
@@ -331,7 +331,7 @@ public class DTrainTest {
             }
 
             double[] interWeight = weightCalculator.calculateWeights(globalParams.getWeights(),
-                    globalParams.getGradients());
+                    globalParams.getGradients(), -1);
 
             globalParams.setWeights(interWeight);
 
@@ -415,7 +415,7 @@ public class DTrainTest {
             }
 
             double[] interWeight = weightCalculator.calculateWeights(globalParams.getWeights(),
-                    globalParams.getGradients());
+                    globalParams.getGradients(), -1);
 
             globalParams.setWeights(interWeight);
 
