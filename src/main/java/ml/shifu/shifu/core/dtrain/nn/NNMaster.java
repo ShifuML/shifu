@@ -159,6 +159,21 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
      */
     private String wgtInit;
 
+    /**
+     * Momentum factor in Momentum UpdateRule
+     */
+    private double momentum = 0.5d;
+
+    /**
+     * 'beta1' in Adam optimization, only for Adam
+     */
+    private double adamBeta1 = 0.9d;
+
+    /**
+     * 'beta2' in Adam optimization, only for Adam
+     */
+    private double adamBeta2 = 0.999d;
+
     @Override
     public NNParams doCompute(MasterContext<NNParams, NNParams> context) {
         if(context.isFirstIteration()) {
@@ -217,7 +232,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.learningRate = this.rawLearningRate;
             this.weightCalculator = new Weight(this.globalNNParams.getGradients().length,
                     this.globalNNParams.getTrainSize(), learningRate, propagation, this.regularizedConstant,
-                    RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)), this.dropoutRate);
+                    RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)), this.dropoutRate,
+                    this.propagation, this.momentum, this.learningDecay, this.adamBeta1, this.adamBeta2);
         } else {
             this.learningRate = this.learningRate * (1.0d - this.learningDecay);
             // without learningDecay Parameter using sqrt(iteration number) to decrease learning rate
@@ -228,9 +244,10 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
 
         double[] oldWeights = Arrays.copyOf(this.globalNNParams.getWeights(), this.globalNNParams.getWeights().length);
 
-        // use last weights and current gradients to calculate
+        // use last weights and current gradients to calculate, current iteration - 1 to remove 1st iteration for worker
+        // data reading
         double[] weights = this.weightCalculator.calculateWeights(this.globalNNParams.getWeights(),
-                this.globalNNParams.getGradients());
+                this.globalNNParams.getGradients(), (context.getCurrentIteration() - 1));
 
         this.globalNNParams.setWeights(weights);
 
@@ -399,6 +416,24 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.learningDecay = Double.valueOf(learningDecayO.toString());
         }
         LOG.info("'learningDecay' in master is :{}", learningDecay);
+
+        Object momentumO = validParams.get("Momentum");
+        if(momentumO != null) {
+            this.momentum = Double.valueOf(momentumO.toString());
+        }
+        LOG.info("'momentum' in master is :{}", momentum);
+
+        Object adamBeta1O = validParams.get("AdamBeta1");
+        if(adamBeta1O != null) {
+            this.adamBeta1 = Double.valueOf(adamBeta1O.toString());
+        }
+        LOG.info("'adamBeta1' in master is :{}", adamBeta1);
+
+        Object adamBeta2O = validParams.get("AdamBeta2");
+        if(adamBeta2O != null) {
+            this.adamBeta2 = Double.valueOf(adamBeta2O.toString());
+        }
+        LOG.info("'adamBeta2' in master is :{}", adamBeta2);
 
         Double threshold = this.modelConfig.getTrain().getConvergenceThreshold();
         this.convergenceThreshold = threshold == null ? Double.MIN_VALUE : threshold.doubleValue();

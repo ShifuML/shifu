@@ -580,6 +580,21 @@
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.1
+                     }, {
+                        "name" : "Momentum",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 0.5
+                     }, {
+                        "name" : "AdamBeta1",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 0.9
+                     }, {
+                        "name" : "AdamBeta2",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 0.999
                     }, {
                         "name" : "RegularizedConstant",
                         "type" : "number",
@@ -694,7 +709,12 @@
                             {"label": "Back Propagation", "value":"B"},
                             {"label": "Manhattan Propagation", "value":"M"},
                             {"label": "Resilient Propagation", "value":"R"},
-                            {"label": "Scaled Conjugate Gradient", "value":"S"}
+                            {"label": "Scaled Conjugate Gradient", "value":"S"},
+                            {"label": "Adam", "value":"Adam"},
+                            {"label": "AdaGrad", "value":"AdaGrad"},
+                            {"label": "RMSProp", "value":"RMSProp"},
+                            {"label": "Nesterov", "value":"Nesterov"},
+                            {"label": "Momentum", "value":"Momentum"}
                         ]
                     }, {
                         "name" : "IsELM",
