@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
  * We'd like to reuse code from Encog but unfortunately the methods are private:(.
  */
 public class Weight {
-    
+
     protected static final Logger LOG = LoggerFactory.getLogger(Weight.class);
 
     /**
@@ -179,8 +179,8 @@ public class Weight {
         } else {
             try {
                 this.updateRule = (UpdateRule) ClassUtils.newInstance(Class.forName(propagation));
-            } catch (ClassNotFoundException e) {
-                LOG.warn("Class not found for {}, set update rule to null", propagation);
+            } catch (Exception e) {
+                LOG.info("Class not found for {}, set update rule to null", propagation);
                 this.updateRule = null;
             }
         }

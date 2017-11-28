@@ -120,7 +120,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         try {
             setUp(ModelStep.EVAL);
             syncDataToHdfs(modelConfig.getDataSet().getSource());
-
+            
             switch(evalStep) {
                 case LIST:
                     listEvalSet();
