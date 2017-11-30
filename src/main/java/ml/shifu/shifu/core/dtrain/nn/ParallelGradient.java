@@ -105,9 +105,14 @@ public class ParallelGradient {
      */
     private String lossStr;
 
+    /**
+     * If miniBatchRate set to 0.1d, {@link #batchs} is 10. It will run 10x iterations for one epochs.
+     */
+    private int batchs = 1;
+
     public ParallelGradient(final FloatFlatNetwork theNetwork, final FloatMLDataSet theTraining,
             final FloatMLDataSet theTesting, final double[] flatSpot, ErrorFunction ef, boolean isCrossOver,
-            int threadCount, boolean isELM, String lossStr) {
+            int threadCount, boolean isELM, String lossStr, int batchs) {
         this.isELM = isELM;
         assert threadCount > 0 && threadCount < 33;
         this.threadCount = threadCount;
@@ -163,9 +168,10 @@ public class ParallelGradient {
         this.flatSpot = flatSpot;
         this.threadPool = Executors.newFixedThreadPool(this.threadCount);
         this.lossStr = lossStr;
+        this.batchs = batchs;
     }
 
-    public double[] computeGradients() {
+    public double[] computeGradients(int currentIteration) {
         CompletionService<double[]> completionService = new ExecutorCompletionService<double[]>(this.threadPool);
         this.subGradients = new SubGradient[this.threadCount];
         Random dropoutRandom = new Random();
@@ -173,7 +179,7 @@ public class ParallelGradient {
             if(this.subGradients[i] == null) {
                 this.subGradients[i] = new SubGradient(this.network.clone(), this.training, this.trainLows[i],
                         this.trainHighs[i], this.testing, this.testLows[i], this.testHighs[i], this.flatSpot,
-                        this.isCrossOver, this, dropoutRandom);
+                        this.isCrossOver, this, dropoutRandom, this.batchs, currentIteration);
             } else {
                 this.subGradients[i].setNetwork(this.network.clone());
             }
