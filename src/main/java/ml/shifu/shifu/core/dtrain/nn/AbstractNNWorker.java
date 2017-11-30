@@ -274,6 +274,11 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      */
     private String wgtInit;
 
+    /**
+     * If miniBatchRate set to 0.1d, {@link #batchs} is 10. It will run 10x iterations for one epochs.
+     */
+    private int batchs = 1;
+
     protected boolean isUpSampleEnabled() {
         // only enabled in regression
         return this.upSampleRng != null
@@ -376,6 +381,24 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             this.dropoutRate = Double.valueOf(dropoutRateObj.toString());
         }
         LOG.info("'dropoutRate' in worker is :{}", this.dropoutRate);
+
+        Object miniBatchO = validParams.get("MiniBatchs");
+        if(miniBatchO != null) {
+            int miniBatchs;
+            try {
+                miniBatchs = Integer.parseInt(miniBatchO.toString());
+            } catch (Exception e) {
+                miniBatchs = 1;
+            }
+            if(miniBatchs < 0) {
+                this.batchs = 1;
+            } else if(miniBatchs > 1000) {
+                this.batchs = 1000;
+            } else {
+                this.batchs = miniBatchs;
+            }
+            LOG.info("'miniBatchs' in worker is : {}, batchs is {} ", miniBatchs, batchs);
+        }
 
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
                 this.columnConfigList);
@@ -512,7 +535,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         // using the weights from master to train model in current iteration
         double[] gradients = null;
         for(int i = 0; i < epochsPerIteration; i++) {
-            gradients = this.gradient.computeGradients();
+            gradients = this.gradient.computeGradients(context.getCurrentIteration());
             if(this.epochsPerIteration > 1) {
                 this.gradient.resetNetworkWeights();
             }
@@ -563,7 +586,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
         this.gradient = new ParallelGradient((FloatFlatNetwork) flat, training, testing, flatSpot,
                 new LinearErrorFunction(), isCrossOver, modelConfig.getTrain().getWorkerThreadCount(), this.isELM,
-                this.lossStr);
+                this.lossStr, this.batchs);
     }
 
     private NNParams buildEmptyNNParams(WorkerContext<NNParams, NNParams> workerContext) {

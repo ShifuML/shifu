@@ -428,9 +428,10 @@ public class ModelInspector {
                 || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCORE
                 || modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT);
 
-        if(modelConfig.isClassification() && !isZScore ) {
+        if(modelConfig.isClassification() && !isZScore) {
             ValidateResult tmpResult = new ValidateResult(false);
-            tmpResult.getCauses().add("NormType 'ZSCALE|ZSCORE|ZSCALE_ONEHOT' is the only norm type for multiple classification.");
+            tmpResult.getCauses().add(
+                    "NormType 'ZSCALE|ZSCORE|ZSCALE_ONEHOT' is the only norm type for multiple classification.");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
@@ -607,6 +608,50 @@ public class ModelInspector {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
                         tmpResult.getCauses().add("Dropout rate should be in [0, 1).");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                Object miniBatchsO = params.get("MiniBatchs");
+                if(miniBatchsO != null) {
+                    Integer miniBatchs = Integer.valueOf(miniBatchsO.toString());
+                    if(miniBatchs != null && (miniBatchs <= 0 || miniBatchs > 1000)) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("MiniBatchs should be in (0, 1000] if set.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                Object momentumO = params.get("Momentum");
+                if(momentumO != null) {
+                    Double momentum = Double.valueOf(momentumO.toString());
+                    if(momentum != null && momentum <= 0d) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("Momentum should be in (0, ) if set.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                Object adamBeta1O = params.get("AdamBeta1");
+                if(adamBeta1O != null) {
+                    Double adamBeta1 = Double.valueOf(adamBeta1O.toString());
+                    if(adamBeta1 != null && (adamBeta1 <= 0d || adamBeta1 >= 1d)) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("AdamBeta1 should be in (0, 1) if set.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                Object adamBeta2O = params.get("AdamBeta2");
+                if(adamBeta2O != null) {
+                    Double adamBeta2 = Double.valueOf(adamBeta2O.toString());
+                    if(adamBeta2 != null && (adamBeta2 <= 0d || adamBeta2 >= 1d)) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("AdamBeta2 should be in (0, 1) if set.");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }
