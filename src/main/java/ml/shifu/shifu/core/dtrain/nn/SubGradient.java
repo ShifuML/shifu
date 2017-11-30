@@ -28,12 +28,16 @@ import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataSet;
 import org.encog.engine.network.activation.ActivationFunction;
 import org.encog.neural.error.ErrorFunction;
 import org.encog.neural.flat.FlatNetwork;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@link SubGradient} is copied from Encog framework. The reason is that we original Gradient don't pop up
  * {@link #gradients} outside. While we need gradients accumulated into {@link NNMaster} to update NN weights.
  */
 public class SubGradient implements Callable<double[]> {
+
+    protected static final Logger LOG = LoggerFactory.getLogger(SubGradient.class);
 
     /**
      * The network to train.
@@ -157,9 +161,19 @@ public class SubGradient implements Callable<double[]> {
      */
     protected Random dropoutRandomSource;
 
+    /**
+     * Current iteration
+     */
+    private int currentIteration;
+
+    /**
+     * If miniBatchRate set to 0.1d, {@link #batchs} is 10. It will run 10x iterations for one epochs.
+     */
+    private int batchs = 1;
+
     public SubGradient(final FloatFlatNetwork theNetwork, final FloatMLDataSet theTraining, long trainLow,
             long trainHigh, final FloatMLDataSet theTesting, long testLow, long testHigh, final double[] flatSpot,
-            boolean isCrossOver, ParallelGradient owner, Random dropoutRandomSource) {
+            boolean isCrossOver, ParallelGradient owner, Random dropoutRandomSource, int batchs, int currentInteration) {
         this.network = theNetwork;
         this.training = theTraining;
         this.trainLow = trainLow;
@@ -175,6 +189,8 @@ public class SubGradient implements Callable<double[]> {
         this.dropoutRandomSource = dropoutRandomSource;
         this.initNetworkParams();
         this.errorCalculation = this.owner.createECInstance();
+        this.batchs = batchs;
+        this.currentIteration = currentInteration;
     }
 
     private void initNetworkParams() {
@@ -288,13 +304,33 @@ public class SubGradient implements Callable<double[]> {
     /**
      * Perform the gradient calculation
      */
+    @Override
     public final double[] call() {
         try {
             // reset errors and gradients firstly
             this.errorCalculation.reset();
             Arrays.fill(this.gradients, 0.0);
 
-            for(long i = this.trainLow; i <= this.trainHigh; i++) {
+            long start = this.trainLow;
+            long end = this.trainHigh;
+
+            if(this.batchs > 1) {
+                long currentBatch = (currentIteration - 2) % this.batchs;
+                long recordsInBatch = (this.trainHigh - this.trainLow + 1) / this.batchs;
+                if(currentBatch == this.batchs - 1) {
+                    start = this.trainLow + recordsInBatch * currentBatch;
+                    end = this.trainHigh;
+                } else {
+                    start = this.trainLow + recordsInBatch * currentBatch;
+                    end = this.trainLow + recordsInBatch * (currentBatch + 1) - 1;
+                }
+                LOG.debug(
+                        "Thread name {}, trainLow {}, trainHigh {}, currentIteration {}, batchs {}, currentBatch {}, start {}, end {}",
+                        Thread.currentThread().getName(), trainLow, trainHigh, currentIteration, batchs, currentBatch,
+                        start, end);
+            }
+
+            for(long i = start; i <= end; i++) {
                 synchronized(this.owner) {
                     if(this.isCrossOver) {
                         // 3:1 to select testing data set, tmp hard code, TODO fix hard code issue,extract such logic to

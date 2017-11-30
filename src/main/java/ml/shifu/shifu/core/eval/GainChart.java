@@ -895,7 +895,6 @@ public class GainChart {
                             GainChartTemplate.DF.format(po.recall * 100),
                             GainChartTemplate.DF.format(po.weightedPrecision * 100),
                             GainChartTemplate.DF.format(po.recall * 100),
-                            GainChartTemplate.DF.format(po.actionRate * 100),
                             GainChartTemplate.DF.format(po.fpr * 100),
                             GainChartTemplate.DF.format(po.actionRate * 100),
                             GainChartTemplate.DF.format(po.binLowestScore)));
@@ -917,7 +916,6 @@ public class GainChart {
                             GainChartTemplate.DF.format(po.recall * 100),
                             GainChartTemplate.DF.format(po.precision * 100),
                             GainChartTemplate.DF.format(po.recall * 100),
-                            GainChartTemplate.DF.format(po.actionRate * 100),
                             GainChartTemplate.DF.format(po.fpr * 100),
                             GainChartTemplate.DF.format(po.actionRate * 100),
                             GainChartTemplate.DF.format(po.binLowestScore)));

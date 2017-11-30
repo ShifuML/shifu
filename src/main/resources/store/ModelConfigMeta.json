@@ -695,6 +695,11 @@
                         "directive": "input",
                         "defval" : 0
                     }, {
+                        "name" : "MiniBatchs",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 1
+                    }, {
                         "name" : "ValidationTolerance",
                         "type" : "number",
                         "directive": "input",
