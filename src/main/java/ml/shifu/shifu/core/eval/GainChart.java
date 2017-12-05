@@ -316,8 +316,8 @@ public class GainChart {
                         GainChartTemplate.DF.format(po.weightedPrecision * 100),
                         GainChartTemplate.DF.format(po.recall * 100),
                         GainChartTemplate.DF.format(po.weightedPrecision * 100),
-                        GainChartTemplate.DF.format(po.recall * 100), GainChartTemplate.DF.format(po.actionRate * 100),
-                        GainChartTemplate.DF.format(po.fpr * 100), GainChartTemplate.DF.format(po.actionRate * 100),
+                        GainChartTemplate.DF.format(po.recall * 100), GainChartTemplate.DF.format(po.fpr * 100),
+                        GainChartTemplate.DF.format(po.actionRate * 100),
                         GainChartTemplate.DF.format(po.binLowestScore)));
                 if(i != result.pr.size() - 1) {
                     writer.write(",");
@@ -332,8 +332,7 @@ public class GainChart {
                 writer.write(String.format(GainChartTemplate.PRROC_DATA_FORMAT,
                         GainChartTemplate.DF.format(po.precision * 100), GainChartTemplate.DF.format(po.recall * 100),
                         GainChartTemplate.DF.format(po.precision * 100), GainChartTemplate.DF.format(po.recall * 100),
-                        GainChartTemplate.DF.format(po.actionRate * 100), GainChartTemplate.DF.format(po.fpr * 100),
-                        GainChartTemplate.DF.format(po.actionRate * 100),
+                        GainChartTemplate.DF.format(po.fpr * 100), GainChartTemplate.DF.format(po.actionRate * 100),
                         GainChartTemplate.DF.format(po.binLowestScore)));
                 if(i != result.pr.size() - 1) {
                     writer.write(",");
@@ -811,7 +810,7 @@ public class GainChart {
             }
         }
     }
-    
+
     public void generateHtml4PrAndRoc(EvalConfig evalConfig, ModelConfig modelConfig, String fileName,
             List<PerformanceResult> results, List<String> names) throws IOException {
         BufferedWriter writer = null;
@@ -894,8 +893,7 @@ public class GainChart {
                             GainChartTemplate.DF.format(po.weightedPrecision * 100),
                             GainChartTemplate.DF.format(po.recall * 100),
                             GainChartTemplate.DF.format(po.weightedPrecision * 100),
-                            GainChartTemplate.DF.format(po.recall * 100),
-                            GainChartTemplate.DF.format(po.fpr * 100),
+                            GainChartTemplate.DF.format(po.recall * 100), GainChartTemplate.DF.format(po.fpr * 100),
                             GainChartTemplate.DF.format(po.actionRate * 100),
                             GainChartTemplate.DF.format(po.binLowestScore)));
                     if(i != result.pr.size() - 1) {
@@ -915,8 +913,7 @@ public class GainChart {
                             GainChartTemplate.DF.format(po.precision * 100),
                             GainChartTemplate.DF.format(po.recall * 100),
                             GainChartTemplate.DF.format(po.precision * 100),
-                            GainChartTemplate.DF.format(po.recall * 100),
-                            GainChartTemplate.DF.format(po.fpr * 100),
+                            GainChartTemplate.DF.format(po.recall * 100), GainChartTemplate.DF.format(po.fpr * 100),
                             GainChartTemplate.DF.format(po.actionRate * 100),
                             GainChartTemplate.DF.format(po.binLowestScore)));
                     if(i != result.pr.size() - 1) {
