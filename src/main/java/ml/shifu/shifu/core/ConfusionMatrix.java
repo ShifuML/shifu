@@ -175,8 +175,8 @@ public class ConfusionMatrix {
         // only works for multi classification
         multiClassScore1Index = targetColumnIndex + 2; // target, weight, score1, score2, this is hard code
         try {
-            multiClassModelCnt = CommonUtils.getBasicModelsCnt(modelConfig, evalConfig,
-                    evalConfig.getDataSet().getSource());
+            multiClassModelCnt = CommonUtils.getBasicModelsCnt(modelConfig, evalConfig, evalConfig.getDataSet()
+                    .getSource());
         } catch (FileNotFoundException e) {
             multiClassModelCnt = 0;
         }
@@ -187,8 +187,8 @@ public class ConfusionMatrix {
         posTags = new HashSet<String>(modelConfig.getPosTags(evalConfig));
         negTags = new HashSet<String>(modelConfig.getNegTags(evalConfig));
 
-        scoreScale = Double.parseDouble(
-                Environment.getProperty(Constants.SHIFU_SCORE_SCALE, Integer.toString(Scorer.DEFAULT_SCORE_SCALE)));
+        scoreScale = Double.parseDouble(Environment.getProperty(Constants.SHIFU_SCORE_SCALE,
+                Integer.toString(Scorer.DEFAULT_SCORE_SCALE)));
     }
 
     private int getColumnIndex(String[] headerColumns, String column) {
@@ -256,8 +256,7 @@ public class ConfusionMatrix {
         List<PerformanceObject> catchRateWeightList = new ArrayList<PerformanceObject>(numBucket + 1);
         List<PerformanceObject> gainWeightList = new ArrayList<PerformanceObject>(numBucket + 1);
 
-        double binScore = (maxScore - minScore) * 1d / numBucket, binCapacity = 1.0 / numBucket, scoreBinCount = 0,
-                scoreBinWeigthedCount = 0;
+        double binScore = (maxScore - minScore) * 1d / numBucket, binCapacity = 1.0 / numBucket, scoreBinCount = 0, scoreBinWeigthedCount = 0;
         int fpBin = 1, tpBin = 1, gainBin = 1, fpWeightBin = 1, tpWeightBin = 1, gainWeightBin = 1, modelScoreBin = 1;
         long index = 0, cnt = 0, invalidTargetCnt = 0, invalidWgtCnt = 0;
 
@@ -336,6 +335,7 @@ public class ConfusionMatrix {
                     cmo.setWeightedFp(cmo.getWeightedFp() + weight * 1.0);
                     cmo.setWeightedTn(cmo.getWeightedTn() - weight * 1.0);
                 }
+
                 cmo.setScore(Double.parseDouble(SCORE_FORMAT.format(score)));
 
                 ConfusionMatrixObject object = cmo;
@@ -467,8 +467,8 @@ public class ConfusionMatrix {
     private void generateChartAndJsonPerfFiles(boolean hasWeight, PerformanceResult result) throws IOException {
         GainChart gc = new GainChart();
 
-        String htmlGainChart = pathFinder.getEvalFilePath(evalConfig.getName(),
-                evalConfig.getName() + "_gainchart.html", SourceType.LOCAL);
+        String htmlGainChart = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                + "_gainchart.html", SourceType.LOCAL);
         LOG.info("Gain chart is generated in {}.", htmlGainChart);
         gc.generateHtml(evalConfig, modelConfig, htmlGainChart, result);
 
@@ -477,14 +477,14 @@ public class ConfusionMatrix {
         LOG.info("PR&ROC chart is generated in {}.", htmlPrRocChart);
         gc.generateHtml4PrAndRoc(evalConfig, modelConfig, htmlPrRocChart, result);
 
-        String unitGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(),
-                evalConfig.getName() + "_unit_wise_gainchart.csv", SourceType.LOCAL);
+        String unitGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                + "_unit_wise_gainchart.csv", SourceType.LOCAL);
         LOG.info("Unit-wise gain chart data is generated in {}.", unitGainChartCsv);
         gc.generateCsv(evalConfig, modelConfig, unitGainChartCsv, result.gains);
 
         if(hasWeight) {
-            String weightedGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(),
-                    evalConfig.getName() + "_weighted_gainchart.csv", SourceType.LOCAL);
+            String weightedGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                    + "_weighted_gainchart.csv", SourceType.LOCAL);
             LOG.info("Weighted gain chart data is generated in {}.", weightedGainChartCsv);
             gc.generateCsv(evalConfig, modelConfig, weightedGainChartCsv, result.weightedGains);
         }
@@ -495,26 +495,26 @@ public class ConfusionMatrix {
         gc.generateCsv(evalConfig, modelConfig, prCsvFile, result.pr);
 
         if(hasWeight) {
-            String weightedPrCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(),
-                    evalConfig.getName() + "_weighted_pr.csv", SourceType.LOCAL);
+            String weightedPrCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                    + "_weighted_pr.csv", SourceType.LOCAL);
             LOG.info("Weighted pr data is generated in {}.", weightedPrCsvFile);
             gc.generateCsv(evalConfig, modelConfig, weightedPrCsvFile, result.weightedPr);
         }
 
-        String rocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(),
-                evalConfig.getName() + "_unit_wise_roc.csv", SourceType.LOCAL);
+        String rocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                + "_unit_wise_roc.csv", SourceType.LOCAL);
         LOG.info("Unit-wise roc data is generated in {}.", rocCsvFile);
         gc.generateCsv(evalConfig, modelConfig, rocCsvFile, result.roc);
 
         if(hasWeight) {
-            String weightedRocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(),
-                    evalConfig.getName() + "_weighted_roc.csv", SourceType.LOCAL);
+            String weightedRocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                    + "_weighted_roc.csv", SourceType.LOCAL);
             LOG.info("Weighted roc data is generated in {}.", weightedRocCsvFile);
             gc.generateCsv(evalConfig, modelConfig, weightedRocCsvFile, result.weightedRoc);
         }
 
-        String modelScoreGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(),
-                evalConfig.getName() + "_modelscore_gainchart.csv", SourceType.LOCAL);
+        String modelScoreGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                + "_modelscore_gainchart.csv", SourceType.LOCAL);
         LOG.info("Model score gain chart data is generated in {}.", modelScoreGainChartCsv);
         gc.generateCsv(evalConfig, modelConfig, modelScoreGainChartCsv, result.modelScoreList);
     }
@@ -552,8 +552,8 @@ public class ConfusionMatrix {
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getEvalScorePath(evalConfig, sourceType),
                 sourceType);
         boolean isDir = ShifuFileUtils.isDir(pathFinder.getEvalScorePath(evalConfig, sourceType), sourceType);
-        Set<String> tagSet = new HashSet<String>(
-                modelConfig.getFlattenTags(modelConfig.getPosTags(evalConfig), modelConfig.getNegTags(evalConfig)));
+        Set<String> tagSet = new HashSet<String>(modelConfig.getFlattenTags(modelConfig.getPosTags(evalConfig),
+                modelConfig.getNegTags(evalConfig)));
         List<Set<String>> tags = modelConfig.getSetTags(modelConfig.getPosTags(evalConfig),
                 modelConfig.getNegTags(evalConfig));
 
@@ -599,9 +599,8 @@ public class ConfusionMatrix {
                             maxScore = maxVotes = tagCounts[i];
                         }
                     }
-                } else if((CommonUtils.isTreeModel(modelConfig.getAlgorithm())
-                        || NNConstants.NN_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm()))
-                        && modelConfig.getTrain().isOneVsAll()) {
+                } else if((CommonUtils.isTreeModel(modelConfig.getAlgorithm()) || NNConstants.NN_ALG_NAME
+                        .equalsIgnoreCase(modelConfig.getAlgorithm())) && modelConfig.getTrain().isOneVsAll()) {
                     // for RF, GBT & NN OneVsAll classification
                     for(int i = this.multiClassScore1Index; i < (classes + this.multiClassScore1Index); i++) {
                         double dd = NumberFormatUtils.getDouble(raw[i], 0d);
@@ -637,7 +636,7 @@ public class ConfusionMatrix {
             }
             scanner.close();
         }
-        
+
         LOG.info("Totally loading {} records with invalid target records {} in eval {}.", cnt, invalidTargetCnt,
                 evalConfig.getName());
 
@@ -748,9 +747,8 @@ public class ConfusionMatrix {
         ConfusionMatrixCalculator calculator = new ConfusionMatrixCalculator(modelConfig.getPosTags(evalConfig),
                 modelConfig.getNegTags(evalConfig), moList);
 
-        BufferedWriter confMatWriter = ShifuFileUtils.getWriter(
-                pathFinder.getEvalMatrixPath(evalConfig, evalConfig.getDataSet().getSource()),
-                evalConfig.getDataSet().getSource());
+        BufferedWriter confMatWriter = ShifuFileUtils.getWriter(pathFinder.getEvalMatrixPath(evalConfig, evalConfig
+                .getDataSet().getSource()), evalConfig.getDataSet().getSource());
         calculator.calculate(confMatWriter);
 
         confMatWriter.close();
