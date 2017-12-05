@@ -82,3 +82,6 @@ shifu.namespace.strict.mode = false
 
 # add worker get result waiting timeout to 10 minutes
 guagua.worker.getresult.timeout=600000
+
+# set worker compute time threshold to 30 minutes, if compute time of 3 iterations >= this value, worker will kill itself.
+guagua.computation.time.threshold=1800000
