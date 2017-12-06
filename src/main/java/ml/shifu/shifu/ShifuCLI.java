@@ -73,6 +73,7 @@ public class ShifuCLI {
     private static final String VARSEL_CMD = "varsel";
     private static final String NORMALIZE_CMD = "normalize";
     private static final String NORM_CMD = "norm";
+    private static final String TRANSFORM_CMD = "transform";
     private static final String STATS_CMD = "stats";
     private static final String INIT_CMD_MODEL = "model";
     private static final String INIT_CMD = "init";
@@ -212,12 +213,13 @@ public class ShifuCLI {
                         if(cmd.hasOption(CORRELATION) || cmd.hasOption("c")) {
                             log.info("Do model set correlation computing successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
                         } else {
-                            log.info("Do model set statistic successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
+                            log.info("Do model set statistic successfully. Please continue next step by using 'shifu normalize or shifu norm or shifu transform'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
                         }
                     } else {
                         log.warn("Error in model set stats computation, please report issue on http:/github.com/shifuml/shifu/issues.");
                     }
-                } else if(cleanedArgs[0].equals(NORMALIZE_CMD) || cleanedArgs[0].equals(NORM_CMD)) {
+                } else if(cleanedArgs[0].equals(NORMALIZE_CMD) || cleanedArgs[0].equals(NORM_CMD)
+                        || cleanedArgs[0].equals(TRANSFORM_CMD)) {
                     // normalize step
                     status = normalizeTrainData(cmd.hasOption(SHUFFLE));
                     if(status == 0) {
@@ -642,8 +644,8 @@ public class ShifuCLI {
         System.out.println("\tstats -rebin [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
         System.out.println("\t                                        Do the variable Re-bin.");
         System.out
-                .println("\tvarselect/varsel [-reset] [-list]       Variable selection, will update finalSelect in ColumnConfig.json.");
-        System.out.println("\tnormalize/norm [-shuffle]               Normalize the columns with finalSelect as true.");
+                .println("\tvarselect/varsel [-reset] [-list]         Variable selection, will update finalSelect in ColumnConfig.json.");
+        System.out.println("\tnormalize/norm/transform [-shuffle]     Normalize the columns with finalSelect as true.");
         System.out.println("\ttrain [-dry] [-shuffle]                 Train the model with the normalized data.");
         System.out.println("\tposttrain                               Post-process data after training models.");
         System.out.println("\teval                                    Run all eval sets.");
