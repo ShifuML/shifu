@@ -67,20 +67,20 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     private static final Splitter DEFAULT_SPLITTER = Splitter.on(CommonConstants.DEFAULT_COLUMN_SEPARATOR);
 
     /**
-     * Model Config read from HDFS
+     * Model Config read from HDFS, be static to shared in multiple mappers
      */
-    private ModelConfig modelConfig;
+    private static ModelConfig modelConfig;
 
     /**
-     * Column Config list read from HDFS
+     * Column Config list read from HDFS, be static to shared in multiple mappers
      */
-    private List<ColumnConfig> columnConfigList;
+    private static List<ColumnConfig> columnConfigList;
 
     /**
      * Basic neural network model instance to compute basic score with all selected columns and wrapper selected
-     * columns.
+     * columns, be static to shared in multiple mappers
      */
-    private MLRegression model;
+    private static MLRegression model;
 
     /**
      * Basic input node count for NN model, all the variables selected in current model training.
@@ -135,35 +135,40 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     /**
      * Load all configurations for modelConfig and columnConfigList from source type.
      */
-    private void loadConfigFiles(final Context context) {
-        LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(), Thread
-                .currentThread().getName());
-        long start = System.currentTimeMillis();
-        try {
-            SourceType sourceType = SourceType.valueOf(context.getConfiguration().get(
-                    Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
-            this.modelConfig = CommonUtils.loadModelConfig(
-                    context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG), sourceType);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+    private synchronized static void loadConfigFiles(final Context context) {
+        if(modelConfig == null) {
+            LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(),
+                    Thread.currentThread().getName());
+            long start = System.currentTimeMillis();
+            try {
+                SourceType sourceType = SourceType.valueOf(context.getConfiguration()
+                        .get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
+                modelConfig = CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
+                        sourceType);
+                columnConfigList = CommonUtils.loadColumnConfigList(
+                        context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            LOG.info("After loading config with time {}ms and memory {} in thread {}.",
+                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(),
+                    Thread.currentThread().getName());
         }
-        LOG.info("After loading config with time {}ms and memory {} in thread {}.",
-                (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(), Thread.currentThread()
-                        .getName());
     }
 
     /**
      * Load first model in model path as a {@link MLRegression} instance.
      */
-    private void loadModel() throws IOException {
-        LOG.info("Before loading model with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(), Thread
-                .currentThread().getName());
-        long start = System.currentTimeMillis();
-        this.model = (MLRegression) (CommonUtils.loadBasicModels(this.modelConfig, this.columnConfigList, null).get(0));
-        LOG.info("After load model with time {}ms and memory {} in thread {}.", (System.currentTimeMillis() - start),
-                MemoryUtils.getRuntimeMemoryStats(), Thread.currentThread().getName());
+    private synchronized static void loadModel() throws IOException {
+        if(model == null) {
+            LOG.info("Before loading model with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(),
+                    Thread.currentThread().getName());
+            long start = System.currentTimeMillis();
+            model = (MLRegression) (CommonUtils.loadBasicModels(modelConfig, columnConfigList, null).get(0));
+            LOG.info("After load model with time {}ms and memory {} in thread {}.",
+                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(),
+                    Thread.currentThread().getName());
+        }
     }
 
     /**
@@ -175,14 +180,14 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         loadConfigFiles(context);
 
         loadModel();
-        this.filterBy = context.getConfiguration()
-                .get(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE, Constants.FILTER_BY_SE);
+        this.filterBy = context.getConfiguration().get(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE,
+                Constants.FILTER_BY_SE);
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
-                this.columnConfigList);
+                columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        if(this.model instanceof BasicFloatNetwork) {
-            this.inputs = new double[((BasicFloatNetwork) this.model).getFeatureSet().size()];
-            this.featureSet = ((BasicFloatNetwork) this.model).getFeatureSet();
+        if(model instanceof BasicFloatNetwork) {
+            this.inputs = new double[((BasicFloatNetwork) model).getFeatureSet().size()];
+            this.featureSet = ((BasicFloatNetwork) model).getFeatureSet();
         } else {
             this.inputs = new double[this.inputNodeCount];
         }
@@ -206,10 +211,10 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         int index = 0, inputsIndex = 0, outputsIndex = 0;
         for(String input: DEFAULT_SPLITTER.split(value.toString())) {
             double doubleValue = NumberFormatUtils.getDouble(input.trim(), 0.0d);
-            if(index == this.columnConfigList.size()) {
+            if(index == columnConfigList.size()) {
                 break;
             } else {
-                ColumnConfig columnConfig = this.columnConfigList.get(index);
+                ColumnConfig columnConfig = columnConfigList.get(index);
                 if(columnConfig != null && columnConfig.isTarget()) {
                     this.outputs[outputsIndex++] = doubleValue;
                 } else {
@@ -228,13 +233,13 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
 
         double candidateModelScore = 0d;
         if(Constants.FILTER_BY_SE.equalsIgnoreCase(this.filterBy)) {
-            candidateModelScore = this.model.compute(new BasicMLData(inputs)).getData()[0];
+            candidateModelScore = model.compute(new BasicMLData(inputs)).getData()[0];
         }
         for(int i = 0; i < this.inputs.length; i++) {
             oldValue = this.inputs[i];
             this.inputs[i] = 0d;
             this.inputsMLData.setData(this.inputs);
-            double currentModelScore = this.model.compute(new BasicMLData(inputs)).getData()[0];
+            double currentModelScore = model.compute(new BasicMLData(inputs)).getData()[0];
 
             double diff = 0d;
             if(Constants.FILTER_BY_ST.equalsIgnoreCase(this.filterBy)) {
