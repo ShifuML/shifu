@@ -520,12 +520,18 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
      */
     private void distributedSEWrapper() throws Exception {
         // 1. Train a model using current selected variables, if no variables selected, use all candidate variables.
-        TrainModelProcessor trainModelProcessor = new TrainModelProcessor();
-        trainModelProcessor.setForVarSelect(true);
-        trainModelProcessor.run();
+        boolean reuseCurrentModel = Environment.getBoolean("shifu.varsel.se.reuse", Boolean.FALSE);
+        SourceType source = this.modelConfig.getDataSet().getSource();
+
+        if(!reuseCurrentModel) {
+            TrainModelProcessor trainModelProcessor = new TrainModelProcessor();
+            trainModelProcessor.setForVarSelect(true);
+            trainModelProcessor.run();
+        }
+
+        syncDataToHdfs(source);
 
         // 2. Submit a MapReduce job to analyze sensitivity RMS.
-        SourceType source = this.modelConfig.getDataSet().getSource();
         Configuration conf = new Configuration();
         // 2.1 prepare se job conf
         prepareSEJobConf(source, conf);
@@ -966,8 +972,11 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
                                         // if SE filterBy and SE postcorrelationMetric, seStatsMap has stats, do
                                         // correlation comparison by SE RMS value
-                                        if(this.modelConfig.getVarSelectFilterBy().equals("SE")
-                                                && corrMetric == PostCorrelationMetric.SE && this.seStatsMap != null
+                                        if((this.modelConfig.getVarSelectFilterBy().equalsIgnoreCase(
+                                                Constants.FILTER_BY_SE) || this.modelConfig.getVarSelectFilterBy()
+                                                .equalsIgnoreCase(Constants.FILTER_BY_ST))
+                                                && corrMetric == PostCorrelationMetric.SE
+                                                && this.seStatsMap != null
                                                 && this.seStatsMap.get(config.getColumnNum()) != null
                                                 && this.seStatsMap.get(columnConfigList.get(i).getColumnNum()) != null) {
                                             log.warn(
@@ -1006,7 +1015,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             case KS:
                 return config1.getKs() > config2.getKs();
             case SE:
-                if(this.modelConfig.getVarSelectFilterBy().equals("SE") && this.seStatsMap != null
+                if((this.modelConfig.getVarSelectFilterBy().equalsIgnoreCase(Constants.FILTER_BY_SE) || this.modelConfig
+                        .getVarSelectFilterBy().equalsIgnoreCase(Constants.FILTER_BY_ST))
+                        && this.seStatsMap != null
                         && this.seStatsMap.get(config1.getColumnNum()) != null
                         && this.seStatsMap.get(config2.getColumnNum()) != null) {
                     // if bigger SE rms, means it is much important column, smaller will be dropped
