@@ -238,6 +238,7 @@ public class Normalizer {
                 return woeZScoreNormalize(config, raw, cutoff, true);
             case ZSCALE_ONEHOT:
                 return woeOneHotNormalize(config, raw, cutoff, categoryMissingNormType);
+            case DISCRETE_ZSCORE:
             case DISCRETE_ZSCALE:
                 return discreteZScoreNormalize(config, raw, cutoff, categoryMissingNormType);
             case OLD_ZSCALE:
