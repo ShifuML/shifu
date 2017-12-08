@@ -113,13 +113,7 @@ case "`uname`" in
     CYGWIN*) cygwin=true;;
 esac
 
-JAVA_OPTIONS=${SHIFU_OPTS:=-server -Xms1G -Xmx2G}
-if [ "${1}" == "stats" ]; then
-    if [ "${2}" == "-correlation" -o "${2}" == "-c" ]; then
-        # set to 4G for correlation computing to avoid OOM
-        JAVA_OPTIONS=${SHIFU_OPTS:=-server -Xms1G -Xmx4G}
-    fi
-fi
+JAVA_OPTIONS=${SHIFU_OPTS:=-server -Xms2G -Xmx4G}
 
 PIG_OPTIONS="${PIG_OPTIONS} -Dmapred.map.tasks.speculative.execution=true"
 PIG_OPTIONS="${PIG_OPTIONS} -Dmapred.reduce.tasks.speculative.execution=true"
