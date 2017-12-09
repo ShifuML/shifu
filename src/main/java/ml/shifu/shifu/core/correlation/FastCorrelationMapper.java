@@ -26,9 +26,11 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import ml.shifu.guagua.util.MemoryUtils;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
@@ -104,19 +106,28 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
     private List<Set<String>> tags;
 
     private synchronized static void loadConfigFiles(final Context context) {
-        if(modelConfig != null) {
-
+        if(modelConfig == null) {
+            LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(),
+                    Thread.currentThread().getName());
+            long start = System.currentTimeMillis();
             try {
-                SourceType sourceType = SourceType.valueOf(context.getConfiguration()
-                        .get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
-                modelConfig = CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
-                        sourceType);
-                columnConfigList = CommonUtils.loadColumnConfigList(
-                        context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+                // SourceType sourceType = SourceType.valueOf(context.getConfiguration()
+                // .get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
+                // modelConfig =
+                // CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
+                // sourceType);
+                // columnConfigList = CommonUtils.loadColumnConfigList(
+                // context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+                modelConfig = CommonUtils.loadModelConfig(Constants.MODEL_CONFIG_JSON_FILE_NAME, SourceType.LOCAL);
+                columnConfigList = CommonUtils.loadColumnConfigList(Constants.COLUMN_CONFIG_JSON_FILE_NAME,
+                        SourceType.LOCAL);
                 hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+            LOG.info("After loading config with time {}ms and memory {} in thread {}.",
+                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(),
+                    Thread.currentThread().getName());
         }
     }
 
