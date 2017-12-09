@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.Set;
 
 import ml.shifu.guagua.util.MemoryUtils;
@@ -70,6 +71,11 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
      * Model Config read from HDFS, be static to shared in multiple mappers
      */
     private static ModelConfig modelConfig;
+
+    /**
+     * Random used for train#baggingSampleRate
+     */
+    private static Random random = new Random();
 
     /**
      * Column Config list read from HDFS, be static to shared in multiple mappers
@@ -137,12 +143,12 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
      */
     private synchronized static void loadConfigFiles(final Context context) {
         if(modelConfig == null) {
-            LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(),
-                    Thread.currentThread().getName());
+            LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(), Thread
+                    .currentThread().getName());
             long start = System.currentTimeMillis();
             try {
-                SourceType sourceType = SourceType.valueOf(context.getConfiguration()
-                        .get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
+                SourceType sourceType = SourceType.valueOf(context.getConfiguration().get(
+                        Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
                 modelConfig = CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
                         sourceType);
                 columnConfigList = CommonUtils.loadColumnConfigList(
@@ -151,8 +157,8 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
                 throw new RuntimeException(e);
             }
             LOG.info("After loading config with time {}ms and memory {} in thread {}.",
-                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(),
-                    Thread.currentThread().getName());
+                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(), Thread.currentThread()
+                            .getName());
         }
     }
 
@@ -161,13 +167,13 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
      */
     private synchronized static void loadModel() throws IOException {
         if(model == null) {
-            LOG.info("Before loading model with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(),
-                    Thread.currentThread().getName());
+            LOG.info("Before loading model with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(), Thread
+                    .currentThread().getName());
             long start = System.currentTimeMillis();
             model = (MLRegression) (CommonUtils.loadBasicModels(modelConfig, columnConfigList, null).get(0));
             LOG.info("After load model with time {}ms and memory {} in thread {}.",
-                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(),
-                    Thread.currentThread().getName());
+                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(), Thread.currentThread()
+                            .getName());
         }
     }
 
@@ -180,8 +186,8 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         loadConfigFiles(context);
 
         loadModel();
-        this.filterBy = context.getConfiguration().get(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE,
-                Constants.FILTER_BY_SE);
+        this.filterBy = context.getConfiguration()
+                .get(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE, Constants.FILTER_BY_SE);
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
                 columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
@@ -207,6 +213,11 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
 
     @Override
     protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+        // only use bagging sample training data to do sensitivity analysis
+        if(random.nextDouble() >= modelConfig.getTrain().getBaggingSampleRate()) {
+            return;
+        }
+
         recordCount += 1L;
         int index = 0, inputsIndex = 0, outputsIndex = 0;
         for(String input: DEFAULT_SPLITTER.split(value.toString())) {
