@@ -324,8 +324,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     private int persistColumnIds(Path path) {
         try {
-            List<Scanner> scanners = ShifuFileUtils.getDataScanners(path.toString(), modelConfig.getDataSet()
-                    .getSource());
+            List<Scanner> scanners = ShifuFileUtils.getDataScanners(path.toString(),
+                    modelConfig.getDataSet().getSource());
 
             List<Integer> ids = null;
             for(Scanner scanner: scanners) {
@@ -365,8 +365,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     private Path getVotedSelectionPath(SourceType sourceType) {
-        return ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
-                new Path(getPathFinder().getVarSelsPath(sourceType), "VarSels"));
+        return ShifuFileUtils.getFileSystemBySourceType(sourceType)
+                .makeQualified(new Path(getPathFinder().getVarSelsPath(sourceType), "VarSels"));
     }
 
     @SuppressWarnings("unused")
@@ -381,7 +381,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         String zkServers = Environment.getProperty(Environment.ZOO_KEEPER_SERVERS);
         if(StringUtils.isEmpty(zkServers)) {
-            log.warn("No specified zookeeper settings from zookeeperServers in shifuConfig file, Guagua will set embeded zookeeper server in client process. For big data applications, specified zookeeper servers are strongly recommended.");
+            log.warn(
+                    "No specified zookeeper settings from zookeeperServers in shifuConfig file, Guagua will set embeded zookeeper server in client process. For big data applications, specified zookeeper servers are strongly recommended.");
         } else {
             args.add("-z");
             args.add(zkServers);
@@ -429,8 +430,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 Environment.getProperty(Environment.VAR_SEL_MASTER_CONDUCTOR, WrapperWorkerConductor.class.getName())));
 
         // setting queue
-        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
-                Environment.getProperty(Environment.HADOOP_JOB_QUEUE, ml.shifu.shifu.util.Constants.DEFAULT_JOB_QUEUE)));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME, Environment
+                .getProperty(Environment.HADOOP_JOB_QUEUE, ml.shifu.shifu.util.Constants.DEFAULT_JOB_QUEUE)));
 
         // MAPRED timeout
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_TASK_TIMEOUT, Environment
@@ -440,20 +441,16 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 VarSelOutput.class.getName()));
 
         // setting model config column config
-        args.add(String.format(
-                CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                CommonConstants.SHIFU_MODEL_CONFIG,
-                ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
-                        new Path(super.getPathFinder().getModelConfigPath(sourceType)))));
-        args.add(String.format(
-                CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                CommonConstants.SHIFU_COLUMN_CONFIG,
-                ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(
-                        new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_MODEL_CONFIG,
+                ShifuFileUtils.getFileSystemBySourceType(sourceType)
+                        .makeQualified(new Path(super.getPathFinder().getModelConfigPath(sourceType)))));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_COLUMN_CONFIG,
+                ShifuFileUtils.getFileSystemBySourceType(sourceType)
+                        .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
 
         // source type
-        args.add(String
-                .format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.MODELSET_SOURCE_TYPE, sourceType));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.MODELSET_SOURCE_TYPE,
+                sourceType));
 
         // computation time
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
@@ -463,8 +460,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // one can set guagua conf in shifuconfig
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
             if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(), entry
-                        .getValue().toString()));
+                args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(),
+                        entry.getValue().toString()));
             }
         }
     }
@@ -587,10 +584,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         job.setMapOutputKeyClass(LongWritable.class);
         job.setMapOutputValueClass(ColumnInfo.class);
         job.setInputFormatClass(CombineInputFormat.class);
-        FileInputFormat.setInputPaths(
-                job,
-                ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(
-                        new Path(super.getPathFinder().getNormalizedDataPath())));
+        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.getPathFinder().getNormalizedDataPath())));
 
         job.setReducerClass(VarSelectReducer.class);
         // Only one reducer, no need set combiner because of distinct keys in map outputs.
@@ -606,21 +601,27 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     private void prepareSEJobConf(SourceType source, Configuration conf) throws IOException {
-        // add jars to hadoop mapper and reducer
-        new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars() });
+        String modelConfigPath = ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString();
+        String columnConfigPath = ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString();
+        // only the first model is sued for sensitivity analysis
+        String seModelPath = ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(
+                new Path(super.getPathFinder().getModelsPath(), "model0." + modelConfig.getAlgorithm().toLowerCase()))
+                .toString();
+        String filePath = modelConfigPath + "," + columnConfigPath + "," + seModelPath;
+
+        // add jars and files to hadoop mapper and reducer
+        new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars(), "-files", filePath });
 
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_MAP_SPECULATIVE, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_REDUCE_SPECULATIVE, true);
-        conf.set(
-                Constants.SHIFU_MODEL_CONFIG,
-                ShifuFileUtils.getFileSystemBySourceType(source)
-                        .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
-        conf.set(
-                Constants.SHIFU_COLUMN_CONFIG,
-                ShifuFileUtils.getFileSystemBySourceType(source)
-                        .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
+        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
+        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
         // set mapreduce.job.max.split.locations to 100 to suppress warnings
@@ -734,8 +735,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         List<Scanner> scanners = null;
         try {
             // here only works for 1 reducer
-            FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source).globStatus(
-                    new Path(outputFilePattern));
+            FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source)
+                    .globStatus(new Path(outputFilePattern));
             if(globStatus == null || globStatus.length == 0) {
                 throw new RuntimeException("Var select MSE stats output file not exist.");
             }
@@ -776,8 +777,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             log.info(
                     "Sensitivity analysis report is in {}/{}-* file(s) with format 'column_index\tcolumn_name\tmean\trms\tvariance'.",
                     varSelectMSEOutputPath, Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME);
-            this.seStatsMap = readSEValuesToMap(varSelectMSEOutputPath + Path.SEPARATOR
-                    + Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME + "-*", source);
+            this.seStatsMap = readSEValuesToMap(
+                    varSelectMSEOutputPath + Path.SEPARATOR + Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME + "-*", source);
         } finally {
             if(scanners != null) {
                 for(Scanner scanner: scanners) {
@@ -927,10 +928,11 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         double[] corrArray = getCorrArray(columns);
                         for(int i = 0; i < corrArray.length; i++) {
                             // only check column larger than current column index and already final selected
-                            if(config.getColumnNum() < i
-                                    && (columnConfigList.get(i).isTarget() || columnConfigList.get(i).isFinalSelect())) {
+                            if(config.getColumnNum() < i && (columnConfigList.get(i).isTarget()
+                                    || columnConfigList.get(i).isFinalSelect())) {
                                 // * 1.000005d is to avoid some value like 1.0000000002 in correlation value
-                                if(Math.abs(corrArray[i]) > (modelConfig.getVarSelect().getCorrelationThreshold() * 1.000005d)) {
+                                if(Math.abs(corrArray[i]) > (modelConfig.getVarSelect().getCorrelationThreshold()
+                                        * 1.000005d)) {
                                     if(config.isForceSelect() && columnConfigList.get(i).isForceSelect()) {
                                         log.warn(
                                                 "{} and {} has high correlated value but both not to be removed because both are force-selected",
@@ -939,8 +941,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                                         log.warn(
                                                 "Absolute correlation value {} in column pair ({}, {}) ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} name {} is not force-selected will not be selected, set finalSelect to false.",
                                                 config.getColumnName(), columnConfigList.get(i).getColumnName(),
-                                                modelConfig.getVarSelect().getCorrelationThreshold(), columnConfigList
-                                                        .get(i).getColumnNum(), columnConfigList.get(i).getColumnName());
+                                                modelConfig.getVarSelect().getCorrelationThreshold(),
+                                                columnConfigList.get(i).getColumnNum(),
+                                                columnConfigList.get(i).getColumnName());
                                         columnConfigList.get(i).setFinalSelect(false);
                                     } else if(!config.isForceSelect() && columnConfigList.get(i).isForceSelect()) {
                                         log.warn(
@@ -972,13 +975,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
                                         // if SE filterBy and SE postcorrelationMetric, seStatsMap has stats, do
                                         // correlation comparison by SE RMS value
-                                        if((this.modelConfig.getVarSelectFilterBy().equalsIgnoreCase(
-                                                Constants.FILTER_BY_SE) || this.modelConfig.getVarSelectFilterBy()
-                                                .equalsIgnoreCase(Constants.FILTER_BY_ST))
-                                                && corrMetric == PostCorrelationMetric.SE
-                                                && this.seStatsMap != null
-                                                && this.seStatsMap.get(config.getColumnNum()) != null
-                                                && this.seStatsMap.get(columnConfigList.get(i).getColumnNum()) != null) {
+                                        if((this.modelConfig.getVarSelectFilterBy()
+                                                .equalsIgnoreCase(Constants.FILTER_BY_SE)
+                                                || this.modelConfig.getVarSelectFilterBy()
+                                                        .equalsIgnoreCase(Constants.FILTER_BY_ST))
+                                                && corrMetric == PostCorrelationMetric.SE && this.seStatsMap != null
+                                                && this.seStatsMap.get(config.getColumnNum()) != null && this.seStatsMap
+                                                        .get(columnConfigList.get(i).getColumnNum()) != null) {
                                             log.warn(
                                                     "Absolute correlation value {} in column pair ({}, {}) ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} name {} with smaller SE RMS value will not be selected, set finalSelect to false.",
                                                     Math.abs(corrArray[i]), config.getColumnNum(), i,
@@ -1015,14 +1018,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             case KS:
                 return config1.getKs() > config2.getKs();
             case SE:
-                if((this.modelConfig.getVarSelectFilterBy().equalsIgnoreCase(Constants.FILTER_BY_SE) || this.modelConfig
-                        .getVarSelectFilterBy().equalsIgnoreCase(Constants.FILTER_BY_ST))
-                        && this.seStatsMap != null
-                        && this.seStatsMap.get(config1.getColumnNum()) != null
+                if((this.modelConfig.getVarSelectFilterBy().equalsIgnoreCase(Constants.FILTER_BY_SE)
+                        || this.modelConfig.getVarSelectFilterBy().equalsIgnoreCase(Constants.FILTER_BY_ST))
+                        && this.seStatsMap != null && this.seStatsMap.get(config1.getColumnNum()) != null
                         && this.seStatsMap.get(config2.getColumnNum()) != null) {
                     // if bigger SE rms, means it is much important column, smaller will be dropped
-                    return this.seStatsMap.get(config1.getColumnNum()).getRms() > this.seStatsMap.get(
-                            config2.getColumnNum()).getRms();
+                    return this.seStatsMap.get(config1.getColumnNum()).getRms() > this.seStatsMap
+                            .get(config2.getColumnNum()).getRms();
                 } else {
                     // not valid se, take iv
                     return config1.getIv() > config2.getIv();
