@@ -23,17 +23,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import ml.shifu.guagua.util.MemoryUtils;
-import ml.shifu.guagua.util.NumberFormatUtils;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -43,6 +34,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Splitter;
+
+import ml.shifu.guagua.util.MemoryUtils;
+import ml.shifu.guagua.util.NumberFormatUtils;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 
 /**
  * Mapper implementation to accumulate MSE value when remove one column.
@@ -141,12 +144,16 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
                     Thread.currentThread().getName());
             long start = System.currentTimeMillis();
             try {
-                SourceType sourceType = SourceType.valueOf(context.getConfiguration()
-                        .get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
-                modelConfig = CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
-                        sourceType);
-                columnConfigList = CommonUtils.loadColumnConfigList(
-                        context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+                // SourceType sourceType = SourceType.valueOf(context.getConfiguration()
+                // .get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
+                // modelConfig =
+                // CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
+                // sourceType);
+                // columnConfigList = CommonUtils.loadColumnConfigList(
+                // context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+                modelConfig = CommonUtils.loadModelConfig(Constants.MODEL_CONFIG_JSON_FILE_NAME, SourceType.LOCAL);
+                columnConfigList = CommonUtils.loadColumnConfigList(Constants.COLUMN_CONFIG_JSON_FILE_NAME,
+                        SourceType.LOCAL);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -164,8 +171,13 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
             LOG.info("Before loading model with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(),
                     Thread.currentThread().getName());
             long start = System.currentTimeMillis();
-            model = (MLRegression) (CommonUtils.loadBasicModels(modelConfig, columnConfigList, null).get(0));
-            LOG.info("After load model with time {}ms and memory {} in thread {}.",
+            // model = (MLRegression) (CommonUtils.loadBasicModels(modelConfig, columnConfigList, null).get(0));
+
+            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.LOCAL);
+            // load model from local d-cache model file
+            model = (MLRegression) CommonUtils.loadModel(modelConfig,
+                    new Path("model0." + modelConfig.getAlgorithm().toLowerCase()), fs);
+            LOG.info("After load model class {} with time {}ms and memory {} in thread {}.", model.getClass().getName(),
                     (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(),
                     Thread.currentThread().getName());
         }
