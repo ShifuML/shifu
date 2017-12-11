@@ -21,7 +21,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
 import java.util.Set;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -44,6 +43,8 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.CacheBasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.CacheFlatNetwork;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -74,11 +75,6 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
      * Model Config read from HDFS, be static to shared in multiple mappers
      */
     private static ModelConfig modelConfig;
-
-    /**
-     * Random used for train#baggingSampleRate
-     */
-    private static Random random = new Random();
 
     /**
      * Column Config list read from HDFS, be static to shared in multiple mappers
@@ -139,7 +135,15 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
      */
     private long recordCount;
 
+    /**
+     * Feature set used to check if column with index are in the feature set
+     */
     private Set<Integer> featureSet;
+
+    /**
+     * Network which will cache first layer outputs and later use minus to replace sum to save CPU time.
+     */
+    private static CacheBasicFloatNetwork cacheNetwork;
 
     /**
      * Load all configurations for modelConfig and columnConfigList from source type.
@@ -181,12 +185,47 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
 
             FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.LOCAL);
             // load model from local d-cache model file
-            model = (MLRegression) CommonUtils.loadModel(modelConfig,
-                    new Path("model0." + modelConfig.getAlgorithm().toLowerCase()), fs);
-            LOG.info("After load model class {} with time {}ms and memory {} in thread {}.", model.getClass().getName(),
-                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(),
-                    Thread.currentThread().getName());
+            model = (MLRegression) CommonUtils.loadModel(modelConfig, new Path("model0."
+                    + modelConfig.getAlgorithm().toLowerCase()), fs);
+            LOG.info("After load model class {} with time {}ms and memory {} in thread {}.",
+                    model.getClass().getName(), (System.currentTimeMillis() - start),
+                    MemoryUtils.getRuntimeMemoryStats(), Thread.currentThread().getName());
         }
+    }
+
+    /**
+     * Copy existing model to {@link CacheBasicFloatNetwork} model for fast scoring in sensitivity computing.
+     * 
+     * @param network
+     *            the raw network model
+     * @return the cache network model instance.
+     */
+    public static final CacheBasicFloatNetwork copy(final BasicFloatNetwork network) {
+        final CacheBasicFloatNetwork result = new CacheBasicFloatNetwork(network);
+        final CacheFlatNetwork flat = new CacheFlatNetwork();
+        result.getProperties().putAll(network.getProperties());
+
+        flat.setBeginTraining(network.getFlat().getBeginTraining());
+        flat.setConnectionLimit(network.getFlat().getConnectionLimit());
+        flat.setContextTargetOffset(network.getFlat().getContextTargetOffset());
+        flat.setContextTargetSize(network.getFlat().getContextTargetSize());
+        flat.setEndTraining(network.getFlat().getEndTraining());
+        flat.setHasContext(network.getFlat().getHasContext());
+        flat.setInputCount(network.getFlat().getInputCount());
+        flat.setLayerCounts(network.getFlat().getLayerCounts());
+        flat.setLayerFeedCounts(network.getFlat().getLayerFeedCounts());
+        flat.setLayerContextCount(network.getFlat().getLayerContextCount());
+        flat.setLayerIndex(network.getFlat().getLayerIndex());
+        flat.setLayerOutput(network.getFlat().getLayerOutput());
+        flat.setLayerSums(network.getFlat().getLayerSums());
+        flat.setOutputCount(network.getFlat().getOutputCount());
+        flat.setWeightIndex(network.getFlat().getWeightIndex());
+        flat.setWeights(network.getFlat().getWeights());
+        flat.setBiasActivation(network.getFlat().getBiasActivation());
+        flat.setActivationFunctions(network.getFlat().getActivationFunctions());
+        result.setFeatureSet(network.getFeatureSet());
+        result.getStructure().setFlat(flat);
+        return result;
     }
 
     /**
@@ -198,6 +237,10 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         loadConfigFiles(context);
 
         loadModel();
+
+        // Copy mode to here
+        cacheNetwork = copy((BasicFloatNetwork) model);
+
         this.filterBy = context.getConfiguration()
                 .get(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE, Constants.FILTER_BY_SE);
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
@@ -216,6 +259,12 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
             this.featureSet = new HashSet<Integer>(CommonUtils.getAllFeatureList(columnConfigList, isAfterVarSelect));
             this.inputs = new double[this.featureSet.size()];
         }
+
+        if(inputs.length != model.getInputCount()) {
+            throw new IllegalArgumentException("Model input count " + model.getInputCount()
+                    + " is inconsistent with input size " + inputs.length + ".");
+        }
+
         this.outputs = new double[inputOutputIndex[1]];
         this.columnIndexes = new long[this.inputs.length];
         this.inputsMLData = new BasicMLData(this.inputs.length);
@@ -225,11 +274,6 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
 
     @Override
     protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-        // only use bagging sample training data to do sensitivity analysis
-        if(random.nextDouble() >= modelConfig.getTrain().getBaggingSampleRate()) {
-            return;
-        }
-
         recordCount += 1L;
         int index = 0, inputsIndex = 0, outputsIndex = 0;
         for(String input: DEFAULT_SPLITTER.split(value.toString())) {
@@ -250,20 +294,13 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
             index++;
         }
 
-        double oldValue = 0.0d;
-
         this.inputsMLData.setData(this.inputs);
+        // compute candidate model score , cache first layer of sum values in such call method, cache flag here is true
+        double candidateModelScore = cacheNetwork.compute(inputsMLData, true, -1).getData()[0];
 
-        double candidateModelScore = 0d;
-        if(Constants.FILTER_BY_SE.equalsIgnoreCase(this.filterBy)) {
-            candidateModelScore = model.compute(new BasicMLData(inputs)).getData()[0];
-        }
         for(int i = 0; i < this.inputs.length; i++) {
-            oldValue = this.inputs[i];
-            this.inputs[i] = 0d;
-            this.inputsMLData.setData(this.inputs);
-            double currentModelScore = model.compute(new BasicMLData(inputs)).getData()[0];
-
+            // cache flag is false to reuse cache sum of first layer of values.
+            double currentModelScore = cacheNetwork.compute(inputsMLData, false, i).getData()[0];
             double diff = 0d;
             if(Constants.FILTER_BY_ST.equalsIgnoreCase(this.filterBy)) {
                 // ST
@@ -283,7 +320,6 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
                 columnInfo.setSumSquareScoreDiff(columnInfo.getSumSquareScoreDiff() + power2(diff));
             }
             this.results.put(this.columnIndexes[i], columnInfo);
-            this.inputs[i] = oldValue;
         }
 
         if(this.recordCount % 1000 == 0) {

@@ -76,7 +76,6 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
         final FlatNetwork flat = new FlatNetwork();
         final EncogReadHelper in = new EncogReadHelper(is);
         EncogFileSection section;
-
         while((section = in.readNextSection()) != null) {
             if(section.getSectionName().equals("BASIC") && section.getSubSectionName().equals("PARAMS")) {
                 final Map<String, String> params = section.parseParams();
