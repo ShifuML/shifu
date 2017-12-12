@@ -36,7 +36,7 @@ SET mapred.reduce.tasks.speculative.execution true;
 SET mapreduce.reduce.speculative true
 SET mapreduce.map.speculative true
 SET mapreduce.map.sort.spill.percent 0.95
-SET mapreduce.job.reduce.slowstart.completedmaps 0.8
+SET mapreduce.job.reduce.slowstart.completedmaps 0.9
 
 DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE AddColumnNum     ml.shifu.shifu.udf.AddColumnNumAndFilterUDF('$source_type', '$path_model_config', '$path_column_config', 'false');
@@ -54,7 +54,7 @@ data_cols = FILTER data_cols BY $0 IS NOT NULL;
 data_cols = FOREACH data_cols GENERATE FLATTEN($0);
 
 -- prepare data and do binning
-data_binning_grp = GROUP data_cols BY $0;
+data_binning_grp = GROUP data_cols BY $0 PARALLEL $column_parallel;;
 binning_info_small = FOREACH data_binning_grp GENERATE FLATTEN(GenSmallBinningInfo(data_cols));
 
 STORE binning_info_small INTO '$path_stats_small_bins' USING PigStorage('\u0007', '-schema');

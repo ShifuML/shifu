@@ -79,7 +79,7 @@ pig.maxCombinedSplitSize=268435456
 
 ## specified reduce memory to avoid default memory too big or too small
 mapreduce.reduce.memory.mb=2048
-mapreduce.reduce.java.opts=-Xms1800m -Xmx1800m
+mapreduce.reduce.java.opts=-Xms1700m -Xmx1700m
 
 # namespace support - default disable
 shifu.namespace.strict.mode = false
