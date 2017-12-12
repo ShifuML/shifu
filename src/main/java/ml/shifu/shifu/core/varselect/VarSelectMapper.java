@@ -30,6 +30,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.encog.ml.MLRegression;
 import org.encog.ml.data.basic.BasicMLData;
+import org.encog.persist.PersistorRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +46,7 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.CacheBasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.CacheFlatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -83,9 +85,9 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
 
     /**
      * Basic neural network model instance to compute basic score with all selected columns and wrapper selected
-     * columns, be static to shared in multiple mappers
+     * columns
      */
-    private static MLRegression model;
+    private MLRegression model;
 
     /**
      * Basic input node count for NN model, all the variables selected in current model training.
@@ -143,7 +145,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     /**
      * Network which will cache first layer outputs and later use minus to replace sum to save CPU time.
      */
-    private static CacheBasicFloatNetwork cacheNetwork;
+    private CacheBasicFloatNetwork cacheNetwork;
 
     /**
      * Load all configurations for modelConfig and columnConfigList from source type.
@@ -176,21 +178,18 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     /**
      * Load first model in model path as a {@link MLRegression} instance.
      */
-    private synchronized static void loadModel() throws IOException {
-        if(model == null) {
-            LOG.info("Before loading model with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(), Thread
-                    .currentThread().getName());
-            long start = System.currentTimeMillis();
-            // model = (MLRegression) (CommonUtils.loadBasicModels(modelConfig, columnConfigList, null).get(0));
-
-            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.LOCAL);
-            // load model from local d-cache model file
-            model = (MLRegression) CommonUtils.loadModel(modelConfig, new Path("model0."
-                    + modelConfig.getAlgorithm().toLowerCase()), fs);
-            LOG.info("After load model class {} with time {}ms and memory {} in thread {}.",
-                    model.getClass().getName(), (System.currentTimeMillis() - start),
-                    MemoryUtils.getRuntimeMemoryStats(), Thread.currentThread().getName());
-        }
+    private synchronized void loadModel() throws IOException {
+        LOG.debug("Before loading model with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(), Thread
+                .currentThread().getName());
+        long start = System.currentTimeMillis();
+        PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.LOCAL);
+        // load model from local d-cache model file
+        model = (MLRegression) CommonUtils.loadModel(modelConfig, new Path("model0."
+                + modelConfig.getAlgorithm().toLowerCase()), fs);
+        LOG.debug("After load model class {} with time {}ms and memory {} in thread {}.", model.getClass().getName(),
+                (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(), Thread.currentThread()
+                        .getName());
     }
 
     /**
@@ -260,9 +259,9 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
             this.inputs = new double[this.featureSet.size()];
         }
 
-        if(inputs.length != model.getInputCount()) {
+        if(inputs.length != this.inputNodeCount) {
             throw new IllegalArgumentException("Model input count " + model.getInputCount()
-                    + " is inconsistent with input size " + inputs.length + ".");
+                    + " is inconsistent with input size " + this.inputNodeCount + ".");
         }
 
         this.outputs = new double[inputOutputIndex[1]];

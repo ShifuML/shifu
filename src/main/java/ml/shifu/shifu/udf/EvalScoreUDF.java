@@ -180,7 +180,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                 }
 
                 // TODO validation
-                log.info("DEBUG: outputHiddenLayerIndex is " + outputHiddenLayerIndex);
+                log.debug("DEBUG: outputHiddenLayerIndex is " + outputHiddenLayerIndex);
             }
         }
     }
