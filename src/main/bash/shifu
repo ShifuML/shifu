@@ -109,7 +109,7 @@ fi
 SHIFU_OPTS=${JAVA_OPTS:=${SHIFU_OPTS}}
 
 if [ "${SPARK_HOME}" != "" ]; then
-   if ["${SPARK_CONF_DIR}" != "" ]; then
+   if [ "${SPARK_CONF_DIR}" != "" ]; then
         SPARK_SUBMIT=`command -v "spark-submit"`
         if [ "${SPAK_SUBMIT}" == "" ]; then
             SPARK_SUBMIT="${SPARK_HOME}/bin/spark-submit"
@@ -220,7 +220,7 @@ case ${COMMAND} in
         ;;
     "eval")
         sanity_check
-        if [ "${SPARK_SUBMIT}" != "" && "${SPARK_EVAL}" == "TRUE" ]; then
+        if [ "${SPARK_SUBMIT}" != "" -a "${SHIFU_SPARK_EVAL}" == "TRUE" ]; then
                 ${SPARK_SUBMIT} --class ml.shifu.shifu.spark.eval.ShifuEval --conf spark.executor.instances=200 --conf spark.executor.memory=4g  --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --jars ${SPARK_CLASSPATH} ${SHIFU_HOME}/lib/${SPARK_EVAL_JAR}
             else 
                 java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
