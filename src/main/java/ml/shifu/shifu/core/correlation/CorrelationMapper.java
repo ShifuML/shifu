@@ -96,17 +96,10 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
 
     private synchronized static void loadConfigFiles(final Context context) {
         if(modelConfig == null) {
-            LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(),
-                    Thread.currentThread().getName());
+            LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(), Thread
+                    .currentThread().getName());
             long start = System.currentTimeMillis();
             try {
-                // SourceType sourceType = SourceType.valueOf(context.getConfiguration()
-                // .get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
-                // modelConfig =
-                // CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
-                // sourceType);
-                // columnConfigList = CommonUtils.loadColumnConfigList(
-                // context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
                 modelConfig = CommonUtils.loadModelConfig(Constants.MODEL_CONFIG_JSON_FILE_NAME, SourceType.LOCAL);
                 columnConfigList = CommonUtils.loadColumnConfigList(Constants.COLUMN_CONFIG_JSON_FILE_NAME,
                         SourceType.LOCAL);
@@ -115,8 +108,8 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                 throw new RuntimeException(e);
             }
             LOG.info("After loading config with time {}ms and memory {} in thread {}.",
-                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(),
-                    Thread.currentThread().getName());
+                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(), Thread.currentThread()
+                            .getName());
         }
     }
 
@@ -128,8 +121,8 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
 
         this.dataPurifier = new DataPurifier(modelConfig);
 
-        this.isComputeAll = Boolean
-                .valueOf(context.getConfiguration().get(Constants.SHIFU_CORRELATION_COMPUTE_ALL, "false"));
+        this.isComputeAll = Boolean.valueOf(context.getConfiguration().get(Constants.SHIFU_CORRELATION_COMPUTE_ALL,
+                "false"));
 
         for(ColumnConfig config: columnConfigList) {
             if(config.isCategorical()) {
@@ -255,8 +248,8 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                     }
                 }
             }
-            LOG.debug("running time is {}ms in thread {}", (System.currentTimeMillis() - startO),
-                    Thread.currentThread().getName());
+            LOG.debug("running time is {}ms in thread {}", (System.currentTimeMillis() - startO), Thread
+                    .currentThread().getName());
         }
     }
 
