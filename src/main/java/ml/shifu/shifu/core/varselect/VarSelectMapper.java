@@ -156,13 +156,6 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
                     .currentThread().getName());
             long start = System.currentTimeMillis();
             try {
-                // SourceType sourceType = SourceType.valueOf(context.getConfiguration()
-                // .get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
-                // modelConfig =
-                // CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
-                // sourceType);
-                // columnConfigList = CommonUtils.loadColumnConfigList(
-                // context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
                 modelConfig = CommonUtils.loadModelConfig(Constants.MODEL_CONFIG_JSON_FILE_NAME, SourceType.LOCAL);
                 columnConfigList = CommonUtils.loadColumnConfigList(Constants.COLUMN_CONFIG_JSON_FILE_NAME,
                         SourceType.LOCAL);
