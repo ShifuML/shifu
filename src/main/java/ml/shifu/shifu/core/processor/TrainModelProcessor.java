@@ -1268,10 +1268,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private long computeDynamicCombineSize() throws IOException {
         // how many part-m-*.gz file in for gzip file, norm depends on how many gzip files
-        int filePartCnt = ShifuFileUtils.getFilePartCount(super.pathFinder.getNormalizedDataPath(), SourceType.HDFS);
-        long actualFileSize = ShifuFileUtils.getFileOrDirectorySize(super.pathFinder.getNormalizedDataPath(),
-                SourceType.HDFS);
-        boolean isGzip = ShifuFileUtils.isPartFileAllGzip(this.pathFinder.getNormalizedDataPath(), SourceType.HDFS);
+        String dataPath = null;
+        if(CommonUtils.isTreeModel(super.modelConfig.getAlgorithm())) {
+            dataPath = super.pathFinder.getCleanedDataPath();
+        } else {
+            dataPath = super.pathFinder.getNormalizedDataPath();
+        }
+        int filePartCnt = ShifuFileUtils.getFilePartCount(dataPath, SourceType.HDFS);
+        long actualFileSize = ShifuFileUtils.getFileOrDirectorySize(dataPath, SourceType.HDFS);
+        boolean isGzip = ShifuFileUtils.isPartFileAllGzip(dataPath, SourceType.HDFS);
         long avgFileSize = actualFileSize / filePartCnt;
 
         if(isGzip && filePartCnt <= 20) {

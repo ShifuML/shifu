@@ -106,17 +106,10 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
 
     private synchronized static void loadConfigFiles(final Context context) {
         if(modelConfig == null) {
-            LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(),
-                    Thread.currentThread().getName());
+            LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(), Thread
+                    .currentThread().getName());
             long start = System.currentTimeMillis();
             try {
-                // SourceType sourceType = SourceType.valueOf(context.getConfiguration()
-                // .get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
-                // modelConfig =
-                // CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
-                // sourceType);
-                // columnConfigList = CommonUtils.loadColumnConfigList(
-                // context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
                 modelConfig = CommonUtils.loadModelConfig(Constants.MODEL_CONFIG_JSON_FILE_NAME, SourceType.LOCAL);
                 columnConfigList = CommonUtils.loadColumnConfigList(Constants.COLUMN_CONFIG_JSON_FILE_NAME,
                         SourceType.LOCAL);
@@ -125,8 +118,8 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
                 throw new RuntimeException(e);
             }
             LOG.info("After loading config with time {}ms and memory {} in thread {}.",
-                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(),
-                    Thread.currentThread().getName());
+                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(), Thread.currentThread()
+                            .getName());
         }
     }
 
@@ -138,8 +131,8 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
 
         this.dataPurifier = new DataPurifier(modelConfig);
 
-        this.isComputeAll = Boolean
-                .valueOf(context.getConfiguration().get(Constants.SHIFU_CORRELATION_COMPUTE_ALL, "false"));
+        this.isComputeAll = Boolean.valueOf(context.getConfiguration().get(Constants.SHIFU_CORRELATION_COMPUTE_ALL,
+                "false"));
 
         this.outputKey = new IntWritable();
         this.correlationMap = new HashMap<Integer, CorrelationWritable>();
@@ -251,8 +244,8 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
                 cw.setAdjustSumY(adjustSumY);
             }
             if(i % 1000 == 0) {
-                LOG.debug("running time 1 is {}ms in thread {}", (System.currentTimeMillis() - start),
-                        Thread.currentThread().getName());
+                LOG.debug("running time 1 is {}ms in thread {}", (System.currentTimeMillis() - start), Thread
+                        .currentThread().getName());
             }
             start = System.currentTimeMillis();
             for(int j = 0; j < columnConfigList.size(); j++) {
@@ -275,12 +268,12 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
                 }
             }
             if(i % 1000 == 0) {
-                LOG.debug("running time 2 is {}ms in thread {}", (System.currentTimeMillis() - start),
-                        Thread.currentThread().getName());
+                LOG.debug("running time 2 is {}ms in thread {}", (System.currentTimeMillis() - start), Thread
+                        .currentThread().getName());
             }
         }
-        LOG.debug("running time is {}ms in thread {}", (System.currentTimeMillis() - startO),
-                Thread.currentThread().getName());
+        LOG.debug("running time is {}ms in thread {}", (System.currentTimeMillis() - startO), Thread.currentThread()
+                .getName());
     }
 
     private double[] getDoubleArrayByRawArray(String[] units) {
