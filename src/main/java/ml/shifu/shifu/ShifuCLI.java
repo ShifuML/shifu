@@ -90,6 +90,10 @@ public class ShifuCLI {
     private static final String RESET = "reset";
 
     private static final String CORRELATION = "correlation";
+
+    private static final String PSI = "psi";
+    private static final String SHORT_PSI = "p";
+
     // for evaluation
     private static final String LIST = "list";
     private static final String DELETE = "delete";
@@ -206,12 +210,15 @@ public class ShifuCLI {
                     params.put(StatsModelProcessor.EXPECTED_BIN_NUM, cmd.getOptionValue(N));
                     params.put(StatsModelProcessor.IV_KEEP_RATIO, cmd.getOptionValue(IVR));
                     params.put(StatsModelProcessor.MINIMUM_BIN_INST_CNT, cmd.getOptionValue(BIC));
+                    params.put(StatsModelProcessor.IS_COMPUTE_PSI, cmd.hasOption(PSI) || cmd.hasOption(SHORT_PSI));
 
                     // stats step
                     status = calModelStats(params);
                     if(status == 0) {
                         if(cmd.hasOption(CORRELATION) || cmd.hasOption("c")) {
                             log.info("Do model set correlation computing successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
+                        } if(cmd.hasOption(PSI) || cmd.hasOption(SHORT_PSI)) {
+                            log.info("Do model set psi computing successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
                         } else {
                             log.info("Do model set statistic successfully. Please continue next step by using 'shifu normalize or shifu norm or shifu transform'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
                         }
@@ -570,6 +577,8 @@ public class ShifuCLI {
                 .withDescription("Compute correlation value for all column pairs.").create(CORRELATION);
         Option opt_correlation_short = OptionBuilder.hasArg(false)
                 .withDescription("Compute correlation value for all column pairs.").create("c");
+        Option opt_psi = OptionBuilder.hasArg(false).withDescription("Compute psi value.").create(PSI);
+        Option opt_psi_short = OptionBuilder.hasArg(false).withDescription("Compute psi value.").create(SHORT_PSI);
         Option opt_shuffle = OptionBuilder.hasArg(false).withDescription("Shuffle data after normalization")
                 .create(SHUFFLE);
         Option opt_resume = OptionBuilder.hasArg(false).withDescription("Resume combo model training.").create(RESUME);
@@ -618,6 +627,8 @@ public class ShifuCLI {
         opts.addOption(opt_eval_model);
         opts.addOption(opt_correlation);
         opts.addOption(opt_correlation_short);
+        opts.addOption(opt_psi);
+        opts.addOption(opt_psi_short);
 
         opts.addOption(opt_rebin);
         opts.addOption(opt_vars);
@@ -641,6 +652,7 @@ public class ShifuCLI {
                 .println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
         System.out
                 .println("\tstats -correlation(c)                   Calculate correlation values between column pairs.");
+        System.out.println("\tstats -psi(p)                           Calculate psi values if psi column is provided.");
         System.out.println("\tstats -rebin [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
         System.out.println("\t                                        Do the variable Re-bin.");
         System.out
