@@ -240,7 +240,6 @@ public class ModelRunner {
      * Cleaning the thread pool resources, must be called at last.
      */
     public void close() {
-        this.scorer.close();
     }
 
 }

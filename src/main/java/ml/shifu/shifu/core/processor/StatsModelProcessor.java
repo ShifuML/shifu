@@ -55,6 +55,7 @@ import ml.shifu.shifu.core.mr.input.CombineInputFormat;
 import ml.shifu.shifu.core.processor.stats.AbstractStatsExecutor;
 import ml.shifu.shifu.core.processor.stats.AkkaStatsWorker;
 import ml.shifu.shifu.core.processor.stats.DIBStatsExecutor;
+import ml.shifu.shifu.core.processor.stats.MapReducerStatsWorker;
 import ml.shifu.shifu.core.processor.stats.MunroPatIStatsExecutor;
 import ml.shifu.shifu.core.processor.stats.MunroPatStatsExecutor;
 import ml.shifu.shifu.core.processor.stats.SPDTIStatsExecutor;
@@ -102,6 +103,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     private final static Logger log = LoggerFactory.getLogger(StatsModelProcessor.class);
 
+    public static final String IS_COMPUTE_PSI = "IS_COMPUTE_PSI";
     public static final String IS_COMPUTE_CORR = "IS_COMPUTE_CORR";
     public static final String IS_REBIN = "IS_RE_BIN";
 
@@ -165,6 +167,28 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
                 // 3. save column config list
                 saveColumnConfigList();
+            } else if(getBooleanParam(this.params, IS_COMPUTE_PSI)) {
+                // 1. validate if run stats before run stats -correlation
+                boolean foundValidMeanValueColumn = false;
+                for(ColumnConfig config: this.columnConfigList) {
+                    if(!config.isMeta() && !config.isTarget()) {
+                        if(config.getMean() != null) {
+                            foundValidMeanValueColumn = true;
+                            break;
+                        }
+                    }
+                }
+
+                if(!foundValidMeanValueColumn) {
+                    log.warn("Some mean value of column is null, could you check if you run 'shifu stats'.");
+                    return -1;
+                }
+
+                if(StringUtils.isNotEmpty(modelConfig.getPsiColumnName())) {
+                    new MapReducerStatsWorker(this, modelConfig, columnConfigList).runPSI();
+                } else {
+                    log.warn("To Run PSI please set your PSI column in dataSet::psiColumnName.");
+                }
             } else if(getBooleanParam(this.params, IS_REBIN)) {
                 // run the re-binning
                 String backupColumnConfigPath = this.pathFinder.getBackupColumnConfig();
@@ -284,17 +308,21 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString();
 
         // add jars and files to hadoop mapper and reducer
-        new GenericOptionsParser(conf,
-                new String[] { "-libjars", addRuntimeJars(), "-files", modelConfigPath + "," + columnConfigPath });
+        new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars(), "-files",
+                modelConfigPath + "," + columnConfigPath });
 
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 5000);
-        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
-        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
+        conf.set(
+                Constants.SHIFU_MODEL_CONFIG,
+                ShifuFileUtils.getFileSystemBySourceType(source)
+                        .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
+        conf.set(
+                Constants.SHIFU_COLUMN_CONFIG,
+                ShifuFileUtils.getFileSystemBySourceType(source)
+                        .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
 
         // too many data needed to be transfered to reducer, set default completed maps to a smaller one 0.7 to start
@@ -315,8 +343,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
         conf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", true);
 
-        boolean isFastCorrelation = Environment.getProperty("shifu.correlation.fast", "false")
-                .equalsIgnoreCase(Boolean.TRUE.toString());
+        boolean isFastCorrelation = Environment.getProperty("shifu.correlation.fast", "false").equalsIgnoreCase(
+                Boolean.TRUE.toString());
 
         int threads = parseThreadNum();
         conf.setInt("mapreduce.map.cpu.vcores", threads);
@@ -359,8 +387,10 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         job.setMapOutputValueClass(CorrelationWritable.class);
 
         job.setInputFormatClass(CombineInputFormat.class);
-        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.modelConfig.getDataSetRawPath())));
+        FileInputFormat.setInputPaths(
+                job,
+                ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(
+                        new Path(super.modelConfig.getDataSetRawPath())));
 
         job.setReducerClass(CorrelationReducer.class);
 
@@ -428,9 +458,15 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         }
 
         conf.set("mapreduce.map.memory.mb", memoryInContainer + "");
-        conf.set("mapreduce.map.java.opts", "-Xms" + (memoryInContainer - memoryBuffer) + "m -Xmx"
-                + (memoryInContainer - memoryBuffer) + "m -Xmn" + youngMemory
-                + "m -server -XX:MaxPermSize=128M -XX:PermSize=64M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps ");
+        conf.set(
+                "mapreduce.map.java.opts",
+                "-Xms"
+                        + (memoryInContainer - memoryBuffer)
+                        + "m -Xmx"
+                        + (memoryInContainer - memoryBuffer)
+                        + "m -Xmn"
+                        + youngMemory
+                        + "m -server -XX:MaxPermSize=128M -XX:PermSize=64M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps ");
     }
 
     private int parseThreadNum() {
@@ -500,8 +536,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                         continue;
                     }
 
-                    double numerator = xCw.getAdjustCount()[i] * xCw.getXySum()[i]
-                            - xCw.getAdjustSumX()[i] * xCw.getAdjustSumY()[i];
+                    double numerator = xCw.getAdjustCount()[i] * xCw.getXySum()[i] - xCw.getAdjustSumX()[i]
+                            * xCw.getAdjustSumY()[i];
                     double denominator1 = Math.sqrt(xCw.getAdjustCount()[i] * xCw.getXxSum()[i]
                             - xCw.getAdjustSumX()[i] * xCw.getAdjustSumX()[i]);
                     double denominator2 = Math.sqrt(xCw.getAdjustCount()[i] * xCw.getYySum()[i]
@@ -516,10 +552,9 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                     // if(corrArray[i] > 1.0005d || (entry.getKey() == 54 && i == 2124)) {
                     if(corrArray[i] > 1.0005d) {
                         log.warn("Correlation value for columns {} {} > 1, below is debug info.", entry.getKey(), i);
-                        log.warn(
-                                "DEBUG: corr {}, value > 1d, numerator " + numerator + " denominator1 " + denominator1
-                                        + " denominator2 " + denominator2 + " {}, {}",
-                                numerator / (denominator1 * denominator2), entry.getKey(), i);
+                        log.warn("DEBUG: corr {}, value > 1d, numerator " + numerator + " denominator1 " + denominator1
+                                + " denominator2 " + denominator2 + " {}, {}", numerator
+                                / (denominator1 * denominator2), entry.getKey(), i);
                         log.warn(
                                 "DEBUG: xCw.getAdjustCount()[i] * xCw.getXySum()[i] - xCw.getAdjustSumX()[i]  * xCw.getAdjustSumY()[i] : {} * {} - {} * {} ",
                                 xCw.getAdjustCount()[i], xCw.getXySum()[i], xCw.getAdjustSumX()[i],
@@ -568,8 +603,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
     private SortedMap<Integer, CorrelationWritable> dumpCorrInfo(SourceType source, String outputFilePattern)
             throws IOException, UnsupportedEncodingException {
         SortedMap<Integer, CorrelationWritable> corrMap = new TreeMap<Integer, CorrelationWritable>();
-        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source)
-                .globStatus(new Path(outputFilePattern));
+        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source).globStatus(
+                new Path(outputFilePattern));
         if(globStatus == null || globStatus.length == 0) {
             throw new RuntimeException("Correlation computing output file not exist.");
         }
@@ -604,11 +639,11 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
      */
     public CorrelationWritable bytesToObject(byte[] data) {
         if(data == null) {
-            throw new NullPointerException(String.format("data and className should not be null. data:%s, className:%s",
-                    Arrays.toString(data)));
+            throw new NullPointerException(String.format(
+                    "data and className should not be null. data:%s, className:%s", Arrays.toString(data)));
         }
-        CorrelationWritable result = (CorrelationWritable) ReflectionUtils
-                .newInstance(CorrelationWritable.class.getName());
+        CorrelationWritable result = (CorrelationWritable) ReflectionUtils.newInstance(CorrelationWritable.class
+                .getName());
         DataInputStream dataIn = null;
         try {
             ByteArrayInputStream in = new ByteArrayInputStream(data);
@@ -661,10 +696,10 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             binCountNeg[i] = binInfo.getNegativeCnt();
             binCountPos[i] = binInfo.getPositiveCnt();
         }
-        binCountNeg[binCountNeg.length - 1] = columnConfig.getBinCountNeg()
-                .get(columnConfig.getBinCountNeg().size() - 1);
-        binCountPos[binCountPos.length - 1] = columnConfig.getBinCountPos()
-                .get(columnConfig.getBinCountPos().size() - 1);
+        binCountNeg[binCountNeg.length - 1] = columnConfig.getBinCountNeg().get(
+                columnConfig.getBinCountNeg().size() - 1);
+        binCountPos[binCountPos.length - 1] = columnConfig.getBinCountPos().get(
+                columnConfig.getBinCountPos().size() - 1);
 
         double[] binWeightNeg = new double[binInfos.size() + 1];
         double[] binWeightPos = new double[binInfos.size() + 1];
@@ -674,15 +709,15 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             binWeightPos[i] = binInfo.getWeightPos();
         }
 
-        binWeightNeg[binWeightNeg.length - 1] = columnConfig.getBinWeightedNeg()
-                .get(columnConfig.getBinWeightedNeg().size() - 1);
-        binWeightPos[binWeightPos.length - 1] = columnConfig.getBinWeightedPos()
-                .get(columnConfig.getBinWeightedPos().size() - 1);
+        binWeightNeg[binWeightNeg.length - 1] = columnConfig.getBinWeightedNeg().get(
+                columnConfig.getBinWeightedNeg().size() - 1);
+        binWeightPos[binWeightPos.length - 1] = columnConfig.getBinWeightedPos().get(
+                columnConfig.getBinWeightedPos().size() - 1);
 
-        ColumnStatsCalculator.ColumnMetrics columnCountMetrics = ColumnStatsCalculator
-                .calculateColumnMetrics(binCountNeg, binCountPos);
-        ColumnStatsCalculator.ColumnMetrics columnWeightMetrics = ColumnStatsCalculator
-                .calculateColumnMetrics(binWeightNeg, binWeightPos);
+        ColumnStatsCalculator.ColumnMetrics columnCountMetrics = ColumnStatsCalculator.calculateColumnMetrics(
+                binCountNeg, binCountPos);
+        ColumnStatsCalculator.ColumnMetrics columnWeightMetrics = ColumnStatsCalculator.calculateColumnMetrics(
+                binWeightNeg, binWeightPos);
 
         columnConfig.setBinLength(binInfos.size() + 1);
         if(columnConfig.isCategorical()) {
