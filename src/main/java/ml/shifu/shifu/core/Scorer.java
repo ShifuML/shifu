@@ -31,7 +31,6 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
-import ml.shifu.shifu.executor.ExecutorManager;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
@@ -70,11 +69,6 @@ public class Scorer {
      * For faster query from categorical bins
      */
     private Map<Integer, Map<String, Integer>> binCategoryMap = new HashMap<Integer, Map<String, Integer>>();
-
-    /**
-     * Run model in parallel. Size is # of models.
-     */
-    private ExecutorManager<MLData> executorManager;
 
     /**
      * For neural network, if output the hidden neurons
@@ -136,25 +130,7 @@ public class Scorer {
             }
         }
 
-        this.executorManager = new ExecutorManager<MLData>(Math.min(Runtime.getRuntime().availableProcessors(),
-                (models.size() == 0 ? 5 : models.size())));
-
-        // add a shutdown hook as a safe guard if some one not call close
-        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Scorer.this.executorManager.forceShutDown();
-            }
-        }));
-
         this.outputHiddenLayerIndex = outputHiddenLayerIndex;
-    }
-
-    /**
-     * Cleaning the thread pool resources, must be called at last.
-     */
-    public void close() {
-        this.executorManager.forceShutDown();
     }
 
     public ScoreObject score(Map<String, String> rawDataMap) {
@@ -183,7 +159,7 @@ public class Scorer {
         }
 
         final MLDataPair pair = inputPair;
-        List<Callable<MLData>> tasks = new ArrayList<Callable<MLData>>();
+        List<MLData> modelResults = new ArrayList<MLData>();
         for(final BasicML model: models) {
             // TODO, check if no need 'if' condition and refactor two if for loops please
             if(model instanceof BasicFloatNetwork || model instanceof NNModel) {
@@ -204,9 +180,9 @@ public class Scorer {
                         .getInput().size());
 
                 final int fnlOutputHiddenLayerIndex = outputHiddenLayerIndex;
-                tasks.add(new Callable<MLData>() {
+                modelResults.add(new Callable<MLData>() {
                     @Override
-                    public MLData call() throws Exception {
+                    public MLData call() {
                         MLData finalOutput = network.compute(networkPair.getInput());
 
                         if(fnlOutputHiddenLayerIndex == 0) {
@@ -221,18 +197,18 @@ public class Scorer {
                         System.arraycopy(hiddenOutputs, 0, outputs, finalOutput.getData().length, hiddenOutputs.length);
                         return new BasicMLData(outputs);
                     }
-                });
+                }.call());
             } else if(model instanceof BasicNetwork) {
                 final BasicNetwork network = (BasicNetwork) model;
 
                 final MLDataPair networkPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
                         columnConfigList, rawNsDataMap, cutoff, alg, null);
-                tasks.add(new Callable<MLData>() {
+                modelResults.add(new Callable<MLData>() {
                     @Override
-                    public MLData call() throws Exception {
+                    public MLData call() {
                         return network.compute(networkPair.getInput());
                     }
-                });
+                }.call());
             } else if(model instanceof SVM) {
                 final SVM svm = (SVM) model;
                 if(svm.getInputCount() != pair.getInput().size()) {
@@ -240,12 +216,12 @@ public class Scorer {
                             + pair.getInput().size());
                     continue;
                 }
-                tasks.add(new Callable<MLData>() {
+                modelResults.add(new Callable<MLData>() {
                     @Override
-                    public MLData call() throws Exception {
+                    public MLData call() {
                         return svm.compute(pair.getInput());
                     }
-                });
+                }.call());
             } else if(model instanceof LR) {
                 final LR lr = (LR) model;
                 if(lr.getInputCount() != pair.getInput().size()) {
@@ -253,25 +229,25 @@ public class Scorer {
                             + pair.getInput().size());
                     continue;
                 }
-                tasks.add(new Callable<MLData>() {
+                modelResults.add(new Callable<MLData>() {
                     @Override
-                    public MLData call() throws Exception {
+                    public MLData call() {
                         return lr.compute(pair.getInput());
                     }
-                });
+                }.call());
             } else if(model instanceof TreeModel) {
                 final TreeModel tm = (TreeModel) model;
                 if(tm.getInputCount() != pair.getInput().size()) {
                     throw new RuntimeException("GBDT and input size mismatch: tm input Size = " + tm.getInputCount()
                             + "; data input Size = " + pair.getInput().size());
                 }
-                tasks.add(new Callable<MLData>() {
+                modelResults.add(new Callable<MLData>() {
                     @Override
-                    public MLData call() throws Exception {
+                    public MLData call() {
                         MLData result = tm.compute(pair.getInput());
                         return result;
                     }
-                });
+                }.call());
             } else {
                 throw new RuntimeException("unsupport models");
             }
@@ -281,10 +257,9 @@ public class Scorer {
         List<Integer> rfTreeSizeList = new ArrayList<Integer>();
         SortedMap<String, Double> hiddenOutputs = null;
 
-        if(CollectionUtils.isNotEmpty(tasks)) {
-            List<MLData> modelResults = this.executorManager.submitTasksAndWaitResults(tasks);
-            if(CollectionUtils.isEmpty(modelResults) || modelResults.size() != this.models.size()) {
-                log.error("Get empty model results or model results size doesn't match with models size.");
+        if(CollectionUtils.isNotEmpty(modelResults)) {
+            if(modelResults.size() != this.models.size()) {
+                log.error("Get model results size doesn't match with models size.");
                 return null;
             }
 

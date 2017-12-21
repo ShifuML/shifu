@@ -89,7 +89,7 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
             String[] splits = CommonUtils.split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
             this.dataPurifiers = new ArrayList<DataPurifier>(splits.length);
             for(String split: splits) {
-                this.dataPurifiers.add(new DataPurifier(modelConfig, split));
+                this.dataPurifiers.add(new DataPurifier(modelConfig, split, true));
             }
         }
     }
@@ -108,11 +108,11 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
 
         if(size == 0 || input.size() != this.columnConfigList.size()) {
             log.error("the input size - " + input.size() + ", while column size - " + columnConfigList.size());
-            this.mismatchCnt ++;
+            this.mismatchCnt++;
 
             // Throw exceptions if hte mismatch count is greater than MAX_MISMATCH_CNT,
-            //  this could make Shifu could skip some malformed data
-            if ( this.mismatchCnt > MAX_MISMATCH_CNT ) {
+            // this could make Shifu could skip some malformed data
+            if(this.mismatchCnt > MAX_MISMATCH_CNT) {
                 throw new ShifuException(ShifuErrorCode.ERROR_NO_EQUAL_COLCONFIG);
             }
             return null;

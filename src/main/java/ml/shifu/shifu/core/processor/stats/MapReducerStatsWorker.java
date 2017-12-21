@@ -151,7 +151,8 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         processor.syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-        if(StringUtils.isNotEmpty(modelConfig.getPsiColumnName())) {
+        boolean toRunPSIWithStats = Environment.getBoolean("shifu.stats.psi.together", true);
+        if(toRunPSIWithStats && StringUtils.isNotEmpty(modelConfig.getPsiColumnName())) {
             runPSI();
             processor.saveColumnConfigList();
             processor.syncDataToHdfs(modelConfig.getDataSet().getSource());
@@ -549,7 +550,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
      * @throws IOException
      *             in scanners read exception
      */
-    private void runPSI() throws IOException {
+    public void runPSI() throws IOException {
         log.info("Run PSI to use {} to compute the PSI ", modelConfig.getPsiColumnName());
         ColumnConfig columnConfig = CommonUtils
                 .findColumnConfigByName(columnConfigList, modelConfig.getPsiColumnName());
