@@ -204,20 +204,21 @@ public class ShifuCLI {
                     }
                 } else if(cleanedArgs[0].equals(STATS_CMD)) {
                     Map<String, Object> params = new HashMap<String, Object>();
-                    params.put(StatsModelProcessor.IS_COMPUTE_CORR, cmd.hasOption(CORRELATION) || cmd.hasOption("c"));
-                    params.put(StatsModelProcessor.IS_REBIN, cmd.hasOption(REBIN));
-                    params.put(StatsModelProcessor.REQUEST_VARS, cmd.getOptionValue(VARS));
-                    params.put(StatsModelProcessor.EXPECTED_BIN_NUM, cmd.getOptionValue(N));
-                    params.put(StatsModelProcessor.IV_KEEP_RATIO, cmd.getOptionValue(IVR));
-                    params.put(StatsModelProcessor.MINIMUM_BIN_INST_CNT, cmd.getOptionValue(BIC));
-                    params.put(StatsModelProcessor.IS_COMPUTE_PSI, cmd.hasOption(PSI) || cmd.hasOption(SHORT_PSI));
+                    params.put(Constants.IS_COMPUTE_CORR, cmd.hasOption(CORRELATION) || cmd.hasOption("c"));
+                    params.put(Constants.IS_REBIN, cmd.hasOption(REBIN));
+                    params.put(Constants.REQUEST_VARS, cmd.getOptionValue(VARS));
+                    params.put(Constants.EXPECTED_BIN_NUM, cmd.getOptionValue(N));
+                    params.put(Constants.IV_KEEP_RATIO, cmd.getOptionValue(IVR));
+                    params.put(Constants.MINIMUM_BIN_INST_CNT, cmd.getOptionValue(BIC));
+                    params.put(Constants.IS_COMPUTE_PSI, cmd.hasOption(PSI) || cmd.hasOption(SHORT_PSI));
 
                     // stats step
                     status = calModelStats(params);
                     if(status == 0) {
                         if(cmd.hasOption(CORRELATION) || cmd.hasOption("c")) {
                             log.info("Do model set correlation computing successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
-                        } if(cmd.hasOption(PSI) || cmd.hasOption(SHORT_PSI)) {
+                        }
+                        if(cmd.hasOption(PSI) || cmd.hasOption(SHORT_PSI)) {
                             log.info("Do model set psi computing successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
                         } else {
                             log.info("Do model set statistic successfully. Please continue next step by using 'shifu normalize or shifu norm or shifu transform'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
