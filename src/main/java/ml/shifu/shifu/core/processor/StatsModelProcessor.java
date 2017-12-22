@@ -103,17 +103,6 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     private final static Logger log = LoggerFactory.getLogger(StatsModelProcessor.class);
 
-    public static final String IS_COMPUTE_PSI = "IS_COMPUTE_PSI";
-    public static final String IS_COMPUTE_CORR = "IS_COMPUTE_CORR";
-    public static final String IS_REBIN = "IS_RE_BIN";
-
-    public static final String REQUEST_VARS = "REQUEST_VARS";
-    public static final String EXPECTED_BIN_NUM = "EXPECTED_BIN_NUM";
-    public static final String IV_KEEP_RATIO = "IV_KEEP_RATIO";
-    public static final String MINIMUM_BIN_INST_CNT = "MINIMUM_BIN_INST_CNT";
-
-    private Map<String, Object> params;
-
     public StatsModelProcessor(Map<String, Object> params) {
         this.params = params;
     }
@@ -129,12 +118,12 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         log.info("Step Start: stats");
         long start = System.currentTimeMillis();
         try {
+            // 0. set up and sync to HDFS
             setUp(ModelStep.STATS);
-            log.debug("catMaxBinNum - {}", this.modelConfig.getStats().getCateMaxNumBin());
             // resync ModelConfig.json/ColumnConfig.json to HDFS
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
-            if(getBooleanParam(this.params, IS_COMPUTE_CORR)) {
+            if(getBooleanParam(this.params, Constants.IS_COMPUTE_CORR)) {
                 // 1. validate if run stats before run stats -correlation
                 boolean foundValidMeanValueColumn = false;
                 for(ColumnConfig config: this.columnConfigList) {
@@ -167,7 +156,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
                 // 3. save column config list
                 saveColumnConfigList();
-            } else if(getBooleanParam(this.params, IS_COMPUTE_PSI)) {
+            } else if(getBooleanParam(this.params, Constants.IS_COMPUTE_PSI)) {
                 // 1. validate if run stats before run stats -correlation
                 boolean foundValidMeanValueColumn = false;
                 for(ColumnConfig config: this.columnConfigList) {
@@ -189,7 +178,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 } else {
                     log.warn("To Run PSI please set your PSI column in dataSet::psiColumnName.");
                 }
-            } else if(getBooleanParam(this.params, IS_REBIN)) {
+            } else if(getBooleanParam(this.params, Constants.IS_REBIN)) {
                 // run the re-binning
                 String backupColumnConfigPath = this.pathFinder.getBackupColumnConfig();
                 if(!ShifuFileUtils.isFileExists(new Path(backupColumnConfigPath), SourceType.LOCAL)) {
@@ -209,7 +198,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 }
 
                 List<ColumnConfig> rebinColumns = new ArrayList<ColumnConfig>();
-                List<String> catVariables = getStringList(this.params, REQUEST_VARS, ",");
+                List<String> catVariables = getStringList(this.params, Constants.REQUEST_VARS, ",");
                 for(ColumnConfig columnConfig: this.columnConfigList) {
                     if(CollectionUtils.isEmpty(catVariables) || isRequestColumn(catVariables, columnConfig)) {
                         rebinColumns.add(columnConfig);
@@ -680,9 +669,9 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private void doReBin(ColumnConfig columnConfig) throws IOException {
-        int expectBinNum = getIntParam(this.params, EXPECTED_BIN_NUM);
-        double ivKeepRatio = getDoubleParam(this.params, IV_KEEP_RATIO, 1.0d);
-        long minimumInstCnt = getLongParam(this.params, MINIMUM_BIN_INST_CNT);
+        int expectBinNum = getIntParam(this.params, Constants.EXPECTED_BIN_NUM);
+        double ivKeepRatio = getDoubleParam(this.params, Constants.IV_KEEP_RATIO, 1.0d);
+        long minimumInstCnt = getLongParam(this.params, Constants.MINIMUM_BIN_INST_CNT);
 
         ColumnConfigDynamicBinning columnConfigDynamicBinning = new ColumnConfigDynamicBinning(columnConfig,
                 expectBinNum, ivKeepRatio, minimumInstCnt);

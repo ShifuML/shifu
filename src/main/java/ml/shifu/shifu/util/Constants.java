@@ -165,7 +165,6 @@ public interface Constants {
     public static final String DEFAULT_EVALSCORE_META_COLUMN_FILE = "score.meta.column.names";
     public static final String DEFAULT_EXPRESSION_COLUMN_FILE = "filter.expressions";
 
-
     public static final String VAR_SEL_MASTER_CONDUCTOR = "dvarsel.master.conductor.cls";
     public static final String VAR_SEL_WORKER_CONDUCTOR = "dvarsel.worker.conductor.cls";
     public static final String VAR_SEL_COLUMN_IDS_OUPUT = "dvarsle.column.ids.output";
@@ -291,5 +290,14 @@ public interface Constants {
     public static final String SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER = "@@";
 
     public static final String SHIFU_STATS_FILTER_EXPRESSIONS = "shifu.stats.filter.expressions";
+
+    public static final String IS_COMPUTE_PSI = "IS_COMPUTE_PSI";
+    public static final String IS_COMPUTE_CORR = "IS_COMPUTE_CORR";
+    public static final String IS_REBIN = "IS_RE_BIN";
+
+    public static final String REQUEST_VARS = "REQUEST_VARS";
+    public static final String EXPECTED_BIN_NUM = "EXPECTED_BIN_NUM";
+    public static final String IV_KEEP_RATIO = "IV_KEEP_RATIO";
+    public static final String MINIMUM_BIN_INST_CNT = "MINIMUM_BIN_INST_CNT";
 
 }

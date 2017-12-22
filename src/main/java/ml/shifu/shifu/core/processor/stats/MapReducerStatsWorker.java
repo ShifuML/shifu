@@ -438,6 +438,10 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                     config.setColumnType(basicConfig.getColumnType());
                     config.setColumnFlag(basicConfig.getColumnFlag() == ColumnFlag.Target ? ColumnFlag.Meta
                             : basicConfig.getColumnFlag());
+
+                    log.info("basicConfig is - " + basicConfig.getColumnName() + " corrColumnNum:" + corrColumnNum
+                            + ", currColumnName: " + columnNum + ", currColumnType:" + config.getColumnType());
+
                     this.columnConfigList.add(config);
                 } else {
                     config = basicConfig;
