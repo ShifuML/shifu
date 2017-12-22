@@ -43,7 +43,7 @@ guagua.computation.time.threshold=1800000
 
 ## tuning for rf, in rf, tree models are stored in master memory, if two many models, please tune such parameters 
 mapreduce.map.memory.mb=2048
-mapreduce.map.java.opts=-Xms1700m -Xmx1700m -server -XX:MaxPermSize=64M -XX:PermSize=64M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
+mapreduce.map.java.opts=-Xms1700m -Xmx1700m -server -XX:MaxPermSize=64m -XX:PermSize=64m -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
 
 set io buffer in mapper to 400mb to avoid too many memory consumption in mapper heap
 mapreduce.task.io.sort.mb=400
@@ -78,8 +78,8 @@ pig.splitCombination=true
 pig.maxCombinedSplitSize=268435456
 
 ## specified reduce memory to avoid default memory too big or too small
-mapreduce.reduce.memory.mb=2400
-mapreduce.reduce.java.opts=-Xms2G -Xmx2G
+mapreduce.reduce.memory.mb=2048
+mapreduce.reduce.java.opts=-Xms1700m -Xmx1700m -XX:MaxPermSize=64m -XX:PermSize=64m
 
 # namespace support - default disable
 shifu.namespace.strict.mode = false
