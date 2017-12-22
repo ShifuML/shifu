@@ -108,6 +108,7 @@ fi
 
 SHIFU_OPTS=${JAVA_OPTS:=${SHIFU_OPTS}}
 
+#check SPARK_HOME for shifu spark eval
 if [ "${SPARK_HOME}" != "" ]; then
    if [ "${SPARK_CONF_DIR}" != "" ]; then
         SPARK_SUBMIT=`command -v "spark-submit"`
@@ -116,6 +117,9 @@ if [ "${SPARK_HOME}" != "" ]; then
             SPARK_EVAL_JAR=`find ${SHIFU_HOME}/lib -name "shifu-spark-eval*.jar"`
             SPARK_CLASSPATH=`find ${SHIFU_HOME}/lib -name "*.jar" | grep -v javadoc | xargs | sed 's/ /,/g'`
         fi
+   else 
+        echo "SPARK_HOME is not set, please set SPARK_HOME to enable shifu spark eval."
+
    fi
 fi
 
@@ -220,9 +224,10 @@ case ${COMMAND} in
         ;;
     "eval")
         sanity_check
+        #TODO : to change spark executor instance automaticaly adapted
         if [ "${SPARK_SUBMIT}" != "" -a "${SHIFU_SPARK_EVAL}" == "TRUE" ]; then
                 ${SPARK_SUBMIT} --class ml.shifu.shifu.spark.eval.ShifuEval --conf spark.executor.instances=200 --conf spark.executor.memory=4g  --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --jars ${SPARK_CLASSPATH} ${SHIFU_HOME}/lib/${SPARK_EVAL_JAR}
-            else 
+        else 
                 java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         fi
         ;;
