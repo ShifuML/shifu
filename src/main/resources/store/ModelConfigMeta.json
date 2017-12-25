@@ -879,7 +879,12 @@
                 "type" : "integer",
                 "directive": "input",
                 "defval" : 10
-             }, { 
+             }, {
+                "name" : "scoreScale",
+                "type" : "number",
+                "directive" : "input",
+                "defval" : 1000
+            }, { 
                 "name": "gbtConvertToProb",
                 "type": "boolean",
                 "directive": "input",
