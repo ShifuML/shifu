@@ -45,7 +45,7 @@ guagua.computation.time.threshold=1800000
 mapreduce.map.memory.mb=2048
 mapreduce.map.java.opts=-Xms1700m -Xmx1700m -server -XX:MaxPermSize=64m -XX:PermSize=64m -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
 
-set io buffer in mapper to 400mb to avoid too many memory consumption in mapper heap
+#set io buffer in mapper to 400mb to avoid too many memory consumption in mapper heap
 mapreduce.task.io.sort.mb=400
 
 ## each round how many jobs can be running, if bagging is 10, two rounds of bagging with each one 5 guagua jobs 
