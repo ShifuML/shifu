@@ -15,22 +15,25 @@
  */
 package ml.shifu.shifu.container.obj;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.fs.PathFinder;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.Path;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.Path;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * EvalConfig class
@@ -49,8 +52,19 @@ public class EvalConfig {
     /**
      * For typical 0-1 binary regression, this is set to be true, while for other regression, better to set it to false
      * as normal regression.
+     * 
+     * <p>
+     * Deprecated this field and make such feature in GBTScoreConvertStrategy.RAW and GBTScoreConvertStrategy.SIGMOID.
+     * From 0.11.0, if {@link #gbtScoreConvertStrategy} is null, such field is like before.
      */
+    @Deprecated
     private Boolean gbtConvertToProb = Boolean.TRUE;
+
+    /**
+     * GBTScoreConvertStrategy is used to convert raw GBT score to the same distribution in NN, like cut off score to
+     * [0, 1].
+     */
+    private String gbtScoreConvertStrategy = "SIGMOID";
 
     /**
      * Cache meta columns to a list to avoid reading this file for several times
@@ -113,22 +127,22 @@ public class EvalConfig {
     @JsonIgnore
     public List<String> getScoreMetaColumns(ModelConfig modelConfig) throws IOException {
         if(scoreMetaColumns == null) {
-            synchronized (this) {
-                if (scoreMetaColumns == null) {
-                    if ( StringUtils.isNotBlank(scoreMetaColumnNameFile) ) {
+            synchronized(this) {
+                if(scoreMetaColumns == null) {
+                    if(StringUtils.isNotBlank(scoreMetaColumnNameFile)) {
                         String path = scoreMetaColumnNameFile;
-                        if ( SourceType.HDFS.equals(dataSet.getSource()) ) {
+                        if(SourceType.HDFS.equals(dataSet.getSource())) {
                             PathFinder pathFinder = new PathFinder(modelConfig);
                             File file = new File(scoreMetaColumnNameFile);
                             path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
                         }
 
-                        String delimiter = StringUtils.isBlank(dataSet.getHeaderDelimiter())
-                                ? dataSet.getDataDelimiter() : dataSet.getHeaderDelimiter();
+                        String delimiter = StringUtils.isBlank(dataSet.getHeaderDelimiter()) ? dataSet
+                                .getDataDelimiter() : dataSet.getHeaderDelimiter();
                         scoreMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(), delimiter);
                     }
 
-                    if ( this.scoreMetaColumns == null ) {
+                    if(this.scoreMetaColumns == null) {
                         this.scoreMetaColumns = new ArrayList<String>();
                     }
                 }
@@ -143,23 +157,24 @@ public class EvalConfig {
             synchronized(this) {
                 if(metaColumns == null) {
                     List<String> scoreMetaColumns = getScoreMetaColumns(modelConfig);
-                    if ( scoreMetaColumns != null ) {
+                    if(scoreMetaColumns != null) {
                         this.metaColumns = new ArrayList<String>(scoreMetaColumns);
                     }
 
                     String metaColumnNameFile = dataSet.getMetaColumnNameFile();
                     if(StringUtils.isNotBlank(metaColumnNameFile)) {
                         String path = metaColumnNameFile;
-                        if ( SourceType.HDFS.equals(dataSet.getSource()) ) {
+                        if(SourceType.HDFS.equals(dataSet.getSource())) {
                             PathFinder pathFinder = new PathFinder(modelConfig);
                             File file = new File(metaColumnNameFile);
                             path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
                         }
 
-                        String delimiter = StringUtils.isBlank(dataSet.getHeaderDelimiter())
-                                ? dataSet.getDataDelimiter() : dataSet.getHeaderDelimiter();
-                        List<String> rawMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(), delimiter);
-                        if( CollectionUtils.isNotEmpty(metaColumns) ) {
+                        String delimiter = StringUtils.isBlank(dataSet.getHeaderDelimiter()) ? dataSet
+                                .getDataDelimiter() : dataSet.getHeaderDelimiter();
+                        List<String> rawMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(),
+                                delimiter);
+                        if(CollectionUtils.isNotEmpty(metaColumns)) {
                             for(String column: rawMetaColumns) {
                                 if(!metaColumns.contains(column)) {
                                     metaColumns.add(column);
@@ -170,7 +185,7 @@ public class EvalConfig {
                         }
                     }
 
-                    if ( this.metaColumns == null ) {
+                    if(this.metaColumns == null) {
                         this.metaColumns = new ArrayList<String>();
                     }
                 }
@@ -230,6 +245,7 @@ public class EvalConfig {
     /**
      * @return the gbtConvertToProb
      */
+    @JsonIgnore
     public Boolean getGbtConvertToProb() {
         return gbtConvertToProb;
     }
@@ -238,8 +254,26 @@ public class EvalConfig {
      * @param gbtConvertToProb
      *            the gbtConvertToProb to set
      */
+    @JsonProperty
     public void setGbtConvertToProb(Boolean gbtConvertToProb) {
         this.gbtConvertToProb = gbtConvertToProb;
+    }
+
+    /**
+     * @return the gbtScoreConvertStrategy
+     */
+    @JsonIgnore
+    public String getGbtScoreConvertStrategy() {
+        return gbtScoreConvertStrategy;
+    }
+
+    /**
+     * @param gbtScoreConvertStrategy
+     *            the gbtScoreConvertStrategy to set
+     */
+    @JsonProperty
+    public void setGbtScoreConvertStrategy(String gbtScoreConvertStrategy) {
+        this.gbtScoreConvertStrategy = gbtScoreConvertStrategy;
     }
 
     @Override
@@ -248,6 +282,7 @@ public class EvalConfig {
         other.setCustomPaths(new HashMap<String, String>(customPaths));
         other.setDataSet(dataSet.clone());
         other.setGbtConvertToProb(gbtConvertToProb);
+        other.setGbtScoreConvertStrategy(gbtScoreConvertStrategy);
         other.setName(name);
         other.setPerformanceBucketNum(performanceBucketNum);
         other.setPerformanceScoreSelector(performanceScoreSelector);

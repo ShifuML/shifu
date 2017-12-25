@@ -96,8 +96,14 @@ public class IndependentTreeModel {
     private boolean isClassification = false;
 
     /**
-     * GBT model results is not in [0, 1], set {@link #isConvertToProb} to true will normalize model score to [0, 1]
+     * GBT model scores are not in [0, 1], set {@link #isConvertToProb} to true will normalize model score to [0, 1].
+     * 
+     * <p>
+     * Deprecate this field and make more strategies in {@link #gbtScoreConvertStrategy}, RAW and SIGMOID are the same
+     * as isConvertToProb to false or true. If {@link #gbtScoreConvertStrategy} is null, #isConvertToProb still is
+     * effective.
      */
+    @Deprecated
     private boolean isConvertToProb = false;
 
     /**
@@ -126,6 +132,28 @@ public class IndependentTreeModel {
      */
     private Map<Integer, Double> numericalMeanMapping;
 
+    /**
+     * GBT model scores are not in [0, 1], to make it in [0, 1], different strategies can be provided. Set this field as
+     * String not Enum to avoid dependency on json related jars.
+     */
+    private String gbtScoreConvertStrategy = "RAW";
+
+    /**
+     * IF current scoring is for gbt sigmoid convert, a flag here to avoid multiple string comparsion
+     */
+    private boolean isGBTSigmoidConvert;
+
+    /**
+     * IF current scoring is for gbt cut off convert, a flag here to avoid multiple string comparsion
+     */
+    private boolean isGBTCutoffConvert;
+
+    /**
+     * IF current scoring is raw gbt score, a flag here to avoid multiple string comparsion
+     */
+    @SuppressWarnings("unused")
+    private boolean isGBTRawScore;
+
     public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping, Map<Integer, String> numNameMapping,
             Map<Integer, List<String>> categoricalColumnNameNames,
             Map<Integer, Map<String, Integer>> columnCategoryIndexMapping, Map<Integer, Integer> columnNumIndexMapping,
@@ -143,6 +171,13 @@ public class IndependentTreeModel {
         this.isGBDT = isGBDT;
         this.isClassification = isClassification;
         this.isConvertToProb = isConvertToProb;
+
+        if(this.isConvertToProb) {
+            this.gbtScoreConvertStrategy = Constants.GBT_SCORE_SIGMOID_CONVETER;
+        } else {
+            this.gbtScoreConvertStrategy = Constants.GBT_SCORE_RAW_CONVETER;
+        }
+
         this.lossStr = lossStr;
         this.algorithm = algorithm;
         this.inputNode = inputNode;
@@ -161,6 +196,46 @@ public class IndependentTreeModel {
                 }
             }
         }
+
+        isGBTSigmoidConvert = this.gbtScoreConvertStrategy != null
+                && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_SIGMOID_CONVETER);
+        isGBTCutoffConvert = this.gbtScoreConvertStrategy != null
+                && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_CUTOFF_CONVETER);
+        isGBTRawScore = this.gbtScoreConvertStrategy != null
+                && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_RAW_CONVETER);
+    }
+
+    public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping, Map<Integer, String> numNameMapping,
+            Map<Integer, List<String>> categoricalColumnNameNames,
+            Map<Integer, Map<String, Integer>> columnCategoryIndexMapping, Map<Integer, Integer> columnNumIndexMapping,
+            boolean isOptimizeMode, List<List<TreeNode>> trees, List<List<Double>> weights, boolean isGBDT,
+            boolean isClassification, boolean isConvertToProb, String lossStr, String algorithm, int inputNode,
+            int version, String gbtScoreConvertStrategy) {
+        this(numericalMeanMapping, numNameMapping, categoricalColumnNameNames, columnCategoryIndexMapping,
+                columnNumIndexMapping, isOptimizeMode, trees, weights, isGBDT, isClassification, isConvertToProb,
+                lossStr, algorithm, inputNode, version);
+        if(isValidGbtScoreConvertStrategy(gbtScoreConvertStrategy)) {
+            this.gbtScoreConvertStrategy = gbtScoreConvertStrategy;
+        } else {
+            // set gbtScoreConvertStrategy by isConvertToProb in the other constructor
+        }
+
+        // re-check boolean flags compute for fast check in compute method
+        isGBTSigmoidConvert = this.gbtScoreConvertStrategy != null
+                && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_SIGMOID_CONVETER);
+        isGBTCutoffConvert = this.gbtScoreConvertStrategy != null
+                && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_CUTOFF_CONVETER);
+        isGBTRawScore = this.gbtScoreConvertStrategy != null
+                && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_RAW_CONVETER);
+    }
+
+    public static boolean isValidGbtScoreConvertStrategy(String gbtScoreConvertStrategy) {
+        return gbtScoreConvertStrategy != null
+                && (gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_RAW_CONVETER)
+                        || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_SIGMOID_CONVETER)
+                        || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_CUTOFF_CONVETER)
+                        || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_HALF_CUTOFF_CONVETER) || gbtScoreConvertStrategy
+                            .equalsIgnoreCase(Constants.GBT_SCORE_MAXMIN_SCALE_CONVETER));
     }
 
     /**
@@ -224,8 +299,15 @@ public class IndependentTreeModel {
                     predict += score * wgtList.get(j);
                 }
 
-                if(this.isConvertToProb) {
-                    predict = convertToProb(predict);
+                if(this.isGBTSigmoidConvert) {
+                    predict = convertToSigmoid(predict);
+                } else if(this.isGBTCutoffConvert) {
+                    predict = cutoffPredict(predict);
+                } else {
+                    // raw score, not to do sth. just to use raw predict score
+                    // here, only SIGMOID, RAW, CUTOFF are supported here since for HALF_CUTOFF and MAXMIN_SCALE are all
+                    // related with max and min score and has been processed in ConfusionMatrix, for HALF_CUTOFF or
+                    // MAXMIN_SCALE, just keep it as raw score here without doing anything
                 }
 
                 // sum all computing scores
@@ -285,6 +367,24 @@ public class IndependentTreeModel {
     }
 
     /**
+     * Cut off predict score in [0, 1] range since for binary regression usually score smaller than 0 can be treated as
+     * 0 and score larger than 1 can be treated as 1
+     * 
+     * @param score
+     *            the raw score
+     * @return cut off score which should be in [0, 1]
+     */
+    public double cutoffPredict(double score) {
+        if(score < 0d) {
+            return 0d;
+        } else if(score > 1d) {
+            return 1d;
+        } else {
+            return score;
+        }
+    }
+
+    /**
      * Covert score to probability value which are in [0, 1], for GBT regression, scores can not be [0, 1]. Round score
      * to 1.0E19 to avoid NaN in final return result.
      * 
@@ -292,7 +392,7 @@ public class IndependentTreeModel {
      *            the raw score
      * @return score after sigmoid transform.
      */
-    public double convertToProb(double score) {
+    public double convertToSigmoid(double score) {
         // sigmoid function to covert to [0, 1], TODO, how to make it configuable for users
         return 1 / (1 + Math.min(1.0E19, Math.exp(-20 * score)));
     }
@@ -604,6 +704,22 @@ public class IndependentTreeModel {
     }
 
     /**
+     * Load model instance from stream like model0.gbt or model0.rf, by default not to convert gbt score to [0, 1]
+     * 
+     * @param input
+     *            the input stream
+     * @param gbtScoreConvertStrategy
+     *            specify how to convert gbt raw score
+     * @return the tree model instance
+     * @throws IOException
+     *             any exception in load input stream
+     */
+    public static IndependentTreeModel loadFromStream(InputStream input, String gbtScoreConvertStrategy)
+            throws IOException {
+        return loadFromStream(input, false, false, true, gbtScoreConvertStrategy);
+    }
+
+    /**
      * Load model instance from stream like model0.gbt or model0.rf. User can specify to use raw score or score after
      * sigmoid transform by isConvertToProb.
      * 
@@ -627,6 +743,25 @@ public class IndependentTreeModel {
      *            the input stream
      * @param isConvertToProb
      *            if convert score to probability (if to transform raw score by sigmoid)
+     * @param gbtScoreConvertStrategy
+     *            specify how to convert gbt raw score
+     * @return the tree model instance
+     * @throws IOException
+     *             any exception in load input stream
+     */
+    public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb,
+            String gbtScoreConvertStrategy) throws IOException {
+        return loadFromStream(input, isConvertToProb, false, true, gbtScoreConvertStrategy);
+    }
+
+    /**
+     * Load model instance from stream like model0.gbt or model0.rf. User can specify to use raw score or score after
+     * sigmoid transform by isConvertToProb.
+     * 
+     * @param input
+     *            the input stream
+     * @param isConvertToProb
+     *            if convert score to probability (if to transform raw score by sigmoid)
      * @param isOptimizeMode
      *            if column index query is optimized
      * @return the tree model instance
@@ -636,6 +771,27 @@ public class IndependentTreeModel {
     public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode)
             throws IOException {
         return loadFromStream(input, isConvertToProb, isOptimizeMode, true);
+    }
+
+    /**
+     * Load model instance from stream like model0.gbt or model0.rf. User can specify to use raw score or score after
+     * sigmoid transform by isConvertToProb.
+     * 
+     * @param input
+     *            the input stream
+     * @param isConvertToProb
+     *            if convert score to probability (if to transform raw score by sigmoid)
+     * @param isOptimizeMode
+     *            if column index query is optimized
+     * @param gbtScoreConvertStrategy
+     *            specify how to convert gbt raw score
+     * @return the tree model instance
+     * @throws IOException
+     *             any exception in load input stream
+     */
+    public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb,
+            boolean isOptimizeMode, String gbtScoreConvertStrategy) throws IOException {
+        return loadFromStream(input, isConvertToProb, isOptimizeMode, true, gbtScoreConvertStrategy);
     }
 
     /**
@@ -657,6 +813,31 @@ public class IndependentTreeModel {
      */
     public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb,
             boolean isOptimizeMode, boolean isRemoveNameSpace) throws IOException {
+        return loadFromStream(input, isConvertToProb, isOptimizeMode, isRemoveNameSpace,
+                isConvertToProb ? Constants.GBT_SCORE_SIGMOID_CONVETER : Constants.GBT_SCORE_RAW_CONVETER);
+    }
+
+    /**
+     * Load model instance from stream like model0.gbt or model0.rf. User can specify to use raw score or score after
+     * sigmoid transform by isConvertToProb.
+     * 
+     * @param input
+     *            the input stream
+     * @param isConvertToProb
+     *            if convert score to probability (if to transform raw score by sigmoid)
+     * @param isOptimizeMode
+     *            if column index query is optimized
+     * @param isRemoveNameSpace
+     *            new column name including namespace like "a::b", if true, remove "a::" and set column name to simple
+     *            name
+     * @param gbtScoreConvertStrategy
+     *            specify how to convert gbt raw score
+     * @return the tree model instance
+     * @throws IOException
+     *             any exception in load input stream
+     */
+    public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb,
+            boolean isOptimizeMode, boolean isRemoveNameSpace, String gbtScoreConvertStrategy) throws IOException {
         DataInputStream dis = null;
         // check if gzip or not
         try {
@@ -768,7 +949,7 @@ public class IndependentTreeModel {
         return new IndependentTreeModel(numericalMeanMapping, columnIndexNameMapping, categoricalColumnNameNames,
                 columnCategoryIndexMapping, columnMapping, isOptimizeMode, bagTrees, bagWgts,
                 CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm), isClassification && !isOneVsAll,
-                isConvertToProb, lossStr, algorithm, inputNode, version);
+                isConvertToProb, lossStr, algorithm, inputNode, version, gbtScoreConvertStrategy);
     }
 
     /**
@@ -792,6 +973,13 @@ public class IndependentTreeModel {
 
     public static void setVersion(int from) {
         version = from;
+    }
+
+    /**
+     * @return the gbtScoreConvertStrategy
+     */
+    public String getGbtScoreConvertStrategy() {
+        return gbtScoreConvertStrategy;
     }
 
 }

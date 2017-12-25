@@ -43,6 +43,7 @@ import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.PerformanceResult;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.eval.AreaUnderCurve;
 import ml.shifu.shifu.core.eval.GainChart;
@@ -227,6 +228,26 @@ public class ConfusionMatrix {
                 this.targetColumnIndex, this.scoreColumnIndex, this.weightColumnIndex, isUseMaxMinScore);
     }
 
+    private boolean isGBTNeedConvertScore() {
+        String gbtStrategy = evalConfig.getGbtScoreConvertStrategy();
+        return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())
+                && gbtStrategy != null
+                && (gbtStrategy.equalsIgnoreCase(Constants.GBT_SCORE_HALF_CUTOFF_CONVETER) || gbtStrategy
+                        .equalsIgnoreCase(Constants.GBT_SCORE_MAXMIN_SCALE_CONVETER));
+    }
+
+    private boolean isGBTScoreHalfCutoffStreategy() {
+        String gbtStrategy = evalConfig.getGbtScoreConvertStrategy();
+        return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm()) && gbtStrategy != null
+                && gbtStrategy.equalsIgnoreCase(Constants.GBT_SCORE_HALF_CUTOFF_CONVETER);
+    }
+
+    private boolean isGBTScoreMaxMinScaleStreategy() {
+        String gbtStrategy = evalConfig.getGbtScoreConvertStrategy();
+        return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm()) && gbtStrategy != null
+                && gbtStrategy.equalsIgnoreCase(Constants.GBT_SCORE_MAXMIN_SCALE_CONVETER);
+    }
+
     public PerformanceResult bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags,
             double pigPosWeightTags, double pigNegWeightTags, long records, double maxPScore, double minPScore,
             String scoreDataPath, String evalPerformancePath, boolean isPrint, boolean isGenerateChart,
@@ -234,10 +255,15 @@ public class ConfusionMatrix {
             throws IOException {
         // 1. compute maxScore and minScore in case some cases score are not in [0, 1]
         double maxScore = 1d * scoreScale, minScore = 0d;
-        if(isUseMaxMinScore) {
+
+        if(isGBTNeedConvertScore()) {
+            // if need convert to [0, 1], just keep max score to 1 and min score to 0 without doing anything
+        } else if(isUseMaxMinScore) {
             // TODO some cases maxPScore is already scaled, how to fix that issue
             maxScore = maxPScore;
             minScore = minPScore;
+        } else {
+            // otherwise, keep [0, 1]
         }
 
         SourceType sourceType = evalConfig.getDataSet().getSource();
@@ -271,6 +297,9 @@ public class ConfusionMatrix {
         catchRateWeightList.add(po);
         gainWeightList.add(po);
         modelScoreList.add(po);
+
+        boolean isGBTScoreHalfCutoffStreategy = isGBTScoreHalfCutoffStreategy();
+        boolean isGBTScoreMaxMinScaleStreategy = isGBTScoreMaxMinScaleStreategy();
 
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
@@ -334,6 +363,20 @@ public class ConfusionMatrix {
                     cmo.setTn(cmo.getTn() - 1);
                     cmo.setWeightedFp(cmo.getWeightedFp() + weight * 1.0);
                     cmo.setWeightedTn(cmo.getWeightedTn() - weight * 1.0);
+                }
+
+                if(isGBTScoreHalfCutoffStreategy) {
+                    // half cut off means score <0 then set to 0 and then min score is 0, max score is raw max score,
+                    // use max min scale to rescale to [0, 1]
+                    if(score < 0d) {
+                        score = 0d;
+                    }
+                    score = ((score - 0) * scoreScale) / (maxPScore - 0);
+                } else if(isGBTScoreMaxMinScaleStreategy) {
+                    // use max min scaler to make score in [0, 1], don't foget to time scoreScale
+                    score = ((score - minPScore) * scoreScale) / (maxPScore - minPScore);
+                } else {
+                    // do nothing, use current score
                 }
 
                 cmo.setScore(Double.parseDouble(SCORE_FORMAT.format(score)));
