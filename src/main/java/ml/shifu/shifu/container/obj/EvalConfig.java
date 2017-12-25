@@ -15,13 +15,9 @@
  */
 package ml.shifu.shifu.container.obj;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
@@ -31,9 +27,12 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * EvalConfig class
@@ -48,6 +47,7 @@ public class EvalConfig {
     private String performanceScoreSelector = "mean";
     private String scoreMetaColumnNameFile;
     private Map<String, String> customPaths;
+    private Long scoreScale = 1000L;
 
     /**
      * For typical 0-1 binary regression, this is set to be true, while for other regression, better to set it to false
@@ -260,6 +260,23 @@ public class EvalConfig {
     }
 
     /**
+     * @param scoreScale
+     *            the scoreScale to set
+     */
+    @JsonProperty
+    public void setScoreScale(Long scoreScale) {
+        this.scoreScale = scoreScale;
+    }
+
+    /**
+     * @return the scoreScale
+     */
+    @JsonIgnore
+    public Long getScoreScale() {
+        return scoreScale;
+    }
+
+    /**
      * @return the gbtScoreConvertStrategy
      */
     @JsonIgnore
@@ -282,7 +299,7 @@ public class EvalConfig {
         other.setCustomPaths(new HashMap<String, String>(customPaths));
         other.setDataSet(dataSet.clone());
         other.setGbtConvertToProb(gbtConvertToProb);
-        other.setGbtScoreConvertStrategy(gbtScoreConvertStrategy);
+        other.setGbtScoreConvertStrategy(getGbtScoreConvertStrategy());
         other.setName(name);
         other.setPerformanceBucketNum(performanceBucketNum);
         other.setPerformanceScoreSelector(performanceScoreSelector);
