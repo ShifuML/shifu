@@ -884,6 +884,18 @@
                 "type": "boolean",
                 "directive": "input",
                 "defval": true
+             }, {
+                "name" : "gbtScoreConvertStrategy",
+                "type" : "text",
+                "directive": "select",
+                "defval" : "SIGMOID",
+                "options": [
+                    {"label": "RAW", "value":"RAW"},
+                    {"label": "SIGMOID", "value":"SIGMOID"},
+                    {"label": "CUTOFF", "value":"CUTOFF"},
+                    {"label": "HALF_CUTOFF", "value":"HALF_CUTOFF"},
+                    {"label": "MAXMIN", "value":"MAXMIN"}
+                ]
             }, {
                 "name" : "performanceScoreSelector",
                 "type" : "text",

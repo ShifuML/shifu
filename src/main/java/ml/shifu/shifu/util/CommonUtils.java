@@ -898,13 +898,41 @@ public final class CommonUtils {
      */
     public static List<BasicML> loadBasicModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType,
             boolean gbtConvertToProb) throws IOException {
+        return loadBasicModels(modelConfig, evalConfig, sourceType, gbtConvertToProb, null);
+    }
+
+    /**
+     * Load basic models from files.
+     * 
+     * @param modelConfig
+     *            model config
+     * @param evalConfig
+     *            eval confg
+     * @param sourceType
+     *            source type
+     * @param gbtConvertToProb
+     *            convert gbt score to prob or not
+     * @param gbtScoreConvertStrategy
+     *            specify how to convert gbt raw score
+     * @return list of models
+     * @throws IOException
+     *             if any IO exception in reading model file.
+     * 
+     * @throws IllegalArgumentException
+     *             if {@code modelConfig} is, if invalid model algorithm .
+     * 
+     * @throws IllegalStateException
+     *             if not HDFS or LOCAL source type or algorithm not supported.
+     */
+    public static List<BasicML> loadBasicModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType,
+            boolean gbtConvertToProb, String gbtScoreConvertStrategy) throws IOException {
         List<BasicML> models = new ArrayList<BasicML>();
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
 
         List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
             for(FileStatus f: modelFileStats) {
-                models.add(loadModel(modelConfig, f.getPath(), fs, gbtConvertToProb));
+                models.add(loadModel(modelConfig, f.getPath(), fs, gbtConvertToProb, gbtScoreConvertStrategy));
             }
         }
 
@@ -961,7 +989,7 @@ public final class CommonUtils {
     }
 
     public static BasicML loadModel(ModelConfig modelConfig, Path modelPath, FileSystem fs) throws IOException {
-        return loadModel(modelConfig, modelPath, fs, false);
+        return loadModel(modelConfig, modelPath, fs, false, Constants.GBT_SCORE_RAW_CONVETER);
     }
 
     /**
@@ -982,6 +1010,29 @@ public final class CommonUtils {
      */
     public static BasicML loadModel(ModelConfig modelConfig, Path modelPath, FileSystem fs, boolean gbtConvertToProb)
             throws IOException {
+        return loadModel(modelConfig, modelPath, fs, gbtConvertToProb, null);
+    }
+
+    /**
+     * Loading model according to existing model path.
+     * 
+     * @param modelConfig
+     *            model config
+     * @param modelPath
+     *            the path to store model
+     * @param fs
+     *            file system used to store model
+     * @param gbtConvertToProb
+     *            convert gbt score to prob or not
+     * @param gbtScoreConvertStrategy
+     *            specify how to convert gbt raw score
+     * @return model object or null if no modelPath file,
+     * 
+     * @throws IOException
+     *             if loading file for any IOException
+     */
+    public static BasicML loadModel(ModelConfig modelConfig, Path modelPath, FileSystem fs, boolean gbtConvertToProb,
+            String gbtScoreConvertStrategy) throws IOException {
         if(!fs.exists(modelPath)) {
             // no such existing model, return null.
             return null;
@@ -997,7 +1048,7 @@ public final class CommonUtils {
                 return LR.loadFromString(br.readLine());
             } else if(modelPath.getName().endsWith(CommonConstants.RF_ALG_NAME.toLowerCase())
                     || modelPath.getName().endsWith(CommonConstants.GBT_ALG_NAME.toLowerCase())) {
-                return TreeModel.loadFromStream(stream, gbtConvertToProb);
+                return TreeModel.loadFromStream(stream, gbtConvertToProb, gbtScoreConvertStrategy);
             } else {
                 GzipStreamPair pair = isGZipFormat(stream);
                 if(pair.isGzip()) {
@@ -1133,9 +1184,14 @@ public final class CommonUtils {
         return fileList;
     }
 
-    @SuppressWarnings("deprecation")
     public static List<ModelSpec> loadSubModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             EvalConfig evalConfig, SourceType sourceType, Boolean gbtConvertToProb) {
+        return loadSubModels(modelConfig, columnConfigList, evalConfig, sourceType, gbtConvertToProb, null);
+    }
+
+    @SuppressWarnings("deprecation")
+    public static List<ModelSpec> loadSubModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            EvalConfig evalConfig, SourceType sourceType, Boolean gbtConvertToProb, String gbtScoreConvertStrategy) {
         List<ModelSpec> modelSpecs = new ArrayList<ModelSpec>();
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
 
@@ -1155,7 +1211,7 @@ public final class CommonUtils {
             for(FileStatus fileStatus: fsArr) {
                 if(fileStatus.isDir()) {
                     ModelSpec modelSpec = loadSubModelSpec(modelConfig, columnConfigList, fileStatus, sourceType,
-                            gbtConvertToProb);
+                            gbtConvertToProb, gbtScoreConvertStrategy);
                     if(modelSpec != null) {
                         modelSpecs.add(modelSpec);
                     }
@@ -1169,7 +1225,8 @@ public final class CommonUtils {
     }
 
     private static ModelSpec loadSubModelSpec(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-            FileStatus fileStatus, SourceType sourceType, Boolean gbtConvertToProb) throws IOException {
+            FileStatus fileStatus, SourceType sourceType, Boolean gbtConvertToProb, String gbtScoreConvertStrategy)
+            throws IOException {
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
 
         String subModelName = fileStatus.getPath().getName();
@@ -1187,7 +1244,7 @@ public final class CommonUtils {
             });
             List<BasicML> models = new ArrayList<BasicML>();
             for(FileStatus f: modelFileStats) {
-                models.add(loadModel(modelConfig, f.getPath(), fs, gbtConvertToProb));
+                models.add(loadModel(modelConfig, f.getPath(), fs, gbtConvertToProb, gbtScoreConvertStrategy));
             }
 
             ModelConfig subModelConfig = modelConfig;
@@ -1302,7 +1359,7 @@ public final class CommonUtils {
     }
 
     public static List<BasicML> loadBasicModels(final String modelsPath, final ALGORITHM alg) throws IOException {
-        return loadBasicModels(modelsPath, alg, false);
+        return loadBasicModels(modelsPath, alg, false, Constants.GBT_SCORE_RAW_CONVETER);
     }
 
     /**
@@ -1314,13 +1371,15 @@ public final class CommonUtils {
      *            the algorithm
      * @param isConvertToProb
      *            if convert to prob for gbt model
+     * @param gbtScoreConvertStrategy
+     *            specify how to convert gbt raw score
      * @return - a list of @BasicML
      * 
      * @throws IOException
      *             - throw exception when loading model files
      */
-    public static List<BasicML> loadBasicModels(final String modelsPath, final ALGORITHM alg, boolean isConvertToProb)
-            throws IOException {
+    public static List<BasicML> loadBasicModels(final String modelsPath, final ALGORITHM alg, boolean isConvertToProb,
+            String gbtScoreConvertStrategy) throws IOException {
         if(modelsPath == null || alg == null || ALGORITHM.DT.equals(alg)) {
             throw new IllegalArgumentException("The model path shouldn't be null");
         }
@@ -1362,7 +1421,7 @@ public final class CommonUtils {
                     } else if(ALGORITHM.LR.equals(alg)) {
                         models.add(LR.loadFromStream(is));
                     } else if(ALGORITHM.GBT.equals(alg) || ALGORITHM.RF.equals(alg)) {
-                        models.add(TreeModel.loadFromStream(is, isConvertToProb));
+                        models.add(TreeModel.loadFromStream(is, isConvertToProb, gbtScoreConvertStrategy));
                     }
                 } finally {
                     IOUtils.closeQuietly(is);
