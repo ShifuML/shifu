@@ -300,4 +300,13 @@ public interface Constants {
     public static final String IV_KEEP_RATIO = "IV_KEEP_RATIO";
     public static final String MINIMUM_BIN_INST_CNT = "MINIMUM_BIN_INST_CNT";
 
+    /**
+     * GBT score range is not in [0, 1], to make it in [0, 1], such strategies are provided with case insensitive.
+     */
+    public static String GBT_SCORE_RAW_CONVETER = "RAW";
+    public static String GBT_SCORE_SIGMOID_CONVETER = "SIGMOID";
+    public static String GBT_SCORE_CUTOFF_CONVETER = "CUTOFF";
+    public static String GBT_SCORE_HALF_CUTOFF_CONVETER = "HALF_CUTOFF";
+    public static String GBT_SCORE_MAXMIN_SCALE_CONVETER = "MAXMIN";
+
 }

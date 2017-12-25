@@ -88,8 +88,17 @@ public class TreeModel extends BasicML implements MLRegression {
         return loadFromStream(input, false);
     }
 
+    public static TreeModel loadFromStream(InputStream input, String gbtScoreConvertStrategy) throws IOException {
+        return loadFromStream(input, false, gbtScoreConvertStrategy);
+    }
+
     public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb) throws IOException {
         return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb));
+    }
+
+    public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, String gbtScoreConvertStrategy)
+            throws IOException {
+        return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb, gbtScoreConvertStrategy));
     }
 
     public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode)
@@ -98,9 +107,21 @@ public class TreeModel extends BasicML implements MLRegression {
     }
 
     public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode,
+            String gbtScoreConvertStrategy) throws IOException {
+        return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb, isOptimizeMode,
+                gbtScoreConvertStrategy));
+    }
+
+    public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode,
             boolean isRemoveNameSpace) throws IOException {
         return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb, isOptimizeMode,
                 isRemoveNameSpace));
+    }
+
+    public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode,
+            boolean isRemoveNameSpace, String gbtScoreConvertStrategy) throws IOException {
+        return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb, isOptimizeMode,
+                isRemoveNameSpace, gbtScoreConvertStrategy));
     }
 
     @Override
