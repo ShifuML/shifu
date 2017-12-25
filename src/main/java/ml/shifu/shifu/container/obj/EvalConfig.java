@@ -17,6 +17,7 @@ package ml.shifu.shifu.container.obj;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
@@ -247,6 +248,7 @@ public class EvalConfig {
      * @param scoreScale
      *            the scoreScale to set
      */
+    @JsonProperty
     public void setScoreScale(Long scoreScale) {
         this.scoreScale = scoreScale;
     }
@@ -254,6 +256,7 @@ public class EvalConfig {
     /**
      * @return the scoreScale
      */
+    @JsonIgnore
     public Long getScoreScale() {
         return scoreScale;
     }
