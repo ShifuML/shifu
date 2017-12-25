@@ -17,6 +17,7 @@ package ml.shifu.shifu.container.obj;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
@@ -45,6 +46,7 @@ public class EvalConfig {
     private String performanceScoreSelector = "mean";
     private String scoreMetaColumnNameFile;
     private Map<String, String> customPaths;
+    private Long scoreScale = 1000L;
 
     /**
      * For typical 0-1 binary regression, this is set to be true, while for other regression, better to set it to false
@@ -241,6 +243,24 @@ public class EvalConfig {
     public void setGbtConvertToProb(Boolean gbtConvertToProb) {
         this.gbtConvertToProb = gbtConvertToProb;
     }
+
+    /**
+     * @param scoreScale
+     *            the scoreScale to set
+     */
+    @JsonProperty
+    public void setScoreScale(Long scoreScale) {
+        this.scoreScale = scoreScale;
+    }
+
+    /**
+     * @return the scoreScale
+     */
+    @JsonIgnore
+    public Long getScoreScale() {
+        return scoreScale;
+    }
+
 
     @Override
     public EvalConfig clone() {
