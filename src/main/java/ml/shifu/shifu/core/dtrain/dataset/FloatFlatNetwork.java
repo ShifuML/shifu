@@ -116,25 +116,41 @@ public class FloatFlatNetwork extends FlatNetwork implements Cloneable {
         final int inputSize = super.getLayerCounts()[currentLayer];
         final int outputSize = super.getLayerFeedCounts()[currentLayer - 1];
         final double dropoutRate;
+        boolean dropoutEnabled = false;
         if(this.getLayerDropoutRates().length > currentLayer - 1) {
             dropoutRate = this.getLayerDropoutRates()[currentLayer - 1];
         } else {
-            dropoutRate = 0;
+            dropoutRate = 0d;
         }
+        dropoutEnabled = (Double.compare(dropoutRate, 0d) != 0);
 
         int index = super.getWeightIndex()[currentLayer - 1];
 
         final int limitX = outputIndex + outputSize;
         final int limitY = inputIndex + inputSize;
 
-        // weight values
-        for(int x = outputIndex; x < limitX; x++) {
-            double sum = 0;
-            for(int y = inputIndex; y < limitY; y++) {
-                sum += super.getWeights()[index++] * super.getLayerOutput()[y] * (1 - dropoutRate);
+        // wrapper computation in if condition to save computation
+        if(dropoutEnabled) {
+            // weight values
+            double nonDropoutRate = (1d - dropoutRate);
+            for(int x = outputIndex; x < limitX; x++) {
+                double sum = 0;
+                for(int y = inputIndex; y < limitY; y++) {
+                    sum += super.getWeights()[index++] * super.getLayerOutput()[y] * nonDropoutRate;
+                }
+                super.getLayerSums()[x] = sum;
+                super.getLayerOutput()[x] = sum;
             }
-            super.getLayerSums()[x] = sum;
-            super.getLayerOutput()[x] = sum;
+        } else {
+            // weight values
+            for(int x = outputIndex; x < limitX; x++) {
+                double sum = 0;
+                for(int y = inputIndex; y < limitY; y++) {
+                    sum += super.getWeights()[index++] * super.getLayerOutput()[y];
+                }
+                super.getLayerSums()[x] = sum;
+                super.getLayerOutput()[x] = sum;
+            }
         }
 
         super.getActivationFunctions()[currentLayer - 1].activationFunction(super.getLayerOutput(), outputIndex,
