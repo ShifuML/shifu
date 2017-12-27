@@ -1270,10 +1270,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // how many part-m-*.gz file in for gzip file, norm depends on how many gzip files
         String dataPath = null;
         if(CommonUtils.isTreeModel(super.modelConfig.getAlgorithm())) {
-            dataPath = super.pathFinder.getCleanedDataPath();
+            dataPath = ShifuFileUtils.getFileSystemBySourceType(modelConfig.getDataSet().getSource())
+                    .makeQualified(new Path(super.getPathFinder().getCleanedDataPath())).toString();
         } else {
-            dataPath = super.pathFinder.getNormalizedDataPath();
+            dataPath = ShifuFileUtils.getFileSystemBySourceType(modelConfig.getDataSet().getSource())
+                    .makeQualified(new Path(super.getPathFinder().getNormalizedDataPath())).toString();
         }
+        LOG.info("DEBUG: data path for combine size computing is {}.", dataPath);
+
         int filePartCnt = ShifuFileUtils.getFilePartCount(dataPath, SourceType.HDFS);
         long actualFileSize = ShifuFileUtils.getFileOrDirectorySize(dataPath, SourceType.HDFS);
         boolean isGzip = ShifuFileUtils.isPartFileAllGzip(dataPath, SourceType.HDFS);
