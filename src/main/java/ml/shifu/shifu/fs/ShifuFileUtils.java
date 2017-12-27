@@ -257,7 +257,7 @@ public class ShifuFileUtils {
         Path p = new Path(path);
         if(fs.getFileStatus(p).isDir()) {
             // for folder we need filter pig header files
-            listStatus = fs.globStatus(p, new PathFilter() {
+            listStatus = fs.listStatus(p, new PathFilter() {
                 @Override
                 public boolean accept(Path path) {
                     boolean hiddenOrSuccessFile = path.getName().startsWith(Constants.HIDDEN_FILES)
@@ -587,7 +587,7 @@ public class ShifuFileUtils {
     public static FileStatus[] getFilePartStatus(String filePath, SourceType sourceType) throws IOException {
         FileSystem fs = getFileSystemBySourceType(sourceType);
 
-        FileStatus[] fileStatsArr = fs.globStatus(new Path(filePath), new PathFilter() {
+        FileStatus[] fileStatsArr = fs.listStatus(new Path(filePath), new PathFilter() {
             @Override
             public boolean accept(Path path) {
                 return path.getName().startsWith("part");
