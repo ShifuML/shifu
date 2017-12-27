@@ -18,6 +18,13 @@
 # 
 # Shifu will check if current hadoop is installed well, if not installed well, please check and configure your HADOOP_HOME
 # or HADOOP_ROOT well.
+#
+# SHIFU_OPTS
+# Shifu option is also avaliable for advanced user.
+#
+# Shifu will check if apache spark is installed corrcetly, if not please check and configure your SPARK_HOME, SAPRK_CONF
+# To enable shifu spark feature, please set environment var SHIFU_SPARK_EVAL=TURE
+
 
 function sanity_check() {
     if [ ! -f ModelConfig.json ]; then
@@ -108,7 +115,7 @@ fi
 
 SHIFU_OPTS=${JAVA_OPTS:=${SHIFU_OPTS}}
 
-#check SPARK_HOME for shifu spark eval
+#check SPARK_HOME for shifu spark eval, init guagua file input format parameters
 if [ "${SPARK_HOME}" != "" ]; then
    if [ "${SPARK_CONF_DIR}" != "" ]; then
         SPARK_SUBMIT=`command -v "spark-submit"`
