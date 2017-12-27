@@ -40,7 +40,12 @@ import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.slf4j.Logger;
@@ -587,12 +592,27 @@ public class ShifuFileUtils {
     public static FileStatus[] getFilePartStatus(String filePath, SourceType sourceType) throws IOException {
         FileSystem fs = getFileSystemBySourceType(sourceType);
 
-        FileStatus[] fileStatsArr = fs.listStatus(new Path(filePath), new PathFilter() {
+        PathFilter filter = new PathFilter() {
             @Override
             public boolean accept(Path path) {
+                // FIXME, should only skip _SUCCESS, .pig_header such files, not start from part, some files may not
+                // start from part.
                 return path.getName().startsWith("part");
             }
-        });
+        };
+
+        FileStatus[] fileStatsArr;
+        try {
+            fileStatsArr = fs.listStatus(new Path(filePath), filter);
+        } catch (Exception e) {
+            // read from glob if not found in listStatus, it usually be a regex path
+            fileStatsArr = fs.globStatus(new Path(filePath), filter);
+        }
+
+        if(fileStatsArr == null || fileStatsArr.length == 0) {
+            // protected by reading glob status agaion
+            fileStatsArr = fs.globStatus(new Path(filePath), filter);
+        }
 
         return fileStatsArr;
     }
