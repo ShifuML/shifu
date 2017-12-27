@@ -1276,7 +1276,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             dataPath = ShifuFileUtils.getFileSystemBySourceType(modelConfig.getDataSet().getSource())
                     .makeQualified(new Path(super.getPathFinder().getNormalizedDataPath())).toString();
         }
-        LOG.info("DEBUG: data path for combine size computing is {}.", dataPath);
 
         int filePartCnt = ShifuFileUtils.getFilePartCount(dataPath, SourceType.HDFS);
         long actualFileSize = ShifuFileUtils.getFileOrDirectorySize(dataPath, SourceType.HDFS);
