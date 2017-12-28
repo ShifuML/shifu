@@ -656,11 +656,13 @@ public class ModelInspector {
                     }
                 }
             }
+
             if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)
                     || train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)
                     || train.getAlgorithm().equalsIgnoreCase(NNConstants.NN_ALG_NAME)) {
                 Map<String, Object> params = train.getParams();
                 Object fssObj = params.get("FeatureSubsetStrategy");
+
                 if(fssObj == null) {
                     if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)
                             || train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
@@ -679,10 +681,14 @@ public class ModelInspector {
                         isNumber = false;
                     }
 
-                    if(isNumber && (doubleFss <= 0d || doubleFss > 1d)) {
-                        ValidateResult tmpResult = new ValidateResult(true);
-                        tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("FeatureSubsetStrategy if double should be in (0, 1]");
+                    if(isNumber) {
+                        // if not in [0, 1] failed
+                        if(doubleFss <= 0d || doubleFss > 1d) {
+                            ValidateResult tmpResult = new ValidateResult(true);
+                            tmpResult.setStatus(false);
+                            tmpResult.getCauses().add("FeatureSubsetStrategy if double should be in (0, 1]");
+                            result = ValidateResult.mergeResult(result, tmpResult);
+                        }
                     } else {
                         boolean fssInEnum = false;
                         for(FeatureSubsetStrategy fss: FeatureSubsetStrategy.values()) {
@@ -698,6 +704,7 @@ public class ModelInspector {
                             tmpResult
                                     .getCauses()
                                     .add("FeatureSubsetStrategy if string should be in ['ALL', 'HALF', 'ONETHIRD' , 'TWOTHIRDS' , 'AUTO' , 'SQRT' , 'LOG2']");
+                            result = ValidateResult.mergeResult(result, tmpResult);
                         }
                     }
                 }
