@@ -467,6 +467,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             if(modelConfig.isRegression()) {
                 if(this.modelCnt > 0) {
                     addModelSchema(tupleSchema, this.modelCnt, "");
+                } else {
+                    throw new IllegalStateException("No any model found!");
                 }
 
                 if(this.outputHiddenLayerIndex != 0) {
@@ -493,6 +495,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             } else {
                 if(this.modelCnt > 0) {
                     addModelTagSchema(tupleSchema, modelCnt, "");
+                } else {
+                    throw new IllegalStateException("No any model found!");
                 }
 
                 if(MapUtils.isNotEmpty(this.subModelsCnt)) {
