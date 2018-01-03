@@ -253,7 +253,7 @@ public class IndependentTreeModel {
                         .equalsIgnoreCase(Constants.GBT_SCORE_MAXMIN_SCALE_CONVETER));
     }
 
-    private static boolean isValidGbtScoreConvertStrategy(String gbtScoreConvertStrategy) {
+    public static boolean isValidGbtScoreConvertStrategy(String gbtScoreConvertStrategy) {
         return gbtScoreConvertStrategy != null
                 && (gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_RAW_CONVETER)
                         || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_SIGMOID_CONVETER)

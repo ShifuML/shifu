@@ -258,14 +258,18 @@ public class ConfusionMatrix {
 
         if(isGBTNeedConvertScore()) {
             // if need convert to [0, 1], just keep max score to 1 and min score to 0 without doing anything
-        } else if(isUseMaxMinScore) {
-            // TODO some cases maxPScore is already scaled, how to fix that issue
-            maxScore = maxPScore;
-            minScore = minPScore;
         } else {
-            // otherwise, keep [0, 1]
+            if(isUseMaxMinScore) {
+                // TODO some cases maxPScore is already scaled, how to fix that issue
+                maxScore = maxPScore;
+                minScore = minPScore;
+            } else {
+                // otherwise, keep [0, 1]
+            }
         }
-        LOG.info("Transformed (scale included) max score is {}, transformed min score is {}", maxScore, minScore);
+
+        LOG.info("{} Transformed (scale included) max score is {}, transformed min score is {}",
+                evalConfig.getGbtScoreConvertStrategy(), maxScore, minScore);
 
         SourceType sourceType = evalConfig.getDataSet().getSource();
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(scoreDataPath, sourceType);
