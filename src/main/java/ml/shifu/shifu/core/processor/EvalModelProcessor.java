@@ -449,7 +449,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 double[] maxMinScores = locateMaxMinScoreFromFile(sourceType, maxMinScoreFolder);
                 maxScore = maxMinScores[0];
                 minScore = maxMinScores[1];
-                LOG.info("Max score is {}, min score is {}", maxScore, minScore);
+                LOG.info("Raw max score is {}, raw min score is {}", maxScore, minScore);
                 ShifuFileUtils.deleteFile(maxMinScoreFolder, sourceType);
             }
             // only one pig job with such counters, return
