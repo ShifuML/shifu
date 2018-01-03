@@ -136,10 +136,17 @@ public class IndependentTreeModel {
      * GBT model scores are not in [0, 1], to make it in [0, 1], different strategies can be provided. Set this field as
      * String not Enum to avoid dependency on json related jars.
      */
-    private String gbtScoreConvertStrategy = "RAW";
+    private String gbtScoreConvertStrategy = Constants.GBT_SCORE_RAW_CONVETER;
 
     /**
-     * IF current scoring is for gbt sigmoid convert, a flag here to avoid multiple string comparsion
+     * IF current scoring is for gbt sigmoid convert, a flag here to avoid multiple string comparsion, for old sigmoid
+     * transform, which is code without scale: <code>1 / (1 + Math.min(1.0E19, Math.exp(- score))); </code>.
+     */
+    private boolean isGBTOldSigmoidConvert;
+
+    /**
+     * IF current scoring is for gbt sigmoid convert, a flag here to avoid multiple string comparsion, for new sigmoid
+     * transform, which is code without scale: <code>1 / (1 + Math.min(1.0E19, Math.exp(-20 * score))); </code>.
      */
     private boolean isGBTSigmoidConvert;
 
@@ -173,7 +180,7 @@ public class IndependentTreeModel {
         this.isConvertToProb = isConvertToProb;
 
         if(this.isConvertToProb) {
-            this.gbtScoreConvertStrategy = Constants.GBT_SCORE_SIGMOID_CONVETER;
+            this.gbtScoreConvertStrategy = Constants.GBT_SCORE_OLD_SIGMOID_CONVETER;
         } else {
             this.gbtScoreConvertStrategy = Constants.GBT_SCORE_RAW_CONVETER;
         }
@@ -199,6 +206,8 @@ public class IndependentTreeModel {
 
         isGBTSigmoidConvert = this.gbtScoreConvertStrategy != null
                 && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_SIGMOID_CONVETER);
+        isGBTOldSigmoidConvert = this.gbtScoreConvertStrategy != null
+                && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_OLD_SIGMOID_CONVETER);
         isGBTCutoffConvert = this.gbtScoreConvertStrategy != null
                 && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_CUTOFF_CONVETER);
         isGBTRawScore = this.gbtScoreConvertStrategy != null
@@ -223,6 +232,8 @@ public class IndependentTreeModel {
         // re-check boolean flags compute for fast check in compute method
         isGBTSigmoidConvert = this.gbtScoreConvertStrategy != null
                 && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_SIGMOID_CONVETER);
+        isGBTOldSigmoidConvert = this.gbtScoreConvertStrategy != null
+                && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_OLD_SIGMOID_CONVETER);
         isGBTCutoffConvert = this.gbtScoreConvertStrategy != null
                 && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_CUTOFF_CONVETER);
         isGBTRawScore = this.gbtScoreConvertStrategy != null
@@ -233,6 +244,7 @@ public class IndependentTreeModel {
         return gbtScoreConvertStrategy != null
                 && (gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_RAW_CONVETER)
                         || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_SIGMOID_CONVETER)
+                        || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_OLD_SIGMOID_CONVETER)
                         || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_CUTOFF_CONVETER)
                         || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_HALF_CUTOFF_CONVETER) || gbtScoreConvertStrategy
                             .equalsIgnoreCase(Constants.GBT_SCORE_MAXMIN_SCALE_CONVETER));
@@ -299,8 +311,10 @@ public class IndependentTreeModel {
                     predict += score * wgtList.get(j);
                 }
 
-                if(this.isGBTSigmoidConvert) {
+                if(this.isGBTOldSigmoidConvert) {
                     predict = convertToSigmoid(predict);
+                } else if(this.isGBTSigmoidConvert) {
+                    predict = convertToNewSigmoid(predict);
                 } else if(this.isGBTCutoffConvert) {
                     predict = cutoffPredict(predict);
                 } else {
@@ -386,15 +400,28 @@ public class IndependentTreeModel {
 
     /**
      * Covert score to probability value which are in [0, 1], for GBT regression, scores can not be [0, 1]. Round score
-     * to 1.0E19 to avoid NaN in final return result.
+     * to 1.0E19 to avoid NaN in final return result. Sigmoid function is new one:
+     * <code>1 / (1 + Math.min(1.0E19, Math.exp(- score))); </code>.
+     * 
+     * @param score
+     *            the raw score
+     * @return score after sigmoid transform.
+     */
+    public double convertToNewSigmoid(double score) {
+        return 1 / (1 + Math.min(1.0E19, Math.exp(-20 * score)));
+    }
+
+    /**
+     * Covert score to probability value which are in [0, 1], for GBT regression, scores can not be [0, 1]. Round score
+     * to 1.0E19 to avoid NaN in final return result. Sigmoid function is old one for compatablity:
+     * <code>1 / (1 + Math.min(1.0E19, Math.exp(- 20 * score))); </code>.
      * 
      * @param score
      *            the raw score
      * @return score after sigmoid transform.
      */
     public double convertToSigmoid(double score) {
-        // sigmoid function to covert to [0, 1], TODO, how to make it configuable for users
-        return 1 / (1 + Math.min(1.0E19, Math.exp(-20 * score)));
+        return 1 / (1 + Math.min(1.0E19, Math.exp(-score)));
     }
 
     private double predictNode(Node topNode, double[] data) {
@@ -814,7 +841,7 @@ public class IndependentTreeModel {
     public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb,
             boolean isOptimizeMode, boolean isRemoveNameSpace) throws IOException {
         return loadFromStream(input, isConvertToProb, isOptimizeMode, isRemoveNameSpace,
-                isConvertToProb ? Constants.GBT_SCORE_SIGMOID_CONVETER : Constants.GBT_SCORE_RAW_CONVETER);
+                isConvertToProb ? Constants.GBT_SCORE_OLD_SIGMOID_CONVETER : Constants.GBT_SCORE_RAW_CONVETER);
     }
 
     /**

@@ -896,6 +896,7 @@
                 "defval" : "SIGMOID",
                 "options": [
                     {"label": "RAW", "value":"RAW"},
+                    {"label": "OLD_SIGMOID", "value":"OLD_SIGMOID"},
                     {"label": "SIGMOID", "value":"SIGMOID"},
                     {"label": "CUTOFF", "value":"CUTOFF"},
                     {"label": "HALF_CUTOFF", "value":"HALF_CUTOFF"},
