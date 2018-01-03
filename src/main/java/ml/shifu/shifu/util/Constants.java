@@ -306,6 +306,7 @@ public interface Constants {
      */
     public static String GBT_SCORE_RAW_CONVETER = "RAW";
     public static String GBT_SCORE_SIGMOID_CONVETER = "SIGMOID";
+    public static String GBT_SCORE_OLD_SIGMOID_CONVETER = "OLD_SIGMOID";
     public static String GBT_SCORE_CUTOFF_CONVETER = "CUTOFF";
     public static String GBT_SCORE_HALF_CUTOFF_CONVETER = "HALF_CUTOFF";
     public static String GBT_SCORE_MAXMIN_SCALE_CONVETER = "MAXMIN";

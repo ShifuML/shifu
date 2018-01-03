@@ -64,7 +64,7 @@ public class EvalConfig {
      * GBTScoreConvertStrategy is used to convert raw GBT score to the same distribution in NN, like cut off score to
      * [0, 1].
      */
-    private String gbtScoreConvertStrategy = "SIGMOID";
+    private String gbtScoreConvertStrategy = "OLD_SIGMOID";
 
     /**
      * Cache meta columns to a list to avoid reading this file for several times
