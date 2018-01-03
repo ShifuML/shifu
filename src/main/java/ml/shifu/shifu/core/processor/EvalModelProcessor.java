@@ -38,6 +38,7 @@ import ml.shifu.shifu.core.ConfusionMatrix;
 import ml.shifu.shifu.core.PerformanceEvaluator;
 import ml.shifu.shifu.core.Scorer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
 import ml.shifu.shifu.core.eval.GainChart;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
@@ -120,7 +121,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         try {
             setUp(ModelStep.EVAL);
             syncDataToHdfs(modelConfig.getDataSet().getSource());
-            
+
             switch(evalStep) {
                 case LIST:
                     listEvalSet();
@@ -805,9 +806,21 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
     }
 
+    @SuppressWarnings("deprecation")
     private boolean isGBTNotConvertToProb(EvalConfig evalConfig) {
-        return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())
-                && !evalConfig.getGbtConvertToProb();
+        if(CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
+            if(IndependentTreeModel.isValidGbtScoreConvertStrategy(evalConfig.getGbtScoreConvertStrategy())) {
+                if(Constants.GBT_SCORE_RAW_CONVETER.equalsIgnoreCase(evalConfig.getGbtScoreConvertStrategy())) {
+                    return true;
+                }
+            } else {
+                // if score strategy not set, check deprecated parameter getGbtConvertToProb
+                if(!evalConfig.getGbtConvertToProb()) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**

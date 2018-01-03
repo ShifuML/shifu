@@ -246,6 +246,7 @@ public class EvalConfig {
      * @return the gbtConvertToProb
      */
     @JsonIgnore
+    @Deprecated
     public Boolean getGbtConvertToProb() {
         return gbtConvertToProb;
     }
@@ -255,6 +256,7 @@ public class EvalConfig {
      *            the gbtConvertToProb to set
      */
     @JsonProperty
+    @Deprecated
     public void setGbtConvertToProb(Boolean gbtConvertToProb) {
         this.gbtConvertToProb = gbtConvertToProb;
     }
