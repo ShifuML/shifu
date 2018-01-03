@@ -223,8 +223,15 @@ public class IndependentTreeModel {
         this(numericalMeanMapping, numNameMapping, categoricalColumnNameNames, columnCategoryIndexMapping,
                 columnNumIndexMapping, isOptimizeMode, trees, weights, isGBDT, isClassification, isConvertToProb,
                 lossStr, algorithm, inputNode, version);
+
         if(isValidGbtScoreConvertStrategy(gbtScoreConvertStrategy)) {
-            this.gbtScoreConvertStrategy = gbtScoreConvertStrategy;
+            if(isGbtHalfCutOffOrMaxMinStrategy(gbtScoreConvertStrategy)) {
+                System.err
+                        .println("WARN: For HALF_CUTOFF and MAXMIN_SCALE gbt score scale strategy not supported in IndependentTreeModel and will be treated in RAW, in client side, such score can be rescaled by return score values.");
+                this.gbtScoreConvertStrategy = Constants.GBT_SCORE_RAW_CONVETER;
+            } else {
+                this.gbtScoreConvertStrategy = gbtScoreConvertStrategy;
+            }
         } else {
             // set gbtScoreConvertStrategy by isConvertToProb in the other constructor
         }
@@ -240,7 +247,13 @@ public class IndependentTreeModel {
                 && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_RAW_CONVETER);
     }
 
-    public static boolean isValidGbtScoreConvertStrategy(String gbtScoreConvertStrategy) {
+    private static boolean isGbtHalfCutOffOrMaxMinStrategy(String gbtScoreConvertStrategy) {
+        return gbtScoreConvertStrategy != null
+                && (gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_HALF_CUTOFF_CONVETER) || gbtScoreConvertStrategy
+                        .equalsIgnoreCase(Constants.GBT_SCORE_MAXMIN_SCALE_CONVETER));
+    }
+
+    private static boolean isValidGbtScoreConvertStrategy(String gbtScoreConvertStrategy) {
         return gbtScoreConvertStrategy != null
                 && (gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_RAW_CONVETER)
                         || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_SIGMOID_CONVETER)
