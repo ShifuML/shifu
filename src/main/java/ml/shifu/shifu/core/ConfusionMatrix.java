@@ -265,6 +265,7 @@ public class ConfusionMatrix {
         } else {
             // otherwise, keep [0, 1]
         }
+        LOG.info("Transformed (scale included) max score is {}, transformed min score is {}", maxScore, minScore);
 
         SourceType sourceType = evalConfig.getDataSet().getSource();
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(scoreDataPath, sourceType);
