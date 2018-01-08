@@ -185,6 +185,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         }
     }
 
+    @SuppressWarnings("deprecation")
     public Tuple exec(Tuple input) throws IOException {
         if(this.modelRunner == null) {
             // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.

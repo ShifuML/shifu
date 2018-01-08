@@ -48,6 +48,8 @@ More details about shifu can be found in our [wiki pages](https://github.com/Shi
  - Xin Zhong (xinzhong@paypal.com)
  - Simon Zhang (jzhang13@paypal.com)
  - Sharma Nitin (nsharma1@paypal.com)
+ - Wayne Zhu (wzhu1@paypal.com)
+ - Devin Wu (haifwu@paypal.com)
 
 ## Google Group
 

@@ -200,8 +200,9 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
         if(this.modelRunner == null) {
             // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.
             // UDF in pig client will be initialized to get some metadata issues
+            @SuppressWarnings("deprecation")
             List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig, evalConfig.getDataSet()
-                    .getSource(), evalConfig.getGbtConvertToProb());
+                    .getSource(), evalConfig.getGbtConvertToProb(), evalConfig.getGbtScoreConvertStrategy());
             this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
                     .getDataDelimiter(), models);
             this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
@@ -225,8 +226,8 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
                 tuple.append(raw);
             } else {
                 ColumnConfig columnConfig = this.columnConfigMap.get(name);
-                List<Double> normVals = Normalizer.normalize(columnConfig, raw, this.modelConfig.getNormalizeStdDevCutOff(),
-                        this.modelConfig.getNormalizeType());
+                List<Double> normVals = Normalizer.normalize(columnConfig, raw,
+                        this.modelConfig.getNormalizeStdDevCutOff(), this.modelConfig.getNormalizeType());
                 if(this.isOutputRaw) {
                     tuple.append(raw);
                 }
