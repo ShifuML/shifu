@@ -66,7 +66,11 @@ public class DataPurifier {
             try {
                 dataFilterExpr = jexl.createExpression(filterExpressions);
             } catch (JexlException e) {
-                log.error("The expression " + filterExpressions + "is invalid, please use correct expression.", e);
+                if(strict) {
+                    throw new RuntimeException(e);
+                } else {
+                    log.error("The expression " + filterExpressions + "is invalid, please use correct expression.", e);
+                }
                 dataFilterExpr = null;
             }
             this.headers = CommonUtils.getFinalHeaders(modelConfig);
@@ -122,9 +126,7 @@ public class DataPurifier {
             if(this.jexl.isStrict()) {
                 throw new RuntimeException(e);
             } else {
-                if(System.currentTimeMillis() % 300L == 0) {
-                    log.warn("Error occurred when trying to evaluate", dataFilterExpr.toString(), e);
-                }
+                log.error("Error occurred when trying to evaluate" + dataFilterExpr.toString(), e);
             }
         }
 
@@ -162,9 +164,7 @@ public class DataPurifier {
             if(this.jexl.isStrict()) {
                 throw new RuntimeException(e);
             } else {
-                if(System.currentTimeMillis() % 300L == 0) {
-                    log.warn("Error occurred when trying to evaluate", dataFilterExpr.toString(), e);
-                }
+                log.warn("Error occurred when trying to evaluate" + dataFilterExpr.toString(), e);
             }
         }
 
