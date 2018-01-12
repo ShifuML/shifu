@@ -89,7 +89,7 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
             String[] splits = CommonUtils.split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
             this.dataPurifiers = new ArrayList<DataPurifier>(splits.length);
             for(String split: splits) {
-                this.dataPurifiers.add(new DataPurifier(modelConfig, split, true));
+                this.dataPurifiers.add(new DataPurifier(modelConfig, split, false));
             }
         }
     }
