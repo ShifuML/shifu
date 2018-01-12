@@ -37,14 +37,15 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
 
     private Map<Integer, String> smallBinsMap;
 
-    public DynamicBinningUDF(String source, String pathModelConfig, String pathColumnConfig, String smallBinsPath) throws IOException {
+    public DynamicBinningUDF(String source, String pathModelConfig, String pathColumnConfig, String smallBinsPath)
+            throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
 
         smallBinsMap = new HashMap<Integer, String>();
         List<String> smallBinsList = ShifuFileUtils.readFilePartsIntoList(smallBinsPath, SourceType.HDFS);
-        for (String smallBin : smallBinsList) {
+        for(String smallBin: smallBinsList) {
             String[] fields = StringUtils.split(smallBin, '\u0007');
-            if (fields.length == 2) {
+            if(fields.length == 2) {
                 smallBinsMap.put(Integer.parseInt(fields[0]), fields[1]);
             }
         }
@@ -53,7 +54,7 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
     @Override
     public Tuple exec(Tuple input) throws IOException {
 
-        if (input == null || input.size() != 1) {
+        if(input == null || input.size() != 1) {
             return null;
         }
 
@@ -66,13 +67,21 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
 
         DataBag columnDataBag = (DataBag) input.get(0);
         Iterator<Tuple> iterator = columnDataBag.iterator();
-        while (iterator.hasNext()) {
+        while(iterator.hasNext()) {
             Tuple tuple = iterator.next();
-            if (columnId == null) {
+            if(columnId == null) {
                 columnId = (Integer) tuple.get(0);
-                columnConfig = super.columnConfigList.get(columnId);
+
+                // for filter expansions
+                if(columnId >= super.columnConfigList.size()) {
+                    int newColumnId = columnId % super.columnConfigList.size();
+                    columnConfig = super.columnConfigList.get(newColumnId);
+                } else {
+                    columnConfig = super.columnConfigList.get(columnId);
+                }
+
                 String smallBins = smallBinsMap.get(columnId);
-                if (columnConfig.isCategorical()) {
+                if(columnConfig.isCategorical()) {
                     binsData = smallBins;
                     break;
                 } else {
@@ -83,7 +92,7 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
             String val = (String) tuple.get(1);
             Boolean isPositiveInst = (Boolean) tuple.get(2);
 
-            if (missingValSet.contains(val)) {
+            if(missingValSet.contains(val)) {
                 continue;
             }
 
@@ -97,14 +106,14 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
             }
 
             NumBinInfo numBinInfo = binaryLocate(binInfoList, d);
-            if (numBinInfo != null) {
+            if(numBinInfo != null) {
                 numBinInfo.incInstCnt(isPositiveInst);
             }
         }
 
-        if (binsData == null && CollectionUtils.isNotEmpty(binInfoList)) {
+        if(binsData == null && CollectionUtils.isNotEmpty(binInfoList)) {
             int maxNumBin = modelConfig.getStats().getMaxNumBin();
-            if ( maxNumBin <= 0 ) {
+            if(maxNumBin <= 0) {
                 maxNumBin = 1024;
             }
             DynamicBinning dynamicBinning = new DynamicBinning(binInfoList, maxNumBin);
@@ -124,14 +133,14 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
         int left = 0;
         int right = binInfoList.size() - 1;
 
-        while (left <= right) {
+        while(left <= right) {
             int middle = (left + right) / 2;
             NumBinInfo binInfo = binInfoList.get(middle);
-            if (d >= binInfo.getLeftThreshold() && d < binInfo.getRightThreshold()) {
+            if(d >= binInfo.getLeftThreshold() && d < binInfo.getRightThreshold()) {
                 return binInfo;
-            } else if (d >= binInfo.getRightThreshold()) {
+            } else if(d >= binInfo.getRightThreshold()) {
                 left = middle + 1;
-            } else if (d < binInfo.getLeftThreshold()) {
+            } else if(d < binInfo.getLeftThreshold()) {
                 right = middle - 1;
             } else {
                 return null;

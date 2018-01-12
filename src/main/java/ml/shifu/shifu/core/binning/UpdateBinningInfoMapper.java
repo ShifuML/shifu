@@ -171,7 +171,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             String[] splits = CommonUtils.split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
             this.expressionDataPurifiers = new ArrayList<DataPurifier>(splits.length);
             for(String split: splits) {
-                this.expressionDataPurifiers.add(new DataPurifier(modelConfig, split, true));
+                this.expressionDataPurifiers.add(new DataPurifier(modelConfig, split, false));
             }
         }
 
