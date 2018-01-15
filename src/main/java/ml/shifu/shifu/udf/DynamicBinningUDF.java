@@ -37,23 +37,28 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
 
     private Map<Integer, String> smallBinsMap;
 
+    private String smallBinsPath;
+
     public DynamicBinningUDF(String source, String pathModelConfig, String pathColumnConfig, String smallBinsPath)
             throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
-
-        smallBinsMap = new HashMap<Integer, String>();
-        List<String> smallBinsList = ShifuFileUtils.readFilePartsIntoList(smallBinsPath, SourceType.HDFS);
-        for(String smallBin: smallBinsList) {
-            String[] fields = StringUtils.split(smallBin, '\u0007');
-            if(fields.length == 2) {
-                smallBinsMap.put(Integer.parseInt(fields[0]), fields[1]);
-            }
-        }
+        this.smallBinsPath = smallBinsPath;
     }
 
     @Override
     public Tuple exec(Tuple input) throws IOException {
-
+        // move initialization from constructor to be here because of Pig UDF will be called in client which will cause
+        // OOM in there
+        if(smallBinsMap == null) {
+            smallBinsMap = new HashMap<Integer, String>();
+            List<String> smallBinsList = ShifuFileUtils.readFilePartsIntoList(smallBinsPath, SourceType.HDFS);
+            for(String smallBin: smallBinsList) {
+                String[] fields = StringUtils.split(smallBin, '\u0007');
+                if(fields.length == 2) {
+                    smallBinsMap.put(Integer.parseInt(fields[0]), fields[1]);
+                }
+            }
+        }
         if(input == null || input.size() != 1) {
             return null;
         }

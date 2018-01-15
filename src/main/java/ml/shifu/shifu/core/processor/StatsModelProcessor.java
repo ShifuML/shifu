@@ -186,7 +186,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                     saveColumnConfigList(backupColumnConfigPath, this.columnConfigList);
                 } else { // existing backup ColumnConfig.json, use binning info in it to do rebin
                     List<ColumnConfig> backColumnConfigList = CommonUtils.loadColumnConfigList(backupColumnConfigPath,
-                            SourceType.LOCAL);
+                            SourceType.LOCAL, false);
                     for(ColumnConfig backupColumnConfig: backColumnConfigList) {
                         for(ColumnConfig columnConfig: this.columnConfigList) {
                             if(NSColumnUtils.isColumnEqual(backupColumnConfig.getColumnName(),
