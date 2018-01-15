@@ -491,7 +491,7 @@ public class BasicModelProcessor {
      */
     private void loadColumnConfig() throws IOException {
         columnConfigList = CommonUtils.loadColumnConfigList(new Path(CommonUtils.getLocalModelSetPath(otherConfigs),
-                Constants.LOCAL_COLUMN_CONFIG_JSON).toString(), SourceType.LOCAL);
+                Constants.LOCAL_COLUMN_CONFIG_JSON).toString(), SourceType.LOCAL, false);
     }
 
     /**
