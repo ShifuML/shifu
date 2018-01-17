@@ -393,10 +393,33 @@ public final class CommonUtils {
      *             if {@code path} is null or empty, if sourceType is null.
      */
     public static List<ColumnConfig> loadColumnConfigList(String path, SourceType sourceType) throws IOException {
+        return loadColumnConfigList(path, sourceType, true);
+    }
+
+    /**
+     * Load column configuration list.
+     * 
+     * @param path
+     *            file path
+     * @param sourceType
+     *            source type: hdfs or local
+     * @param nullSampleValues
+     *            if sample values null or not to save memory especially in Pig UDF to save more memory. there is a OOM
+     *            if larger ColumnConfig.json.
+     * @return column config list
+     * @throws IOException
+     *             if any IO exception in parsing json.
+     * @throws IllegalArgumentException
+     *             if {@code path} is null or empty, if sourceType is null.
+     */
+    public static List<ColumnConfig> loadColumnConfigList(String path, SourceType sourceType, boolean nullSampleValues)
+            throws IOException {
         ColumnConfig[] configList = loadJSON(path, sourceType, ColumnConfig[].class);
         List<ColumnConfig> columnConfigList = new ArrayList<ColumnConfig>();
         for(ColumnConfig columnConfig: configList) {
-            columnConfig.setSampleValues(null);
+            if(nullSampleValues) {
+                columnConfig.setSampleValues(null);
+            }
             columnConfigList.add(columnConfig);
         }
         return columnConfigList;

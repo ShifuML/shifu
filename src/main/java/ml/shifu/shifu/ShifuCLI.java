@@ -676,7 +676,7 @@ public class ShifuCLI {
         System.out
                 .println("\t                                        Export model to PMML format or export ColumnConfig.");
         System.out
-                .println("\tcombo -new    <Algorithm List>          Create a combo model train. Algorithm lis should be NN,LR,RF,GBT,LR");
+                .println("\tcombo -new    <Algorithm List>          Create a combo model train. Algorithm lis should be NN,LR,RF,GBT");
         System.out.println("\tcombo -init                             Generate sub-models.");
         System.out.println("\tcombo -run [-shuffle] [-resume]         Run Combo-Model train.");
         System.out.println("\tcombo -eval [-resume]                   Evaluate Combo-Model performance.");
