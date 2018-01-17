@@ -17,11 +17,14 @@ package ml.shifu.shifu.core.pmml.builder.creator;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+
+import org.apache.commons.collections.CollectionUtils;
 import org.dmg.pmml.DataType;
 import org.dmg.pmml.OpType;
 import org.encog.ml.BasicML;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by zhanhu on 3/29/16.
@@ -50,7 +53,7 @@ public abstract class AbstractPmmlElementCreator<T> {
      * Target Column -&gt; CATEGORICAL
      * Categorical Column -&gt; CATEGORICAL
      * Numerical Column -&gt; CONTINUOUS
-     *
+     * 
      * @param columnConfig
      *            - ColumnConfig for variable
      * @return OpType
@@ -69,12 +72,19 @@ public abstract class AbstractPmmlElementCreator<T> {
      * Get DataType from OpType
      * CONTINUOUS -&gt; DOUBLE
      * Other -&gt; STRING
-     *
+     * 
      * @param optype
      *            OpType
      * @return DataType
      */
     protected DataType getDataType(OpType optype) {
         return (optype.equals(OpType.CONTINUOUS) ? DataType.DOUBLE : DataType.STRING);
+    }
+
+    protected boolean isActiveColumn(Set<Integer> featureSet, ColumnConfig columnConfig) {
+        boolean isActiveInputColumn = (columnConfig.isFinalSelect() && (CollectionUtils.isEmpty(featureSet) || featureSet
+                .contains(columnConfig.getColumnNum())));
+        // active input and active target
+        return isActiveInputColumn || columnConfig.isTarget();
     }
 }

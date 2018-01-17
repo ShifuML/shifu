@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.util.Arrays;
+import java.util.Random;
 import java.util.concurrent.Callable;
 
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLDataPair;
@@ -25,15 +26,18 @@ import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataPair;
 import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataSet;
 
 import org.encog.engine.network.activation.ActivationFunction;
-import org.encog.mathutil.error.ErrorCalculation;
 import org.encog.neural.error.ErrorFunction;
 import org.encog.neural.flat.FlatNetwork;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@link SubGradient} is copied from Encog framework. The reason is that we original Gradient don't pop up
  * {@link #gradients} outside. While we need gradients accumulated into {@link NNMaster} to update NN weights.
  */
 public class SubGradient implements Callable<double[]> {
+
+    protected static final Logger LOG = LoggerFactory.getLogger(SubGradient.class);
 
     /**
      * The network to train.
@@ -43,7 +47,7 @@ public class SubGradient implements Callable<double[]> {
     /**
      * The error calculation method.
      */
-    private final ErrorCalculation errorCalculation = new ErrorCalculation();
+    private ErrorCalculation errorCalculation = new SquaredErrorCalculation();
 
     /**
      * The actual values from the neural network.
@@ -147,9 +151,29 @@ public class SubGradient implements Callable<double[]> {
 
     private double[] doubleIdeal;
 
+    /**
+     * The dropout rate for each layer.
+     */
+    private double[] layerDropoutRates;
+
+    /**
+     * Used to generate randomness for dropout
+     */
+    protected Random dropoutRandomSource;
+
+    /**
+     * Current iteration
+     */
+    private int currentIteration;
+
+    /**
+     * If miniBatchRate set to 0.1d, {@link #batchs} is 10. It will run 10x iterations for one epochs.
+     */
+    private int batchs = 1;
+
     public SubGradient(final FloatFlatNetwork theNetwork, final FloatMLDataSet theTraining, long trainLow,
             long trainHigh, final FloatMLDataSet theTesting, long testLow, long testHigh, final double[] flatSpot,
-            ErrorFunction ef, boolean isCrossOver, ParallelGradient owner) {
+            boolean isCrossOver, ParallelGradient owner, Random dropoutRandomSource, int batchs, int currentInteration) {
         this.network = theNetwork;
         this.training = theTraining;
         this.trainLow = trainLow;
@@ -159,10 +183,14 @@ public class SubGradient implements Callable<double[]> {
         this.testHigh = testHigh;
         this.isCrossOver = isCrossOver;
         this.flatSpot = flatSpot;
-        this.errorFunction = ef;
         this.owner = owner;
-
+        this.errorFunction = this.owner.createEFInstance();
+        this.layerDropoutRates = theNetwork.getLayerDropoutRates();
+        this.dropoutRandomSource = dropoutRandomSource;
         this.initNetworkParams();
+        this.errorCalculation = this.owner.createECInstance();
+        this.batchs = batchs;
+        this.currentIteration = currentInteration;
     }
 
     private void initNetworkParams() {
@@ -205,9 +233,16 @@ public class SubGradient implements Callable<double[]> {
         this.errorCalculation.updateError(this.actual, doubleIdeal, s);
         this.errorFunction.calculateError(doubleIdeal, actual, this.getLayerDelta());
 
-        for(int i = 0; i < this.actual.length; i++) {
-            this.getLayerDelta()[i] = ((this.getNetwork().getActivationFunctions()[0].derivativeFunction(
-                    this.layerSums[i], this.layerOutput[i]) + this.flatSpot[0])) * (this.getLayerDelta()[i] * s);
+        // TODO this logic should be moved the ErrorFunction
+        if(this.errorFunction instanceof LogErrorFunction) {
+            for(int i = 0; i < this.actual.length; i++) {
+                this.getLayerDelta()[i] *= s;
+            }
+        } else {
+            for(int i = 0; i < this.actual.length; i++) {
+                this.getLayerDelta()[i] = ((this.getNetwork().getActivationFunctions()[0].derivativeFunction(
+                        this.layerSums[i], this.layerOutput[i]) + this.flatSpot[0])) * (this.getLayerDelta()[i] * s);
+            }
         }
 
         int beginTraining = this.getNetwork().getBeginTraining();
@@ -221,13 +256,17 @@ public class SubGradient implements Callable<double[]> {
      * Process one level.
      * 
      * @param currentLevel
-     *            The level.
+     *            The current level.
      */
     private void processLevel(final int currentLevel) {
         final int fromLayerIndex = this.layerIndex[currentLevel + 1];
         final int toLayerIndex = this.layerIndex[currentLevel];
         final int fromLayerSize = this.layerCounts[currentLevel + 1];
         final int toLayerSize = this.layerFeedCounts[currentLevel];
+        double dropoutRate = 0;
+        if(this.layerDropoutRates.length > currentLevel && this.layerDropoutRates[currentLevel] != 0) {
+            dropoutRate = this.layerDropoutRates[currentLevel];
+        }
 
         final int index = this.weightIndex[currentLevel];
         final ActivationFunction activation = this.getNetwork().getActivationFunctions()[currentLevel + 1];
@@ -238,21 +277,26 @@ public class SubGradient implements Callable<double[]> {
         for(int y = 0; y < fromLayerSize; y++) {
             final double output = this.layerOutput[yi];
             double sum = 0;
-            int xi = toLayerIndex;
             int wi = index + y;
-            for(int x = 0; x < toLayerSize; x++) {
-                if(this.owner.isELM() && currentLevel == 0) {
-                    this.gradients[wi] = 0d;
-                } else {
-                    this.gradients[wi] += output * this.getLayerDelta()[xi];
+            if(this.owner.isELM() || dropoutRate == 0d || dropoutRandomSource.nextDouble() > dropoutRate) {
+                int xi = toLayerIndex;
+                for(int x = 0; x < toLayerSize; x++) {
+                    // if ELM and current Level is endTrainingIndex-1, from firstHidden to input, gradients set to 0 to
+                    // skip update weights on input to first layer
+                    if(this.owner.isELM() && currentLevel == (this.getNetwork().getEndTraining() - 1)) {
+                        this.gradients[wi] = 0d;
+                    } else {
+                        this.gradients[wi] += output * this.getLayerDelta()[xi];
+                    }
+                    sum += this.weights[wi] * this.getLayerDelta()[xi];
+                    wi += fromLayerSize;
+                    xi++;
                 }
-                sum += this.weights[wi] * this.getLayerDelta()[xi];
-                wi += fromLayerSize;
-                xi++;
+                this.getLayerDelta()[yi] = sum
+                        * (activation.derivativeFunction(this.layerSums[yi], this.layerOutput[yi]) + currentFlatSpot);
+            } else {
+                this.getLayerDelta()[yi] = 0;
             }
-
-            this.getLayerDelta()[yi] = sum
-                    * (activation.derivativeFunction(this.layerSums[yi], this.layerOutput[yi]) + currentFlatSpot);
             yi++;
         }
     }
@@ -260,13 +304,33 @@ public class SubGradient implements Callable<double[]> {
     /**
      * Perform the gradient calculation
      */
+    @Override
     public final double[] call() {
         try {
             // reset errors and gradients firstly
             this.errorCalculation.reset();
             Arrays.fill(this.gradients, 0.0);
 
-            for(long i = this.trainLow; i <= this.trainHigh; i++) {
+            long start = this.trainLow;
+            long end = this.trainHigh;
+
+            if(this.batchs > 1) {
+                long currentBatch = (currentIteration - 2) % this.batchs;
+                long recordsInBatch = (this.trainHigh - this.trainLow + 1) / this.batchs;
+                if(currentBatch == this.batchs - 1) {
+                    start = this.trainLow + recordsInBatch * currentBatch;
+                    end = this.trainHigh;
+                } else {
+                    start = this.trainLow + recordsInBatch * currentBatch;
+                    end = this.trainLow + recordsInBatch * (currentBatch + 1) - 1;
+                }
+                LOG.debug(
+                        "Thread name {}, trainLow {}, trainHigh {}, currentIteration {}, batchs {}, currentBatch {}, start {}, end {}",
+                        Thread.currentThread().getName(), trainLow, trainHigh, currentIteration, batchs, currentBatch,
+                        start, end);
+            }
+
+            for(long i = start; i <= end; i++) {
                 synchronized(this.owner) {
                     if(this.isCrossOver) {
                         // 3:1 to select testing data set, tmp hard code, TODO fix hard code issue,extract such logic to

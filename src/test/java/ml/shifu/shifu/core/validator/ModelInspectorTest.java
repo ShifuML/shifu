@@ -71,7 +71,7 @@ public class ModelInspectorTest {
         config.getDataSet().setCategoricalColumnNameFile("not-exists");
         config.getDataSet().setMetaColumnNameFile("~/not-exists");
         result = instance.probe(config, ModelStep.INIT);
-        Assert.assertFalse(result.getStatus());
+        Assert.assertTrue(result.getStatus());
 
         config.getDataSet().setMetaColumnNameFile(" ");
         config.getDataSet().setCategoricalColumnNameFile("");
@@ -80,53 +80,52 @@ public class ModelInspectorTest {
 
         config.getDataSet().setTargetColumnName(null);
         result = instance.probe(config, ModelStep.INIT);
-        Assert.assertFalse(result.getStatus());
+        Assert.assertTrue(result.getStatus());
 
         config.getDataSet().setTargetColumnName("  ");
         result = instance.probe(config, ModelStep.INIT);
-        Assert.assertFalse(result.getStatus());
+        Assert.assertTrue(result.getStatus());
 
         config.getDataSet().setTargetColumnName("a");
         config.getDataSet().setMetaColumnNameFile("meta.names");
         FileUtils.write(new File("meta.names"), "a");
         result = instance.probe(config, ModelStep.INIT);
-        Assert.assertFalse(result.getStatus());
+        Assert.assertTrue(result.getStatus());
 
         FileUtils.write(new File("meta.names"), "");
         config.getDataSet().setTargetColumnName("a");
         config.getVarSelect().setForceRemoveColumnNameFile("force.remove.names");
         FileUtils.write(new File("force.remove.names"), "a");
         result = instance.probe(config, ModelStep.INIT);
-        Assert.assertFalse(result.getStatus());
+        Assert.assertTrue(result.getStatus());
 
         FileUtils.write(new File("force.remove.names"), "");
         config.getDataSet().setTargetColumnName("a");
         config.getVarSelect().setForceSelectColumnNameFile("force.select.names");
         FileUtils.write(new File("force.select.names"), "a");
         result = instance.probe(config, ModelStep.INIT);
-        Assert.assertFalse(result.getStatus());
+        Assert.assertTrue(result.getStatus());
 
         FileUtils.write(new File("force.select.names"), "");
         FileUtils.write(new File("force.remove.names"), "");
         FileUtils.write(new File("meta.names"), "b\nc");
         FileUtils.write(new File("force.select.names"), "c\nd");
         result = instance.probe(config, ModelStep.INIT);
-        Assert.assertFalse(result.getStatus());
+        Assert.assertTrue(result.getStatus());
 
         FileUtils.write(new File("force.select.names"), "");
         FileUtils.write(new File("force.remove.names"), "");
         FileUtils.write(new File("meta.names"), "b\nc");
         FileUtils.write(new File("force.remove.names"), "c\nd");
         result = instance.probe(config, ModelStep.INIT);
-        Assert.assertFalse(result.getStatus());
+        Assert.assertTrue(result.getStatus());
 
         FileUtils.write(new File("meta.names"), "");
         FileUtils.write(new File("force.remove.names"), "b\nc");
         FileUtils.write(new File("force.select.names"), "c\nd");
         result = instance.probe(config, ModelStep.INIT);
-        Assert.assertFalse(result.getStatus());
-        Assert.assertEquals("[false, Column - c exists both in force select conf and force remove conf.]",
-                result.toString());
+        Assert.assertTrue(result.getStatus());
+        Assert.assertEquals("[true]", result.toString());
 
         FileUtils.deleteQuietly(new File("meta.names"));
         FileUtils.deleteQuietly(new File("force.remove.names"));
@@ -176,7 +175,7 @@ public class ModelInspectorTest {
         config.getTrain().getParams().put(CommonConstants.NUM_HIDDEN_NODES, hiddenNodes);
         List<String> activateFuncs = new ArrayList<String>();
         activateFuncs.add("tanh");
-        activateFuncs.add("sigmod");
+        activateFuncs.add("sigmoid");
         activateFuncs.add("tanh");
         config.getTrain().getParams().put(CommonConstants.ACTIVATION_FUNC, activateFuncs);
         result = instance.probe(config, ModelStep.TRAIN);

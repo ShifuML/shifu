@@ -3,14 +3,18 @@ package ml.shifu.shifu.util.updater;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
+import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.validator.ModelInspector;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 
 import org.apache.commons.collections.CollectionUtils;
 
@@ -20,12 +24,16 @@ import org.apache.commons.collections.CollectionUtils;
 public class BasicUpdater {
 
     protected String targetColumnName;
+    protected String weightColumnName;
+
     protected Set<NSColumn> setCategorialColumns;
     protected Set<NSColumn> setMeta;
     protected Set<NSColumn> setForceRemove;
     protected Set<NSColumn> setForceSelect;
     protected Set<NSColumn> setCandidates;
-    protected String weightColumnName;
+
+    protected Set<NSColumn> setHybridColumns;
+    protected Map<String, Double> hybridColumnNames;
 
     public BasicUpdater(ModelConfig modelConfig) throws IOException {
         this.targetColumnName = modelConfig.getTargetColumnName();
@@ -54,6 +62,14 @@ public class BasicUpdater {
             }
         }
 
+        setHybridColumns = new HashSet<NSColumn>();
+        hybridColumnNames = modelConfig.getHybridColumnNames();
+        if(hybridColumnNames != null && hybridColumnNames.size() > 0) {
+            for(Entry<String, Double> entry: hybridColumnNames.entrySet()) {
+                setHybridColumns.add(new NSColumn(entry.getKey()));
+            }
+        }
+
         this.setForceSelect = new HashSet<NSColumn>(512);
         if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())
                 && CollectionUtils.isNotEmpty(modelConfig.getListForceSelect())) {
@@ -65,8 +81,8 @@ public class BasicUpdater {
 
         this.setCandidates = new HashSet<NSColumn>();
         List<String> candidates = modelConfig.getListCandidates();
-        if (CollectionUtils.isNotEmpty(candidates)) {
-            for ( String candidate : candidates ) {
+        if(CollectionUtils.isNotEmpty(candidates)) {
+            for(String candidate: candidates) {
                 this.setCandidates.add(new NSColumn(candidate));
             }
         }
@@ -87,13 +103,16 @@ public class BasicUpdater {
         } else if(this.setForceRemove.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceRemove);
         } else if(this.setForceSelect.contains(new NSColumn(varName))) {
-            if ( CollectionUtils.isEmpty(this.setCandidates)
-                    || (CollectionUtils.isNotEmpty(this.setCandidates) && this.setCandidates.contains(new NSColumn(varName))) ) {
+            if(CollectionUtils.isEmpty(this.setCandidates)
+                    || (CollectionUtils.isNotEmpty(this.setCandidates) // candidates is not empty
+                        && this.setCandidates.contains(new NSColumn(varName)))) {
                 columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
             }
         } else if(NSColumnUtils.isColumnEqual(this.weightColumnName, varName)) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Weight);
             columnConfig.setColumnType(null);
+        } else if(this.setCandidates.contains(new NSColumn(varName))) {
+            columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Candidate);
         }
 
         if(NSColumnUtils.isColumnEqual(weightColumnName, varName)) {
@@ -102,6 +121,15 @@ public class BasicUpdater {
         } else if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
             // target column is set to categorical column
             columnConfig.setColumnType(ColumnType.C);
+        } else if(setHybridColumns.contains(new NSColumn(varName))) {
+            columnConfig.setColumnType(ColumnType.H);
+            String newVarName = null;
+            if(Environment.getBoolean(Constants.SHIFU_NAMESPACE_STRICT_MODE, false)) {
+                newVarName = new NSColumn(varName).getFullColumnName();
+            } else {
+                newVarName = new NSColumn(varName).getSimpleName();
+            }
+            columnConfig.setHybridThreshold(hybridColumnNames.get(newVarName));
         } else if(setCategorialColumns.contains(new NSColumn(varName))) {
             columnConfig.setColumnType(ColumnType.C);
         } else {
@@ -115,6 +143,7 @@ public class BasicUpdater {
         switch(step) {
             case INIT:
             case STATS:
+            case NORMALIZE:
                 updater = new BasicUpdater(modelConfig);
                 break;
             case VARSELECT:

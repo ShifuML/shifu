@@ -19,6 +19,8 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
+import ml.shifu.shifu.util.CommonUtils;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.dmg.pmml.*;
@@ -52,7 +54,7 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
                 if(columnConfig.isFinalSelect()
                         && (CollectionUtils.isEmpty(featureSet) || featureSet.contains(columnConfig.getColumnNum()))) {
                     UnivariateStats univariateStats = new UnivariateStats();
-                    univariateStats.setField(FieldName.create(columnConfig.getColumnName()));
+                    univariateStats.setField(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig)));
 
                     if(columnConfig.isCategorical()) {
                         DiscrStats discrStats = new DiscrStats();
@@ -81,7 +83,7 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
             for(ColumnConfig columnConfig: columnConfigList) {
                 if(columnConfig.isFinalSelect()) {
                     UnivariateStats univariateStats = new UnivariateStats();
-                    univariateStats.setField(FieldName.create(columnConfig.getColumnName()));
+                    univariateStats.setField(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig)));
 
                     if(columnConfig.isCategorical()) {
                         DiscrStats discrStats = new DiscrStats();

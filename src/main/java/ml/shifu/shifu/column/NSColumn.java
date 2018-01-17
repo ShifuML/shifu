@@ -1,5 +1,7 @@
 package ml.shifu.shifu.column;
 
+import java.util.Arrays;
+
 import org.apache.commons.lang.StringUtils;
 
 /**
@@ -71,5 +73,14 @@ public class NSColumn {
             }
             return equal;
         }
+    }
+
+    /* (non-Javadoc)
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return "NSColumn [fullColumnName=" + fullColumnName + ", nameIdentifiers=" + Arrays.toString(nameIdentifiers)
+                + "]";
     }
 }

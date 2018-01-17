@@ -77,7 +77,7 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
             Set<Integer> featureSet = bfn.getFeatureSet();
             for(ColumnConfig config: columnConfigList) {
                 if(config.isFinalSelect()
-                        && (CollectionUtils.isEmpty(featureSet) || featureSet.contains(config.getColumnNum())) ) {
+                        && (CollectionUtils.isEmpty(featureSet) || featureSet.contains(config.getColumnNum()))) {
                     double cutoff = modelConfig.getNormalizeStdDevCutOff();
                     localTransformations.withDerivedFields(config.isCategorical() ? createCategoricalDerivedField(
                             config, cutoff, modelConfig.getNormalizeType()) : createNumericalDerivedField(config,
@@ -119,14 +119,14 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
         }
 
         String defaultValue = Normalizer.normalize(config, "doesn't exist at all...by paypal", cutoff, normType)
-                .toString();
-        String missingValue = Normalizer.normalize(config, null, cutoff, normType).toString();
+                .get(0).toString();
+        String missingValue = Normalizer.normalize(config, null, cutoff, normType).get(0).toString();
 
         InlineTable inlineTable = new InlineTable();
         for(int i = 0; i < config.getBinCategory().size(); i++) {
             List<String> catVals = CommonUtils.flattenCatValGrp(config.getBinCategory().get(i));
             for(String cval: catVals) {
-                String dval = Normalizer.normalize(config, cval, cutoff, normType).toString();
+                String dval = Normalizer.normalize(config, cval, cutoff, normType).get(0).toString();
 
                 Element out = document.createElementNS(NAME_SPACE_URI, ELEMENT_OUT);
                 out.setTextContent(dval);
@@ -138,13 +138,17 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
             }
         }
 
-        MapValues mapValues = new MapValues("out").withDataType(DataType.DOUBLE).withDefaultValue(defaultValue)
-                .withFieldColumnPairs(new FieldColumnPair(new FieldName(config.getColumnName()), ELEMENT_ORIGIN))
+        MapValues mapValues = new MapValues("out")
+                .withDataType(DataType.DOUBLE)
+                .withDefaultValue(defaultValue)
+                .withFieldColumnPairs(
+                        new FieldColumnPair(new FieldName(CommonUtils.getSimpleColumnName(config)), ELEMENT_ORIGIN))
                 .withInlineTable(inlineTable).withMapMissingTo(missingValue);
 
         List<DerivedField> derivedFields = new ArrayList<DerivedField>();
         derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
-                FieldName.create(genPmmlColumnName(config.getColumnName(), normType))).withExpression(mapValues));
+                FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config), normType))).withExpression(
+                mapValues));
         return derivedFields;
     }
 
@@ -164,14 +168,15 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
         // added capping logic to linearNorm
         LinearNorm from = new LinearNorm().withOrig(config.getMean() - config.getStdDev() * cutoff).withNorm(-cutoff);
         LinearNorm to = new LinearNorm().withOrig(config.getMean() + config.getStdDev() * cutoff).withNorm(cutoff);
-        NormContinuous normContinuous = new NormContinuous(FieldName.create(config.getColumnName()))
+        NormContinuous normContinuous = new NormContinuous(FieldName.create(CommonUtils.getSimpleColumnName(config)))
                 .withLinearNorms(from, to).withMapMissingTo(0.0)
                 .withOutliers(OutlierTreatmentMethodType.AS_EXTREME_VALUES);
 
         // derived field name is consisted of FieldName and "_zscl"
         List<DerivedField> derivedFields = new ArrayList<DerivedField>();
         derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
-                FieldName.create(genPmmlColumnName(config.getColumnName(), normType))).withExpression(normContinuous));
+                FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config), normType))).withExpression(
+                normContinuous));
         return derivedFields;
     }
 

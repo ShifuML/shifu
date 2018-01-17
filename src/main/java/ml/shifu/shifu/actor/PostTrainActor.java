@@ -15,11 +15,13 @@
  */
 package ml.shifu.shifu.actor;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
-import akka.actor.UntypedActor;
-import akka.actor.UntypedActorFactory;
-import akka.routing.RoundRobinRouter;
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+
 import ml.shifu.shifu.actor.worker.DataLoadWorker;
 import ml.shifu.shifu.actor.worker.DataPrepareWorker;
 import ml.shifu.shifu.actor.worker.PostTrainWorker;
@@ -33,15 +35,15 @@ import ml.shifu.shifu.message.ScanEvalDataMessage;
 import ml.shifu.shifu.message.StatsResultMessage;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.JSONUtils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
+import akka.actor.ActorRef;
+import akka.actor.Props;
+import akka.actor.UntypedActor;
+import akka.actor.UntypedActorFactory;
+import akka.routing.RoundRobinRouter;
 
 /**
  * PostTrainActor class do the post train for models. Post-Train is used the
@@ -70,7 +72,7 @@ public class PostTrainActor extends AbstractActor {
         // actors to calculate the average score for each column binning
         columnNumToActorMap = new HashMap<Integer, ActorRef>();
         for (ColumnConfig config : columnConfigList) {
-            if (config.isCandidate() && config.isFinalSelect()) {
+            if (config.isCandidate(super.hasCandidates) && config.isFinalSelect()) {
                 expectedResultCnt++;
                 ActorRef actor = getContext().actorOf(new Props(new UntypedActorFactory() {
                     private static final long serialVersionUID = -4461572845675918681L;

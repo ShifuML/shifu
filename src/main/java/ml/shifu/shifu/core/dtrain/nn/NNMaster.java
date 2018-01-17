@@ -16,11 +16,7 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.master.AbstractMasterComputable;
@@ -41,6 +37,7 @@ import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
+import org.encog.ml.BasicML;
 import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,7 +112,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
     /**
      * Convergence threshold setting.
      */
-    private double convergenceThreshold = 0d;
+    private double convergenceThreshold = Double.MIN_VALUE;
 
     /**
      * Convergence judger instance for convergence checking.
@@ -156,6 +153,26 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
      * If variables are selected, if not, select variables with good candidate.
      */
     private boolean isAfterVarSelect;
+
+    /**
+     * Weight initializer, can be 'default', 'gaussian' or 'xavier'.
+     */
+    private String wgtInit;
+
+    /**
+     * Momentum factor in Momentum UpdateRule
+     */
+    private double momentum = 0.5d;
+
+    /**
+     * 'beta1' in Adam optimization, only for Adam
+     */
+    private double adamBeta1 = 0.9d;
+
+    /**
+     * 'beta2' in Adam optimization, only for Adam
+     */
+    private double adamBeta2 = 0.999d;
 
     @Override
     public NNParams doCompute(MasterContext<NNParams, NNParams> context) {
@@ -215,7 +232,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.learningRate = this.rawLearningRate;
             this.weightCalculator = new Weight(this.globalNNParams.getGradients().length,
                     this.globalNNParams.getTrainSize(), learningRate, propagation, this.regularizedConstant,
-                    RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)), this.dropoutRate);
+                    RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)), this.dropoutRate,
+                    this.propagation, this.momentum, this.learningDecay, this.adamBeta1, this.adamBeta2);
         } else {
             this.learningRate = this.learningRate * (1.0d - this.learningDecay);
             // without learningDecay Parameter using sqrt(iteration number) to decrease learning rate
@@ -226,9 +244,10 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
 
         double[] oldWeights = Arrays.copyOf(this.globalNNParams.getWeights(), this.globalNNParams.getWeights().length);
 
-        // use last weights and current gradients to calculate
+        // use last weights and current gradients to calculate, current iteration - 1 to remove 1st iteration for worker
+        // data reading
         double[] weights = this.weightCalculator.calculateWeights(this.globalNNParams.getWeights(),
-                this.globalNNParams.getGradients());
+                this.globalNNParams.getGradients(), (context.getCurrentIteration() - 1));
 
         this.globalNNParams.setWeights(weights);
 
@@ -289,8 +308,9 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         NNParams params = null;
         try {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-            BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils.loadModel(modelConfig, modelPath,
+            BasicML basicML = CommonUtils.loadModel(modelConfig, modelPath,
                     ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
+            BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils.getBasicNetwork(basicML);
             if(existingModel == null) {
                 params = initWeights();
                 LOG.info("Starting to train model from scratch.");
@@ -318,7 +338,10 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
     private NNParams initWeights() {
         NNParams params = new NNParams();
 
-        int[] inputAndOutput = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int[] inputAndOutput = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                this.columnConfigList);
+        int featureInputsCnt = DTrainUtils.getFeatureInputsCnt(modelConfig, this.columnConfigList,
+                new HashSet<Integer>(this.subFeatures));
         @SuppressWarnings("unused")
         int inputNodeCount = inputAndOutput[0] == 0 ? inputAndOutput[2] : inputAndOutput[0];
         // if is one vs all classification, outputNodeCount is set to 1
@@ -328,8 +351,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
-        BasicNetwork network = DTrainUtils.generateNetwork(this.subFeatures.size(), outputNodeCount, numLayers,
-                actFunc, hiddenNodeList);
+        BasicNetwork network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers, actFunc,
+                hiddenNodeList, true, this.dropoutRate, this.wgtInit);
 
         params.setTrainError(0);
         params.setTestError(0);
@@ -356,7 +379,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         }
 
         int trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
+                .getGridConfigFileContent());
         validParams = this.modelConfig.getTrain().getParams();
         if(gs.hasHyperParam()) {
             validParams = gs.getParams(trainerId);
@@ -385,17 +409,41 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         if(dropoutRateObj != null) {
             this.dropoutRate = Double.valueOf(dropoutRateObj.toString());
         }
-        LOG.info("dropoutRate in master is :{}", this.dropoutRate);
+        LOG.info("'dropoutRate' in master is : {}", this.dropoutRate);
 
         Object learningDecayO = validParams.get("LearningDecay");
         if(learningDecayO != null) {
             this.learningDecay = Double.valueOf(learningDecayO.toString());
         }
-        LOG.info("learningDecay in master is :{}", learningDecay);
+        LOG.info("'learningDecay' in master is :{}", learningDecay);
+
+        Object momentumO = validParams.get("Momentum");
+        if(momentumO != null) {
+            this.momentum = Double.valueOf(momentumO.toString());
+        }
+        LOG.info("'momentum' in master is :{}", momentum);
+
+        Object adamBeta1O = validParams.get("AdamBeta1");
+        if(adamBeta1O != null) {
+            this.adamBeta1 = Double.valueOf(adamBeta1O.toString());
+        }
+        LOG.info("'adamBeta1' in master is :{}", adamBeta1);
+
+        Object adamBeta2O = validParams.get("AdamBeta2");
+        if(adamBeta2O != null) {
+            this.adamBeta2 = Double.valueOf(adamBeta2O.toString());
+        }
+        LOG.info("'adamBeta2' in master is :{}", adamBeta2);
 
         Double threshold = this.modelConfig.getTrain().getConvergenceThreshold();
-        this.convergenceThreshold = threshold == null ? 0d : threshold.doubleValue();
+        this.convergenceThreshold = threshold == null ? Double.MIN_VALUE : threshold.doubleValue();
         LOG.info("Convergence threshold in master is :{}", this.convergenceThreshold);
+
+        this.wgtInit = "default";
+        Object wgtInitObj = validParams.get("WeightInitializer");
+        if(wgtInitObj != null) {
+            this.wgtInit = wgtInitObj.toString();
+        }
 
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));

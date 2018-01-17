@@ -17,14 +17,6 @@
  */
 package ml.shifu.shifu.udf;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.pig.data.DataBag;
-import org.apache.pig.data.DataType;
-import org.apache.pig.data.Tuple;
-import org.apache.pig.data.TupleFactory;
-import org.apache.pig.impl.logicalLayer.schema.Schema;
-import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
-
 import java.io.IOException;
 import java.text.DecimalFormat;
 
@@ -34,15 +26,18 @@ import ml.shifu.shifu.core.ColumnStatsCalculator.ColumnMetrics;
 import ml.shifu.shifu.udf.stats.AbstractVarStats;
 import ml.shifu.shifu.util.Base64Utils;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.pig.data.DataBag;
+import org.apache.pig.data.DataType;
+import org.apache.pig.data.Tuple;
+import org.apache.pig.data.TupleFactory;
+import org.apache.pig.impl.logicalLayer.schema.Schema;
+import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
+
 /**
  * CalculateNewStatsUDF class
  */
 public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
-
-    /**
-     * Experience value from modeler
-     */
-    public static final int MAX_CATEGORICAL_BINC_COUNT = 5000;
 
     private Double valueThreshold = 1e6;
 
@@ -56,7 +51,6 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
         }
         log.debug("Value Threshold: " + valueThreshold);
     }
-
     /*
      * (non-Javadoc)
      * 
@@ -91,7 +85,7 @@ public class CalculateNewStatsUDF extends AbstractTrainerUDF<Tuple> {
         tuple.append(columnId);
         if(columnConfig.isCategorical()) {
             if(columnConfig.getBinCategory().size() == 0
-                    || columnConfig.getBinCategory().size() > MAX_CATEGORICAL_BINC_COUNT) {
+                    || columnConfig.getBinCategory().size() > this.maxCategorySize) {
                 return null;
             }
 

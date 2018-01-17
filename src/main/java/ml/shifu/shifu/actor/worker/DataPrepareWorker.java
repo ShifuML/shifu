@@ -57,6 +57,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
 
     private int weightedColumnNum = -1;
 
+
     public DataPrepareWorker(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, ActorRef parentActorRef,
             ActorRef nextActorRef) throws IOException {
         super(modelConfig, columnConfigList, parentActorRef, nextActorRef);
@@ -129,7 +130,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
     private Map<Integer, List<ValueObject>> buildColumnVoListMap(int capacity) {
         Map<Integer, List<ValueObject>> columnVoListMap = new HashMap<Integer, List<ValueObject>>();
         for(ColumnConfig columnConfig: columnConfigList) {
-            if(columnConfig.isCandidate()) {
+            if(columnConfig.isCandidate(super.hasCandidates)) {
                 columnVoListMap.put(columnConfig.getColumnNum(), new ArrayList<ValueObject>(capacity));
             }
         }
@@ -147,7 +148,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
     private Map<Integer, List<ColumnScoreObject>> buildColumnScoreListMap() {
         Map<Integer, List<ColumnScoreObject>> columnScoreListMap = new HashMap<Integer, List<ColumnScoreObject>>();
         for(ColumnConfig columnConfig: columnConfigList) {
-            if(columnConfig.isCandidate() && columnConfig.isFinalSelect()) {
+            if(columnConfig.isCandidate(super.hasCandidates) && columnConfig.isFinalSelect()) {
                 columnScoreListMap.put(columnConfig.getColumnNum(), new ArrayList<ColumnScoreObject>());
             }
         }

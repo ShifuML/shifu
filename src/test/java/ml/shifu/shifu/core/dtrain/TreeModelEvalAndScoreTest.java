@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import ml.shifu.guagua.util.FileUtils;
 import ml.shifu.guagua.util.MemoryUtils;
@@ -34,7 +33,6 @@ import ml.shifu.shifu.core.Scorer;
 import ml.shifu.shifu.core.TreeModel;
 import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
 import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.SizeEstimator;
 
 import org.encog.ml.BasicML;
 import org.testng.annotations.BeforeClass;
@@ -52,15 +50,15 @@ public class TreeModelEvalAndScoreTest {
         FileInputStream fi = null;
         try {
             fi = new FileInputStream(modelPath);
-            long start = System.nanoTime();
+            // long start = System.nanoTime();
             iTreeModel = IndependentTreeModel.loadFromStream(fi, true);
-            System.out.println(iTreeModel.getTrees().size() + " " + SizeEstimator.estimate(iTreeModel) + " "
-                    + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + "ms");
-            System.out.println(SizeEstimator.estimate(iTreeModel));
-            System.out.println(SizeEstimator.estimate(iTreeModel.getTrees()));
-            System.out.println(SizeEstimator.estimate(iTreeModel.getNumNameMapping()));
-            System.out.println(SizeEstimator.estimate(iTreeModel.getCategoricalColumnNameNames()));
-            System.out.println(SizeEstimator.estimate(iTreeModel.getColumnNumIndexMapping()));
+            // System.out.println(iTreeModel.getTrees().get(0).size() + " " + SizeEstimator.estimate(iTreeModel) + " "
+            // + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + "ms");
+            // System.out.println(SizeEstimator.estimate(iTreeModel));
+            // System.out.println(SizeEstimator.estimate(iTreeModel.getTrees()));
+            // System.out.println(SizeEstimator.estimate(iTreeModel.getNumNameMapping()));
+            // System.out.println(SizeEstimator.estimate(iTreeModel.getCategoricalColumnNameNames()));
+            // System.out.println(SizeEstimator.estimate(iTreeModel.getColumnNumIndexMapping()));
 
         } finally {
             fi.close();
@@ -78,7 +76,7 @@ public class TreeModelEvalAndScoreTest {
         }
 
         System.gc();
-        System.out.println(MemoryUtils.getRuntimeMemoryStats());
+        // System.out.println(MemoryUtils.getRuntimeMemoryStats());
     }
 
     @Test
@@ -114,11 +112,13 @@ public class TreeModelEvalAndScoreTest {
                 map.put(headers[j], data[j]);
                 mapObj.put(headers[j], data[j]);
             }
+            @SuppressWarnings("unused")
             double[] scores = iTreeModel.compute(mapObj);
 
+            @SuppressWarnings("unused")
             ScoreObject scoreObject = scorer.score(map);
-            System.out.println("Eval score is: " + scoreObject.getMeanScore() / 1000 + "; shifu score: " + scores[0]
-                    + "; raw eval score is " + Double.parseDouble(map.get("model0").toString()) / 1000L);
+            // System.out.println("Eval score is: " + scoreObject.getMeanScore() / 1000 + "; shifu score: " + scores[0]
+            // + "; raw eval score is " + Double.parseDouble(map.get("model0").toString()) / 1000L);
         }
 
     }

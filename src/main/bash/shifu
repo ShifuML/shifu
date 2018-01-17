@@ -108,18 +108,27 @@ fi
 
 SHIFU_OPTS=${JAVA_OPTS:=${SHIFU_OPTS}}
 
+#check SPARK_HOME for shifu spark eval
+if [ "${SPARK_HOME}" != "" ]; then
+   if [ "${SPARK_CONF_DIR}" != "" ]; then
+        SPARK_SUBMIT=`command -v "spark-submit"`
+        if [ "${SPAK_SUBMIT}" == "" ]; then
+            SPARK_SUBMIT="${SPARK_HOME}/bin/spark-submit"
+            SPARK_EVAL_JAR=`find ${SHIFU_HOME}/lib -name "shifu-spark-eval*.jar"`
+            SPARK_CLASSPATH=`find ${SHIFU_HOME}/lib -name "*.jar" | grep -v javadoc | xargs | sed 's/ /,/g'`
+        fi
+   else 
+        echo "SPARK_HOME is not set, please set SPARK_HOME to enable shifu spark eval."
+
+   fi
+fi
+
 cygwin=false
 case "`uname`" in
     CYGWIN*) cygwin=true;;
 esac
 
-JAVA_OPTIONS=${SHIFU_OPTS:=-server -Xms1G -Xmx2G}
-if [ "${1}" == "stats" ]; then
-    if [ "${2}" == "-correlation" -o "${2}" == "-c" ]; then
-        # set to 4G for correlation computing to avoid OOM
-        JAVA_OPTIONS=${SHIFU_OPTS:=-server -Xms1G -Xmx4G}
-    fi
-fi
+JAVA_OPTIONS=${SHIFU_OPTS:=-server -Xms2G -Xmx4G}
 
 PIG_OPTIONS="${PIG_OPTIONS} -Dmapred.map.tasks.speculative.execution=true"
 PIG_OPTIONS="${PIG_OPTIONS} -Dmapred.reduce.tasks.speculative.execution=true"
@@ -193,7 +202,7 @@ case ${COMMAND} in
         sanity_check
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
-    "init"|"stats"|"normalize"|"norm"|"posttrain"|"eval")
+    "init"|"stats"|"normalize"|"norm"|"posttrain")
         sanity_check
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
@@ -202,9 +211,9 @@ case ${COMMAND} in
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     "combo")
-    	sanity_check
-    	java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
-    	;;
+        sanity_check
+        java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
+        ;;
     "syncUp")
         sanity_check
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
@@ -212,6 +221,15 @@ case ${COMMAND} in
     "syncHDFS")
         sanity_check
         sync_model_to_hdfs
+        ;;
+    "eval")
+        sanity_check
+        #TODO : to change spark executor instance automaticaly adapted
+        if [ "${SPARK_SUBMIT}" != "" -a "${SHIFU_SPARK_EVAL}" == "TRUE" ]; then
+                ${SPARK_SUBMIT} --class ml.shifu.shifu.spark.eval.ShifuEval --conf spark.executor.instances=200 --conf spark.executor.memory=4g  --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --jars ${SPARK_CLASSPATH} ${SHIFU_HOME}/lib/${SPARK_EVAL_JAR}
+        else 
+                java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
+        fi
         ;;
     "--help"|"-help"|"-h"|"h"|"help")
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"

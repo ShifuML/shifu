@@ -20,14 +20,25 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.Set;
 
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.meta.ValidateResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.shuffle.MapReduceShuffle;
 import ml.shifu.shifu.core.validator.ModelInspector;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
@@ -44,6 +55,7 @@ import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
@@ -65,6 +77,11 @@ public class BasicModelProcessor {
      * If not specified SHIFU_HOME env, some key configurations like pig path or lib path can be configured here
      */
     protected Map<String, Object> otherConfigs;
+
+    /**
+     * Params for sub steps
+     */
+    protected Map<String, Object> params;
 
     public BasicModelProcessor() {
     }
@@ -109,10 +126,53 @@ public class BasicModelProcessor {
                 loadColumnConfig();
                 validateColumnConfig();
 
+                // if in stats but stats -c or stats -p or stats -rebin, column update should be called because of
+                // such stats substep should all be caclled after 'shifu stats', this is actually to call VoidUpdater
+                boolean strictCallVoidUpdate = (step == ModelStep.STATS)
+                        && (getBooleanParam(this.params, Constants.IS_COMPUTE_CORR)
+                                || getBooleanParam(this.params, Constants.IS_COMPUTE_PSI) || getBooleanParam(
+                                    this.params, Constants.IS_REBIN));
+
                 // update ColumnConfig and save to disk
-                ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, columnConfigList, step);
+                ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, columnConfigList, step, strictCallVoidUpdate);
+
+                validateColumnConfigAfterSet();
+
                 saveColumnConfigList();
                 break;
+        }
+
+        // validate
+        switch(step) {
+            case NORMALIZE:
+            case VARSELECT:
+            case TRAIN:
+            case EVAL:
+                List<String> segs = this.modelConfig.getSegmentFilterExpressions();
+                String alg = this.modelConfig.getAlgorithm();
+                if(segs.size() > 0 && !(CommonUtils.isNNModel(alg) || CommonUtils.isLRModel(alg))) {
+                    throw new IllegalArgumentException(
+                            "Segment expression is only supported in NN or LR model, please check train:algrithm setting in ModelConfig.json.");
+                }
+                break;
+        }
+    }
+
+    private void validateColumnConfigAfterSet() {
+        if(this.columnConfigList == null) {
+            return;
+        }
+        NormType normType = this.modelConfig.getNormalizeType();
+
+        for(ColumnConfig config: this.columnConfigList) {
+            if(config.isHybrid() && !modelConfig.isRegression()) {
+                throw new IllegalArgumentException("Hybrid column " + config.getColumnName()
+                        + " is found, but only supported in regression mode, not classfication mode.");
+            }
+            if(config.isHybrid() && !normType.isWoe()) {
+                throw new IllegalArgumentException("Hybrid column " + config.getColumnName()
+                        + " is found, but not woe norm type, please set norm#normType to woe related.");
+            }
         }
     }
 
@@ -224,6 +284,33 @@ public class BasicModelProcessor {
     }
 
     /**
+     * Sync data into HDFS for list of EvalConfig,
+     * 
+     * @param evalConfigList
+     *            - EvalConfig list to sync
+     * @return true if synced to HDFS
+     * @throws IOException
+     *             if exception in creating eval folder
+     */
+    protected boolean syncDataToHdfs(List<EvalConfig> evalConfigList) throws IOException {
+        if(CollectionUtils.isNotEmpty(evalConfigList)) {
+            // create local eval folder
+            for(EvalConfig evalConfig: evalConfigList) {
+                String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
+                FileUtils.forceMkdir(new File(evalSetPath));
+            }
+
+            // sync files to HDFS
+            for(EvalConfig evalConfig: evalConfigList) {
+                if(SourceType.HDFS.equals(evalConfig.getDataSet().getSource())) {
+                    return syncDataToHdfs(evalConfig.getDataSet().getSource());
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
      * Sync data into HDFS if necessary:
      * RunMode == pig and SourceType == HDFS
      * 
@@ -305,7 +392,7 @@ public class BasicModelProcessor {
             if(!param.containsKey("Propagation")) {
                 param = new LinkedHashMap<String, Object>();
 
-                param.put("Propagation", "Q");
+                param.put("Propagation", "R");
                 param.put("LearningRate", 0.1);
                 param.put("NumHiddenLayers", 2);
 
@@ -337,28 +424,35 @@ public class BasicModelProcessor {
         } else if(alg.equalsIgnoreCase("DT")) {
             // do nothing
         } else if(alg.equalsIgnoreCase("RF")) {
-            if(!param.containsKey("FeatureSubsetStrategy")) {
+            if(!param.containsKey("MaxDepth")) {
                 param = new LinkedHashMap<String, Object>();
 
-                param.put("FeatureSubsetStrategy", "all");
-                param.put("MaxDepth", 10);
-                param.put("MaxStatsMemoryMB", 256);
+                param.put("TreeNum", 10);
+                param.put("FeatureSubsetStrategy", "TWOTHIRDS");
+                param.put("MaxDepth", 14);
+                param.put("MinInstancesPerNode", 1);
+                param.put("MinInfoGain", 0.0);
                 param.put("Impurity", "entropy");
+                param.put("Loss", "squared");
 
                 modelConfig.setParams(param);
                 saveModelConfig();
             }
         } else if(alg.equalsIgnoreCase("GBT")) {
-            if(!param.containsKey("FeatureSubsetStrategy")) {
+            if(!param.containsKey("MaxDepth")) {
                 param = new LinkedHashMap<String, Object>();
 
-                param.put("FeatureSubsetStrategy", "all");
-                param.put("MaxDepth", 10);
-                param.put("MaxStatsMemoryMB", 256);
-                param.put("Impurity", "entropy");
+                param.put("TreeNum", "100");
+                param.put("FeatureSubsetStrategy", "TWOTHIRDS");
+                param.put("MaxDepth", 7);
+                param.put("MinInstancesPerNode", 5);
+                param.put("MinInfoGain", 0.0);
+                param.put("DropoutRate", 0.0);
+                param.put("Impurity", "variance");
+                param.put(CommonConstants.LEARNING_RATE, 0.05);
                 param.put("Loss", "squared");
-
                 modelConfig.setParams(param);
+                modelConfig.getTrain().setNumTrainEpochs(10000);
                 saveModelConfig();
             }
         } else {
@@ -397,7 +491,7 @@ public class BasicModelProcessor {
      */
     private void loadColumnConfig() throws IOException {
         columnConfigList = CommonUtils.loadColumnConfigList(new Path(CommonUtils.getLocalModelSetPath(otherConfigs),
-                Constants.LOCAL_COLUMN_CONFIG_JSON).toString(), SourceType.LOCAL);
+                Constants.LOCAL_COLUMN_CONFIG_JSON).toString(), SourceType.LOCAL, false);
     }
 
     /**
@@ -505,10 +599,13 @@ public class BasicModelProcessor {
 
     /**
      * Save ModelConfig into some folder
-     *
-     * @param folder      - folder to host ModelConfig.json
-     * @param modelConfig model config instance
-     * @throws IOException any io exception
+     * 
+     * @param folder
+     *            - folder to host ModelConfig.json
+     * @param modelConfig
+     *            model config instance
+     * @throws IOException
+     *             any io exception
      */
     protected void saveModelConfig(String folder, ModelConfig modelConfig) throws IOException {
         JSONUtils.writeValue(new File(folder + File.separator + Constants.MODEL_CONFIG_JSON_FILE_NAME), modelConfig);
@@ -516,10 +613,15 @@ public class BasicModelProcessor {
 
     /**
      * save the Column Config
-     *
+     * 
+     * @param path
+     *            path of column config file
+     * @param columnConfigs
+     *            column config list
      * @throws IOException
      *             an exception in saving column config
      */
+
     protected void saveColumnConfigList(String path, List<ColumnConfig> columnConfigs) throws IOException {
         LOG.info("Saving ColumnConfig into {} ... ", path);
         JSONUtils.writeValue(new File(path), columnConfigs);
@@ -527,8 +629,8 @@ public class BasicModelProcessor {
 
     protected boolean isRequestColumn(List<String> catVariables, ColumnConfig columnConfig) {
         boolean status = false;
-        for ( String varName : catVariables ) {
-            if (NSColumnUtils.isColumnEqual(varName, columnConfig.getColumnName()) ) {
+        for(String varName: catVariables) {
+            if(NSColumnUtils.isColumnEqual(varName, columnConfig.getColumnName())) {
                 status = true;
                 break;
             }
@@ -537,16 +639,16 @@ public class BasicModelProcessor {
     }
 
     protected boolean getBooleanParam(Map<String, Object> params, String propKey) {
-        if ( MapUtils.isNotEmpty(params) && params.get(propKey) instanceof Boolean ) {
+        if(MapUtils.isNotEmpty(params) && params.get(propKey) instanceof Boolean) {
             return (Boolean) params.get(propKey);
         }
         return false;
     }
 
     protected List<String> getStringList(Map<String, Object> params, String propKey, String delimiter) {
-        if ( MapUtils.isNotEmpty(params) && params.get(propKey) instanceof String ) {
+        if(MapUtils.isNotEmpty(params) && params.get(propKey) instanceof String) {
             String propVal = (String) params.get(propKey);
-            if ( StringUtils.isNotBlank(propVal) ) {
+            if(StringUtils.isNotBlank(propVal)) {
                 return Arrays.asList(propVal.split(","));
             }
         }
@@ -554,7 +656,7 @@ public class BasicModelProcessor {
     }
 
     protected int getIntParam(Map<String, Object> params, String propKey) {
-        if ( MapUtils.isNotEmpty(params) && params.get(propKey) instanceof String) {
+        if(MapUtils.isNotEmpty(params) && params.get(propKey) instanceof String) {
             String propVal = (String) params.get(propKey);
             try {
                 return Integer.parseInt(propVal);
@@ -566,7 +668,7 @@ public class BasicModelProcessor {
     }
 
     protected double getDoubleParam(Map<String, Object> params, String propKey, double defval) {
-        if ( MapUtils.isNotEmpty(params) && params.get(propKey) instanceof String) {
+        if(MapUtils.isNotEmpty(params) && params.get(propKey) instanceof String) {
             String propVal = (String) params.get(propKey);
             try {
                 return Double.parseDouble(propVal);
@@ -578,7 +680,7 @@ public class BasicModelProcessor {
     }
 
     protected long getLongParam(Map<String, Object> params, String propKey) {
-        if ( MapUtils.isNotEmpty(params) && params.get(propKey) instanceof String) {
+        if(MapUtils.isNotEmpty(params) && params.get(propKey) instanceof String) {
             String propVal = (String) params.get(propKey);
             try {
                 return Long.parseLong(propVal);

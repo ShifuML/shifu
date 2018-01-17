@@ -27,7 +27,6 @@ import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
-import ml.shifu.shifu.container.obj.ModelSourceDataConf;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningAlgorithm;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
@@ -110,22 +109,35 @@ public class ModelInspector {
 
         if(modelConfig.getDataSet().getSource() == SourceType.LOCAL && modelConfig.isMapReduceRunMode()) {
             ValidateResult tmpResult = new ValidateResult(true);
-            // tmpResult.setStatus(false);
-            // tmpResult.getCauses().add(
-            // "'LOCAL' data set (dataSet.source) cannot be run with 'mapred' run mode(basic.runMode)");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
         if(ModelStep.INIT.equals(modelStep)) {
-            result = ValidateResult.mergeResult(result, checkTrainData(modelConfig.getDataSet()));
-            result = ValidateResult.mergeResult(result, checkVarSelect(modelConfig, modelConfig.getVarSelect()));
-            if(result.getStatus()) {
-                result = ValidateResult.mergeResult(result, checkColumnConf(modelConfig));
-            }
+            // in INIT, only check if data or header are there or not
+            result = ValidateResult.mergeResult(result, checkRawData(modelConfig.getDataSet(), "Train Set:"));
         } else if(ModelStep.STATS.equals(modelStep)) {
             result = ValidateResult.mergeResult(result,
                     checkFile("ColumnConfig.json", SourceType.LOCAL, "ColumnConfig.json : "));
             result = ValidateResult.mergeResult(result, checkStatsConf(modelConfig));
+            // verify categorical name file
+            if(StringUtils.isNotBlank(modelConfig.getDataSet().getCategoricalColumnNameFile())) {
+                result = ValidateResult.mergeResult(
+                        result,
+                        checkFile(modelConfig.getDataSet().getCategoricalColumnNameFile(), SourceType.LOCAL,
+                                "categorical columns configuration "));
+            }
+
+            // verify meta name file
+            if(StringUtils.isNotBlank(modelConfig.getDataSet().getMetaColumnNameFile())) {
+                result = ValidateResult.mergeResult(
+                        result,
+                        checkFile(modelConfig.getDataSet().getMetaColumnNameFile(), SourceType.LOCAL,
+                                "meta columns configuration "));
+            }
+            // check column stats
+            if(result.getStatus()) {
+                result = ValidateResult.mergeResult(result, checkColumnConf(modelConfig));
+            }
         } else if(ModelStep.VARSELECT.equals(modelStep)) {
             result = ValidateResult.mergeResult(result, checkVarSelect(modelConfig, modelConfig.getVarSelect()));
             if(result.getStatus()) {
@@ -361,36 +373,6 @@ public class ModelInspector {
     }
 
     /**
-     * Check the training data for model
-     * Fist of all, it checks the @RawSourceData
-     * Then, it checks conf file for categorical column exists or not, if the setting is not empty
-     * Then, it checks conf file for meta column exists or not, if the setting is not empty
-     * 
-     * @param dataSet
-     *            - @ModelSourceDataConf to check
-     * @return @ValidateResult
-     * @throws IOException
-     *             IOException may be thrown when checking file
-     */
-    private ValidateResult checkTrainData(ModelSourceDataConf dataSet) throws IOException {
-        ValidateResult result = checkRawData(dataSet, "Train Set:");
-
-        if(StringUtils.isNotBlank(dataSet.getCategoricalColumnNameFile())) {
-            result = ValidateResult.mergeResult(
-                    result,
-                    checkFile(dataSet.getCategoricalColumnNameFile(), SourceType.LOCAL,
-                            "categorical columns configuration "));
-        }
-
-        if(StringUtils.isNotBlank(dataSet.getMetaColumnNameFile())) {
-            result = ValidateResult.mergeResult(result,
-                    checkFile(dataSet.getMetaColumnNameFile(), SourceType.LOCAL, "meta columns configuration "));
-        }
-
-        return result;
-    }
-
-    /**
      * Check the setting for model normalize.
      * It will make sure the following condition:
      * 
@@ -443,11 +425,13 @@ public class ModelInspector {
         boolean isZScore = modelConfig.getNormalize().getNormType() == NormType.ZSCALE
                 || modelConfig.getNormalize().getNormType() == NormType.ZSCORE
                 || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCALE
-                || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCORE;
+                || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCORE
+                || modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT);
 
         if(modelConfig.isClassification() && !isZScore) {
             ValidateResult tmpResult = new ValidateResult(false);
-            tmpResult.getCauses().add("NormType 'ZSCALE|ZSCORE' is the only norm type for multiple classification.");
+            tmpResult.getCauses().add(
+                    "NormType 'ZSCALE|ZSCORE|ZSCALE_ONEHOT' is the only norm type for multiple classification.");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
@@ -549,11 +533,22 @@ public class ModelInspector {
             }
         }
 
-        GridSearch gs = new GridSearch(train.getParams());
+        GridSearch gs = new GridSearch(train.getParams(), train.getGridConfigFileContent());
         // such parameter validation only in regression and not grid search mode
         if(modelConfig.isRegression() && !gs.hasHyperParam()) {
             if(train.getAlgorithm().equalsIgnoreCase("nn")) {
                 Map<String, Object> params = train.getParams();
+
+                Object loss = params.get("Loss");
+                if(loss != null && !"log".equalsIgnoreCase(loss.toString())
+                        && !"squared".equalsIgnoreCase(loss.toString())
+                        && !"absolute".equalsIgnoreCase(loss.toString())) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add("Loss should be in [log,squared,absolute].");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+
                 int layerCnt = (Integer) params.get(CommonConstants.NUM_HIDDEN_LAYERS);
                 if(layerCnt < 0) {
                     ValidateResult tmpResult = new ValidateResult(true);
@@ -616,12 +611,58 @@ public class ModelInspector {
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }
+
+                Object miniBatchsO = params.get("MiniBatchs");
+                if(miniBatchsO != null) {
+                    Integer miniBatchs = Integer.valueOf(miniBatchsO.toString());
+                    if(miniBatchs != null && (miniBatchs <= 0 || miniBatchs > 1000)) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("MiniBatchs should be in (0, 1000] if set.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                Object momentumO = params.get("Momentum");
+                if(momentumO != null) {
+                    Double momentum = Double.valueOf(momentumO.toString());
+                    if(momentum != null && momentum <= 0d) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("Momentum should be in (0, ) if set.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                Object adamBeta1O = params.get("AdamBeta1");
+                if(adamBeta1O != null) {
+                    Double adamBeta1 = Double.valueOf(adamBeta1O.toString());
+                    if(adamBeta1 != null && (adamBeta1 <= 0d || adamBeta1 >= 1d)) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("AdamBeta1 should be in (0, 1) if set.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
+
+                Object adamBeta2O = params.get("AdamBeta2");
+                if(adamBeta2O != null) {
+                    Double adamBeta2 = Double.valueOf(adamBeta2O.toString());
+                    if(adamBeta2 != null && (adamBeta2 <= 0d || adamBeta2 >= 1d)) {
+                        ValidateResult tmpResult = new ValidateResult(true);
+                        tmpResult.setStatus(false);
+                        tmpResult.getCauses().add("AdamBeta2 should be in (0, 1) if set.");
+                        result = ValidateResult.mergeResult(result, tmpResult);
+                    }
+                }
             }
+
             if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)
                     || train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)
                     || train.getAlgorithm().equalsIgnoreCase(NNConstants.NN_ALG_NAME)) {
                 Map<String, Object> params = train.getParams();
                 Object fssObj = params.get("FeatureSubsetStrategy");
+
                 if(fssObj == null) {
                     if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)
                             || train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
@@ -640,10 +681,14 @@ public class ModelInspector {
                         isNumber = false;
                     }
 
-                    if(isNumber && (doubleFss <= 0d || doubleFss > 1d)) {
-                        ValidateResult tmpResult = new ValidateResult(true);
-                        tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("FeatureSubsetStrategy if double should be in (0, 1]");
+                    if(isNumber) {
+                        // if not in [0, 1] failed
+                        if(doubleFss <= 0d || doubleFss > 1d) {
+                            ValidateResult tmpResult = new ValidateResult(true);
+                            tmpResult.setStatus(false);
+                            tmpResult.getCauses().add("FeatureSubsetStrategy if double should be in (0, 1]");
+                            result = ValidateResult.mergeResult(result, tmpResult);
+                        }
                     } else {
                         boolean fssInEnum = false;
                         for(FeatureSubsetStrategy fss: FeatureSubsetStrategy.values()) {
@@ -659,6 +704,7 @@ public class ModelInspector {
                             tmpResult
                                     .getCauses()
                                     .add("FeatureSubsetStrategy if string should be in ['ALL', 'HALF', 'ONETHIRD' , 'TWOTHIRDS' , 'AUTO' , 'SQRT' , 'LOG2']");
+                            result = ValidateResult.mergeResult(result, tmpResult);
                         }
                     }
                 }
@@ -675,7 +721,7 @@ public class ModelInspector {
                             && !"absolute".equalsIgnoreCase(loss.toString())) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("Loss should be in [log,squared,absolute].");
+                        tmpResult.getCauses().add("Loss should be in [log,squared,halfgradsquared,absolute].");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
 
