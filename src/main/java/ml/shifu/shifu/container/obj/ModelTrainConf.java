@@ -54,8 +54,8 @@ public class ModelTrainConf {
     @JsonDeserialize(using = MultipleClassificationDeserializer.class)
     public static enum MultipleClassification {
         NATIVE, // means using NN regression or RF classification, not one vs all or one vs one
-        ONEVSALL, ONVVSREST, // the same as ONEVSALL
-        ONVVSONE; // ONEVSONE is not impl yet.
+        ONEVSALL, ONEVSREST, // the same as ONEVSALL
+        ONEVSONE; // ONEVSONE is not impl yet.
         /*
          * Get {@link MultipleClassification} by string, case can be ignored.
          */
@@ -150,6 +150,14 @@ public class ModelTrainConf {
     private Integer numKFold = -1;
 
     /**
+     * Random sample seed is used to generate Random instance when sampling.
+     * It's a hidden feature support in shifu. If user not configure this value, shifu will will fallback to generate
+     * random for bagging each time.
+     */
+    @JsonIgnore
+    private Long baggingSampleSeed = CommonConstants.NOT_CONFIGURED_BAGGING_SEED;
+
+    /**
      * Up sampling for positive tags, this is to solve class imbalance.
      */
     private Double upSampleWeight = Double.valueOf(1d);
@@ -163,6 +171,18 @@ public class ModelTrainConf {
      * Model params for training like learning rate, tree depth ...
      */
     private Map<String, Object> params;
+    
+    /**
+     * Grid search params config file path.
+     */
+    private String gridConfigFile = null;
+    
+    /**
+     * Grid search params in config file.
+     * Read from {@link #gridConfigFile} after loading {@link ModelConfig} from JSON file.
+     */
+    @JsonIgnore
+    private List<String> gridConfigFileContent = null;
 
     /**
      * Multiple classification method: NATIVE or ONEVSALL(ONEVSREST)
@@ -261,6 +281,24 @@ public class ModelTrainConf {
         this.params = params;
     }
 
+    @JsonIgnore
+    public String getGridConfigFile() {
+        return gridConfigFile;
+    }
+
+    @JsonProperty
+    public void setGridConfigFile(String gridConfigFile) {
+        this.gridConfigFile = gridConfigFile;
+    }
+
+    public List<String> getGridConfigFileContent() {
+        return gridConfigFileContent;
+    }
+
+    public void setGridConfigFileContent(List<String> gridConfigFileContent) {
+        this.gridConfigFileContent = gridConfigFileContent;
+    }
+
     public Map<String, String> getCustomPaths() {
         return customPaths;
     }
@@ -347,6 +385,21 @@ public class ModelTrainConf {
     }
 
     /**
+     * @return the baggingSampleSeed
+     */
+    public Long getBaggingSampleSeed() {
+        return baggingSampleSeed;
+    }
+
+    /**
+     * @param baggingSampleSeed
+     *              the baggingSampleSeed to set
+     */
+    public void setBaggingSampleSeed(Long baggingSampleSeed) {
+        this.baggingSampleSeed = baggingSampleSeed;
+    }
+
+    /**
      * @return the upSampleWeight
      */
     @JsonIgnore
@@ -382,7 +435,7 @@ public class ModelTrainConf {
     @JsonIgnore
     public boolean isOneVsAll() {
         return this.multiClassifyMethod == MultipleClassification.ONEVSALL
-                || this.multiClassifyMethod == MultipleClassification.ONVVSREST;
+                || this.multiClassifyMethod == MultipleClassification.ONEVSREST;
     }
 
     /**
@@ -458,6 +511,7 @@ public class ModelTrainConf {
         other.setAlgorithm(algorithm);
         other.setBaggingNum(baggingNum);
         other.setBaggingSampleRate(baggingSampleRate);
+        other.setBaggingSampleSeed(baggingSampleSeed);
         other.setConvergenceThreshold(convergenceThreshold);
         if(customPaths != null) {
             other.setCustomPaths(new HashMap<String, String>(customPaths));
@@ -503,7 +557,6 @@ public class ModelTrainConf {
             params.put("MinInfoGain", 0.0);
             params.put("Impurity", "variance");
             params.put("Loss", "squared");
-            trainConf.setNumTrainEpochs(1000);
         } else if(ALGORITHM.GBT.equals(alg)) {
             params.put("TreeNum", "100");
             params.put("FeatureSubsetStrategy", "TWOTHIRDS");
@@ -514,7 +567,6 @@ public class ModelTrainConf {
             params.put("Impurity", "variance");
             params.put(CommonConstants.LEARNING_RATE, 0.05);
             params.put("Loss", "squared");
-            trainConf.setNumTrainEpochs(1000);
         } else if(ALGORITHM.LR.equals(alg)) {
             params.put(LogisticRegressionTrainer.LEARNING_RATE, 0.1);
             params.put("RegularizedConstant", 0.0);

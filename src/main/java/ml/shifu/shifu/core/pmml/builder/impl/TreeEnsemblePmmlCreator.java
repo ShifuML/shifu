@@ -50,7 +50,8 @@ public class TreeEnsemblePmmlCreator extends AbstractPmmlElementCreator<MiningMo
 
     public MiningModel convert(IndependentTreeModel treeModel) {
         MiningModel gbt = new MiningModel();
-        MiningSchema miningSchema = new TreeModelMiningSchemaCreator(this.modelConfig, this.columnConfigList).build(null);
+        MiningSchema miningSchema = new TreeModelMiningSchemaCreator(this.modelConfig, this.columnConfigList)
+                .build(null);
         gbt.setMiningSchema(miningSchema);
         if(treeModel.isClassification()) {
             gbt.setFunctionName(MiningFunctionType.fromValue("classification"));
@@ -64,7 +65,11 @@ public class TreeEnsemblePmmlCreator extends AbstractPmmlElementCreator<MiningMo
         seg.setMultipleModelMethod(MultipleModelMethodType.fromValue("weightedAverage"));
         List<Segment> list = seg.getSegments();
         int idCount = 0;
-        for(TreeNode tn: treeModel.getTrees()) {
+        // such case we only support treeModel is one element list
+        if(treeModel.getTrees().size() != 1) {
+            throw new RuntimeException("Bagging model cannot be supported in PMML generation.");
+        }
+        for(TreeNode tn: treeModel.getTrees().get(0)) {
             TreeNodePmmlElementCreator tnec = new TreeNodePmmlElementCreator(this.modelConfig, this.columnConfigList,
                     treeModel);
             org.dmg.pmml.Node root = tnec.convert(tn.getNode());
@@ -73,9 +78,9 @@ public class TreeEnsemblePmmlCreator extends AbstractPmmlElementCreator<MiningMo
             tm.setModelName(String.valueOf(idCount));
             Segment segment = new Segment();
             if(treeModel.isGBDT()) {
-                segment.setWeight(treeModel.getWeights().get(idCount) * treeModel.getTrees().size());
+                segment.setWeight(treeModel.getWeights().get(0).get(idCount) * treeModel.getTrees().size());
             } else {
-                segment.setWeight(treeModel.getWeights().get(idCount));
+                segment.setWeight(treeModel.getWeights().get(0).get(idCount));
             }
             segment.setId("Segement" + String.valueOf(idCount));
             idCount++;

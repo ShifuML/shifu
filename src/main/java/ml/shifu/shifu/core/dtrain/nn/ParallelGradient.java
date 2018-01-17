@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.util.Arrays;
+import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
@@ -26,9 +27,10 @@ import java.util.concurrent.TimeUnit;
 
 import ml.shifu.shifu.core.dtrain.dataset.FloatFlatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataSet;
+import ml.shifu.shifu.util.ClassUtils;
 
-import org.encog.mathutil.error.ErrorCalculation;
 import org.encog.neural.error.ErrorFunction;
+import org.encog.neural.error.LinearErrorFunction;
 import org.encog.neural.flat.FlatNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,11 +73,6 @@ public class ParallelGradient {
      */
     private double[] flatSpot;
 
-    /**
-     * The error function to use.
-     */
-    private final ErrorFunction errorFunction;
-
     private final int threadCount;
 
     private long[] trainLows;
@@ -103,9 +100,19 @@ public class ParallelGradient {
      */
     private boolean isELM;
 
+    /**
+     * Loss string definition: log, squared, absolute
+     */
+    private String lossStr;
+
+    /**
+     * If miniBatchRate set to 0.1d, {@link #batchs} is 10. It will run 10x iterations for one epochs.
+     */
+    private int batchs = 1;
+
     public ParallelGradient(final FloatFlatNetwork theNetwork, final FloatMLDataSet theTraining,
             final FloatMLDataSet theTesting, final double[] flatSpot, ErrorFunction ef, boolean isCrossOver,
-            int threadCount, boolean isELM) {
+            int threadCount, boolean isELM, String lossStr, int batchs) {
         this.isELM = isELM;
         assert threadCount > 0 && threadCount < 33;
         this.threadCount = threadCount;
@@ -159,19 +166,20 @@ public class ParallelGradient {
         this.network = theNetwork;
         this.isCrossOver = isCrossOver;
         this.flatSpot = flatSpot;
-        this.errorFunction = ef;
-
         this.threadPool = Executors.newFixedThreadPool(this.threadCount);
+        this.lossStr = lossStr;
+        this.batchs = batchs;
     }
 
-    public double[] computeGradients() {
+    public double[] computeGradients(int currentIteration) {
         CompletionService<double[]> completionService = new ExecutorCompletionService<double[]>(this.threadPool);
         this.subGradients = new SubGradient[this.threadCount];
+        Random dropoutRandom = new Random();
         for(int i = 0; i < this.threadCount; i++) {
             if(this.subGradients[i] == null) {
                 this.subGradients[i] = new SubGradient(this.network.clone(), this.training, this.trainLows[i],
                         this.trainHighs[i], this.testing, this.testLows[i], this.testHighs[i], this.flatSpot,
-                        this.errorFunction, this.isCrossOver, this);
+                        this.isCrossOver, this, dropoutRandom, this.batchs, currentIteration);
             } else {
                 this.subGradients[i].setNetwork(this.network.clone());
             }
@@ -236,7 +244,7 @@ public class ParallelGradient {
 
     public double calculateError() {
         CompletionService<Double> completionService = new ExecutorCompletionService<Double>(this.threadPool);
-        final ErrorCalculation ec = new ErrorCalculation();
+        final ml.shifu.shifu.core.dtrain.nn.ErrorCalculation ec = createECInstance();
         for(int i = 0; i < this.threadCount; i++) {
             final SubGradient subGradient = this.subGradients[i];
             completionService.submit(new Callable<Double>() {
@@ -261,6 +269,49 @@ public class ParallelGradient {
         }
 
         return ec.calculate();
+    }
+
+    /**
+     * Create error calculation instance according to lossStr;
+     * 
+     * @return the ErrorCalculation instance.
+     */
+    public ml.shifu.shifu.core.dtrain.nn.ErrorCalculation createECInstance() {
+        ml.shifu.shifu.core.dtrain.nn.ErrorCalculation ec = new SquaredErrorCalculation();
+        if(lossStr.equalsIgnoreCase("log")) {
+            ec = new LogErrorCalculation();
+        } else if(lossStr.equalsIgnoreCase("absolute")) {
+            ec = new AbsoluteErrorCalculation();
+        } else if(lossStr.equalsIgnoreCase("squared")) {
+            ec = new SquaredErrorCalculation();
+        } else {
+            try {
+                ec = (ml.shifu.shifu.core.dtrain.nn.ErrorCalculation) ClassUtils.newInstance(Class.forName(lossStr));
+            } catch (ClassNotFoundException e) {
+                LOG.warn("Class not found for {}, using default SquaredLoss", lossStr);
+                ec = new SquaredErrorCalculation();
+            }
+        }
+        return ec;
+    }
+
+    /**
+     * Create error function instance according to lossStr;
+     * 
+     * @return the ErrorCalculation instance.
+     */
+    public ErrorFunction createEFInstance() {
+        ErrorFunction ef = new LinearErrorFunction();
+        if(lossStr.equalsIgnoreCase("log")) {
+            ef = new LogErrorFunction();
+        } else if(lossStr.equalsIgnoreCase("absolute")) {
+            ef = new AbsoluteErrorFunction();
+        } else if(lossStr.equalsIgnoreCase("squared")) {
+            ef = new LinearErrorFunction();
+        } else {
+            ef = new LinearErrorFunction();
+        }
+        return ef;
     }
 
     /**

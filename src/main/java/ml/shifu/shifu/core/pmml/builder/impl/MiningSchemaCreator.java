@@ -22,8 +22,8 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
+import ml.shifu.shifu.util.CommonUtils;
 
-import org.apache.commons.collections.CollectionUtils;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.FieldUsageType;
 import org.dmg.pmml.MiningField;
@@ -46,21 +46,19 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
     @Override
     public MiningSchema build(BasicML basicML) {
         MiningSchema miningSchema = new MiningSchema();
-        if(basicML instanceof BasicFloatNetwork) {
+        if(basicML != null && basicML instanceof BasicFloatNetwork) {
             BasicFloatNetwork bfn = (BasicFloatNetwork) basicML;
             Set<Integer> featureSet = bfn.getFeatureSet();
             for(ColumnConfig columnConfig: columnConfigList) {
-                if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
+                if(isActiveColumn(featureSet, columnConfig)) {
                     MiningField miningField = new MiningField();
 
-                    miningField.setName(FieldName.create(columnConfig.getColumnName()));
+                    miningField.setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig)));
                     miningField.setOptype(getOptype(columnConfig));
-
-                    if(columnConfig.isFinalSelect() &&
-                            (CollectionUtils.isEmpty(featureSet) || featureSet.contains(columnConfig.getColumnNum()))) {
-                        miningField.setUsageType(FieldUsageType.ACTIVE);
-                    } else if(columnConfig.isTarget()) {
+                    if(columnConfig.isTarget()) {
                         miningField.setUsageType(FieldUsageType.TARGET);
+                    } else {
+                        miningField.setUsageType(FieldUsageType.ACTIVE);
                     }
 
                     miningSchema.withMiningFields(miningField);
@@ -68,18 +66,18 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
             }
         } else {
             for(ColumnConfig columnConfig: columnConfigList) {
+                // FIXME, if no variable is selected
                 if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
                     MiningField miningField = new MiningField();
 
-                    miningField.setName(FieldName.create(columnConfig.getColumnName()));
+                    miningField.setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig)));
                     miningField.setOptype(getOptype(columnConfig));
 
-                    if(columnConfig.isFinalSelect()) {
-                        miningField.setUsageType(FieldUsageType.ACTIVE);
-                    } else if(columnConfig.isTarget()) {
+                    if(columnConfig.isTarget()) {
                         miningField.setUsageType(FieldUsageType.TARGET);
+                    } else {
+                        miningField.setUsageType(FieldUsageType.ACTIVE);
                     }
-
                     miningSchema.withMiningFields(miningField);
                 }
             }

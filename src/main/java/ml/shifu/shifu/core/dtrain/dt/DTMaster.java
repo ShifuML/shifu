@@ -715,6 +715,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         doneNode.setRightImpurity(maxGainInfo.getRightImpurity());
         doneNode.setLeftPredict(maxGainInfo.getLeftPredict());
         doneNode.setRightPredict(maxGainInfo.getRightPredict());
+        doneNode.setWgtCnt(maxGainInfo.getWgtCnt());
 
         if(Node.isRootNode(doneNode)) {
             this.trees.get(treeId).setRootWgtCnt(maxGainInfo.getWgtCnt());
@@ -841,6 +842,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
     private List<Integer> getAllFeatureList(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect) {
         List<Integer> features = new ArrayList<Integer>();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
+
         for(ColumnConfig config: columnConfigList) {
             if(isAfterVarSelect) {
                 if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
@@ -852,7 +855,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     }
                 }
             } else {
-                if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
+                if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config, hasCandidates)) {
                     // only select numerical feature with getBinBoundary().size() larger than 1
                     // or categorical feature with getBinCategory().size() larger than 0
                     if((config.isNumerical() && config.getBinBoundary().size() > 1)
@@ -909,7 +912,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
         int trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
         // If grid search, select valid paramters, if not parameters is what in ModelConfig.json
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
+                .getGridConfigFileContent());
         Map<String, Object> validParams = this.modelConfig.getTrain().getParams();
         if(gs.hasHyperParam()) {
             validParams = gs.getParams(trainerId);
@@ -983,6 +987,10 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         Object maxStatsMemoryMB = validParams.get("MaxStatsMemoryMB");
         if(maxStatsMemoryMB != null) {
             this.maxStatsMemory = Long.valueOf(validParams.get("MaxStatsMemoryMB").toString()) * 1024 * 1024;
+            if(this.maxStatsMemory > ((2L * Runtime.getRuntime().maxMemory()) / 3)) {
+                // if >= 2/3 max memory, take 2/3 max memory to avoid OOM
+                this.maxStatsMemory = ((2L * Runtime.getRuntime().maxMemory()) / 3);
+            }
         } else {
             // by default it is 1/2 of heap, about 1.5G setting in current Shifu
             this.maxStatsMemory = Runtime.getRuntime().maxMemory() / 2L;

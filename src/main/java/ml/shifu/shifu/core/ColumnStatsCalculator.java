@@ -94,7 +94,7 @@ public final class ColumnStatsCalculator {
             return null;
         }
 
-        double woe = Math.log((sumP + EPS) / (sumN + EPS));
+        double woe = Math.log((sumN + EPS) / (sumP + EPS));
 
         List<Double> binningWoe = new ArrayList<Double>(numBins);
 
@@ -104,9 +104,9 @@ public final class ColumnStatsCalculator {
             double p = cntP / sumP;
             double n = cntN / sumN;
             // TODO merge bin with p or q = 0 ???
-            double woePerBin = Math.log((p + EPS) / (n + EPS));
+            double woePerBin = Math.log((n + EPS) / (p + EPS));
             binningWoe.add(woePerBin);
-            iv += (p - n) * woePerBin;
+            iv += (n - p) * woePerBin;
             cumP += p;
             cumN += n;
             double tmpKS = Math.abs(cumP - cumN);
@@ -139,7 +139,7 @@ public final class ColumnStatsCalculator {
             return null;
         }
 
-        double woe = Math.log((sumP + EPS) / (sumN + EPS));
+        double woe = Math.log((sumN + EPS) / (sumP + EPS));
 
         List<Double> binningWoe = new ArrayList<Double>(numBins);
 
@@ -149,9 +149,9 @@ public final class ColumnStatsCalculator {
             double p = cntP / sumP;
             double n = cntN / sumN;
             // TODO merge bin with p or q = 0 ???
-            double woePerBin = Math.log((p + EPS) / (n + EPS));
+            double woePerBin = Math.log((n + EPS) / (p + EPS));
             binningWoe.add(woePerBin);
-            iv += (p - n) * woePerBin;
+            iv += (n - p) * woePerBin;
             cumP += p;
             cumN += n;
             double tmpKS = Math.abs(cumP - cumN);

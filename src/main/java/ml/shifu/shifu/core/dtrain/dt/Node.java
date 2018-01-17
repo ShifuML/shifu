@@ -238,6 +238,12 @@ public class Node implements Bytable {
     private float gain;
 
     /**
+     * Current weighted node count is mostly used for feature importance, by gain * wgtCount to compute contribution per
+     * each node.
+     */
+    private double wgtCnt;
+
+    /**
      * Default root index is 1. Others are 2, 3, 4, 5 ...
      */
     public static final int ROOT_INDEX = 1;
@@ -529,17 +535,10 @@ public class Node implements Bytable {
         return id << 1;
     }
 
-    /**
-     * @return the wgtCnt
-     */
     public double getWgtCntRatio() {
         return this.nodeStats.getWgtCntRatio();
     }
 
-    /**
-     * @param wgtCntRatio
-     *            the wgtCntRatio to set
-     */
     public void setWgtCntRatio(double wgtCntRatio) {
         if(this.nodeStats == null) {
             this.nodeStats = new NodeStats();
@@ -587,8 +586,8 @@ public class Node implements Bytable {
         // cast to float to save space
         out.writeFloat((float) gain);
 
-        // for back-forward compatibility, still need to put one float here for wgtCntRatio
-        out.writeFloat((float) 1d);
+        // change current float to double to get a better accuracy, start from tree model version 3 to use it as double
+        out.writeDouble(this.wgtCnt);
 
         if(split == null) {
             out.writeBoolean(false);
@@ -630,7 +629,11 @@ public class Node implements Bytable {
 
         this.gain = in.readFloat();
         // for back-forward compatibility, still need to read two floats here for wgtCntRatio
-        in.readFloat();
+        if(IndependentTreeModel.getVersion() <= 2) {
+            this.wgtCnt = in.readFloat();
+        } else {
+            this.wgtCnt = in.readDouble();
+        }
 
         if(in.readBoolean()) {
             this.split = new Split();
@@ -669,6 +672,21 @@ public class Node implements Bytable {
      */
     public void setNodeStats(NodeStats nodeStats) {
         this.nodeStats = nodeStats;
+    }
+
+    /**
+     * @return the wgtCount
+     */
+    public double getWgtCnt() {
+        return wgtCnt;
+    }
+
+    /**
+     * @param wgtCount
+     *            the wgtCount to set
+     */
+    public void setWgtCnt(double wgtCount) {
+        this.wgtCnt = wgtCount;
     }
 
     @Override

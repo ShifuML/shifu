@@ -29,9 +29,11 @@ public abstract class AbstractSpecifCreator {
 
     public abstract boolean build(BasicML basicML, Model model);
 
+    public abstract boolean build(BasicML basicML, Model model, int id);
+
     /**
      * Create the normalized output for model, since the final score should be 0 ~ 1000, instead of 0.o ~ 1.0
-     *
+     * 
      * @return output for model
      */
     protected Output createNormalizedOutput() {
@@ -42,7 +44,29 @@ public abstract class AbstractSpecifCreator {
 
         OutputField finalResult = createOutputField(FINAL_RESULT, OpType.CONTINUOUS, DataType.DOUBLE,
                 ResultFeatureType.TRANSFORMED_VALUE);
-        finalResult.withExpression(createApplyFunc());
+        finalResult.withExpression(createNormExpr());
+
+        output.withOutputFields(finalResult);
+
+        return output;
+    }
+
+    /**
+     * Create the normalized output for model, since the final score should be 0 ~ 1000, instead of 0.o ~ 1.0
+     * 
+     * @param id
+     *            output id
+     * @return output for model
+     */
+    protected Output createNormalizedOutput(int id) {
+        Output output = new Output();
+
+        output.withOutputFields(createOutputField(RAW_RESULT + "_" + id, OpType.CONTINUOUS, DataType.DOUBLE,
+                ResultFeatureType.PREDICTED_VALUE));
+
+        OutputField finalResult = createOutputField(FINAL_RESULT + "_" + id, OpType.CONTINUOUS, DataType.DOUBLE,
+                ResultFeatureType.TRANSFORMED_VALUE);
+        finalResult.withExpression(createNormExpr(id));
 
         output.withOutputFields(finalResult);
 
@@ -51,7 +75,7 @@ public abstract class AbstractSpecifCreator {
 
     /**
      * Create the output field, and set the field name, operation type, data type and feature type
-     *
+     * 
      * @param fieldName
      *            - the name of output field
      * @param opType
@@ -62,7 +86,8 @@ public abstract class AbstractSpecifCreator {
      *            - result feature type
      * @return OutputField
      */
-    protected OutputField createOutputField(String fieldName, OpType opType, DataType dataType, ResultFeatureType feature) {
+    protected OutputField createOutputField(String fieldName, OpType opType, DataType dataType,
+            ResultFeatureType feature) {
         OutputField outputField = new OutputField();
         outputField.withName(new FieldName(fieldName));
         outputField.withOptype(opType);
@@ -73,22 +98,22 @@ public abstract class AbstractSpecifCreator {
 
     /**
      * Create the apply expression for final output, the function is "round"
-     *
+     * 
      * @return Apply
      */
-    protected Apply createApplyFunc() {
-        Apply apply = new Apply();
-
-        apply.withFunction(ROUND_FUNC);
-
+    protected Expression createNormExpr() {
         NormContinuous normContinuous = new NormContinuous();
         normContinuous.withField(new FieldName(RAW_RESULT));
         normContinuous.withLinearNorms(new LinearNorm().withOrig(0).withNorm(0));
         normContinuous.withLinearNorms(new LinearNorm().withOrig(1).withNorm(1000));
-
-        apply.withExpressions(normContinuous);
-
-        return apply;
+        return normContinuous;
     }
 
+    protected Expression createNormExpr(int id) {
+        NormContinuous normContinuous = new NormContinuous();
+        normContinuous.withField(new FieldName(RAW_RESULT + "_" + id));
+        normContinuous.withLinearNorms(new LinearNorm().withOrig(0).withNorm(0));
+        normContinuous.withLinearNorms(new LinearNorm().withOrig(1).withNorm(1000));
+        return normContinuous;
+    }
 }

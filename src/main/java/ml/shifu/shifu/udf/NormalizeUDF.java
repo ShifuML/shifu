@@ -17,6 +17,7 @@ package ml.shifu.shifu.udf;
 
 import java.io.IOException;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,10 +27,12 @@ import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.WeightAmplifier;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
+import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.jexl2.Expression;
@@ -49,6 +52,10 @@ import org.apache.pig.tools.pigstats.PigStatusReporter;
  */
 public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
+    private static final String POSRATE = "posrate";
+
+    private static final String SHIFU_NORM_CATEGORY_MISSING_NORM = "shifu.norm.category.missing.norm";
+
     private List<Set<String>> tags;
 
     private Double cutoff;
@@ -56,6 +63,10 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private Expression weightExpr;
     private JexlContext weightContext;
     private DecimalFormat df = new DecimalFormat("#.######");
+
+    private List<DataPurifier> dataPurifiers;
+
+    private boolean isForExpressions = false;
 
     public static enum CategoryMissingNormType {
         MEAN, POSRATE;
@@ -86,26 +97,36 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
      * In Zscore norm type, how to process category default missing value norm, by default use mean, another option is
      * POSRATE.
      */
-    private CategoryMissingNormType categoryMissingNormType;
+    private CategoryMissingNormType categoryMissingNormType = CategoryMissingNormType.POSRATE;
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         this(source, pathModelConfig, pathColumnConfig, "false");
-        this.categoryMissingNormType = CategoryMissingNormType.of(UDFContext.getUDFContext().getJobConf()
-                .get("shifu.norm.category.missing.norm", "posrate"));
+        setCategoryMissingNormType();
+    }
+
+    private void setCategoryMissingNormType() {
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            this.categoryMissingNormType = CategoryMissingNormType.of(UDFContext.getUDFContext().getJobConf()
+                    .get(SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
+        } else {
+            this.categoryMissingNormType = CategoryMissingNormType.of(Environment.getProperty(
+                    SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
+        }
         if(this.categoryMissingNormType == null) {
             this.categoryMissingNormType = CategoryMissingNormType.POSRATE;
         }
+        log.info("'categoryMissingNormType' is set to: " + this.categoryMissingNormType);
     }
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig, String isForClean)
             throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
+
+        setCategoryMissingNormType();
+
         this.isForClean = "true".equalsIgnoreCase(isForClean);
 
-        log.debug("Initializing NormalizeUDF ... ");
-
         cutoff = modelConfig.getNormalizeStdDevCutOff();
-        log.debug("\t stdDevCutOff: " + cutoff);
 
         normType = modelConfig.getNormalizeType();
         log.debug("\t normType: " + normType.name());
@@ -132,7 +153,23 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
-        log.debug("NormalizeUDF Initialized");
+        String filterExpressions = "";
+
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            filterExpressions = UDFContext.getUDFContext().getJobConf().get("shifu.segment.expressions");
+        } else {
+            filterExpressions = Environment.getProperty("shifu.segment.expressions");
+        }
+
+        if(StringUtils.isNotBlank(filterExpressions)) {
+            this.isForExpressions = true;
+            String[] splits = CommonUtils.split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
+            this.dataPurifiers = new ArrayList<DataPurifier>(splits.length);
+            for(String split: splits) {
+                this.dataPurifiers.add(new DataPurifier(modelConfig, split, false));
+            }
+        }
+
     }
 
     @SuppressWarnings("deprecation")
@@ -140,12 +177,16 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         if(input == null || input.size() == 0) {
             return null;
         }
-        // update total valid count
-        if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT")) {
-            PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1);
-        }
 
-        final String rawTag = CommonUtils.trimTag(input.get(tagColumnNum).toString());
+        Object tag = input.get(tagColumnNum);
+        if(tag == null) {
+            log.warn("The tag is NULL, just skip it!!");
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1);
+            }
+            return null;
+        }
+        final String rawTag = CommonUtils.trimTag(tag.toString());
 
         // make sure all invalid tag record are filter out
         if(!super.tagSet.contains(rawTag)) {
@@ -170,17 +211,86 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         Tuple tuple = TupleFactory.getInstance().newTuple();
         final NormType normType = modelConfig.getNormalizeType();
 
-        for(int i = 0; i < input.size(); i++) {
-            ColumnConfig config = columnConfigList.get(i);
-            String val = (input.get(i) == null) ? "" : input.get(i).toString().trim();
-            // load variables for weight calculating.
-            if(weightExpr != null) {
-                weightContext.set(new NSColumn(config.getColumnName()).getSimpleName(), val);
-            }
+        if(!this.isForExpressions) {
+            for(int i = 0; i < input.size(); i++) {
+                ColumnConfig config = columnConfigList.get(i);
+                String val = (input.get(i) == null) ? "" : input.get(i).toString().trim();
+                // load variables for weight calculating.
+                if(weightExpr != null) {
+                    weightContext.set(new NSColumn(config.getColumnName()).getSimpleName(), val);
+                }
 
-            // check tag type.
-            if(tagColumnNum == i) {
-                if(modelConfig.isRegression()) {
+                // check tag type.
+                if(tagColumnNum == i) {
+                    if(modelConfig.isRegression()) {
+                        int type = 0;
+                        if(super.posTagSet.contains(rawTag)) {
+                            type = 1;
+                        } else if(super.negTagSet.contains(rawTag)) {
+                            type = 0;
+                        } else {
+                            log.error("Invalid data! The target value is not listed - " + rawTag);
+                            warn("Invalid data! The target value is not listed - " + rawTag,
+                                    WarnInNormalizeUDF.INVALID_TAG);
+                            return null;
+                        }
+                        tuple.append(type);
+                    } else {
+                        int index = -1;
+                        for(int j = 0; j < tags.size(); j++) {
+                            Set<String> tagSet = tags.get(j);
+                            if(tagSet.contains(rawTag)) {
+                                index = j;
+                                break;
+                            }
+                        }
+                        if(index == -1) {
+                            log.error("Invalid data! The target value is not listed - " + rawTag);
+                            return null;
+                        }
+                        tuple.append(index);
+                    }
+                    continue;
+                }
+
+                if(this.isForClean) {
+                    // for RF/GBT model, only clean data, not real do norm data
+                    if(config.isCategorical()) {
+                        Map<String, Integer> map = this.categoricalIndexMap.get(config.getColumnNum());
+                        // map should not be null, no need check if map is null, if val not in binCategory, set it to ""
+                        tuple.append(((map.get(val) == null || map.get(val) == -1)) ? "" : val);
+                    } else {
+                        Double normVal = 0d;
+                        try {
+                            normVal = Double.parseDouble(val);
+                        } catch (Exception e) {
+                            log.debug("Not decimal format " + val + ", using default!");
+                            normVal = Normalizer.defaultMissingValue(config);
+                        }
+                        tuple.append(df.format(normVal));
+                    }
+                } else {
+                    // append normalize data. exclude data clean, for data cleaning, no need check good or bad candidate
+                    if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
+                        // for multiple classification, binPosRate means rate of such category over all counts, reuse
+                        // binPosRate for normalize
+                        List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
+                                this.categoryMissingNormType);
+                        for(Double normVal: normVals) {
+                            tuple.append(df.format(normVal));
+                        }
+                    } else {
+                        tuple.append(config.isMeta() ? val : null);
+                    }
+                }
+            }
+        } else {
+            int rawSize = input.size();
+            for(int i = 0; i < this.columnConfigList.size(); i++) {
+                ColumnConfig config = this.columnConfigList.get(i);
+                int newIndex = i >= rawSize ? i % rawSize : i;
+                String val = (input.get(newIndex) == null) ? "" : input.get(newIndex).toString().trim();
+                if(config.isTarget()) {
                     int type = 0;
                     if(super.posTagSet.contains(rawTag)) {
                         type = 1;
@@ -192,47 +302,12 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         return null;
                     }
                     tuple.append(type);
-                } else {
-                    int index = -1;
-                    for(int j = 0; j < tags.size(); j++) {
-                        Set<String> tagSet = tags.get(j);
-                        if(tagSet.contains(rawTag)) {
-                            index = j;
-                            break;
-                        }
+                } else if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
+                    List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
+                            this.categoryMissingNormType);
+                    for(Double normVal: normVals) {
+                        tuple.append(df.format(normVal));
                     }
-                    if(index == -1) {
-                        log.error("Invalid data! The target value is not listed - " + rawTag);
-                        return null;
-                    }
-                    tuple.append(index);
-                }
-                continue;
-            }
-
-            if(this.isForClean) {
-                // for RF/GBT model, only clean data, not real do norm data
-                if(config.isCategorical()) {
-                    Map<String, Integer> map = this.categoricalIndexMap.get(config.getColumnNum());
-                    // map should not be null, no need check if map is null, if val not in binCategory, set it to ""
-                    tuple.append(((map.get(val) == null || map.get(val) == -1)) ? "" : val);
-                } else {
-                    Double normVal = 0d;
-                    try {
-                        normVal = Double.parseDouble(val);
-                    } catch (Exception e) {
-                        log.debug("Not decimal format " + val + ", using default!");
-                        normVal = Normalizer.defaultMissingValue(config);
-                    }
-                    tuple.append(df.format(normVal));
-                }
-            } else {
-                // append normalize data. exclude data clean, for data cleaning, no need check good or bad candidate
-                if(CommonUtils.isGoodCandidate(modelConfig.isRegression(), config)) {
-                    // for multiple classification, binPosRate means rate of such category over all counts, reuse
-                    // binPosRate for normalize
-                    Double normVal = Normalizer.normalize(config, val, cutoff, normType, this.categoryMissingNormType);
-                    tuple.append(df.format(normVal));
                 } else {
                     tuple.append(config.isMeta() ? val : null);
                 }
@@ -296,7 +371,16 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         schemaStr.append(config.getColumnName() + ":chararray" + ",");
                     } else {
                         // for others, set to float, no matter LR/NN categorical or filter out feature with null
-                        schemaStr.append(config.getColumnName() + ":float" + ",");
+                        if(modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT)) {
+                            if(CommonUtils.isGoodCandidate(config, super.hasCandidates)) {
+                                for(int i = 0; i < config.getBinCategory().size(); i++) {
+                                    schemaStr.append(config.getColumnName() + "_" + i + ":float" + ",");
+                                }
+                            }
+                            schemaStr.append(config.getColumnName() + "_missing" + ":float" + ",");
+                        } else {
+                            schemaStr.append(config.getColumnName() + ":float" + ",");
+                        }
                     }
                 }
             }

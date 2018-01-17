@@ -15,21 +15,22 @@
  */
 package ml.shifu.shifu.core;
 
-import ml.shifu.shifu.container.obj.EvalConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
-import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.util.Constants;
-import org.apache.commons.io.FileUtils;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.commons.io.FileUtils;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Test;
+
+import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
+import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.util.Constants;
 
 /**
  * ConfusionMatrixTest class
@@ -53,7 +54,7 @@ public class ConfusionMatrixTest {
         evalConfig.setCustomPaths(customPaths);
 
         evalConfig.setPerformanceScoreSelector(null);
-        new ConfusionMatrix(modelConfig, evalConfig);
+        new ConfusionMatrix(modelConfig, evalConfig, this);
     }
 
     @Test(expectedExceptions = ShifuException.class)
@@ -63,7 +64,7 @@ public class ConfusionMatrixTest {
         evalConfig.setCustomPaths(customPaths);
 
         evalConfig.setPerformanceScoreSelector("mean");
-        new ConfusionMatrix(modelConfig, evalConfig);
+        new ConfusionMatrix(modelConfig, evalConfig, this);
     }
 
     @Test
@@ -73,7 +74,7 @@ public class ConfusionMatrixTest {
         evalConfig.setCustomPaths(customPaths);
 
         evalConfig.setPerformanceScoreSelector("diagnosis");
-        new ConfusionMatrix(modelConfig, evalConfig);
+        new ConfusionMatrix(modelConfig, evalConfig, this);
     }
 
     @Test(expectedExceptions = { ShifuException.class, FileNotFoundException.class })
@@ -83,7 +84,7 @@ public class ConfusionMatrixTest {
         evalConfig.setCustomPaths(customPaths);
 
         evalConfig.setPerformanceScoreSelector(null);
-        new ConfusionMatrix(modelConfig, evalConfig);
+        new ConfusionMatrix(modelConfig, evalConfig, this);
     }
 
     @Test(expectedExceptions = ShifuException.class)
@@ -94,7 +95,7 @@ public class ConfusionMatrixTest {
 
         evalConfig.setPerformanceScoreSelector("diagnosis");
         evalConfig.getDataSet().setTargetColumnName("xxxx");
-        new ConfusionMatrix(modelConfig, evalConfig);
+        new ConfusionMatrix(modelConfig, evalConfig, this);
     }
 
     @Test

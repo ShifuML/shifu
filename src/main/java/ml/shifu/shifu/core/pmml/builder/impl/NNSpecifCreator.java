@@ -34,4 +34,11 @@ public class NNSpecifCreator extends AbstractSpecifCreator {
         return true;
     }
 
+    @Override
+    public boolean build(BasicML basicML, Model model, int id) {
+        NeuralNetwork nnPmmlModel = (NeuralNetwork) model;
+        new PMMLEncogNeuralNetworkModel().adaptMLModelToPMML((BasicNetwork) basicML, nnPmmlModel);
+        nnPmmlModel.withOutput(createNormalizedOutput(id));
+        return true;
+    }
 }

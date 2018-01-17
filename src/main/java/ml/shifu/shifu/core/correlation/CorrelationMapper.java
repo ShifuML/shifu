@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import ml.shifu.guagua.util.MemoryUtils;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
@@ -56,9 +57,9 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
     private String dataSetDelimiter;
 
     /**
-     * Model Config read from HDFS
+     * Model Config read from HDFS, be static to shared in multiple mappers
      */
-    private ModelConfig modelConfig;
+    private static ModelConfig modelConfig;
 
     /**
      * To filter records by customized expressions
@@ -71,9 +72,9 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
     private long count;
 
     /**
-     * Column Config list read from HDFS
+     * Column Config list read from HDFS, be static to shared in multiple mappers
      */
-    private List<ColumnConfig> columnConfigList;
+    private static List<ColumnConfig> columnConfigList;
 
     /**
      * For categorical feature, a map is used to save query time in execution
@@ -85,22 +86,30 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
      */
     private boolean isComputeAll = false;
 
+    private static boolean hasCandidates = false;
+
     // cache tags in set for search
     protected Set<String> posTagSet;
     protected Set<String> negTagSet;
     protected Set<String> tagSet;
     private List<Set<String>> tags;
 
-    private void loadConfigFiles(final Context context) {
-        try {
-            SourceType sourceType = SourceType.valueOf(context.getConfiguration().get(
-                    Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
-            this.modelConfig = CommonUtils.loadModelConfig(
-                    context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG), sourceType);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+    private synchronized static void loadConfigFiles(final Context context) {
+        if(modelConfig == null) {
+            LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(), Thread
+                    .currentThread().getName());
+            long start = System.currentTimeMillis();
+            try {
+                modelConfig = CommonUtils.loadModelConfig(Constants.MODEL_CONFIG_JSON_FILE_NAME, SourceType.LOCAL);
+                columnConfigList = CommonUtils.loadColumnConfigList(Constants.COLUMN_CONFIG_JSON_FILE_NAME,
+                        SourceType.LOCAL);
+                hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            LOG.info("After loading config with time {}ms and memory {} in thread {}.",
+                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(), Thread.currentThread()
+                            .getName());
         }
     }
 
@@ -108,9 +117,9 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
 
-        this.dataSetDelimiter = this.modelConfig.getDataSetDelimiter();
+        this.dataSetDelimiter = modelConfig.getDataSetDelimiter();
 
-        this.dataPurifier = new DataPurifier(this.modelConfig);
+        this.dataPurifier = new DataPurifier(modelConfig);
 
         this.isComputeAll = Boolean.valueOf(context.getConfiguration().get(Constants.SHIFU_CORRELATION_COMPUTE_ALL,
                 "false"));
@@ -140,7 +149,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
             this.tagSet = new HashSet<String>(modelConfig.getFlattenTags());
         }
 
-        this.tags = this.modelConfig.getSetTags();
+        this.tags = modelConfig.getSetTags();
     }
 
     @Override
@@ -151,7 +160,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
             return;
         }
         double[] dValues = null;
-        if(!this.dataPurifier.isFilterOut(valueStr)) {
+        if(!this.dataPurifier.isFilter(valueStr)) {
             return;
         }
 
@@ -160,7 +169,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
         context.getCounter(Constants.SHIFU_GROUP_COUNTER, "CNT_AFTER_FILTER").increment(1L);
 
         // make sampling work in correlation
-        if(Math.random() >= this.modelConfig.getStats().getSampleRate()) {
+        if(Math.random() >= modelConfig.getStats().getSampleRate()) {
             return;
         }
 
@@ -173,11 +182,13 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
             LOG.info("Current records: {} in thread {}.", count, Thread.currentThread().getName());
         }
 
-        for(int i = 0; i < this.columnConfigList.size(); i++) {
-            ColumnConfig columnConfig = this.columnConfigList.get(i);
-            if(columnConfig.getColumnFlag() == ColumnFlag.Meta) {
+        for(int i = 0; i < columnConfigList.size(); i++) {
+            ColumnConfig columnConfig = columnConfigList.get(i);
+            if(columnConfig.getColumnFlag() == ColumnFlag.Meta
+                    || (hasCandidates && !ColumnFlag.Candidate.equals(columnConfig.getColumnFlag()))) {
                 continue;
             }
+
             CorrelationWritable cw = CorrelationMultithreadedMapper.finalCorrelationMap.get(i);
             synchronized(cw) {
                 cw.setColumnIndex(i);
@@ -187,44 +198,45 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                 cw.setSumSquare(cw.getSumSquare() + squaredSum);
                 double[] xySum = cw.getXySum();
                 if(xySum == null) {
-                    xySum = new double[this.columnConfigList.size()];
+                    xySum = new double[columnConfigList.size()];
                     cw.setXySum(xySum);
                 }
                 double[] xxSum = cw.getXxSum();
                 if(xxSum == null) {
-                    xxSum = new double[this.columnConfigList.size()];
+                    xxSum = new double[columnConfigList.size()];
                     cw.setXxSum(xxSum);
                 }
                 double[] yySum = cw.getYySum();
                 if(yySum == null) {
-                    yySum = new double[this.columnConfigList.size()];
+                    yySum = new double[columnConfigList.size()];
                     cw.setYySum(yySum);
                 }
 
                 double[] adjustCount = cw.getAdjustCount();
                 if(adjustCount == null) {
-                    adjustCount = new double[this.columnConfigList.size()];
+                    adjustCount = new double[columnConfigList.size()];
                     cw.setAdjustCount(adjustCount);
                 }
                 double[] adjustSumX = cw.getAdjustSumX();
                 if(adjustSumX == null) {
-                    adjustSumX = new double[this.columnConfigList.size()];
+                    adjustSumX = new double[columnConfigList.size()];
                     cw.setAdjustSumX(adjustSumX);
                 }
                 double[] adjustSumY = cw.getAdjustSumY();
                 if(adjustSumY == null) {
-                    adjustSumY = new double[this.columnConfigList.size()];
+                    adjustSumY = new double[columnConfigList.size()];
                     cw.setAdjustSumY(adjustSumY);
                 }
 
-                for(int j = 0; j < this.columnConfigList.size(); j++) {
-                    ColumnConfig otherColumnConfig = this.columnConfigList.get(j);
+                for(int j = 0; j < columnConfigList.size(); j++) {
+                    ColumnConfig otherColumnConfig = columnConfigList.get(j);
                     if(otherColumnConfig.getColumnFlag() == ColumnFlag.Meta) {
                         continue;
                     }
                     if(i > j && !this.isComputeAll) {
                         continue;
                     }
+
                     // only do stats on both valid values
                     if(dValues[i] != Double.MIN_VALUE && dValues[j] != Double.MIN_VALUE) {
                         xySum[j] += dValues[i] * dValues[j];
@@ -242,9 +254,9 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
     }
 
     private double[] getDoubleArrayByRawArray(String[] units) {
-        double[] dValues = new double[this.columnConfigList.size()];
-        for(int i = 0; i < this.columnConfigList.size(); i++) {
-            ColumnConfig columnConfig = this.columnConfigList.get(i);
+        double[] dValues = new double[columnConfigList.size()];
+        for(int i = 0; i < columnConfigList.size(); i++) {
+            ColumnConfig columnConfig = columnConfigList.get(i);
             if(columnConfig.getColumnFlag() == ColumnFlag.Meta) {
                 // only meta columns not in correlation
                 dValues[i] = 0d;

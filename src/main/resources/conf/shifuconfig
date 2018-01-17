@@ -30,19 +30,23 @@ mapreduce.job.max.split.locations=5000
 # This option can limit the records for each mapper
 # guagua.split.maxCombinedSplitSize=256000000
 
-# set to 15mins (default 10mins)
-mapreduce.task.timeout=900000
+# set to 30mins (default 10mins)
+mapreduce.task.timeout=1800000
 
 # set default zk in client machine by default it is false and in master node, if set it to false, zk will be sstarted in 
 # master task. Please tune memory to make sure enough memory in master zookeeper process.
 guagua.zk.embedbed.isInClient=true
 
-# if over such threshold three times, kill worker; by default is 60000, change it to 120000 to avoid failures
-guagua.computation.time.threshold=120000
+# if over such threshold three times, kill worker; by default is 60000, change it to 30 minutes to avoid failures
+# set worker compute time threshold to 30 minutes, if compute time of 3 iterations >= this value, worker will kill itself.
+guagua.computation.time.threshold=1800000
 
-## tunning for rf, in rf, tree models are stored in master memory, if two many models, please tune such parameters 
+## tuning for rf, in rf, tree models are stored in master memory, if two many models, please tune such parameters 
 mapreduce.map.memory.mb=2048
-mapreduce.map.java.opts=-Xms1700m -Xmx1700m -server -XX:MaxPermSize=64M -XX:PermSize=64M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
+mapreduce.map.java.opts=-Xms1700m -Xmx1700m -server -XX:MaxPermSize=64m -XX:PermSize=64m -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
+
+#set io buffer in mapper to 400mb to avoid too many memory consumption in mapper heap
+mapreduce.task.io.sort.mb=400
 
 ## each round how many jobs can be running, if bagging is 10, two rounds of bagging with each one 5 guagua jobs 
 shifu.train.bagging.inparallel=5
@@ -74,6 +78,13 @@ pig.splitCombination=true
 pig.maxCombinedSplitSize=268435456
 
 ## specified reduce memory to avoid default memory too big or too small
-mapreduce.reduce.memory.mb=2400
-mapreduce.reduce.java.opts=-Xms2G -Xmx2G
+mapreduce.reduce.memory.mb=2048
+mapreduce.reduce.java.opts=-Xms1700m -Xmx1700m -XX:MaxPermSize=64m -XX:PermSize=64m
+
+# namespace support - default disable
+shifu.namespace.strict.mode = false
+
+# add worker get result waiting timeout to 10 minutes
+guagua.worker.getresult.timeout=600000
+
 
