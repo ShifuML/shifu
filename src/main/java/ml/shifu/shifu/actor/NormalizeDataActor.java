@@ -127,8 +127,6 @@ public class NormalizeDataActor extends AbstractActor {
             AkkaActorInputMessage msg = (AkkaActorInputMessage) message;
             List<Scanner> scanners = msg.getScanners();
 
-            log.debug("Num of Scanners: " + scanners.size());
-
             for(Scanner scanner: scanners) {
                 dataLoadRef.tell(new ScanNormInputDataMessage(scanners.size(), scanner), getSelf());
             }

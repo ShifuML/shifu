@@ -39,7 +39,7 @@ public class RegressionPmmlModelCreator extends NNPmmlModelCreator {
     @Override
     public Model build(BasicML basicML) {
         Model model = new RegressionModel();
-        model.setTargets(createTargets(modelConfig));
+        model.setTargets(createTargets());
         return model;
     }
 

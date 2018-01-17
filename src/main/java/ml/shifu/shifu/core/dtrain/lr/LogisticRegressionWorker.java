@@ -230,7 +230,7 @@ public class LogisticRegressionWorker
     @Override
     public void init(WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         loadConfigFiles(context.getProps());
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         this.outputNum = inputOutputIndex[1];
         this.candidateNum = inputOutputIndex[2];
@@ -375,10 +375,14 @@ public class LogisticRegressionWorker
         if(validationData != null) {
             this.validationData.switchState();
         }
-        LOG.info("    - # Records of the Master Data Set: {}.", this.count);
+        LOG.info("    - # Records of the Total Data Set: {}.", this.count);
         LOG.info("    - Bagging Sample Rate: {}.", this.modelConfig.getBaggingSampleRate());
         LOG.info("    - Bagging With Replacement: {}.", this.modelConfig.isBaggingWithReplacement());
-        LOG.info("        - Cross Validation Rate: {}.", this.modelConfig.getValidSetRate());
+        if(this.isKFoldCV) {
+            LOG.info("        - Validation Rate(kFold): {}.", 1d / this.modelConfig.getTrain().getNumKFold());
+        } else {
+            LOG.info("        - Validation Rate: {}.", this.modelConfig.getValidSetRate());
+        }
         LOG.info("        - # Records of the Training Set: {}.", this.trainingData.size());
         if(modelConfig.isRegression() || modelConfig.getTrain().isOneVsAll()) {
             LOG.info("        - # Positive Bagging Selected Records of the Training Set: {}.",
@@ -411,6 +415,8 @@ public class LogisticRegressionWorker
         int index = 0, inputIndex = 0, outputIndex = 0;
         long hashcode = 0;
         double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
+
         for(String unit: splitter.split(line)) {
             // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
             float floatValue = unit.length() == 0 ? 0f : NumberFormatUtils.getFloat(unit, 0f);
@@ -444,7 +450,7 @@ public class LogisticRegressionWorker
                     if(this.inputNum == this.candidateNum) {
                         // no variable selected, good candidate but not meta and not target choosed
                         if(!columnConfig.isMeta() && !columnConfig.isTarget()
-                                && CommonUtils.isGoodCandidate(columnConfig)) {
+                                && CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
                             inputData[inputIndex++] = floatValue;
                             hashcode = hashcode * 31 + Float.valueOf(floatValue).hashCode();
                         }
@@ -532,13 +538,15 @@ public class LogisticRegressionWorker
             if(this.isStratifiedSampling) {
                 random = baggingRandomMap.get(classValue);
                 if(random == null) {
-                    random = new Random();
+                    random = DTrainUtils.generateRandomBySampleSeed(modelConfig.getTrain().getBaggingSampleSeed(),
+                            CommonConstants.NOT_CONFIGURED_BAGGING_SEED);
                     baggingRandomMap.put(classValue, random);
                 }
             } else {
                 random = baggingRandomMap.get(0);
                 if(random == null) {
-                    random = new Random();
+                    random = DTrainUtils.generateRandomBySampleSeed(modelConfig.getTrain().getBaggingSampleSeed(),
+                            CommonConstants.NOT_CONFIGURED_BAGGING_SEED);
                     baggingRandomMap.put(0, random);
                 }
             }

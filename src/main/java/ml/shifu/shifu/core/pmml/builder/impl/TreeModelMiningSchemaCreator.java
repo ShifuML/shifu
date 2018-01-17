@@ -18,6 +18,8 @@ package ml.shifu.shifu.core.pmml.builder.impl;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
+import ml.shifu.shifu.util.CommonUtils;
+
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.FieldUsageType;
 import org.dmg.pmml.MiningField;
@@ -44,7 +46,7 @@ public class TreeModelMiningSchemaCreator extends AbstractPmmlElementCreator<Min
             if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
                 MiningField miningField = new MiningField();
 
-                miningField.setName(FieldName.create(columnConfig.getColumnName()));
+                miningField.setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig)));
                 miningField.setOptype(getOptype(columnConfig));
                 if(columnConfig.isNumerical()) {
                     miningField.setMissingValueReplacement(String.valueOf(columnConfig.getColumnStats().getMean()));

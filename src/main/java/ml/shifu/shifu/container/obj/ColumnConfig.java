@@ -15,13 +15,14 @@
  */
 package ml.shifu.shifu.container.obj;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import ml.shifu.shifu.util.Constants;
-
 import java.io.Serializable;
 import java.util.Comparator;
 import java.util.List;
+
+import ml.shifu.shifu.util.Constants;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
  * ColumnConfig class record the basic information for column in data. Almost all information in ColumnConfig is
@@ -32,11 +33,7 @@ public class ColumnConfig {
 
     // add weight column and weight column is treated the same as meta
     public static enum ColumnFlag {
-        ForceSelect, ForceRemove, Meta, Target, Weight
-    }
-
-    public static enum ColumnType {
-        A, N, C
+        ForceSelect, ForceRemove, Candidate, Meta, Target, Weight
     }
 
     /**
@@ -72,6 +69,11 @@ public class ColumnConfig {
      * Only {@link #finalSelect} is determined as final training column.
      */
     private Boolean finalSelect = Boolean.FALSE;
+
+    // in some hybrid threshold, some values like -100 is also category, try to set a threshold like 0, if value<0 would
+    // be treated as categorical features, if not set, by default threshold is min double value, which means all value <
+    // min can be set to categorical, which is all double value is not categorical, only works in Hybrid column type
+    private Double hybridThreshold = Double.MIN_VALUE;
 
     /**
      * Column stats info
@@ -173,19 +175,32 @@ public class ColumnConfig {
         return ColumnFlag.Target.equals(columnFlag);
     }
 
-    @JsonIgnore
+/*    @JsonIgnore
     public boolean isCandidate() {
-        return !isForceRemove() && !isMeta() && !isTarget();
+        return ColumnFlag.Candidate.equals(columnFlag)
+                || (!isForceRemove() && !isMeta() && !isTarget());
+    }*/
+
+    @JsonIgnore
+    public boolean isCandidate(boolean hasCandidate) {
+        return ( hasCandidate
+                ? ColumnFlag.Candidate.equals(columnFlag) : (!isForceRemove() && !isMeta() && !isTarget()));
     }
 
     @JsonIgnore
     public boolean isNumerical() {
-        return columnType == ColumnType.N;
+        // hybrid major is a numerical column but missing value is not target
+        return columnType == ColumnType.N || columnType == ColumnType.H;
     }
 
     @JsonIgnore
     public boolean isCategorical() {
         return columnType == ColumnType.C;
+    }
+
+    @JsonIgnore
+    public boolean isHybrid() {
+        return columnType == ColumnType.H;
     }
 
     // weigt column is also treated as meta column
@@ -483,5 +498,20 @@ public class ColumnConfig {
      */
     public void setSampleValues(List<String> sampleValues) {
         this.sampleValues = sampleValues;
+    }
+
+    /**
+     * @return the hybridThreshold
+     */
+    public Double getHybridThreshold() {
+        return hybridThreshold;
+    }
+
+    /**
+     * @param hybridThreshold
+     *            the hybridThreshold to set
+     */
+    public void setHybridThreshold(Double hybridThreshold) {
+        this.hybridThreshold = hybridThreshold;
     }
 }

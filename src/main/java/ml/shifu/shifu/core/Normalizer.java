@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.core;
 
+import java.util.Arrays;
 import java.util.List;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -26,15 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Normalizer
- * <p>
- * formula:
- * <p>
- * <code>norm_result = (value - means) / stdev</code> The stdDevCutOff should be setting, by default it's 4
- * <p>
- * The <code>value</code> should less than mean + stdDevCutOff * stdev
- * <p>
- * and larger than mean - stdDevCutOff * stdev
+ * Util normalization class which is used for any kind of transformation.
  */
 public class Normalizer {
 
@@ -111,7 +104,7 @@ public class Normalizer {
      *            the raw value
      * @return normalized value
      */
-    public Double normalize(String raw) {
+    public List<Double> normalize(String raw) {
         return normalize(config, raw, method, stdDevCutOff);
     }
 
@@ -124,7 +117,7 @@ public class Normalizer {
      *            raw input data
      * @return normalized value
      */
-    public static Double normalize(ColumnConfig config, String raw) {
+    public static List<Double> normalize(ColumnConfig config, String raw) {
         return normalize(config, raw, NormalizeMethod.ZScore);
     }
 
@@ -139,7 +132,7 @@ public class Normalizer {
      *            the method used to do normalization
      * @return normalized value
      */
-    public static Double normalize(ColumnConfig config, String raw, NormalizeMethod method) {
+    public static List<Double> normalize(ColumnConfig config, String raw, NormalizeMethod method) {
         return normalize(config, raw, method, STD_DEV_CUTOFF);
     }
 
@@ -154,7 +147,7 @@ public class Normalizer {
      *            the standard deviation cutoff to use
      * @return normalized value
      */
-    public static Double normalize(ColumnConfig config, String raw, double stdDevCutoff) {
+    public static List<Double> normalize(ColumnConfig config, String raw, double stdDevCutoff) {
         return normalize(config, raw, NormalizeMethod.ZScore, stdDevCutoff);
     }
 
@@ -171,7 +164,7 @@ public class Normalizer {
      *            the standard deviation cutoff to use
      * @return normalized value
      */
-    public static Double normalize(ColumnConfig config, String raw, NormalizeMethod method, double stdDevCutoff) {
+    public static List<Double> normalize(ColumnConfig config, String raw, NormalizeMethod method, double stdDevCutoff) {
         if(method == null) {
             method = NormalizeMethod.ZScore;
         }
@@ -180,9 +173,9 @@ public class Normalizer {
             case ZScore:
                 return zScoreNormalize(config, raw, stdDevCutoff);
             case MaxMin:
-                return getMaxMinScore(config, raw);
+                return Arrays.asList(getMaxMinScore(config, raw));
             default:
-                return 0.0;
+                return Arrays.asList(new Double[] { 0.0 });
         }
     }
 
@@ -195,13 +188,13 @@ public class Normalizer {
      *            input column value
      * @return normalized value for MaxMin method
      */
-    private static Double getMaxMinScore(ColumnConfig config, String raw) {
+    private static Double[] getMaxMinScore(ColumnConfig config, String raw) {
         if(config.isCategorical()) {
             // TODO, doesn't support
         } else {
             Double value = Double.parseDouble(raw);
-            return (value - config.getColumnStats().getMin())
-                    / (config.getColumnStats().getMax() - config.getColumnStats().getMin());
+            return new Double[] { (value - config.getColumnStats().getMin())
+                    / (config.getColumnStats().getMax() - config.getColumnStats().getMin()) };
         }
         return null;
     }
@@ -226,8 +219,8 @@ public class Normalizer {
      *            missing categorical value norm type
      * @return normalized value. If normType parameter is invalid, then the ZSCALE will be used as default.
      */
-    public static Double normalize(ColumnConfig config, String raw, Double cutoff, ModelNormalizeConf.NormType type,
-            CategoryMissingNormType categoryMissingNormType) {
+    public static List<Double> normalize(ColumnConfig config, String raw, Double cutoff,
+            ModelNormalizeConf.NormType type, CategoryMissingNormType categoryMissingNormType) {
         switch(type) {
             case WOE:
                 return woeNormalize(config, raw, false);
@@ -243,12 +236,34 @@ public class Normalizer {
             case WEIGHT_WOE_ZSCORE:
             case WEIGHT_WOE_ZSCALE:
                 return woeZScoreNormalize(config, raw, cutoff, true);
+            case ZSCALE_ONEHOT:
+                return woeOneHotNormalize(config, raw, cutoff, categoryMissingNormType);
+            case DISCRETE_ZSCORE:
+            case DISCRETE_ZSCALE:
+                return discreteZScoreNormalize(config, raw, cutoff, categoryMissingNormType);
             case OLD_ZSCALE:
             case OLD_ZSCORE:
             case ZSCALE:
             case ZSCORE:
             default:
                 return zScoreNormalize(config, raw, cutoff, categoryMissingNormType);
+        }
+    }
+
+    private static List<Double> woeOneHotNormalize(ColumnConfig config, String raw, Double cutoff,
+            CategoryMissingNormType categoryMissingNormType) {
+        if(config.isNumerical()) {
+            return zScoreNormalize(config, raw, cutoff, categoryMissingNormType);
+        } else {
+            Double[] normVals = new Double[config.getBinCategory().size() + 1];
+            Arrays.fill(normVals, 0.0d);
+
+            int binNum = CommonUtils.getBinNum(config, raw);
+            if(binNum < 0) {
+                binNum = config.getBinCategory().size();
+            }
+            normVals[binNum] = 1.0d;
+            return Arrays.asList(normVals);
         }
     }
 
@@ -270,8 +285,9 @@ public class Normalizer {
      *            normalization type of ModelNormalizeConf.NormType
      * @return normalized value. If normType parameter is invalid, then the ZSCALE will be used as default.
      */
-    public static Double normalize(ColumnConfig config, String raw, Double cutoff, ModelNormalizeConf.NormType type) {
-        return normalize(config, raw, cutoff, type, CategoryMissingNormType.MEAN);
+    public static List<Double> normalize(ColumnConfig config, String raw, Double cutoff,
+            ModelNormalizeConf.NormType type) {
+        return normalize(config, raw, cutoff, type, CategoryMissingNormType.POSRATE);
     }
 
     /**
@@ -287,11 +303,49 @@ public class Normalizer {
      *            missing categorical value norm type
      * @return normalized value for ZScore method.
      */
-    private static Double zScoreNormalize(ColumnConfig config, String raw, Double cutoff,
+    private static List<Double> zScoreNormalize(ColumnConfig config, String raw, Double cutoff,
             CategoryMissingNormType categoryMissingNormType) {
         double stdDevCutOff = checkCutOff(cutoff);
         double value = parseRawValue(config, raw, categoryMissingNormType);
-        return computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff);
+        return Arrays.asList(computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff));
+    }
+
+    /**
+     * Compute the zscore value after do discreting in each bin for numerical value, for categorical feature, use
+     * positive rate.
+     * 
+     * @param config
+     *            ColumnConfig info
+     * @param raw
+     *            input column value
+     * @param cutoff
+     *            standard deviation cut off
+     * @param categoryMissingNormType
+     *            missing categorical value norm type
+     * @return normalized value for ZScore method.
+     */
+    private static List<Double> discreteZScoreNormalize(ColumnConfig config, String raw, Double cutoff,
+            CategoryMissingNormType categoryMissingNormType) {
+        double stdDevCutOff = checkCutOff(cutoff);
+        double value = 0;
+        if(config.isCategorical()) {
+            value = parseRawValue(config, raw, categoryMissingNormType);
+        } else {
+            int binIndex = CommonUtils.getBinNum(config, raw);
+            if(binIndex < 0 || binIndex >= config.getBinBoundary().size()) {
+                // missing value, use mean value, after zscore, it is 0
+                value = config.getMean();
+            } else {
+                List<Double> binBoundaries = config.getBinBoundary();
+                if(binIndex == 0) {
+                    // the first bin, use min value
+                    value = config.getColumnStats().getMin();
+                } else {
+                    value = binBoundaries.get(binIndex);
+                }
+            }
+        }
+        return Arrays.asList(computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff));
     }
 
     /**
@@ -305,10 +359,10 @@ public class Normalizer {
      *            standard deviation cut off
      * @return normalized value for ZScore method.
      */
-    private static Double zScoreNormalize(ColumnConfig config, String raw, Double cutoff) {
+    private static List<Double> zScoreNormalize(ColumnConfig config, String raw, Double cutoff) {
         double stdDevCutOff = checkCutOff(cutoff);
-        double value = parseRawValue(config, raw, CategoryMissingNormType.MEAN);
-        return computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff);
+        double value = parseRawValue(config, raw, CategoryMissingNormType.POSRATE);
+        return Arrays.asList(computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff));
     }
 
     /**
@@ -326,7 +380,7 @@ public class Normalizer {
      */
     private static double parseRawValue(ColumnConfig config, String raw, CategoryMissingNormType categoryMissingNormType) {
         if(categoryMissingNormType == null) {
-            categoryMissingNormType = CategoryMissingNormType.MEAN;
+            categoryMissingNormType = CategoryMissingNormType.POSRATE;
         }
         double value = 0.0;
         if(config.isCategorical()) {
@@ -345,7 +399,7 @@ public class Normalizer {
             } else {
                 Double binPosRate = config.getBinPosRate().get(index);
                 if(binPosRate != null) {
-                    value = binPosRate.doubleValue();;
+                    value = binPosRate.doubleValue();
                 } else {
                     switch(categoryMissingNormType) {
                         case POSRATE:
@@ -395,14 +449,29 @@ public class Normalizer {
      * @return normalized value for Woe method. For missing value, we return the value in last bin. Since the last
      *         bin refers to the missing value bin.
      */
-    private static Double woeNormalize(ColumnConfig config, String raw, boolean isWeightedNorm) {
+    private static List<Double> woeNormalize(ColumnConfig config, String raw, boolean isWeightedNorm) {
         List<Double> woeBins = isWeightedNorm ? config.getBinWeightedWoe() : config.getBinCountWoe();
-        int binIndex = CommonUtils.getBinNum(config, raw);
+        int binIndex = 0;
+        if(config.isHybrid()) {
+            binIndex = CommonUtils.getCategoicalBinIndex(config.getBinCategory(), raw);
+            if(binIndex != -1) {
+                binIndex = binIndex + config.getBinBoundary().size(); // append the first numerical bins
+            } else {
+                double douVal = CommonUtils.parseNumber(raw);
+                if(Double.isNaN(douVal)) {
+                    binIndex = config.getBinBoundary().size() + config.getBinCategory().size();
+                } else {
+                    binIndex = CommonUtils.getBinIndex(config.getBinBoundary(), douVal);
+                }
+            }
+        } else {
+            binIndex = CommonUtils.getBinNum(config, raw);
+        }
         if(binIndex == -1) {
             // The last bin in woeBins is the miss value bin.
-            return woeBins.get(woeBins.size() - 1);
+            return Arrays.asList(new Double[] { woeBins.get(woeBins.size() - 1) });
         } else {
-            return woeBins.get(binIndex);
+            return Arrays.asList(new Double[] { woeBins.get(binIndex) });
         }
     }
 
@@ -420,11 +489,13 @@ public class Normalizer {
      *            if use weighted woe
      * @return normalized value for woe zscore method.
      */
-    private static Double woeZScoreNormalize(ColumnConfig config, String raw, Double cutoff, boolean isWeightedNorm) {
+    private static List<Double> woeZScoreNormalize(ColumnConfig config, String raw, Double cutoff,
+            boolean isWeightedNorm) {
         double stdDevCutOff = checkCutOff(cutoff);
-        double woe = woeNormalize(config, raw, isWeightedNorm);
+        double woe = woeNormalize(config, raw, isWeightedNorm).get(0);
+        // TODO cache such computing to avoid computing each time
         double[] meanAndStdDev = calculateWoeMeanAndStdDev(config, isWeightedNorm);
-        return computeZScore(woe, meanAndStdDev[0], meanAndStdDev[1], stdDevCutOff);
+        return Arrays.asList(computeZScore(woe, meanAndStdDev[0], meanAndStdDev[1], stdDevCutOff));
     }
 
     /**
@@ -441,8 +512,8 @@ public class Normalizer {
      *            if use weighted woe
      * @return normalized value for hybrid method.
      */
-    private static Double hybridNormalize(ColumnConfig config, String raw, Double cutoff, boolean isWeightedNorm) {
-        Double normValue;
+    private static List<Double> hybridNormalize(ColumnConfig config, String raw, Double cutoff, boolean isWeightedNorm) {
+        List<Double> normValue;
         if(config.isNumerical()) {
             // For numerical data, use zscore.
             normValue = zScoreNormalize(config, raw, cutoff);
@@ -461,7 +532,7 @@ public class Normalizer {
      *            specified standard deviation cutoff
      * @return If cutoff is valid then return it, else return {@link Normalizer#STD_DEV_CUTOFF}
      */
-    private static double checkCutOff(Double cutoff) {
+    public static double checkCutOff(Double cutoff) {
         double stdDevCutOff;
         if(cutoff != null && !cutoff.isInfinite() && !cutoff.isNaN()) {
             stdDevCutOff = cutoff;
@@ -522,7 +593,7 @@ public class Normalizer {
      *            standard deviation cutoff
      * @return zscore
      */
-    public static double computeZScore(double var, double mean, double stdDev, double stdDevCutOff) {
+    public static Double[] computeZScore(double var, double mean, double stdDev, double stdDevCutOff) {
         double maxCutOff = mean + stdDevCutOff * stdDev;
         if(var > maxCutOff) {
             var = maxCutOff;
@@ -534,9 +605,9 @@ public class Normalizer {
         }
 
         if(stdDev > 0.00001) {
-            return (var - mean) / stdDev;
+            return new Double[] { (var - mean) / stdDev };
         } else {
-            return 0.0;
+            return new Double[] { 0.0 };
         }
     }
 

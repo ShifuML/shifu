@@ -60,7 +60,7 @@ public class SimpleScoreUDF extends AbstractTrainerUDF<Double> {
     }
 
     public Double exec(Tuple input) throws IOException {
-        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.header);
+        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.header, 0);
 
         CaseScoreResult cs = modelRunner.computeNsData(rawDataNsMap);
         if(cs == null) {

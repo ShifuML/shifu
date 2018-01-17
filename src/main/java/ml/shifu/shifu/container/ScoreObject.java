@@ -18,6 +18,7 @@ package ml.shifu.shifu.container;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.SortedMap;
 
 import org.apache.commons.collections.CollectionUtils;
 
@@ -36,11 +37,18 @@ public class ScoreObject {
     private double minScore = Integer.MAX_VALUE;
     private double medianScore = 0;
 
+    private SortedMap<String, Double> hiddenLayerScores;
+
     public ScoreObject(List<Double> scores, Object tag) {
         this(scores, tag, new ArrayList<Integer>());
     }
 
     public ScoreObject(List<Double> scores, Object tag, List<Integer> modelSizeList) {
+        this(scores, tag, modelSizeList, null);
+    }
+
+    public ScoreObject(List<Double> scores, Object tag, List<Integer> modelSizeList,
+            SortedMap<String, Double> hiddenLayerScores) {
         this.scores = scores;
         this.tag = tag;
 
@@ -65,6 +73,8 @@ public class ScoreObject {
             meanScore /= modelSizeSum;
             medianScore = tmpScoreList.get(scores.size() / 2);
         }
+
+        this.hiddenLayerScores = hiddenLayerScores;
     }
 
     public List<Double> getScores() {
@@ -113,6 +123,21 @@ public class ScoreObject {
 
     public void setMeanScore(double meanScore) {
         this.meanScore = meanScore;
+    }
+
+    /**
+     * @return the hiddenLayerScores
+     */
+    public SortedMap<String, Double> getHiddenLayerScores() {
+        return hiddenLayerScores;
+    }
+
+    /**
+     * @param hiddenLayerScores
+     *            the hiddenLayerScores to set
+     */
+    public void setHiddenLayerScores(SortedMap<String, Double> hiddenLayerScores) {
+        this.hiddenLayerScores = hiddenLayerScores;
     }
 
 }

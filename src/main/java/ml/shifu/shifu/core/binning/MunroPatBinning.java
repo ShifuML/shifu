@@ -24,13 +24,14 @@ import java.util.Arrays;
 import java.util.List;
 
 import ml.shifu.shifu.core.MunroPatEstimator;
+import ml.shifu.shifu.util.Constants;
 
 public class MunroPatBinning extends AbstractBinning<Double> {
 
     private MunroPatEstimator<Double> estimator = null;
 
     public MunroPatBinning(int binningNum, List<String> missingValList) {
-        super(binningNum, missingValList);
+        super(binningNum, missingValList, Constants.MAX_CATEGORICAL_BINC_COUNT);
         estimator = new MunroPatEstimator<Double>(binningNum);
     }
 

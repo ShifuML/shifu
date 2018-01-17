@@ -27,7 +27,7 @@ SET job.name 'Shifu Statistic: $data_set';
 SET io.sort.mb 500;
 SET mapred.child.java.opts '-Xmx1G -server -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=70';
 SET mapred.child.ulimit 2.5G;
-SET mapred.reduce.slowstart.completed.maps 0.6;
+SET mapred.reduce.slowstart.completed.maps 0.8;
 
 -- for new hadoop >= 2.4.0
 --SET mapreduce.map.java.opts  '-server -Xms2048m -Xmx3072m -Djava.net.preferIPv4Stack=true  -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=70'
@@ -45,7 +45,7 @@ DEFINE MergeBinningData ml.shifu.shifu.udf.BinningDataMergeUDF('$source_type', '
 DEFINE AddColumnNum     ml.shifu.shifu.udf.AddColumnNumAndFilterUDF('$source_type', '$path_model_config', '$path_column_config', 'false');
 
 -- load and purify data
-data = LOAD '$path_raw_data' USING PigStorage('$delimiter');
+data = LOAD '$path_raw_data' USING PigStorage('$delimiter', '-noschema');
 data = FILTER data BY IsDataFilterOut(*);
 
 -- convert data into column based

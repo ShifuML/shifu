@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.column.NSColumn;
@@ -37,11 +38,11 @@ import ml.shifu.shifu.core.ConfusionMatrix;
 import ml.shifu.shifu.core.PerformanceEvaluator;
 import ml.shifu.shifu.core.Scorer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
 import ml.shifu.shifu.core.eval.GainChart;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.util.CommonUtils;
@@ -220,8 +221,71 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      *             any io exception
      */
     private void runScore(List<EvalConfig> evalSetList) throws IOException {
-        for(EvalConfig config: evalSetList) {
-            runScore(config);
+        // do it only once
+        syncDataToHdfs(evalSetList);
+
+        if(Environment.getBoolean(Constants.SHIFU_EVAL_PARALLEL, true) && modelConfig.isMapReduceRunMode()
+                && evalSetList.size() > 1) {
+            // run in parallel
+            int parallelNum = Environment.getInt(Constants.SHIFU_EVAL_PARALLEL_NUM, 5);
+            if(parallelNum <= 0 || parallelNum > 100) {
+                throw new IllegalArgumentException(Constants.SHIFU_EVAL_PARALLEL_NUM
+                        + " in shifuconfig should be in (0, 100], by default it is 5.");
+            }
+
+            int evalSize = evalSetList.size();
+            int mod = evalSize % parallelNum;
+            int batch = evalSize / parallelNum;
+            batch = (mod == 0 ? batch : (batch + 1));
+
+            for(int i = 0; i < batch; i++) {
+                int batchSize = (mod != 0 && i == (batch - 1)) ? mod : parallelNum;
+                // lunch current batch size
+                LOG.info("Starting to run eval score in {}/{} round", (i + 1), batch);
+                final CountDownLatch cdl = new CountDownLatch(batchSize);
+                for(int j = 0; j < batchSize; j++) {
+                    int currentIndex = i * parallelNum + j;
+                    final EvalConfig config = evalSetList.get(currentIndex);
+                    // save tmp models
+                    Thread evalRunThread = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                runScore(config);
+                            } catch (IOException e) {
+                                LOG.error("Exception in eval score:", e);
+                            } catch (Exception e) {
+                                LOG.error("Exception in eval score:", e);
+                            }
+                            cdl.countDown();
+                        }
+                    }, config.getName());
+                    // print eval name to log4j console to make each one is easy to be get from logs
+                    evalRunThread.start();
+
+                    // each one sleep 4s to avoid conflict in initialization
+                    try {
+                        Thread.sleep(4000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+
+                LOG.info("Starting to wait eval score in {}/{} round", (i + 1), batch);
+                // await all threads done
+                try {
+                    cdl.await();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                LOG.info("Finish eval score in {}/{} round", (i + 1), batch);
+            }
+            LOG.info("Finish all eval score parallel running with eval size {}.", evalSize);
+        } else {
+            // for old sequential runs
+            for(final EvalConfig config: evalSetList) {
+                runScore(config);
+            }
         }
     }
 
@@ -235,10 +299,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runScore(EvalConfig config) throws IOException {
         // create evalset home directory firstly in local file system
-        PathFinder pathFinder = new PathFinder(modelConfig);
-        String evalSetPath = pathFinder.getEvalSetPath(config, SourceType.LOCAL);
-        FileUtils.forceMkdir(new File(evalSetPath));
-        syncDataToHdfs(config.getDataSet().getSource());
+        // PathFinder pathFinder = new PathFinder(modelConfig);
+        // String evalSetPath = pathFinder.getEvalSetPath(config, SourceType.LOCAL);
+        // FileUtils.forceMkdir(new File(evalSetPath));
+        // syncDataToHdfs(config.getDataSet().getSource());
 
         switch(modelConfig.getBasic().getRunMode()) {
             case DIST:
@@ -321,10 +385,13 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         paramsMap.put("pathEvalScore", pathFinder.getEvalScorePath(evalConfig));
         paramsMap.put("pathEvalPerformance", pathFinder.getEvalPerformancePath(evalConfig));
         paramsMap.put("eval_set_name", evalConfig.getName());
-        paramsMap.put("delimiter", evalConfig.getDataSet().getDataDelimiter());
+        paramsMap.put("delimiter", CommonUtils.escapePigString(evalConfig.getDataSet().getDataDelimiter()));
         paramsMap.put("columnIndex", evalConfig.getPerformanceScoreSelector().trim());
         paramsMap.put("scale",
                 Environment.getProperty(Constants.SHIFU_SCORE_SCALE, Integer.toString(Scorer.DEFAULT_SCORE_SCALE)));
+
+        String expressionsAsString = super.modelConfig.getSegmentFilterExpressionsAsString();
+        Environment.getProperties().put("shifu.segment.expressions", expressionsAsString);
 
         String pigScript = "scripts/Eval.pig";
         Map<String, String> confMap = new HashMap<String, String>();
@@ -383,7 +450,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 double[] maxMinScores = locateMaxMinScoreFromFile(sourceType, maxMinScoreFolder);
                 maxScore = maxMinScores[0];
                 minScore = maxMinScores[1];
-                LOG.info("Max score is {}, min score is {}", maxScore, minScore);
+                LOG.info("Raw max score is {}, raw min score is {}", maxScore, minScore);
                 ShifuFileUtils.deleteFile(maxMinScoreFolder, sourceType);
             }
             // only one pig job with such counters, return
@@ -535,6 +602,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      *             any exception in running pig evaluation or akka evaluation
      */
     private void runEval(List<EvalConfig> evalSetList) throws IOException {
+        // do it only once
+        syncDataToHdfs(evalSetList);
+
         // validation for score column
         for(EvalConfig evalConfig: evalSetList) {
             List<String> scoreMetaColumns = evalConfig.getScoreMetaColumns(modelConfig);
@@ -546,8 +616,68 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             }
         }
 
-        for(EvalConfig evalConfig: evalSetList) {
-            runEval(evalConfig);
+        if(Environment.getBoolean(Constants.SHIFU_EVAL_PARALLEL, true) && modelConfig.isMapReduceRunMode()
+                && evalSetList.size() > 1) {
+            // run in parallel
+            int parallelNum = Environment.getInt(Constants.SHIFU_EVAL_PARALLEL_NUM, 5);
+            if(parallelNum <= 0 || parallelNum > 100) {
+                throw new IllegalArgumentException(Constants.SHIFU_EVAL_PARALLEL_NUM
+                        + " in shifuconfig should be in (0, 100], by default it is 5.");
+            }
+
+            int evalSize = evalSetList.size();
+            int mod = evalSize % parallelNum;
+            int batch = evalSize / parallelNum;
+            batch = (mod == 0 ? batch : (batch + 1));
+
+            for(int i = 0; i < batch; i++) {
+                int batchSize = (mod != 0 && i == (batch - 1)) ? mod : parallelNum;
+                // lunch current batch size
+                LOG.info("Starting to run eval score in {}/{} round", (i + 1), batch);
+                final CountDownLatch cdl = new CountDownLatch(batchSize);
+                for(int j = 0; j < batchSize; j++) {
+                    int currentIndex = i * parallelNum + j;
+                    final EvalConfig config = evalSetList.get(currentIndex);
+                    // save tmp models
+                    Thread evalRunThread = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                runEval(config);
+                            } catch (IOException e) {
+                                LOG.error("Exception in eval:", e);
+                            } catch (Exception e) {
+                                LOG.error("Exception in eval:", e);
+                            }
+                            cdl.countDown();
+                        }
+                    }, config.getName());
+                    // print eval name to log4j console to make each one is easy to be get from logs
+                    evalRunThread.start();
+
+                    // each one sleep 3s to avoid conflict in initialization
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+
+                LOG.info("Starting to wait eval in {}/{} round", (i + 1), batch);
+                // await all threads done
+                try {
+                    cdl.await();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                LOG.info("Finish eval in {}/{} round", (i + 1), batch);
+            }
+            LOG.info("Finish all eval parallel running with eval size {}.", evalSize);
+        } else {
+            // for old sequential runs
+            for(EvalConfig evalConfig: evalSetList) {
+                runEval(evalConfig);
+            }
         }
     }
 
@@ -604,6 +734,17 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             names.add(new NSColumn(evalColumnName));
         }
 
+        String filterExpressions = super.modelConfig.getSegmentFilterExpressionsAsString();
+        if(StringUtils.isNotBlank(filterExpressions)) {
+            int segFilterSize = CommonUtils
+                    .split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER).length;
+            for(int i = 0; i < segFilterSize; i++) {
+                for(int j = 0; j < evalColumnNames.length; j++) {
+                    names.add(new NSColumn(evalColumnNames[j] + "_" + (i + 1)));
+                }
+            }
+        }
+
         for(ColumnConfig config: this.columnConfigList) {
             NSColumn nsColumn = new NSColumn(config.getColumnName());
             if(config.isFinalSelect() && !names.contains(nsColumn)
@@ -638,10 +779,19 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runEval(EvalConfig evalConfig) throws IOException {
         // create evalset home directory firstly in local file system
-        validateEvalColumnConfig(evalConfig);
-        String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
-        FileUtils.forceMkdir(new File(evalSetPath));
-        syncDataToHdfs(evalConfig.getDataSet().getSource());
+        synchronized(this) {
+            validateEvalColumnConfig(evalConfig);
+            // String evalSetPath = pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL);
+            // FileUtils.forceMkdir(new File(evalSetPath));
+            // syncDataToHdfs(evalConfig.getDataSet().getSource());
+        }
+
+        // each one sleep 8s to avoid conflict in initialization
+        try {
+            Thread.sleep(8000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
 
         switch(modelConfig.getBasic().getRunMode()) {
             case DIST:
@@ -656,9 +806,21 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
     }
 
+    @SuppressWarnings("deprecation")
     private boolean isGBTNotConvertToProb(EvalConfig evalConfig) {
-        return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())
-                && !evalConfig.getGbtConvertToProb();
+        if(CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
+            if(IndependentTreeModel.isValidGbtScoreConvertStrategy(evalConfig.getGbtScoreConvertStrategy())) {
+                if(Constants.GBT_SCORE_RAW_CONVETER.equalsIgnoreCase(evalConfig.getGbtScoreConvertStrategy())) {
+                    return true;
+                }
+            } else {
+                // if score strategy not set, check deprecated parameter getGbtConvertToProb
+                if(!evalConfig.getGbtConvertToProb()) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -700,76 +862,78 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             ScoreStatus newScoreStatus = runDistMetaScore(evalConfig, metaScoreColumn);
 
             PerformanceResult championModelPerformance = runConfusionMatrix(evalConfig, newScoreStatus,
-                    pathFinder.getEvalScorePath(evalConfig, metaScoreColumn),
-                    pathFinder.getEvalPerformancePath(evalConfig, metaScoreColumn), false, false, 0, 1, 2);
+                    pathFinder.getEvalMetaScorePath(evalConfig, metaScoreColumn),
+                    pathFinder.getEvalMetaPerformancePath(evalConfig, metaScoreColumn), false, false, 0, 1, 2);
             prList.add(championModelPerformance);
         }
 
-        GainChart gc = new GainChart();
-        boolean hasWeight = StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName());
+        synchronized(this) {
+            GainChart gc = new GainChart();
+            boolean hasWeight = StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName());
 
-        // 3. Compute gain chart and other eval performance files only in local.
-        String htmlGainChart = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
-                + "_gainchart.html", SourceType.LOCAL);
-        LOG.info("Gain chart is generated in {}.", htmlGainChart);
-        gc.generateHtml(evalConfig, modelConfig, htmlGainChart, prList, names);
+            // 3. Compute gain chart and other eval performance files only in local.
+            String htmlGainChart = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
+                    + "_gainchart.html", SourceType.LOCAL);
+            LOG.info("Gain chart is generated in {}.", htmlGainChart);
+            gc.generateHtml(evalConfig, modelConfig, htmlGainChart, prList, names);
 
-        String hrmlPrRoc = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName() + "_prroc.html",
-                SourceType.LOCAL);
-        LOG.info("PR & ROC chart is generated in {}.", hrmlPrRoc);
-        gc.generateHtml4PrAndRoc(evalConfig, modelConfig, hrmlPrRoc, prList, names);
-
-        for(int i = 0; i < names.size(); i++) {
-            String name = names.get(i);
-            PerformanceResult pr = prList.get(i);
-            String unitGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), name
-                    + "_unit_wise_gainchart.csv", SourceType.LOCAL);
-            LOG.info("Unit-wise gain chart data is generated in {} for eval {} and name {}.", unitGainChartCsv,
-                    evalConfig.getName(), name);
-            gc.generateCsv(evalConfig, modelConfig, unitGainChartCsv, pr.gains);
-            if(hasWeight) {
-                String weightedGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), name
-                        + "_weighted_gainchart.csv", SourceType.LOCAL);
-                LOG.info("Weighted gain chart data is generated in {} for eval {} and name {}.", weightedGainChartCsv,
-                        evalConfig.getName(), name);
-                gc.generateCsv(evalConfig, modelConfig, weightedGainChartCsv, pr.weightedGains);
-            }
-
-            String prCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), name + "_unit_wise_pr.csv",
+            String hrmlPrRoc = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName() + "_prroc.html",
                     SourceType.LOCAL);
-            LOG.info("Unit-wise pr data is generated in {} for eval {} and name {}.", prCsvFile, evalConfig.getName(),
-                    name);
-            gc.generateCsv(evalConfig, modelConfig, prCsvFile, pr.pr);
+            LOG.info("PR & ROC chart is generated in {}.", hrmlPrRoc);
+            gc.generateHtml4PrAndRoc(evalConfig, modelConfig, hrmlPrRoc, prList, names);
 
-            if(hasWeight) {
-                String weightedPrCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), name + "_weighted_pr.csv",
+            for(int i = 0; i < names.size(); i++) {
+                String name = names.get(i);
+                PerformanceResult pr = prList.get(i);
+                String unitGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), name
+                        + "_unit_wise_gainchart.csv", SourceType.LOCAL);
+                LOG.info("Unit-wise gain chart data is generated in {} for eval {} and name {}.", unitGainChartCsv,
+                        evalConfig.getName(), name);
+                gc.generateCsv(evalConfig, modelConfig, unitGainChartCsv, pr.gains);
+                if(hasWeight) {
+                    String weightedGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), name
+                            + "_weighted_gainchart.csv", SourceType.LOCAL);
+                    LOG.info("Weighted gain chart data is generated in {} for eval {} and name {}.",
+                            weightedGainChartCsv, evalConfig.getName(), name);
+                    gc.generateCsv(evalConfig, modelConfig, weightedGainChartCsv, pr.weightedGains);
+                }
+
+                String prCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), name + "_unit_wise_pr.csv",
                         SourceType.LOCAL);
-                LOG.info("Weighted pr data is generated in {} for eval {} and name {}.", weightedPrCsvFile,
+                LOG.info("Unit-wise pr data is generated in {} for eval {} and name {}.", prCsvFile,
                         evalConfig.getName(), name);
-                gc.generateCsv(evalConfig, modelConfig, weightedPrCsvFile, pr.weightedPr);
-            }
+                gc.generateCsv(evalConfig, modelConfig, prCsvFile, pr.pr);
 
-            String rocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), name + "_unit_wise_roc.csv",
-                    SourceType.LOCAL);
-            LOG.info("Unit-wise roc data is generated in {} for eval {} and name {}.", rocCsvFile,
-                    evalConfig.getName(), name);
-            gc.generateCsv(evalConfig, modelConfig, rocCsvFile, pr.roc);
+                if(hasWeight) {
+                    String weightedPrCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), name
+                            + "_weighted_pr.csv", SourceType.LOCAL);
+                    LOG.info("Weighted pr data is generated in {} for eval {} and name {}.", weightedPrCsvFile,
+                            evalConfig.getName(), name);
+                    gc.generateCsv(evalConfig, modelConfig, weightedPrCsvFile, pr.weightedPr);
+                }
 
-            if(hasWeight) {
-                String weightedRocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(),
-                        name + "_weighted_roc.csv", SourceType.LOCAL);
-                LOG.info("Weighted roc data is generated in {} for eval {} and name {}.", weightedRocCsvFile,
+                String rocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), name + "_unit_wise_roc.csv",
+                        SourceType.LOCAL);
+                LOG.info("Unit-wise roc data is generated in {} for eval {} and name {}.", rocCsvFile,
                         evalConfig.getName(), name);
-                gc.generateCsv(evalConfig, modelConfig, weightedRocCsvFile, pr.weightedRoc);
-            }
+                gc.generateCsv(evalConfig, modelConfig, rocCsvFile, pr.roc);
 
-            String modelScoreGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), name
-                    + "_modelscore_gainchart.csv", SourceType.LOCAL);
-            LOG.info("Model score gain chart data is generated in {} for eval {} and name {}.", modelScoreGainChartCsv,
-                    evalConfig.getName(), name);
-            gc.generateCsv(evalConfig, modelConfig, modelScoreGainChartCsv, pr.modelScoreList);
+                if(hasWeight) {
+                    String weightedRocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), name
+                            + "_weighted_roc.csv", SourceType.LOCAL);
+                    LOG.info("Weighted roc data is generated in {} for eval {} and name {}.", weightedRocCsvFile,
+                            evalConfig.getName(), name);
+                    gc.generateCsv(evalConfig, modelConfig, weightedRocCsvFile, pr.weightedRoc);
+                }
+
+                String modelScoreGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), name
+                        + "_modelscore_gainchart.csv", SourceType.LOCAL);
+                LOG.info("Model score gain chart data is generated in {} for eval {} and name {}.",
+                        modelScoreGainChartCsv, evalConfig.getName(), name);
+                gc.generateCsv(evalConfig, modelConfig, modelScoreGainChartCsv, pr.modelScoreList);
+            }
+            LOG.info("Performance Evaluation is done for {}.", evalConfig.getName());
         }
-        LOG.info("Performance Evaluation is done for {}.", evalConfig.getName());
     }
 
     @SuppressWarnings("deprecation")
@@ -777,14 +941,14 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         SourceType sourceType = evalConfig.getDataSet().getSource();
 
         // clean up output directories
-        ShifuFileUtils.deleteFile(pathFinder.getEvalScorePath(evalConfig, metaScore), sourceType);
+        ShifuFileUtils.deleteFile(pathFinder.getEvalMetaScorePath(evalConfig, metaScore), sourceType);
 
         // prepare special parameters and execute pig
         Map<String, String> paramsMap = new HashMap<String, String>();
 
         paramsMap.put(Constants.SOURCE_TYPE, sourceType.toString());
         paramsMap.put("pathEvalRawData", evalConfig.getDataSet().getDataPath());
-        paramsMap.put("pathSortScoreData", pathFinder.getEvalScorePath(evalConfig, metaScore));
+        paramsMap.put("pathSortScoreData", pathFinder.getEvalMetaScorePath(evalConfig, metaScore));
         paramsMap.put("eval_set_name", evalConfig.getName());
         paramsMap.put("delimiter", evalConfig.getDataSet().getDataDelimiter());
         paramsMap.put("column_name", metaScore);
@@ -939,7 +1103,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     private PerformanceResult runConfusionMatrix(EvalConfig config, ScoreStatus ss, String scoreDataPath,
             String evalPerformancePath, boolean isPrint, boolean isGenerateChart, boolean isUseMaxMinScore)
             throws IOException {
-        ConfusionMatrix worker = new ConfusionMatrix(modelConfig, config);
+        ConfusionMatrix worker = new ConfusionMatrix(modelConfig, config, this);
         switch(modelConfig.getBasic().getRunMode()) {
             case DIST:
             case MAPRED:
@@ -960,7 +1124,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     private PerformanceResult runConfusionMatrix(EvalConfig config, ScoreStatus ss, String scoreDataPath,
             String evalPerformancePath, boolean isPrint, boolean isGenerateChart, int targetColumnIndex,
             int scoreColumnIndex, int weightColumnIndex) throws IOException {
-        ConfusionMatrix worker = new ConfusionMatrix(modelConfig, config);
+        ConfusionMatrix worker = new ConfusionMatrix(modelConfig, config, this);
         switch(modelConfig.getBasic().getRunMode()) {
             case DIST:
             case MAPRED:
