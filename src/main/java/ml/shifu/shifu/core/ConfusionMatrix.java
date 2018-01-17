@@ -27,6 +27,13 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.ConfusionMatrixObject;
@@ -36,6 +43,7 @@ import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.PerformanceResult;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.eval.AreaUnderCurve;
 import ml.shifu.shifu.core.eval.GainChart;
@@ -48,13 +56,6 @@ import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
 import ml.shifu.shifu.util.JSONUtils;
-
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.Path;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Confusion matrix, hold the confusion matrix computing.
@@ -132,10 +133,17 @@ public class ConfusionMatrix {
      */
     private Set<String> negTags;
 
+    private Object lock;
+
     public ConfusionMatrix(ModelConfig modelConfig, EvalConfig evalConfig) throws IOException {
+        this(modelConfig, evalConfig, new Object());
+    }
+
+    public ConfusionMatrix(ModelConfig modelConfig, EvalConfig evalConfig, Object source) throws IOException {
         this.modelConfig = modelConfig;
         this.evalConfig = evalConfig;
         this.pathFinder = new PathFinder(modelConfig);
+        this.lock = source;
 
         String[] evalScoreHeader = getEvalScoreHeader();
         if(ArrayUtils.isEmpty(evalScoreHeader)) {
@@ -220,6 +228,26 @@ public class ConfusionMatrix {
                 this.targetColumnIndex, this.scoreColumnIndex, this.weightColumnIndex, isUseMaxMinScore);
     }
 
+    private boolean isGBTNeedConvertScore() {
+        String gbtStrategy = evalConfig.getGbtScoreConvertStrategy();
+        return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())
+                && gbtStrategy != null
+                && (gbtStrategy.equalsIgnoreCase(Constants.GBT_SCORE_HALF_CUTOFF_CONVETER) || gbtStrategy
+                        .equalsIgnoreCase(Constants.GBT_SCORE_MAXMIN_SCALE_CONVETER));
+    }
+
+    private boolean isGBTScoreHalfCutoffStreategy() {
+        String gbtStrategy = evalConfig.getGbtScoreConvertStrategy();
+        return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm()) && gbtStrategy != null
+                && gbtStrategy.equalsIgnoreCase(Constants.GBT_SCORE_HALF_CUTOFF_CONVETER);
+    }
+
+    private boolean isGBTScoreMaxMinScaleStreategy() {
+        String gbtStrategy = evalConfig.getGbtScoreConvertStrategy();
+        return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm()) && gbtStrategy != null
+                && gbtStrategy.equalsIgnoreCase(Constants.GBT_SCORE_MAXMIN_SCALE_CONVETER);
+    }
+
     public PerformanceResult bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags,
             double pigPosWeightTags, double pigNegWeightTags, long records, double maxPScore, double minPScore,
             String scoreDataPath, String evalPerformancePath, boolean isPrint, boolean isGenerateChart,
@@ -227,11 +255,21 @@ public class ConfusionMatrix {
             throws IOException {
         // 1. compute maxScore and minScore in case some cases score are not in [0, 1]
         double maxScore = 1d * scoreScale, minScore = 0d;
-        if(isUseMaxMinScore) {
-            // TODO some cases maxPScore is already scaled, how to fix that issue
-            maxScore = maxPScore;
-            minScore = minPScore;
+
+        if(isGBTNeedConvertScore()) {
+            // if need convert to [0, 1], just keep max score to 1 and min score to 0 without doing anything
+        } else {
+            if(isUseMaxMinScore) {
+                // TODO some cases maxPScore is already scaled, how to fix that issue
+                maxScore = maxPScore;
+                minScore = minPScore;
+            } else {
+                // otherwise, keep [0, 1]
+            }
         }
+
+        LOG.info("{} Transformed (scale included) max score is {}, transformed min score is {}",
+                evalConfig.getGbtScoreConvertStrategy(), maxScore, minScore);
 
         SourceType sourceType = evalConfig.getDataSet().getSource();
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(scoreDataPath, sourceType);
@@ -253,9 +291,6 @@ public class ConfusionMatrix {
         int fpBin = 1, tpBin = 1, gainBin = 1, fpWeightBin = 1, tpWeightBin = 1, gainWeightBin = 1, modelScoreBin = 1;
         long index = 0, cnt = 0, invalidTargetCnt = 0, invalidWgtCnt = 0;
 
-        // System.out.println("max score  is " + maxScore + " scoreBin is " + modelScoreBin + " bin score is " +
-        // binScore);
-
         ConfusionMatrixObject prevCmo = buildInitalCmo(pigPosTags, pigNegTags, pigPosWeightTags, pigNegWeightTags,
                 maxScore);
         PerformanceObject po = buildFirstPO(prevCmo);
@@ -267,6 +302,9 @@ public class ConfusionMatrix {
         catchRateWeightList.add(po);
         gainWeightList.add(po);
         modelScoreList.add(po);
+
+        boolean isGBTScoreHalfCutoffStreategy = isGBTScoreHalfCutoffStreategy();
+        boolean isGBTScoreMaxMinScaleStreategy = isGBTScoreMaxMinScaleStreategy();
 
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
@@ -331,6 +369,21 @@ public class ConfusionMatrix {
                     cmo.setWeightedFp(cmo.getWeightedFp() + weight * 1.0);
                     cmo.setWeightedTn(cmo.getWeightedTn() - weight * 1.0);
                 }
+
+                if(isGBTScoreHalfCutoffStreategy) {
+                    // half cut off means score <0 then set to 0 and then min score is 0, max score is raw max score,
+                    // use max min scale to rescale to [0, 1]
+                    if(score < 0d) {
+                        score = 0d;
+                    }
+                    score = ((score - 0) * scoreScale) / (maxPScore - 0);
+                } else if(isGBTScoreMaxMinScaleStreategy) {
+                    // use max min scaler to make score in [0, 1], don't foget to time scoreScale
+                    score = ((score - minPScore) * scoreScale) / (maxPScore - minPScore);
+                } else {
+                    // do nothing, use current score
+                }
+
                 cmo.setScore(Double.parseDouble(SCORE_FORMAT.format(score)));
 
                 ConfusionMatrixObject object = cmo;
@@ -387,33 +440,35 @@ public class ConfusionMatrix {
 
         PerformanceResult result = buildPerfResult(FPRList, catchRateList, gainList, modelScoreList, FPRWeightList,
                 catchRateWeightList, gainWeightList);
-        // System.out.println(result.modelScoreList);
-        if(isPrint) {
-            PerformanceEvaluator.logResult(FPRList, "Bucketing False Positive Rate");
 
-            if(hasWeight) {
-                PerformanceEvaluator.logResult(FPRWeightList, "Bucketing Weighted False Positive Rate");
+        synchronized(this.lock) {
+            if(isPrint) {
+                PerformanceEvaluator.logResult(FPRList, "Bucketing False Positive Rate");
+
+                if(hasWeight) {
+                    PerformanceEvaluator.logResult(FPRWeightList, "Bucketing Weighted False Positive Rate");
+                }
+
+                PerformanceEvaluator.logResult(catchRateList, "Bucketing Catch Rate");
+
+                if(hasWeight) {
+                    PerformanceEvaluator.logResult(catchRateWeightList, "Bucketing Weighted Catch Rate");
+                }
+
+                PerformanceEvaluator.logResult(gainList, "Bucketing Action Rate");
+
+                if(hasWeight) {
+                    PerformanceEvaluator.logResult(gainWeightList, "Bucketing Weighted Action Rate");
+                }
+
+                PerformanceEvaluator.logAucResult(result, hasWeight);
             }
 
-            PerformanceEvaluator.logResult(catchRateList, "Bucketing Catch Rate");
+            writePerResult2File(evalPerformancePath, result);
 
-            if(hasWeight) {
-                PerformanceEvaluator.logResult(catchRateWeightList, "Bucketing Weighted Catch Rate");
+            if(isGenerateChart) {
+                generateChartAndJsonPerfFiles(hasWeight, result);
             }
-
-            PerformanceEvaluator.logResult(gainList, "Bucketing Action Rate");
-
-            if(hasWeight) {
-                PerformanceEvaluator.logResult(gainWeightList, "Bucketing Weighted Action Rate");
-            }
-
-            PerformanceEvaluator.logAucResult(result, hasWeight);
-        }
-
-        writePerResult2File(evalPerformancePath, result);
-
-        if(isGenerateChart) {
-            generateChartAndJsonPerfFiles(hasWeight, result);
         }
 
         if(cnt == 0) {
@@ -578,8 +633,7 @@ public class ConfusionMatrix {
                 int maxIndex = -1;
                 double maxScore = Double.NEGATIVE_INFINITY;
 
-                if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())
-                        && !modelConfig.getTrain().isOneVsAll()) {
+                if(CommonUtils.isTreeModel(modelConfig.getAlgorithm()) && !modelConfig.getTrain().isOneVsAll()) {
                     // for RF native classification
                     double[] tagCounts = new double[tags.size()];
                     for(int i = this.multiClassScore1Index; i < (raw.length - this.metaColumns); i++) {

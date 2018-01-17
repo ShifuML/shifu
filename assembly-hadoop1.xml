@@ -130,7 +130,6 @@
                 <include>*:jackson-databind:*</include>
                 <include>*:pmml-model:*</include>
                 <include>*:pmml-schema:*</include>
-                <include>*:pmml-evaluator:*</include>
                 <include>*:jaxb-impl:*</include>
                 <include>*:jline:*</include>
                 <include>*:liblinear:*</include>

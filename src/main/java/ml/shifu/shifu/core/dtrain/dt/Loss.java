@@ -87,16 +87,14 @@ class HalfGradSquaredLoss extends SquaredLoss {
  * @author Zhang David (pengzhang@paypal.com)
  */
 class LogLoss implements Loss {
-
+    // reference https://statweb.stanford.edu/~jhf/ftp/trebst.pdf
     @Override
     public float computeGradient(float predict, float label) {
-        return -4f * label / (1f + (float) Math.exp(2d * label * predict));
+        return (2 - 4 * label) / (float) Math.exp(4 * label * predict - 2 * predict);
     }
 
     @Override
     public float computeError(float predict, float label) {
-        float margin = 2.0f * label * predict;
-        return 2f * (float) Math.log1p(Math.exp(-margin));
+        return (float) Math.log1p(1 + Math.exp(2 * predict - 4 * predict * label));
     }
-
 }

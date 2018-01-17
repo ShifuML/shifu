@@ -32,6 +32,21 @@ public class PMMLScoreGenTest {
         }
     }
 
+    @Test
+    public void verifyPmml2() throws Exception {
+        String dataPath = "src/test/resources/example/pmml-test/atom17v2_seg1_3p_score.csv";
+        String delimiter = "\\|";
+
+        PMML pmml = PMMLUtils.loadPMML("src/test/resources/example/pmml-test/FF_3P0.pmml");
+        NeuralNetworkEvaluator evaluator = new NeuralNetworkEvaluator(pmml);
+
+        List<Map<FieldName, FieldValue>> input = CsvUtil.load(evaluator, dataPath, delimiter);
+        for (Map<FieldName, FieldValue> rawLine : input) {
+            int score = runPmmlModel(evaluator, rawLine);
+            System.out.println(score);
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private int runPmmlModel(NeuralNetworkEvaluator evaluator, Map<FieldName, FieldValue> rawInput) {
         switch (evaluator.getModel().getFunctionName()) {

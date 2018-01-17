@@ -147,7 +147,8 @@ public class LogisticRegressionMaster extends
         loadConfigFiles(context.getProps());
         int trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
 
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
+                .getGridConfigFileContent());
         validParams = this.modelConfig.getTrain().getParams();
         if(gs.hasHyperParam()) {
             validParams = gs.getParams(trainerId);
@@ -155,7 +156,8 @@ public class LogisticRegressionMaster extends
         }
 
         this.learningRate = Double.valueOf(this.validParams.get(CommonConstants.LR_LEARNING_RATE).toString());
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                this.columnConfigList);
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
 
         Object vtObj = this.validParams.get("ValidationTolerance");
@@ -282,7 +284,8 @@ public class LogisticRegressionMaster extends
             }
 
             double[] oldWeights = Arrays.copyOf(this.weights, this.weights.length);
-            this.weights = this.weightCalculator.calculateWeights(this.weights, gradients);
+            this.weights = this.weightCalculator.calculateWeights(this.weights, gradients,
+                    (context.getCurrentIteration() - 1));
 
             double finalTrainError = trainError / trainSize;
             double finalTestError = testError / testSize;

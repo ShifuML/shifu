@@ -42,8 +42,6 @@ import org.encog.ml.data.basic.BasicMLData;
  * <p>
  * {@link #loadFromStream(InputStream, boolean)} can be used to read serialized models. Which is delegated to
  * {@link IndependentTreeModel}.
- * 
- * @author Zhang David (pengzhang@paypal.com)
  */
 public class TreeModel extends BasicML implements MLRegression {
 
@@ -90,8 +88,17 @@ public class TreeModel extends BasicML implements MLRegression {
         return loadFromStream(input, false);
     }
 
+    public static TreeModel loadFromStream(InputStream input, String gbtScoreConvertStrategy) throws IOException {
+        return loadFromStream(input, false, gbtScoreConvertStrategy);
+    }
+
     public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb) throws IOException {
         return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb));
+    }
+
+    public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, String gbtScoreConvertStrategy)
+            throws IOException {
+        return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb, gbtScoreConvertStrategy));
     }
 
     public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode)
@@ -100,9 +107,21 @@ public class TreeModel extends BasicML implements MLRegression {
     }
 
     public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode,
+            String gbtScoreConvertStrategy) throws IOException {
+        return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb, isOptimizeMode,
+                gbtScoreConvertStrategy));
+    }
+
+    public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode,
             boolean isRemoveNameSpace) throws IOException {
         return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb, isOptimizeMode,
                 isRemoveNameSpace));
+    }
+
+    public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode,
+            boolean isRemoveNameSpace, String gbtScoreConvertStrategy) throws IOException {
+        return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb, isOptimizeMode,
+                isRemoveNameSpace, gbtScoreConvertStrategy));
     }
 
     @Override
@@ -120,7 +139,7 @@ public class TreeModel extends BasicML implements MLRegression {
     }
 
     public List<TreeNode> getTrees() {
-        return this.getIndependentTreeModel().getTrees();
+        return this.getIndependentTreeModel().getTrees().get(0);
     }
 
     public boolean isGBDT() {
@@ -143,18 +162,27 @@ public class TreeModel extends BasicML implements MLRegression {
     public Map<Integer, MutablePair<String, Double>> getFeatureImportances() {
         Map<Integer, MutablePair<String, Double>> importancesSum = new HashMap<Integer, MutablePair<String, Double>>();
         Map<Integer, String> nameMapping = this.getIndependentTreeModel().getNumNameMapping();
-        int size = this.getIndependentTreeModel().getTrees().size();
-        for(TreeNode tree: this.getIndependentTreeModel().getTrees()) {
+        int treeSize = this.getIndependentTreeModel().getTrees().size();
+
+        // such case we only support treeModel is one element list
+        if(this.getIndependentTreeModel().getTrees().size() != 1) {
+            throw new RuntimeException(
+                    "Bagging model cannot be supported in Tree Model one element feature importance computing.");
+        }
+
+        for(TreeNode tree: this.getIndependentTreeModel().getTrees().get(0)) {
+            // get current tree importance at first
             Map<Integer, Double> subImportances = tree.computeFeatureImportance();
+            // merge feature importance from different trees
             for(Entry<Integer, Double> entry: subImportances.entrySet()) {
                 String featureName = nameMapping.get(entry.getKey());
                 MutablePair<String, Double> importance = MutablePair.of(featureName, entry.getValue());
                 if(!importancesSum.containsKey(entry.getKey())) {
-                    importance.setValue(importance.getValue() / size);
+                    importance.setValue(importance.getValue() / treeSize);
                     importancesSum.put(entry.getKey(), importance);
                 } else {
                     MutablePair<String, Double> current = importancesSum.get(entry.getKey());
-                    current.setValue(current.getValue() + importance.getValue() / size);
+                    current.setValue(current.getValue() + importance.getValue() / treeSize);
                     importancesSum.put(entry.getKey(), current);
                 }
             }
@@ -163,8 +191,12 @@ public class TreeModel extends BasicML implements MLRegression {
     }
 
     /**
-     * Sort by feature impotance
+     * Sort by feature importance.
      * 
+     * @param unsortMap
+     *            map of raw feature importance
+     * @param order
+     *            descending or ascending
      * @return map of feature importance, key is column index.
      */
     public static Map<Integer, MutablePair<String, Double>> sortByValue(

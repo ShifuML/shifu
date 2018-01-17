@@ -26,7 +26,7 @@ import java.util.Scanner;
 import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
+import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper;
 import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountReducer;
@@ -38,8 +38,8 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
-
 import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
+
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;

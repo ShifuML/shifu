@@ -380,6 +380,7 @@ public class DTWorker
         Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
         if(kCrossValidation != null && kCrossValidation > 0) {
             isKFoldCV = true;
+            LOG.info("Cross validation is enabled by kCrossValidation: {}.", kCrossValidation);
         }
 
         Double upSampleWeight = modelConfig.getTrain().getUpSampleWeight();
@@ -412,7 +413,7 @@ public class DTWorker
         this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
         this.isOneVsAll = modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll();
 
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
         Map<String, Object> validParams = this.modelConfig.getTrain().getParams();
         if(gs.hasHyperParam()) {
             validParams = gs.getParams(this.trainerId);
@@ -636,13 +637,17 @@ public class DTWorker
                                 if(this.isStratifiedSampling) {
                                     random = baggingRandomMap.get(classValue);
                                     if(random == null) {
-                                        random = new Random();
+                                        random = DTrainUtils.generateRandomBySampleSeed(
+                                                modelConfig.getTrain().getBaggingSampleSeed(),
+                                                CommonConstants.NOT_CONFIGURED_BAGGING_SEED);
                                         baggingRandomMap.put(classValue, random);
                                     }
                                 } else {
                                     random = baggingRandomMap.get(0);
                                     if(random == null) {
-                                        random = new Random();
+                                        random = DTrainUtils.generateRandomBySampleSeed(
+                                                modelConfig.getTrain().getBaggingSampleSeed(),
+                                                CommonConstants.NOT_CONFIGURED_BAGGING_SEED);
                                         baggingRandomMap.put(0, random);
                                     }
                                 }
@@ -921,10 +926,14 @@ public class DTWorker
         if(validationData != null) {
             this.validationData.switchState();
         }
-        LOG.info("    - # Records of the Master Data Set: {}.", this.count);
+        LOG.info("    - # Records of the Total Data Set: {}.", this.count);
         LOG.info("    - Bagging Sample Rate: {}.", this.modelConfig.getBaggingSampleRate());
         LOG.info("    - Bagging With Replacement: {}.", this.modelConfig.isBaggingWithReplacement());
-        LOG.info("        - Cross Validation Rate: {}.", this.modelConfig.getValidSetRate());
+        if(this.isKFoldCV) {
+            LOG.info("        - Validation Rate(kFold): {}.", 1d / this.modelConfig.getTrain().getNumKFold());
+        } else {
+            LOG.info("        - Validation Rate: {}.", this.modelConfig.getValidSetRate());
+        }
         LOG.info("        - # Records of the Training Set: {}.", this.trainingData.size());
         if(modelConfig.isRegression() || modelConfig.getTrain().isOneVsAll()) {
             LOG.info("        - # Positive Bagging Selected Records of the Training Set: {}.",
@@ -946,6 +955,7 @@ public class DTWorker
 
     private List<Integer> getAllValidFeatures() {
         List<Integer> features = new ArrayList<Integer>();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for(ColumnConfig config: columnConfigList) {
             if(isAfterVarSelect) {
                 if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
@@ -957,7 +967,7 @@ public class DTWorker
                     }
                 }
             } else {
-                if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config)) {
+                if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config, hasCandidates)) {
                     // only select numerical feature with getBinBoundary().size() larger than 1
                     // or categorical feature with getBinCategory().size() larger than 0
                     if((config.isNumerical() && config.getBinBoundary().size() > 1)
@@ -1098,6 +1108,7 @@ public class DTWorker
         // use NNConstants.NN_DEFAULT_COLUMN_SEPARATOR to replace getModelConfig().getDataSetDelimiter(), super follows
         // the function in akka mode.
         int index = 0, inputIndex = 0;
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for(String input: DEFAULT_SPLITTER.split(currentValue.getWritable().toString())) {
             if(index == this.columnConfigList.size()) {
                 // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
@@ -1124,7 +1135,7 @@ public class DTWorker
                     if(!isAfterVarSelect) {
                         // no variable selected, good candidate but not meta and not target chose
                         if(!columnConfig.isMeta() && !columnConfig.isTarget()
-                                && CommonUtils.isGoodCandidate(columnConfig)) {
+                                && CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
                             if(columnConfig.isNumerical()) {
                                 float floatValue = getFloatValue(input);
                                 // cast is safe as we limit max bin to Short.MAX_VALUE
@@ -1501,13 +1512,15 @@ public class DTWorker
             if(this.isStratifiedSampling) {
                 random = baggingRandomMap.get(classValue);
                 if(random == null) {
-                    random = new Random();
+                    random = DTrainUtils.generateRandomBySampleSeed(modelConfig.getTrain().getBaggingSampleSeed(),
+                            CommonConstants.NOT_CONFIGURED_BAGGING_SEED);
                     baggingRandomMap.put(classValue, random);
                 }
             } else {
                 random = baggingRandomMap.get(0);
                 if(random == null) {
-                    random = new Random();
+                    random = DTrainUtils.generateRandomBySampleSeed(modelConfig.getTrain().getBaggingSampleSeed(),
+                            CommonConstants.NOT_CONFIGURED_BAGGING_SEED);
                     baggingRandomMap.put(0, random);
                 }
             }
@@ -1560,7 +1573,9 @@ public class DTWorker
         private static final long serialVersionUID = 903201066309036170L;
 
         /**
-         * Inputs for bin index, short is using to compress
+         * Inputs for bin index, short is using to compress data, for numerical, it can be byte type for less than 256
+         * bins, while it is hard to control byte and short together, as so far memory consumption is OK, just use short
+         * for both numerical and categorical columns
          */
         short[] inputs;
 

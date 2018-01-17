@@ -42,15 +42,16 @@ public class DataPurifier {
     private String dataDelimiter;
     private Expression dataFilterExpr;
     private ShifuMapContext jc = new ShifuMapContext();
+    private JexlEngine jexl;
 
     public DataPurifier(ModelConfig modelConfig) throws IOException {
         if(StringUtils.isNotBlank(modelConfig.getFilterExpressions())) {
-            JexlEngine jexl = new JexlEngine();
+            jexl = new JexlEngine();
             try {
                 dataFilterExpr = jexl.createExpression(modelConfig.getFilterExpressions());
             } catch (JexlException e) {
-                log.error("The expression is {} is invalid, please use correct expression.",
-                        modelConfig.getFilterExpressions());
+                log.error("The expression is " + modelConfig.getFilterExpressions()
+                        + "is invalid, please use correct expression.", e);
                 dataFilterExpr = null;
             }
             this.headers = CommonUtils.getFinalHeaders(modelConfig);
@@ -58,13 +59,36 @@ public class DataPurifier {
         }
     }
 
+    public DataPurifier(ModelConfig modelConfig, String filterExpressions, boolean strict) throws IOException {
+        if(StringUtils.isNotBlank(filterExpressions)) {
+            jexl = new JexlEngine();
+            jexl.setStrict(strict);
+            try {
+                dataFilterExpr = jexl.createExpression(filterExpressions);
+            } catch (JexlException e) {
+                if(strict) {
+                    throw new RuntimeException(e);
+                } else {
+                    log.error("The expression " + filterExpressions + "is invalid, please use correct expression.", e);
+                }
+                dataFilterExpr = null;
+            }
+            this.headers = CommonUtils.getFinalHeaders(modelConfig);
+            dataDelimiter = modelConfig.getDataSetDelimiter();
+        }
+    }
+
+    public DataPurifier(ModelConfig modelConfig, String filterExpressions) throws IOException {
+        this(modelConfig, filterExpressions, false);
+    }
+
     public DataPurifier(EvalConfig evalConfig) throws IOException {
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getFilterExpressions())) {
-            JexlEngine jexl = new JexlEngine();
+            jexl = new JexlEngine();
             try {
                 dataFilterExpr = jexl.createExpression(evalConfig.getDataSet().getFilterExpressions());
             } catch (JexlException e) {
-                log.error("The expression is {} is invalid, please use correct expression.", evalConfig.getDataSet()
+                log.error("The expression {} is invalid, please use correct expression.", evalConfig.getDataSet()
                         .getFilterExpressions());
                 dataFilterExpr = null;
             }
@@ -74,7 +98,7 @@ public class DataPurifier {
         }
     }
 
-    public Boolean isFilterOut(String record) {
+    public Boolean isFilter(String record) {
         if(dataFilterExpr == null) {
             return true;
         }
@@ -99,17 +123,24 @@ public class DataPurifier {
         try {
             retObj = dataFilterExpr.evaluate(jc);
         } catch (Throwable e) {
-            log.debug("Error occurred when trying to evaluate", dataFilterExpr.toString(), e);
+            if(this.jexl.isStrict()) {
+                throw new RuntimeException(e);
+            } else {
+                log.error("Error occurred when trying to evaluate" + dataFilterExpr.toString(), e);
+            }
         }
 
         if(retObj != null && retObj instanceof Boolean) {
             result = (Boolean) retObj;
+        } else if(retObj != null && !(retObj instanceof Boolean)) {
+            throw new InvalidFilterResultExcetion("Invalid filter return not boolean type: "
+                    + dataFilterExpr.getExpression());
         }
 
         return result;
     }
 
-    public Boolean isFilterOut(Tuple input) throws ExecException {
+    public Boolean isFilter(Tuple input) throws ExecException {
         if(dataFilterExpr == null) {
             return true;
         }
@@ -130,14 +161,77 @@ public class DataPurifier {
         try {
             retObj = dataFilterExpr.evaluate(jc);
         } catch (Throwable e) {
-            log.debug("Error occurred when trying to evaluate", dataFilterExpr.toString(), e);
+            if(this.jexl.isStrict()) {
+                throw new RuntimeException(e);
+            } else {
+                log.warn("Error occurred when trying to evaluate" + dataFilterExpr.toString(), e);
+            }
         }
 
         if(retObj != null && retObj instanceof Boolean) {
             result = (Boolean) retObj;
+        } else if(retObj != null && !(retObj instanceof Boolean)) {
+            throw new InvalidFilterResultExcetion("Invalid filter return not boolean type: "
+                    + dataFilterExpr.getExpression());
         }
 
         return result;
+    }
+
+    // reuse context
+    public static class InvalidFilterResultExcetion extends RuntimeException {
+
+        private static final long serialVersionUID = 279485512893373010L;
+
+        /**
+         * Constructs a new fail task runtime exception with <code>null</code> as its detail message. The cause is
+         * not initialized, and may subsequently be initialized by a call to {@link #initCause}.
+         */
+        public InvalidFilterResultExcetion() {
+        }
+
+        /**
+         * Constructs a new fail task runtime exception with the specified detail message. The cause is not
+         * initialized, and may subsequently be initialized by a call to {@link #initCause}.
+         * 
+         * @param message
+         *            the detail message. The detail message is saved for later retrieval by the {@link #getMessage()}
+         *            method.
+         */
+        public InvalidFilterResultExcetion(String message) {
+            super(message);
+        }
+
+        /**
+         * Constructs a new fail task runtime exception with the specified detail message and cause.
+         * <p>
+         * Note that the detail message associated with <code>cause</code> is <i>not</i> automatically incorporated in
+         * this runtime exception's detail message.
+         * 
+         * @param message
+         *            the detail message (which is saved for later retrieval by the {@link #getMessage()} method).
+         * @param cause
+         *            the cause (which is saved for later retrieval by the {@link #getCause()} method). (A <tt>null</tt>
+         *            value is permitted, and indicates that the cause is nonexistent or unknown.)
+         */
+        public InvalidFilterResultExcetion(String message, Throwable cause) {
+            super(message, cause);
+        }
+
+        /**
+         * Constructs a new fail task runtime exception with the specified cause and a detail message of
+         * <tt>(cause==null ? null : cause.toString())</tt> (which typically contains the class and detail
+         * message of <tt>cause</tt>). This constructor is useful for runtime exceptions that are little more than
+         * wrappers for other throwables.
+         * 
+         * @param cause
+         *            the cause (which is saved for later retrieval by the {@link #getCause()} method). (A <tt>null</tt>
+         *            value is permitted, and indicates that the cause is nonexistent or unknown.)
+         */
+        public InvalidFilterResultExcetion(Throwable cause) {
+            super(cause);
+        }
+
     }
 
     // reuse context

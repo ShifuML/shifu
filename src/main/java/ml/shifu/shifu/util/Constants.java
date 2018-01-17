@@ -37,6 +37,7 @@ public interface Constants {
     public static final String MODEL_SETS = "ModelSets";
 
     public static final String TMP = "tmp";
+    public static final String MODELS_TMP = "modelsTmp";
 
     public static final String PIG_HEADER = ".pig_header";
 
@@ -78,6 +79,7 @@ public interface Constants {
     public static final String LR = "lr";
     public static final String SVM = "svm";
     public static final String NN = "nn";
+    public static final String GBT = "GBT";
 
     public static final String BZ2_SUFFIX = ".bz2";
     public static final String GZ_SUFFIX = ".gz";
@@ -104,6 +106,7 @@ public interface Constants {
     public static final String EVAL_DIR = "evals";
     public static final String EVAL_NORMALIZED = "EvalNormalized";
     public static final String EVAL_SCORE = "EvalScore";
+    public static final String EVAL_META_SCORE = "EvalMetaScore";
     public static final String EVAL_PERFORMANCE = "EvalPerformance.json";
     public static final String EVAL_MATRIX = "EvalConfusionMatrix";
 
@@ -154,13 +157,14 @@ public interface Constants {
     public static final String KEY_AUTO_TYPE_PATH = "autoTypePath";
     public static final String KEY_CORRELATION_PATH = "correlationPath";
 
-
     public static final String DEFAULT_META_COLUMN_FILE = "meta.column.names";
     public static final String DEFAULT_CATEGORICAL_COLUMN_FILE = "categorical.column.names";
+    public static final String DEFAULT_HYBRID_COLUMN_FILE = "hybrid.column.names";
     public static final String DEFAULT_CANDIDATE_COLUMN_FILE = "candidate.column.names";
     public static final String DEFAULT_FORCESELECT_COLUMN_FILE = "forceselect.column.names";
     public static final String DEFAULT_FORCEREMOVE_COLUMN_FILE = "forceremove.column.names";
     public static final String DEFAULT_EVALSCORE_META_COLUMN_FILE = "score.meta.column.names";
+    public static final String DEFAULT_EXPRESSION_COLUMN_FILE = "filter.expressions";
 
     public static final String VAR_SEL_MASTER_CONDUCTOR = "dvarsel.master.conductor.cls";
     public static final String VAR_SEL_WORKER_CONDUCTOR = "dvarsel.worker.conductor.cls";
@@ -251,11 +255,60 @@ public interface Constants {
     public static final String SHIFU_CORRELATION_MULTI_THREADS = "shifu.correlation.multi.threads";
 
     public static final String SHIFU_CORRELATION_MULTI = "shifu.correlation.multi";
-    
+
     public static final String SHIFU_CURRENT_WORKING_DIR = "shifu.current.working.dir";
-    
+
     public static final String SHIFU_CORRELATION_COMPUTE_ALL = "shifu.correlation.computeAll";
 
     public static final String CATEGORICAL_GROUP_VAL_DELIMITER = "@^";
+
+    public static final String SHIFU_NAMESPACE_STRICT_MODE = "shifu.namespace.strict.mode";
+
+    public static final String EMPTY_CATEGORY = "";
+
+    /**
+     * The limitation of max categorical value length
+     */
+    public static final int MAX_CATEGORICAL_VAL_LEN = 10 * 1024;
+
+    /**
+     * Experience value from modeler
+     */
+    public static final int MAX_CATEGORICAL_BINC_COUNT = 10000;
+
+    public static final String SHIFU_MAX_CATEGORY_SIZE = "shifu.max.category.size";
+
+    public static final String SHIFU_NN_INDEPENDENT_MODEL = "shifu.nn.independent.model";
+
+    public static final String SHIFU_NN_BINARY_MODEL_PATH = "shifu.nn.binary.model.path";
+
+    public static final String HYBRID_BIN_STR_DILIMETER = ";;;";
+
+    public static final String SHIFU_EVAL_PARALLEL_NUM = "shifu.eval.parallel.num";
+
+    public static final String SHIFU_EVAL_PARALLEL = "shifu.eval.parallel";
+
+    public static final String SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER = "@@";
+
+    public static final String SHIFU_STATS_FILTER_EXPRESSIONS = "shifu.stats.filter.expressions";
+
+    public static final String IS_COMPUTE_PSI = "IS_COMPUTE_PSI";
+    public static final String IS_COMPUTE_CORR = "IS_COMPUTE_CORR";
+    public static final String IS_REBIN = "IS_RE_BIN";
+
+    public static final String REQUEST_VARS = "REQUEST_VARS";
+    public static final String EXPECTED_BIN_NUM = "EXPECTED_BIN_NUM";
+    public static final String IV_KEEP_RATIO = "IV_KEEP_RATIO";
+    public static final String MINIMUM_BIN_INST_CNT = "MINIMUM_BIN_INST_CNT";
+
+    /**
+     * GBT score range is not in [0, 1], to make it in [0, 1], such strategies are provided with case insensitive.
+     */
+    public static String GBT_SCORE_RAW_CONVETER = "RAW";
+    public static String GBT_SCORE_SIGMOID_CONVETER = "SIGMOID";
+    public static String GBT_SCORE_OLD_SIGMOID_CONVETER = "OLD_SIGMOID";
+    public static String GBT_SCORE_CUTOFF_CONVETER = "CUTOFF";
+    public static String GBT_SCORE_HALF_CUTOFF_CONVETER = "HALF_CUTOFF";
+    public static String GBT_SCORE_MAXMIN_SCALE_CONVETER = "MAXMIN";
 
 }

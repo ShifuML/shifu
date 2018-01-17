@@ -15,12 +15,21 @@
  */
 package ml.shifu.shifu;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.processor.StatsModelProcessor;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
+
 import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
 import org.powermock.api.easymock.PowerMock;
@@ -31,11 +40,6 @@ import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
-
-import java.io.*;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * ManagerTest class
@@ -343,9 +347,9 @@ public class ShifuCLITest {
         FileUtils.copyDirectory(originConfDir, tmpConfDir);
 
         Map<String, Object> params = new HashMap<String, Object>();
-        params.put(StatsModelProcessor.IS_REBIN, true);
-        params.put(StatsModelProcessor.IV_KEEP_RATIO, "0.975");
-        params.put(StatsModelProcessor.MINIMUM_BIN_INST_CNT, "2000");
+        params.put(Constants.IS_REBIN, true);
+        params.put(Constants.IV_KEEP_RATIO, "0.975");
+        params.put(Constants.MINIMUM_BIN_INST_CNT, "2000");
         ShifuCLI.calModelStats(params);
         Assert.assertTrue(new File("tmp/ColumnConfig.json").exists());
 
