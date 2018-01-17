@@ -15,11 +15,16 @@
  */
 package ml.shifu.shifu.core.dtrain.dt;
 
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.*;
-import java.util.Map.Entry;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import ml.shifu.guagua.master.BasicMasterInterceptor;
@@ -34,9 +39,8 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
-import ml.shifu.shifu.util.Constants;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -50,11 +54,6 @@ import org.slf4j.LoggerFactory;
 public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerParams> {
 
     private static final Logger LOG = LoggerFactory.getLogger(DTOutput.class);
-
-    /**
-     * The limitation of max categorical value length
-     */
-    private static final int MAX_CATEGORICAL_VAL_LEN = 10 * 1024;
 
     /**
      * Model Config read from HDFS
@@ -123,6 +122,11 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
      */
     private boolean isKFoldCV;
 
+    /**
+     * Use the same one conf instance
+     */
+    private Configuration conf;
+
     @Override
     public void preApplication(MasterContext<DTMasterParams, DTWorkerParams> context) {
         init(context);
@@ -133,20 +137,47 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         long start = System.currentTimeMillis();
         // save tmp to hdfs according to raw trainer logic
         final int tmpModelFactor = DTrainUtils.tmpModelFactor(context.getTotalIteration());
+        final int currentIteration = context.getCurrentIteration();
+        final int totalIteration = context.getTotalIteration();
+        final boolean isHalt = context.getMasterResult().isHalt();
+
         if(isRF) {
-            if(context.getCurrentIteration() % (tmpModelFactor * 2) == 0) {
+            if(currentIteration % (tmpModelFactor * 2) == 0) {
+                // save tmp models
                 Thread tmpModelPersistThread = new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        // save model results for continue model training, if current job is failed, then next running
+                        // save model results for continue model training, if current job is failed, then next
+                        // running
                         // we can start from this point to save time.
                         // another case for master recovery, if master is failed, read such checkpoint model
                         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-                        writeModelToFileSystem(context.getMasterResult().getTrees(), out);
 
-                        saveTmpModelToHDFS(context.getCurrentIteration(), context.getMasterResult().getTrees());
+                        // if current iteration is the last iteration, or it is halted by early stop condition, no
+                        // need to save checkpoint model here as it is replicated with postApplicaiton.
+                        // There is issue here if saving the same model in this thread and another thread in
+                        // postApplication, sometimes this conflict will cause model writing failed.
+                        if(!isHalt && currentIteration != totalIteration) {
+                            Path tmpModelPath = getTmpModelPath(currentIteration);
+                            writeModelToFileSystem(context.getMasterResult().getTrees(), out);
+
+                            // in such case tmp model is final model, just copy to tmp models
+                            LOG.info("Copy checkpointed model to tmp folder: {}", tmpModelPath.toString());
+                            try {
+                                DataOutputStream outputStream = new DataOutputStream(new GZIPOutputStream(FileSystem
+                                        .get(DTOutput.this.conf).create(tmpModelPath)));
+                                FSDataInputStream inputStream = FileSystem.get(DTOutput.this.conf).open(out);
+                                DataInputStream dis = new DataInputStream(new GZIPInputStream(inputStream));
+                                IOUtils.copyBytes(dis, outputStream, DTOutput.this.conf);
+                            } catch (IOException e) {
+                                LOG.warn("Error in copy models to tmp", e);
+                            }
+                        } else {
+                            // last one only save tmp models
+                            saveTmpModelToHDFS(currentIteration, context.getMasterResult().getTrees());
+                        }
                     }
-                }, "saveTmpNNToHDFS thread");
+                }, "saveTmpModelToHDFS thread");
                 tmpModelPersistThread.setDaemon(true);
                 tmpModelPersistThread.start();
             }
@@ -164,11 +195,33 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                             // running we can start from this point to save time.
                             // another case for master recovery, if master is failed, read such checkpoint model
                             Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-                            writeModelToFileSystem(subTrees, out);
-                            // last one is newest one with only ROOT node, should be excluded
-                            saveTmpModelToHDFS(subTrees.size(), subTrees);
+
+                            // if current iteration is the last iteration, or it is halted by early stop condition, no
+                            // need to save checkpoint model here as it is replicated with postApplicaiton.
+                            // There is issue here if saving the same model in this thread and another thread in
+                            // postApplication, sometimes this conflict will cause model writing failed.
+                            int subTreesSize = subTrees.size();
+                            if(!isHalt && currentIteration != totalIteration) {
+                                Path tmpModelPath = getTmpModelPath(subTreesSize);
+                                writeModelToFileSystem(subTrees, out);
+
+                                // in such case tmp model is final model, just copy to tmp models
+                                LOG.info("Copy checkpointed model to tmp folder: {}", tmpModelPath.toString());
+                                try {
+                                    DataOutputStream outputStream = new DataOutputStream(new GZIPOutputStream(
+                                            FileSystem.get(DTOutput.this.conf).create(tmpModelPath)));
+                                    FSDataInputStream inputStream = FileSystem.get(DTOutput.this.conf).open(out);
+                                    DataInputStream dis = new DataInputStream(new GZIPInputStream(inputStream));
+                                    IOUtils.copyBytes(dis, outputStream, DTOutput.this.conf);
+                                } catch (IOException e) {
+                                    LOG.warn("Error in copy models to tmp", e);
+                                }
+                            } else {
+                                // last one is newest one with only ROOT node, should be excluded
+                                saveTmpModelToHDFS(subTreesSize, subTrees);
+                            }
                         }
-                    }, "saveTmpNNToHDFS thread");
+                    }, "saveTmpModelToHDFS thread");
                     tmpModelPersistThread.setDaemon(true);
                     tmpModelPersistThread.start();
                 }
@@ -307,136 +360,35 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
     }
 
     private void writeModelToFileSystem(List<TreeNode> trees, Path out) {
-        DataOutputStream fos = null;
-
+        List<List<TreeNode>> baggingTrees = new ArrayList<List<TreeNode>>();
+        baggingTrees.add(trees);
         try {
-            fos = new DataOutputStream(new GZIPOutputStream(FileSystem.get(new Configuration()).create(out)));
-            LOG.info("Writing {} trees to {}.", trees.size(), out);
-            // version
-            fos.writeInt(CommonConstants.TREE_FORMAT_VERSION);
-            fos.writeUTF(modelConfig.getAlgorithm());
-            fos.writeUTF(this.validParams.get("Loss").toString());
-            fos.writeBoolean(this.modelConfig.isClassification());
-            fos.writeBoolean(this.modelConfig.getTrain().isOneVsAll());
-            fos.writeInt(this.inputCount);
-
-            Map<Integer, String> columnIndexNameMapping = new HashMap<Integer, String>();
-            Map<Integer, List<String>> columnIndexCategoricalListMapping = new HashMap<Integer, List<String>>();
-            Map<Integer, Double> numericalMeanMapping = new HashMap<Integer, Double>();
-            for(ColumnConfig columnConfig: this.columnConfigList) {
-                if(columnConfig.isFinalSelect()) {
-                    columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
-                }
-                if(columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinCategory())) {
-                    columnIndexCategoricalListMapping.put(columnConfig.getColumnNum(), columnConfig.getBinCategory());
-                }
-
-                if(columnConfig.isNumerical() && columnConfig.getMean() != null) {
-                    numericalMeanMapping.put(columnConfig.getColumnNum(), columnConfig.getMean());
-                }
-            }
-
-            if(columnIndexNameMapping.size() == 0) {
-                for(ColumnConfig columnConfig: this.columnConfigList) {
-                    if(CommonUtils.isGoodCandidate(columnConfig)) {
-                        columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
-                    }
-                }
-            }
-
-            // serialize numericalMeanMapping
-            fos.writeInt(numericalMeanMapping.size());
-            for(Entry<Integer, Double> entry: numericalMeanMapping.entrySet()) {
-                fos.writeInt(entry.getKey());
-                // for some feature, it is null mean value, it is not selected, just set to 0d to avoid NPE
-                fos.writeDouble(entry.getValue() == null ? 0d : entry.getValue());
-            }
-            // serialize columnIndexNameMapping
-            fos.writeInt(columnIndexNameMapping.size());
-            for(Entry<Integer, String> entry: columnIndexNameMapping.entrySet()) {
-                fos.writeInt(entry.getKey());
-                fos.writeUTF(entry.getValue());
-            }
-            // serialize columnIndexCategoricalListMapping
-            fos.writeInt(columnIndexCategoricalListMapping.size());
-            for(Entry<Integer, List<String>> entry: columnIndexCategoricalListMapping.entrySet()) {
-                List<String> categories = entry.getValue();
-                if(categories != null) {
-                    fos.writeInt(entry.getKey());
-                    fos.writeInt(categories.size());
-                    for(String category: categories) {
-                        // There is 16k limitation when using writeUTF() function.
-                        // if the category value is larger than 10k, then treat it as missing value
-                        if(category.length() > MAX_CATEGORICAL_VAL_LEN) {
-                            int pos = category.lastIndexOf(Constants.CATEGORICAL_GROUP_VAL_DELIMITER,
-                                    MAX_CATEGORICAL_VAL_LEN);
-                            if(pos >= 0) {
-                                category = category.substring(0, pos);
-                            } else {
-                                category = category.substring(0, MAX_CATEGORICAL_VAL_LEN);
-                            }
-                        }
-                        fos.writeUTF(category);
-                    }
-                }
-            }
-
-            Map<Integer, Integer> columnMapping = getColumnMapping();
-            fos.writeInt(columnMapping.size());
-            for(Entry<Integer, Integer> entry: columnMapping.entrySet()) {
-                fos.writeInt(entry.getKey());
-                fos.writeInt(entry.getValue());
-            }
-
-            int treeLength = trees.size();
-            fos.writeInt(treeLength);
-            for(TreeNode treeNode: trees) {
-                treeNode.write(fos);
-            }
+            BinaryDTSerializer.save(modelConfig, columnConfigList, baggingTrees, this.validParams.get("Loss")
+                    .toString(), inputCount, FileSystem.get(this.conf), out);
         } catch (IOException e) {
-            LOG.error("Error in writing output.", e);
-        } finally {
-            IOUtils.closeStream(fos);
+            LOG.error("Error in writing model", e);
         }
-    }
-
-    private Map<Integer, Integer> getColumnMapping() {
-        Map<Integer, Integer> columnMapping = new HashMap<Integer, Integer>(columnConfigList.size(), 1f);
-        int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(columnConfigList);
-        boolean isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
-        int index = 0;
-        for(int i = 0; i < columnConfigList.size(); i++) {
-            ColumnConfig columnConfig = columnConfigList.get(i);
-            if(!isAfterVarSelect) {
-                if(!columnConfig.isMeta() && !columnConfig.isTarget() && CommonUtils.isGoodCandidate(columnConfig)) {
-                    columnMapping.put(columnConfig.getColumnNum(), index);
-                    index += 1;
-                }
-            } else {
-                if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
-                        && columnConfig.isFinalSelect()) {
-                    columnMapping.put(columnConfig.getColumnNum(), index);
-                    index += 1;
-                }
-            }
-        }
-        return columnMapping;
     }
 
     /**
      * Save tmp model to HDFS.
      */
     private void saveTmpModelToHDFS(int iteration, List<TreeNode> trees) {
-        Path out = new Path(DTrainUtils.getTmpModelName(this.tmpModelsFolder, this.trainerId, iteration, modelConfig
-                .getTrain().getAlgorithm().toLowerCase()));
+        Path out = getTmpModelPath(iteration);
         writeModelToFileSystem(trees, out);
+    }
+
+    private Path getTmpModelPath(int iteration) {
+        return new Path(DTrainUtils.getTmpModelName(this.tmpModelsFolder, this.trainerId, iteration, modelConfig
+                .getTrain().getAlgorithm().toLowerCase()));
     }
 
     private void init(MasterContext<DTMasterParams, DTWorkerParams> context) {
         if(isInit.compareAndSet(false, true)) {
+            this.conf = new Configuration();
             loadConfigFiles(context.getProps());
             this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
-            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams());
+            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
             this.isGsMode = gs.hasHyperParam();
 
             this.validParams = modelConfig.getParams();

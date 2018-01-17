@@ -25,8 +25,11 @@ REGISTER $path_jar;
 DEFINE AddColumnNum      ml.shifu.shifu.udf.AddColumnNumUDF('$source_type', '$path_model_config', '$path_column_config', 'false');
 DEFINE PopulationCounter ml.shifu.shifu.udf.PopulationCounterUDF('$source_type', '$path_model_config', '$path_column_config', '$value_index');
 DEFINE PSI               ml.shifu.shifu.udf.PSICalculatorUDF('$source_type', '$path_model_config', '$path_column_config');
+DEFINE IsDataFilterOut   ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
 
-data = LOAD '$path_raw_data' USING PigStorage('$delimiter');
+
+data = LOAD '$path_raw_data' USING PigStorage('$delimiter', '-noschema');
+data = FILTER data BY IsDataFilterOut(*);
 
 -- not need to filtering
 data_cols = FOREACH data GENERATE $PSIColumn, AddColumnNum(*);

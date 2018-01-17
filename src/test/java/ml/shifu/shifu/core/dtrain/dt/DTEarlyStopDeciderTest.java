@@ -44,7 +44,7 @@ public class DTEarlyStopDeciderTest {
         BasicConfigurator.configure();
         LogManager.getRootLogger().setLevel(Level.DEBUG);
         URL resource = this.getClass().getClassLoader().getResource(DATA_FILE_NAME);
-        if(resource != null){
+        if(resource != null) {
             File file = new File(resource.getFile());
             Scanner scanner = new Scanner(file);
             while(scanner.hasNext()) {
@@ -63,9 +63,9 @@ public class DTEarlyStopDeciderTest {
         LOG.info("Total iteration size: {}", this.validationErrorList.size());
 
         int iteration = 0;
-        for(; iteration < this.validationErrorList.size(); iteration ++) {
+        for(; iteration < this.validationErrorList.size(); iteration++) {
             if(dtEarlyStopDecider.add(this.validationErrorList.get(iteration))) {
-                LOG.info("Iteration {} stop!", iteration);
+                // LOG.info("Iteration {} stop!", iteration);
                 break;
             }
         }
@@ -74,18 +74,18 @@ public class DTEarlyStopDeciderTest {
     }
 
     @Test
-    public void testGetCurrentAverageValue(){
+    public void testGetCurrentAverageValue() {
         DTEarlyStopDecider dtEarlyStopDecider = new DTEarlyStopDecider(6);
         LOG.info("Total iteration size: {}", this.validationErrorList.size());
 
         int iteration = 0;
-        for(; iteration < this.validationErrorList.size(); iteration ++) {
+        for(; iteration < this.validationErrorList.size(); iteration++) {
             if(dtEarlyStopDecider.add(this.validationErrorList.get(iteration))) {
                 LOG.info("Iteration {} stop!", iteration);
                 break;
             }
-            LOG.info("iteration {}: {}==> average value {}", iteration, this.validationErrorList.get(iteration), 
-                    dtEarlyStopDecider.getCurrentAverageValue());
+            // LOG.info("iteration {}: {}==> average value {}", iteration, this.validationErrorList.get(iteration),
+            // dtEarlyStopDecider.getCurrentAverageValue());
         }
 
         Assert.assertNotSame(iteration, this.validationErrorList.size());

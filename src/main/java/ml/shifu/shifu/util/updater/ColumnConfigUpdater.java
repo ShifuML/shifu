@@ -14,16 +14,46 @@ public class ColumnConfigUpdater {
 
     /**
      * Update target, listMeta, listForceSelect, listForceRemove
-     * @param modelConfig - ModelConfig
-     * @param columnConfigList - ColumnConfig list to update
-     * @param step - which step is running
-     * @throws IOException - error occur, when create updater
+     * 
+     * @param modelConfig
+     *            - ModelConfig
+     * @param columnConfigList
+     *            - ColumnConfig list to update
+     * @param step
+     *            - which step is running
+     * @throws IOException
+     *             - error occur, when create updater
      */
     public static void updateColumnConfigFlags(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             ModelInspector.ModelStep step) throws IOException {
-        BasicUpdater updater = BasicUpdater.getUpdater(modelConfig, step);
+        updateColumnConfigFlags(modelConfig, columnConfigList, step, false);
+    }
+
+    /**
+     * Update target, listMeta, listForceSelect, listForceRemove
+     * 
+     * @param modelConfig
+     *            - ModelConfig
+     * @param columnConfigList
+     *            - ColumnConfig list to update
+     * @param step
+     *            - which step is running
+     * @param directVoidCall
+     *            - if strictly to call VoidUpdater
+     * @throws IOException
+     *             - error occur, when create updater
+     */
+    public static void updateColumnConfigFlags(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            ModelInspector.ModelStep step, boolean directVoidCall) throws IOException {
+        BasicUpdater updater = null;
+        if(directVoidCall) {
+            updater = new VoidUpdater(modelConfig);
+        } else {
+            updater = BasicUpdater.getUpdater(modelConfig, step);
+        }
+
         for(ColumnConfig config: columnConfigList) {
-           updater.updateColumnConfig(config);
+            updater.updateColumnConfig(config);
         }
     }
 

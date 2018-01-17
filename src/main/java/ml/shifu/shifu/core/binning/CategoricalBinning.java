@@ -22,8 +22,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import ml.shifu.shifu.udf.CalculateNewStatsUDF;
-
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,23 +39,23 @@ public class CategoricalBinning extends AbstractBinning<String> {
     /**
      * Empty constructor : it is just for bin merging
      */
-    protected CategoricalBinning() {
+    public CategoricalBinning() {
     }
 
     /*
      * Constructor with expected bin number.
      * For categorical variable, the binningNum won't be used
      */
-    public CategoricalBinning(int binningNum) {
-        this(binningNum, null);
+    public CategoricalBinning(int binningNum, int maxCategorySize) {
+        this(binningNum, null, maxCategorySize);
     }
 
     /*
      * Constructor with expected bin number and missing value list
      * For categorical variable, the binningNum won't be used
      */
-    public CategoricalBinning(int binningNum, List<String> missingValList) {
-        super(binningNum, missingValList);
+    public CategoricalBinning(int binningNum, List<String> missingValList, int maxCategorySize) {
+        super(binningNum, missingValList, maxCategorySize);
         this.categoricalVals = new HashSet<String>();
     }
 
@@ -77,7 +75,7 @@ public class CategoricalBinning extends AbstractBinning<String> {
                 categoricalVals.add(fval);
             }
 
-            if(categoricalVals.size() > CalculateNewStatsUDF.MAX_CATEGORICAL_BINC_COUNT) {
+            if(categoricalVals.size() > maxCategorySize) {
                 isValid = false;
                 categoricalVals.clear();
             }
@@ -119,7 +117,7 @@ public class CategoricalBinning extends AbstractBinning<String> {
     /**
      * convert @CategoricalBinning to String
      */
-    protected void stringToObj(String objValStr) {
+    public void stringToObj(String objValStr) {
         super.stringToObj(objValStr);
 
         if(categoricalVals == null) {

@@ -318,20 +318,28 @@ public class BinningInfoWritable implements Writable {
             out.writeDouble(this.binWeightNeg[i]);
         }
 
-        if(this.isNumeric) {
+        // binBoundaries
+        if(this.binBoundaries == null) {
+            out.writeInt(0);
+        } else {
             out.writeInt(this.binBoundaries.size());
             for(int i = 0; i < this.binBoundaries.size(); i++) {
                 out.writeDouble(this.binBoundaries.get(i));
             }
+        }
 
-            if(this.xMultiY != null) {
-                out.writeInt(this.xMultiY.length);
-                for(double d: this.xMultiY) {
-                    out.writeDouble(d);
-                }
-            } else {
-                out.writeInt(0);
+        if(this.xMultiY != null) {
+            out.writeInt(this.xMultiY.length);
+            for(double d: this.xMultiY) {
+                out.writeDouble(d);
             }
+        } else {
+            out.writeInt(0);
+        }
+
+        // binCategories
+        if(this.binCategories == null) {
+            out.writeInt(0);
         } else {
             out.writeInt(this.binCategories.size());
             for(int i = 0; i < this.binCategories.size(); i++) {
@@ -342,7 +350,6 @@ public class BinningInfoWritable implements Writable {
                     out.writeByte(bytes[j]);
                 }
             }
-            // xMultiY computation is in the reducer computation
         }
 
         this.cfiw.write(out);
@@ -387,30 +394,32 @@ public class BinningInfoWritable implements Writable {
             this.binWeightNeg[i] = in.readDouble();
         }
 
-        if(this.isNumeric) {
-            size = in.readInt();
-            this.binBoundaries = new ArrayList<Double>(size);
-            for(int i = 0; i < size; i++) {
-                this.binBoundaries.add(in.readDouble());
+        // read binBoundaries
+        size = in.readInt();
+        this.binBoundaries = new ArrayList<Double>(size);
+        for(int i = 0; i < size; i++) {
+            this.binBoundaries.add(in.readDouble());
+        }
+
+        // read xMultiY
+        int xMultiYSize = in.readInt();
+        if(xMultiYSize != 0) {
+            this.xMultiY = new double[xMultiYSize];
+            for(int i = 0; i < xMultiYSize; i++) {
+                this.xMultiY[i] = in.readDouble();
             }
-            int xMultiYSize = in.readInt();
-            if(xMultiYSize != 0) {
-                this.xMultiY = new double[xMultiYSize];
-                for(int i = 0; i < xMultiYSize; i++) {
-                    this.xMultiY[i] = in.readDouble();
-                }
+        }
+
+        // read binCategories
+        size = in.readInt();
+        this.binCategories = new ArrayList<String>(size);
+        for(int i = 0; i < size; i++) {
+            int bytesSize = in.readInt();
+            byte[] bytes = new byte[bytesSize];
+            for(int j = 0; j < bytesSize; j++) {
+                bytes[j] = in.readByte();
             }
-        } else {
-            size = in.readInt();
-            this.binCategories = new ArrayList<String>(size);
-            for(int i = 0; i < size; i++) {
-                int bytesSize = in.readInt();
-                byte[] bytes = new byte[bytesSize];
-                for(int j = 0; j < bytesSize; j++) {
-                    bytes[j] = in.readByte();
-                }
-                this.binCategories.add(new String(bytes, Charset.forName("UTF-8")));
-            }
+            this.binCategories.add(new String(bytes, Charset.forName("UTF-8")));
         }
 
         this.cfiw = new CountAndFrequentItemsWritable();

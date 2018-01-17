@@ -22,6 +22,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -66,6 +67,11 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
      * Final results list, this list is loaded in memory for sum, and will be written by context in cleanup.
      */
     private List<Pair> results = new ArrayList<Pair>();
+
+    /**
+     * Model Config read from HDFS
+     */
+    private ModelConfig modelConfig;
 
     /**
      * Column Config list read from HDFS
@@ -121,6 +127,8 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
         try {
             SourceType sourceType = SourceType.valueOf(context.getConfiguration().get(
                     Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
+            this.modelConfig = CommonUtils.loadModelConfig(
+                    context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG), sourceType);
             this.columnConfigList = CommonUtils.loadColumnConfigList(
                     context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
@@ -135,7 +143,7 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
 
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         this.filterOutRatio = context.getConfiguration().getFloat(Constants.SHIFU_VARSELECT_FILTEROUT_RATIO,
                 Constants.SHIFU_DEFAULT_VARSELECT_FILTEROUT_RATIO);

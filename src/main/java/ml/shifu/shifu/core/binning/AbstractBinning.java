@@ -25,6 +25,7 @@ import java.util.Set;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
+import ml.shifu.shifu.util.Constants;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
@@ -57,6 +58,8 @@ public abstract class AbstractBinning<T> {
      */
     protected int expectedBinningNum;
 
+    protected int maxCategorySize = Constants.MAX_CATEGORICAL_BINC_COUNT;
+
     /**
      * Empty constructor : it is just for bin merging bin
      */
@@ -70,7 +73,19 @@ public abstract class AbstractBinning<T> {
      *            the binningNum
      */
     public AbstractBinning(int binningNum) {
-        this(binningNum, null);
+        this(binningNum, null, Constants.MAX_CATEGORICAL_BINC_COUNT);
+    }
+
+    /**
+     * Constructor with expected bin number
+     * 
+     * @param binningNum
+     *            the binningNum
+     * @param maxCategorySize
+     *            max size of category list
+     */
+    public AbstractBinning(int binningNum, int maxCategorySize) {
+        this(binningNum, null, maxCategorySize);
     }
 
     /**
@@ -80,8 +95,10 @@ public abstract class AbstractBinning<T> {
      *            the binningNum
      * @param missingValList
      *            the missing value list
+     * @param maxCategorySize
+     *            max size of category list
      */
-    public AbstractBinning(int binningNum, List<String> missingValList) {
+    public AbstractBinning(int binningNum, List<String> missingValList, int maxCategorySize) {
         this.expectedBinningNum = binningNum;
         this.missingValSet = new HashSet<String>();
         this.missingValSet.add("");
@@ -91,6 +108,7 @@ public abstract class AbstractBinning<T> {
                 missingValSet.add(StringUtils.trimToEmpty(missingVal));
             }
         }
+        this.maxCategorySize = maxCategorySize;
     }
 
     /**
@@ -133,7 +151,7 @@ public abstract class AbstractBinning<T> {
      *            the value to be checked
      * @return if it is missing value
      */
-    protected boolean isMissingVal(String val) {
+    public boolean isMissingVal(String val) {
         return missingValSet.contains(val);
     }
 
@@ -177,7 +195,7 @@ public abstract class AbstractBinning<T> {
      * @param objValStr
      *            value string
      */
-    protected void stringToObj(String objValStr) {
+    public void stringToObj(String objValStr) {
         String[] objStrArr = objValStr.split(Character.toString(FIELD_SEPARATOR), -1);
         if(objStrArr.length < 4) {
             throw new IllegalArgumentException("The size of argument is incorrect");

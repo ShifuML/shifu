@@ -27,6 +27,8 @@ import ml.shifu.shifu.core.binning.AbstractBinning;
 import ml.shifu.shifu.core.binning.CategoricalBinning;
 import ml.shifu.shifu.core.binning.EqualIntervalBinning;
 import ml.shifu.shifu.core.binning.EqualPopulationBinning;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.DataType;
@@ -41,7 +43,11 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
 
     private int columnId = -1;
     private AbstractBinning<?> binning = null;
+
+    // backup binning for hybrid columns
+    private AbstractBinning<?> backUpbinning = null;
     private int histoScaleFactor;
+    private ColumnConfig columnConfig;
 
     public BinningPartialDataUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
         this(source, pathModelConfig, pathColumnConfig, "100");
@@ -77,39 +83,73 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
 
             if(columnId < 0) {
                 columnId = (Integer) element.get(0);
-                ColumnConfig columnConfig = super.columnConfigList.get(columnId);
-                if(columnConfig.isCategorical()) {
-                    binning = new CategoricalBinning(-1);
+                if(columnId >= super.columnConfigList.size()){
+                    columnId = columnId % super.columnConfigList.size();
+                }
+                columnConfig = super.columnConfigList.get(columnId);
+                if(columnConfig.isHybrid()) {
+                    if(super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)) {
+                        binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin() > 0 ? modelConfig
+                                .getStats().getMaxNumBin() : 1024);
+                    } else {
+                        binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin() > 0 ? modelConfig
+                                .getStats().getMaxNumBin() : 1024);
+                    }
+
+                    this.backUpbinning = new CategoricalBinning(-1, this.maxCategorySize);
+                } else if(columnConfig.isCategorical()) {
+                    binning = new CategoricalBinning(-1, this.maxCategorySize);
                 } else {
                     if(super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)) {
-                        binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin() > 0
-                                ? modelConfig.getStats().getMaxNumBin() : 1024);
+                        binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin() > 0 ? modelConfig
+                                .getStats().getMaxNumBin() : 1024);
                     } else {
-                        binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin() > 0
-                                ? modelConfig.getStats().getMaxNumBin() : 1024);
+                        binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin() > 0 ? modelConfig
+                                .getStats().getMaxNumBin() : 1024);
                     }
                 }
             }
 
             Object value = element.get(1);
-            if (value != null) {
-                if (isWeightBinningMethod() && binning instanceof EqualPopulationBinning) {
-                    ((EqualPopulationBinning) binning).addData(value.toString(),
+            if(value != null) {
+                String valStr = value.toString();
+                if(isWeightBinningMethod() && binning instanceof EqualPopulationBinning) {
+                    ((EqualPopulationBinning) binning).addData(valStr,
                             (Double) element.get(AddColumnNumUDF.COLUMN_WEIGHT_INDX));
                 } else {
-                    binning.addData(value.toString());
+                    binning.addData(valStr);
+                }
+                if(this.columnConfig.isHybrid()) {
+                    // missing value and not number value go to categorical binning
+                    double douVal = CommonUtils.parseNumber(valStr);
+                    Double hybridThreshould = this.columnConfig.getHybridThreshold();
+                    if(hybridThreshould == null) {
+                        hybridThreshould = Double.NEGATIVE_INFINITY;
+                    }
+                    // douVal < hybridThreshould which will also be set to category
+                    boolean isCategory = Double.isNaN(douVal) || douVal < hybridThreshould;
+                    if(douVal < hybridThreshould) {
+                        log.warn("douVal " + douVal + ", threshold " + hybridThreshould + ", column {}"
+                                + columnConfig.getColumnName());
+                    }
+                    if(binning.isMissingVal(valStr) || isCategory) {
+                        this.backUpbinning.addData(valStr);
+                    }
                 }
             }
         }
-
         String binningObjStr = ((binning == null) ? null : binning.objToString());
+
+        if(this.columnConfig.isHybrid()) {
+            binningObjStr += Constants.HYBRID_BIN_STR_DILIMETER + this.backUpbinning.objToString();
+        }
 
         cleanUp();
 
         return binningObjStr;
     }
 
-    private boolean isWeightBinningMethod(){
+    private boolean isWeightBinningMethod() {
         return modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualTotal)
                 || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualInterval)
                 || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualPositive)

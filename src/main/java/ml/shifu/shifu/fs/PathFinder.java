@@ -36,7 +36,7 @@ import java.util.Map;
  * {@link #modelConfig} should be passed as parameter in constructor
  */
 public class PathFinder {
-    
+
     public static final String FEATURE_IMPORTANCE_FILE = "all.fi";
     private static final String CORRELATION_CSV = "correlation.csv";
     private static final String REASON_CODE_PATH = "common/ReasonCodeMapV3.json";
@@ -498,6 +498,28 @@ public class PathFinder {
         return getPathBySourceType(new Path(Constants.MODELS), sourceType);
     }
 
+    /**
+     * Get the path of one bagging model
+     * 
+     * @param sourceType
+     *            - Local/HDFS
+     * @return path of models
+     */
+    public String getBaggingModelPath(SourceType sourceType) {
+        return getPathBySourceType(new Path("onebaggingmodel"), sourceType);
+    }
+
+    /**
+     * Get the path ofnn binary models
+     * 
+     * @param sourceType
+     *            - Local/HDFS
+     * @return path of models
+     */
+    public String getNNBinaryModelsPath(SourceType sourceType) {
+        return getPathBySourceType(new Path("bmodels"), sourceType);
+    }
+
     public String getValErrorPath(SourceType sourceType) {
         return getPathBySourceType(new Path(Constants.TMP, "valerr"), sourceType);
     }
@@ -676,8 +698,17 @@ public class PathFinder {
      *            - score column
      * @return path of evaluation score
      */
-    public String getEvalScorePath(EvalConfig evalConfig, String metaColumn) {
-        return new Path(getEvalScorePath(evalConfig, evalConfig.getDataSet().getSource()), metaColumn).toString();
+    public String getEvalMetaScorePath(EvalConfig evalConfig, String metaColumn) {
+        SourceType sourceType = evalConfig.getDataSet().getSource();
+
+        String scoreMetaPath = getPreferPath(evalConfig.getCustomPaths(), Constants.KEY_SCORE_PATH);
+        if(StringUtils.isBlank(scoreMetaPath)) {
+            scoreMetaPath = getEvalFilePath(evalConfig.getName(), Constants.EVAL_META_SCORE, sourceType);
+        } else {
+            scoreMetaPath = new Path(scoreMetaPath, Constants.EVAL_META_SCORE).toString();
+        }
+
+        return new Path(scoreMetaPath, metaColumn).toString();
     }
 
     /**
@@ -732,13 +763,24 @@ public class PathFinder {
         return new Path(scorePath, Constants.PIG_HEADER).toString();
     }
 
-    public String getEvalPerformancePath(EvalConfig evalConfig, String metaColumn) {
+    /**
+     * Get the path of evaluation set performance for EvalMetaScore column
+     * 
+     * @param evalConfig
+     *            - EvalConfig to find
+     * @param metaColumn
+     *            meta column
+     * @return eval meta path
+     */
+    public String getEvalMetaPerformancePath(EvalConfig evalConfig, String metaColumn) {
         String evalPerformancePath = getPreferPath(evalConfig.getCustomPaths(), Constants.KEY_PERFORMANCE_PATH);
+
         if(StringUtils.isBlank(evalPerformancePath)) {
-            return getEvalFilePath(evalConfig.getName(), metaColumn + Path.SEPARATOR + Constants.EVAL_PERFORMANCE,
-                    evalConfig.getDataSet().getSource());
+            String evalMetaPerfPath = getEvalFilePath(evalConfig.getName(), Constants.EVAL_META_SCORE, evalConfig
+                    .getDataSet().getSource());
+            return new Path(evalMetaPerfPath, metaColumn + Constants.EVAL_PERFORMANCE).toString();
         } else {
-            return new Path(evalPerformancePath, metaColumn + Path.SEPARATOR + Constants.EVAL_PERFORMANCE).toString();
+            return new Path(evalPerformancePath, metaColumn + Constants.EVAL_PERFORMANCE).toString();
         }
     }
 
@@ -871,6 +913,8 @@ public class PathFinder {
 
     /**
      * Return local correlation csv path
+     * 
+     * @return the local correlation csv path
      */
     public String getLocalCorrelationCsvPath() {
         return getPathBySourceType(CORRELATION_CSV, SourceType.LOCAL);
