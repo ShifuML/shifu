@@ -281,12 +281,9 @@ public class Binning {
      * BinBoundary: left, inclusive
      */
     private void doNumericalBinning() {
-        log.debug("==> There are " + voList.size() + " to sort in Binning.");
-        long timestamp = System.currentTimeMillis();
         // use our in-place quick order
         QuickSort.sort(voList, new ValueObjectComparator(BinningDataType.Numerical));
         // Collections.sort(voList, new ValueObjectComparator(BinningDataType.Numerical));
-        log.debug("==> Spend " + (System.currentTimeMillis() - timestamp) + " milli-seconds to sort data.");
 
         if(BinningMethod.EqualPositive.equals(binningMethod)) {
             doEqualPositiveBinning();

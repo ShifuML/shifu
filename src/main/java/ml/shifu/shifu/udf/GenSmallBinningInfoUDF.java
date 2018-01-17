@@ -36,16 +36,17 @@ import java.util.Iterator;
  */
 public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> {
 
-    private  int scaleFactor = 1024;
+    private int scaleFactor = 1024;
 
-    public GenSmallBinningInfoUDF(String source, String pathModelConfig, String pathColumnConfig, String histoScaleFactor) throws IOException {
+    public GenSmallBinningInfoUDF(String source, String pathModelConfig, String pathColumnConfig,
+            String histoScaleFactor) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
         this.scaleFactor = Integer.parseInt(histoScaleFactor);
     }
 
     @Override
     public Tuple exec(Tuple input) throws IOException {
-        if ( input == null || input.size() != 1 ) {
+        if(input == null || input.size() != 1) {
             return null;
         }
 
@@ -56,17 +57,22 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> {
 
         DataBag dataBag = (DataBag) input.get(0);
         Iterator<Tuple> iterator = dataBag.iterator();
-        while ( iterator.hasNext() ) {
+        while(iterator.hasNext()) {
             Tuple tuple = iterator.next();
-            if ( tuple != null && tuple.size() >= 3 ) {
-                if ( columnId == null ) {
+            if(tuple != null && tuple.size() >= 3) {
+                if(columnId == null) {
                     columnId = (Integer) tuple.get(0);
-                    columnConfig = super.columnConfigList.get(columnId);
+                    if(columnId >= super.columnConfigList.size()) {
+                        int newColumnId = columnId % super.columnConfigList.size();
+                        columnConfig = super.columnConfigList.get(newColumnId);
+                    } else {
+                        columnConfig = super.columnConfigList.get(columnId);
+                    }
                     binning = getBinningHandler(columnConfig);
                 }
 
-                Boolean isPostive = (Boolean)tuple.get(2);
-                if ( isToBinningVal(columnConfig, isPostive) ) {
+                Boolean isPostive = (Boolean) tuple.get(2);
+                if(isToBinningVal(columnConfig, isPostive)) {
                     String val = (String) tuple.get(1);
                     binning.addData(val);
                 }
@@ -95,14 +101,15 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> {
     @SuppressWarnings("rawtypes")
     private AbstractBinning getBinningHandler(ColumnConfig columnConfig) {
         AbstractBinning binning = null;
-        if ( columnConfig.isNumerical() ) {
-            if ( modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualInterval) ) {
+        if(columnConfig.isNumerical()) {
+            if(modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualInterval)) {
                 binning = new EqualIntervalBinning(this.scaleFactor, super.modelConfig.getMissingOrInvalidValues());
             } else {
                 binning = new MunroPatBinning(this.scaleFactor, super.modelConfig.getMissingOrInvalidValues());
             }
         } else {
-            binning = new CategoricalBinning(this.scaleFactor, super.modelConfig.getMissingOrInvalidValues());
+            binning = new CategoricalBinning(this.scaleFactor, super.modelConfig.getMissingOrInvalidValues(),
+                    this.maxCategorySize);
         }
 
         return binning;

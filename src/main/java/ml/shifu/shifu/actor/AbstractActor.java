@@ -15,13 +15,12 @@
  */
 package ml.shifu.shifu.actor;
 
-import akka.actor.UntypedActor;
+import java.util.List;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.List;
+import akka.actor.UntypedActor;
+import ml.shifu.shifu.util.CommonUtils;
 
 /**
  * AbstractActor class
@@ -31,13 +30,13 @@ import java.util.List;
  * ColumnConfig list for its sub-class, it also try to find the column number of the target column
  */
 public abstract class AbstractActor extends UntypedActor {
-    private static Logger log = LoggerFactory.getLogger(AbstractActor.class);
 
     protected ModelConfig modelConfig;
     protected List<ColumnConfig> columnConfigList;
     protected AkkaExecStatus akkaStatus;
 
     protected int targetColumnNum = -1;
+    protected boolean hasCandidates;
 
     public AbstractActor(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList,
             AkkaExecStatus akkaStatus) {
@@ -48,8 +47,6 @@ public abstract class AbstractActor extends UntypedActor {
         for(ColumnConfig config: columnConfigList) {
             if(config.isTarget()) {
                 targetColumnNum = config.getColumnNum();
-                log.debug("Target Column Name: " + config.getColumnName());
-                log.debug("Target Column Num: " + targetColumnNum);
                 break;
             }
         }
@@ -57,6 +54,8 @@ public abstract class AbstractActor extends UntypedActor {
         if(targetColumnNum == -1) {
             throw new RuntimeException("No Valid Target.");
         }
+
+        this.hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
     }
 
     /**

@@ -15,12 +15,31 @@
  */
 package ml.shifu.shifu.util;
 
-import com.fasterxml.jackson.core.JsonGenerationException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
+import ml.shifu.shifu.container.obj.ColumnType;
+import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.validator.ModelInspector;
+import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.udf.CalculateStatsUDF;
 import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileStatus;
@@ -30,22 +49,9 @@ import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.util.*;
-
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnType;
-import ml.shifu.shifu.container.obj.EvalConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.fs.PathFinder;
-import ml.shifu.shifu.udf.CalculateStatsUDF;
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * CommonUtilsTest
@@ -481,10 +487,14 @@ public class CommonUtilsTest {
     public void trimNumber() {
         Assert.assertEquals(CommonUtils.trimTag("1000"), "1000");
         Assert.assertEquals(CommonUtils.trimTag("1.000"), "1");
+        Assert.assertEquals(CommonUtils.trimTag("1.0"), "1");
+        Assert.assertEquals(CommonUtils.trimTag("0.0"), "0");
         Assert.assertEquals(CommonUtils.trimTag("1."), "1");
         Assert.assertEquals(CommonUtils.trimTag("0.0000"), "0");
         Assert.assertEquals(CommonUtils.trimTag("1.03400"), "1.034");
         Assert.assertEquals(CommonUtils.trimTag("1.034001"), "1.034001");
+        Assert.assertEquals(CommonUtils.trimTag("192.168.0.1"), "192.168.0.1");
+        Assert.assertEquals(CommonUtils.trimTag("192.168.0.0"), "192.168.0.0");
         Assert.assertEquals(CommonUtils.trimTag(".0000"), "0");
         Assert.assertEquals(CommonUtils.trimTag(".00001"), "0.00001");
         Assert.assertEquals(CommonUtils.trimTag(".M0001"), ".M0001");

@@ -17,6 +17,17 @@ package ml.shifu.shifu.core.dtrain;
 
 import java.util.Random;
 
+import ml.shifu.shifu.core.dtrain.nn.update.AdaGradUpdate;
+import ml.shifu.shifu.core.dtrain.nn.update.AdamUpdate;
+import ml.shifu.shifu.core.dtrain.nn.update.MomentumUpdate;
+import ml.shifu.shifu.core.dtrain.nn.update.NesterovUpdate;
+import ml.shifu.shifu.core.dtrain.nn.update.RMSPropUpdate;
+import ml.shifu.shifu.core.dtrain.nn.update.UpdateRule;
+import ml.shifu.shifu.util.ClassUtils;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * {@link Weight} is used to update NN weights according to propagation option. Which is also copied from Encog.
  * 
@@ -24,10 +35,23 @@ import java.util.Random;
  * We'd like to reuse code from Encog but unfortunately the methods are private:(.
  */
 public class Weight {
+
+    protected static final Logger LOG = LoggerFactory.getLogger(Weight.class);
+
     /**
      * The zero tolerance to use.
      */
     private final static double ZERO_TOLERANCE = 0.00000000000000001;
+
+    public static final String ADAM_OPTIMIZATION = "ADAM";
+
+    public static final String MOMENTUN_OPTIMIZATION = "MOMENTUM";
+
+    public static final String RMSPROP_OPTIMIZATION = "RMSPROP";
+
+    public static final String ADAGRAD_OPTIMIZATION = "ADAGRAD";
+
+    public static final String NESTEROV_OPTIMIZATION = "NESTEROV";
 
     private double learningRate;
 
@@ -40,9 +64,6 @@ public class Weight {
     private double outputEpsilon = 0.35;
     private double eps = 0.0;
     private double shrink = 0.0;
-
-    // for back propagation
-    private double momentum = 0.5;
 
     // for resilient propagation
     private double[] updateValues = null;
@@ -74,8 +95,48 @@ public class Weight {
      */
     private Random random;
 
+    /**
+     * Enable Adam, Momentum, AdaGrad or RMSProp optimization, if {@link #updateRule} is null, by default old BGD.
+     */
+    private UpdateRule updateRule;
+
+    /**
+     * Number of weights in network
+     */
+    private int numWeight;
+
+    /**
+     * Learning Decay value, for {@link RMSPropUpdate}
+     */
+    private double learningDecay;
+
+    /**
+     * 'beta1' in Adam optimization, only for Adam
+     */
+    private double adamBeta1 = 0.9d;
+
+    /**
+     * 'beta2' in Adam optimization, only for Adam
+     */
+    private double adamBeta2 = 0.999d;
+
+    // for back propagation
+    private double momentum = 0.5;
+
     public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl,
             double dropoutRate) {
+        this(numWeight, numTrainSize, rate, algorithm, reg, rl, dropoutRate, null);
+    }
+
+    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl,
+            double dropoutRate, String propagation) {
+        this(numWeight, numTrainSize, rate, algorithm, reg, rl, dropoutRate, propagation, 0.5d, 0d, 0.9d, 0.999d);
+    }
+
+    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl,
+            double dropoutRate, String propagation, double momentum, double learningDecay, double adamBeta1,
+            double adamBeta2) {
+        this.numWeight = numWeight;
         this.dropoutRate = dropoutRate;
         this.random = new Random();
         this.lastDelta = new double[numWeight];
@@ -91,39 +152,75 @@ public class Weight {
             this.updateValues[i] = DEFAULT_INITIAL_UPDATE;
             this.lastDelta[i] = 0;
         }
+
         this.reg = reg;
         if(rl != null) {
             this.rl = rl;
         }
-    }
 
-    public double[] calculateWeights(double[] weights, double[] gradients) {
-        for(int i = 0; i < gradients.length; i++) {
-            if(this.random.nextDouble() < this.dropoutRate) {
-                // drop out, no need to update weight, just continue next weight
-                continue;
-            }
-            switch(this.rl) {
-                case NONE:
-                    weights[i] += updateWeight(i, weights, gradients);
-                    break;
-                case L1:
-                    if(Double.compare(this.reg, 0d) == 0) {
-                        weights[i] += updateWeight(i, weights, gradients);
-                    } else {
-                        double shrinkValue = this.reg / getNumTrainSize();
-                        double delta = updateWeight(i, weights, gradients);
-                        weights[i] += Math.signum(delta) * Math.max(0.0, Math.abs(delta) - shrinkValue);
-                    }
-                    break;
-                case L2:
-                default:
-                    weights[i] += (updateWeight(i, weights, gradients) - this.reg * weights[i] / getNumTrainSize());
-                    break;
+        this.momentum = momentum;
+        this.learningDecay = learningDecay;
+        this.adamBeta1 = adamBeta1;
+        this.adamBeta2 = adamBeta2;
+
+        // init update rule
+        if(propagation == null || propagation.length() == 0) {
+            this.updateRule = null;
+        } else if(ADAM_OPTIMIZATION.equalsIgnoreCase(propagation)) {
+            this.updateRule = new AdamUpdate();
+        } else if(ADAGRAD_OPTIMIZATION.equalsIgnoreCase(propagation)) {
+            this.updateRule = new AdaGradUpdate();
+        } else if(RMSPROP_OPTIMIZATION.equalsIgnoreCase(propagation)) {
+            this.updateRule = new RMSPropUpdate();
+        } else if(MOMENTUN_OPTIMIZATION.equalsIgnoreCase(propagation)) {
+            this.updateRule = new MomentumUpdate();
+        } else if(NESTEROV_OPTIMIZATION.equalsIgnoreCase(propagation)) {
+            this.updateRule = new NesterovUpdate();
+        } else {
+            try {
+                this.updateRule = (UpdateRule) ClassUtils.newInstance(Class.forName(propagation));
+            } catch (Exception e) {
+                LOG.info("Class not found for {}, set update rule to null", propagation);
+                this.updateRule = null;
             }
         }
 
-        return weights;
+        if(this.updateRule != null) {
+            this.updateRule.init(this);
+        }
+    }
+
+    public double[] calculateWeights(double[] weights, double[] gradients, int iteration) {
+        if(this.updateRule != null) {
+            this.updateRule.update(gradients, weights, iteration);
+            return weights;
+        } else {
+            for(int i = 0; i < gradients.length; i++) {
+                if(this.dropoutRate > 0 && this.random.nextDouble() < this.dropoutRate) {
+                    // drop out, no need to update weight, just continue next weight
+                    continue;
+                }
+                switch(this.rl) {
+                    case NONE:
+                        weights[i] += updateWeight(i, weights, gradients);
+                        break;
+                    case L1:
+                        if(Double.compare(this.reg, 0d) == 0) {
+                            weights[i] += updateWeight(i, weights, gradients);
+                        } else {
+                            double shrinkValue = this.reg / getNumTrainSize();
+                            double delta = updateWeight(i, weights, gradients);
+                            weights[i] = Math.signum(delta) * Math.max(0.0, Math.abs(delta) - shrinkValue);
+                        }
+                        break;
+                    case L2:
+                    default:
+                        weights[i] += (updateWeight(i, weights, gradients) - this.reg * weights[i] / getNumTrainSize());
+                        break;
+                }
+            }
+            return weights;
+        }
     }
 
     private double updateWeight(int index, double[] weights, double[] gradients) {
@@ -143,7 +240,7 @@ public class Weight {
     }
 
     private double updateWeightBP(int index, double[] weights, double[] gradients) {
-        double delta = (gradients[index] * this.getLearningRate()) + (this.lastDelta[index] * this.momentum);
+        double delta = (gradients[index] * this.getLearningRate()) + (this.lastDelta[index] * this.getMomentum());
         this.lastDelta[index] = delta;
         return delta;
     }
@@ -272,5 +369,80 @@ public class Weight {
     public void setNumTrainSize(double numTrainSize) {
         this.numTrainSize = numTrainSize;
         this.eps = this.outputEpsilon / numTrainSize;
+    }
+
+    /**
+     * @return the numWeight
+     */
+    public int getNumWeight() {
+        return numWeight;
+    }
+
+    /**
+     * @param numWeight
+     *            the numWeight to set
+     */
+    public void setNumWeight(int numWeight) {
+        this.numWeight = numWeight;
+    }
+
+    /**
+     * @return the momentum
+     */
+    public double getMomentum() {
+        return momentum;
+    }
+
+    /**
+     * @param momentum
+     *            the momentum to set
+     */
+    public void setMomentum(double momentum) {
+        this.momentum = momentum;
+    }
+
+    /**
+     * @return the learningDecay
+     */
+    public double getLearningDecay() {
+        return learningDecay;
+    }
+
+    /**
+     * @param learningDecay
+     *            the learningDecay to set
+     */
+    public void setLearningDecay(double learningDecay) {
+        this.learningDecay = learningDecay;
+    }
+
+    /**
+     * @return the adamBeta1
+     */
+    public double getAdamBeta1() {
+        return adamBeta1;
+    }
+
+    /**
+     * @param adamBeta1
+     *            the adamBeta1 to set
+     */
+    public void setAdamBeta1(double adamBeta1) {
+        this.adamBeta1 = adamBeta1;
+    }
+
+    /**
+     * @return the adamBeta2
+     */
+    public double getAdamBeta2() {
+        return adamBeta2;
+    }
+
+    /**
+     * @param adamBeta2
+     *            the adamBeta2 to set
+     */
+    public void setAdamBeta2(double adamBeta2) {
+        this.adamBeta2 = adamBeta2;
     }
 }

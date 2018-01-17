@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,7 @@ import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -42,6 +44,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.encog.ml.BasicML;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.persist.EncogDirectoryPersistence;
 import org.encog.persist.PersistorRegistry;
@@ -125,6 +128,21 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      */
     protected Set<Integer> subFeatures;
 
+    /**
+     * Dropout rate which is in [0, 1], default it is 0
+     */
+    private double dropoutRate = 0d;
+
+    /**
+     * Binary model path
+     */
+    private Path bModel;
+
+    /**
+     * Weight initializer, can be 'default', 'gaussian' or 'xavier'.
+     */
+    private String wgtInit;
+
     @Override
     public void preApplication(MasterContext<NNParams, NNParams> context) {
         init(context);
@@ -148,16 +166,28 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
         // save tmp to hdfs according to raw trainer logic
         final int tmpModelFactor = DTrainUtils.tmpModelFactor(context.getTotalIteration());
-        if(context.getCurrentIteration() % tmpModelFactor == 0) {
+        final int currentIteration = context.getCurrentIteration();
+        final double[] weights = context.getMasterResult().getWeights();
+        final int totalIteration = context.getTotalIteration();
+        final boolean isHalt = context.getMasterResult().isHalt();
+        // currentIteration - 1 because the first iteration is used for sync master models to workers
+        if(currentIteration > 1 && (currentIteration - 1) % tmpModelFactor == 0) {
             Thread tmpNNThread = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    saveTmpNNToHDFS(context.getCurrentIteration(), context.getMasterResult().getWeights());
+                    saveTmpNNToHDFS(currentIteration - 1, weights);
                     // save model results for continue model training, if current job is failed, then next running
                     // we can start from this point to save time.
                     // another case for master recovery, if master is failed, read such checkpoint model
                     Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-                    writeModelWeightsToFileSystem(optimizedWeights, out);
+
+                    // if current iteration is the last iteration, or it is halted by early stop condition, no need to
+                    // save checkpoint model here as it is replicated with postApplicaiton.
+                    // There is issue here if saving the same model in this thread and another thread in
+                    // postApplication, sometimes this conflict will cause model writing failed.
+                    if(!isHalt && currentIteration != totalIteration) {
+                        writeModelWeightsToFileSystem(optimizedWeights, out, false);
+                    }
                 }
             }, "saveTmpNNToHDFS thread");
             tmpNNThread.setDaemon(true);
@@ -199,7 +229,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
         if(optimizedWeights != null) {
             Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-            writeModelWeightsToFileSystem(optimizedWeights, out);
+            // TODO do we need to check IOException and retry again to make sure such important model is saved
+            // successfully.
+            writeModelWeightsToFileSystem(optimizedWeights, out, true);
         }
 
         if(this.gridSearch.hasHyperParam() || this.isKFoldCV) {
@@ -227,7 +259,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     private void saveTmpNNToHDFS(int iteration, double[] weights) {
         Path out = new Path(DTrainUtils.getTmpModelName(this.tmpModelsFolder, this.trainerId, iteration, modelConfig
                 .getTrain().getAlgorithm().toLowerCase()));
-        writeModelWeightsToFileSystem(weights, out);
+        writeModelWeightsToFileSystem(weights, out, false);
     }
 
     private void init(MasterContext<NNParams, NNParams> context) {
@@ -240,7 +272,8 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             loadConfigFiles(context.getProps());
             this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
             this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);
-            gridSearch = new GridSearch(modelConfig.getTrain().getParams());
+            gridSearch = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
+                    .getGridConfigFileContent());
             validParams = this.modelConfig.getTrain().getParams();
             if(gridSearch.hasHyperParam()) {
                 validParams = gridSearch.getParams(Integer.parseInt(trainerId));
@@ -250,6 +283,21 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             if(kCrossValidation != null && kCrossValidation > 0) {
                 isKFoldCV = true;
             }
+
+            Object dropoutRateObj = validParams.get(CommonConstants.DROPOUT_RATE);
+            if(dropoutRateObj != null) {
+                this.dropoutRate = Double.valueOf(dropoutRateObj.toString());
+            }
+            LOG.info("'dropoutRate' in master output is :{}", this.dropoutRate);
+
+            this.wgtInit = "default";
+            Object wgtInitObj = validParams.get("WeightInitializer");
+            if(wgtInitObj != null) {
+                this.wgtInit = wgtInitObj.toString();
+            }
+
+            this.bModel = new Path(context.getProps().getProperty(Constants.SHIFU_NN_BINARY_MODEL_PATH));
+
             initNetwork(context);
         }
 
@@ -286,7 +334,8 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
     @SuppressWarnings("unchecked")
     private void initNetwork(MasterContext<NNParams, NNParams> context) {
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                this.columnConfigList);
         @SuppressWarnings("unused")
         int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         // if is one vs all classification, outputNodeCount is set to 1
@@ -310,19 +359,30 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             }
         }
 
-        this.network = DTrainUtils.generateNetwork(this.subFeatures.size(), outputNodeCount, numLayers, actFunc,
-                hiddenNodeList, false);
+        int featureInputsCnt = DTrainUtils.getFeatureInputsCnt(modelConfig, columnConfigList, this.subFeatures);
+
+        this.network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers, actFunc,
+                hiddenNodeList, false, this.dropoutRate, this.wgtInit);
         ((BasicFloatNetwork) this.network).setFeatureSet(this.subFeatures);
 
+        // register here to save models
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
     }
 
-    private void writeModelWeightsToFileSystem(double[] weights, Path out) {
+    private void writeModelWeightsToFileSystem(double[] weights, Path out, boolean isLast) {
+        if(isLast) {
+            writeBinaryModelWeightsToFileSystem(weights, this.bModel);
+        }
+        writeEncogModelToFileSystem(weights, out);
+    }
+
+    private void writeEncogModelToFileSystem(double[] weights, Path out) {
+        double[] finalWeights = refineWeights(weights);
         FSDataOutputStream fos = null;
         try {
             fos = FileSystem.get(new Configuration()).create(out);
             LOG.info("Writing results to {}", out);
-            this.network.getFlat().setWeights(weights);
+            this.network.getFlat().setWeights(finalWeights);
             if(out != null) {
                 EncogDirectoryPersistence.saveObject(fos, this.network);
             }
@@ -330,6 +390,36 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             LOG.error("Error in writing output.", e);
         } finally {
             IOUtils.closeStream(fos);
+        }
+    }
+
+    private double[] refineWeights(double[] weights) {
+        double[] finalWeights;
+        if(this.dropoutRate == 0d) {
+            finalWeights = weights;
+        } else {
+            finalWeights = new double[weights.length];
+            for(int i = 0; i < finalWeights.length; i++) {
+                // do we need to norm all weights or leave last hidden layer to output layer not normed???
+                // it is ok to add or not added in last iteration as such parameters only impact last final output score
+                // but not change the order of scores
+                finalWeights[i] = weights[i] * (1 - this.dropoutRate);
+            }
+        }
+        return finalWeights;
+    }
+
+    private void writeBinaryModelWeightsToFileSystem(double[] weights, Path out) {
+        double[] finalWeights = refineWeights(weights);
+        LOG.info("Writing NN models to {}.", out);
+        this.network.getFlat().setWeights(finalWeights);
+
+        BasicML basicML = this.network;
+        try {
+            BinaryNNSerializer.save(modelConfig, columnConfigList, Arrays.asList(basicML),
+                    FileSystem.get(new Configuration()), out);
+        } catch (IOException e) {
+            LOG.error("Error in writing model", e);
         }
     }
 

@@ -50,8 +50,9 @@ public class ValidationConductorTest {
                 RawSourceData.SourceType.LOCAL);
 
         List<Integer> columnIdList = new ArrayList<Integer>();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for ( ColumnConfig columnConfig : columnConfigList ) {
-            if ( columnConfig.isCandidate() ) {
+            if ( columnConfig.isCandidate(hasCandidates) ) {
                 columnIdList.add(columnConfig.getColumnNum());
             }
         }
@@ -93,7 +94,10 @@ public class ValidationConductorTest {
 
         int i = 0;
         for ( Integer columnId : trainingDataSet.getDataColumnIdList() ) {
-            inputs[i++] = Normalizer.normalize(columnConfigList.get(columnId), fields[columnId]);
+            List<Double> normVals = Normalizer.normalize(columnConfigList.get(columnId), fields[columnId]);
+            for ( Double normVal : normVals) {
+                inputs[i++] = normVal;
+            }
         }
 
         trainingDataSet.addTrainingRecord(new TrainingRecord(inputs, ideal, significance));
@@ -109,8 +113,9 @@ public class ValidationConductorTest {
                 RawSourceData.SourceType.LOCAL);
 
         List<Integer> columnIdList = new ArrayList<Integer>();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for ( ColumnConfig columnConfig : columnConfigList ) {
-            if ( CommonUtils.isGoodCandidate(columnConfig) ) {
+            if ( CommonUtils.isGoodCandidate(columnConfig, hasCandidates) ) {
                 columnIdList.add(columnConfig.getColumnNum());
             }
         }

@@ -20,6 +20,8 @@ import java.util.Set;
 
 import ml.shifu.shifu.util.ClassUtils;
 
+import org.encog.ml.data.MLData;
+import org.encog.neural.NeuralNetworkError;
 import org.encog.neural.networks.BasicNetwork;
 
 /**
@@ -55,4 +57,33 @@ public class BasicFloatNetwork extends BasicNetwork {
     public void setFeatureSet(Set<Integer> featureSet) {
         this.featureSet = featureSet;
     }
+
+    /**
+     * Get the layer output. Should be called after {@link #compute(MLData)} or {@link #compute(double[], double[])}.
+     * 
+     * @param layer
+     *            The layer.
+     * @return The output from the last call to compute.
+     */
+    public final double[] getLayerOutput(final int layer) {
+        super.getStructure().requireFlat();
+        final int layerNumber = getLayerCount() - layer - 1;
+        int layerCount = super.getStructure().getFlat().getLayerCounts()[layerNumber];
+
+        int index = super.getStructure().getFlat().getLayerIndex()[layerNumber];
+        final double[] output = super.getStructure().getFlat().getLayerOutput();
+
+        double[] results = new double[layerCount];
+        for(int i = 0; i < layerCount; i++) {
+            if(index >= output.length) {
+                throw new NeuralNetworkError("The layer index: " + index
+                        + " specifies an output index larger than the network has.");
+            }
+
+            results[i] = output[index];
+            index += 1;
+        }
+        return results;
+    }
+
 }

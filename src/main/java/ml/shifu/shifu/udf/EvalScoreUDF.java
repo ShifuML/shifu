@@ -15,16 +15,29 @@
  */
 package ml.shifu.shifu.udf;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.SortedMap;
+
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ModelRunner;
 import ml.shifu.shifu.core.Scorer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
@@ -40,17 +53,14 @@ import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
 import org.encog.ml.BasicML;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
 /**
  * Calculate the score for each evaluation data
  */
 public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
+
+    private static final String SHIFU_NN_OUTPUT_FIRST_HIDDENLAYER = "shifu.nn.output.first.hiddenlayer";
+
+    private static final String SHIFU_NN_OUTPUT_HIDDENLAYER_INDEX = "shifu.nn.output.hiddenlayer.index";
 
     private static final String SCHEMA_PREFIX = "shifu::";
 
@@ -70,11 +80,32 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
      */
     private int weightExceptions;
 
+    /**
+     * For neural network, if output the first
+     */
+    private boolean outputFirstHiddenLayer = false;
+
+    /**
+     * Hidden layer output index
+     */
+    private int outputHiddenLayerIndex = 0;
+
+    /**
+     * Helper fields for #outputFirstHiddenLayer
+     */
+    private List<Integer> hiddenNodeList;
+
+    /**
+     * Splits for filter expressions
+     */
+    private int segFilterSize = 0;
+
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
         this(source, pathModelConfig, pathColumnConfig, evalSetName, Integer.toString(Scorer.DEFAULT_SCORE_SCALE));
     }
 
+    @SuppressWarnings("unchecked")
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName, String scale)
             throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
@@ -88,25 +119,85 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
         this.headers = CommonUtils.getFinalHeaders(evalConfig);
 
+        String filterExpressions = "";
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            filterExpressions = UDFContext.getUDFContext().getJobConf().get("shifu.segment.expressions");
+        } else {
+            filterExpressions = Environment.getProperty("shifu.segment.expressions");
+        }
+
+        if(StringUtils.isNotBlank(filterExpressions)) {
+            this.segFilterSize = CommonUtils.split(filterExpressions,
+                    Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER).length;
+        }
+
         // move model runner construction in exec to avoid OOM error in client side if model is too big like RF
+        // TODO not to load model but only to check model file cnt
         this.modelCnt = CommonUtils.getBasicModelsCnt(modelConfig, evalConfig, evalConfig.getDataSet().getSource());
         this.subModelsCnt = CommonUtils.getSubModelsCnt(modelConfig, this.columnConfigList, evalConfig, evalConfig
                 .getDataSet().getSource());
 
         this.scale = scale;
+
+        int modelSize = CommonUtils.locateBasicModels(modelConfig, evalConfig, evalConfig.getDataSet().getSource())
+                .size();
+        log.info("Run eval " + evalConfig.getName() + " with " + modelSize + " model(s).");
+
+        // only check if output first hidden layer in regression and NN
+        if(modelConfig.isRegression() && Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
+                    .getGridConfigFileContent());
+            Map<String, Object> validParams = this.modelConfig.getTrain().getParams();
+            if(gs.hasHyperParam()) {
+                validParams = gs.getParams(0);
+            }
+            hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
+
+            // only check when hidden layer > 0
+            if(this.hiddenNodeList.size() > 0) {
+                if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+                    this.outputFirstHiddenLayer = Boolean.TRUE.toString().equalsIgnoreCase(
+                            UDFContext.getUDFContext().getJobConf()
+                                    .get(SHIFU_NN_OUTPUT_FIRST_HIDDENLAYER, Boolean.FALSE.toString()));
+                    this.outputHiddenLayerIndex = UDFContext.getUDFContext().getJobConf()
+                            .getInt(SHIFU_NN_OUTPUT_HIDDENLAYER_INDEX, 0);
+                } else {
+                    this.outputFirstHiddenLayer = Boolean.TRUE.toString().equalsIgnoreCase(
+                            Environment.getProperty(SHIFU_NN_OUTPUT_FIRST_HIDDENLAYER, Boolean.FALSE.toString()));
+                    this.outputHiddenLayerIndex = Environment.getInt(SHIFU_NN_OUTPUT_HIDDENLAYER_INDEX, 0);
+                }
+
+                if(outputFirstHiddenLayer) {
+                    this.outputHiddenLayerIndex = 1;
+                }
+
+                if(this.outputHiddenLayerIndex == 1) {
+                    this.outputFirstHiddenLayer = true;
+                }
+
+                if(this.outputHiddenLayerIndex < -1 || this.outputHiddenLayerIndex > this.hiddenNodeList.size()) {
+                    throw new IllegalArgumentException("outputHiddenLayerIndex should in [-1, hidden layers]");
+                }
+
+                // TODO validation
+                log.debug("DEBUG: outputHiddenLayerIndex is " + outputHiddenLayerIndex);
+            }
+        }
     }
 
+    @SuppressWarnings("deprecation")
     public Tuple exec(Tuple input) throws IOException {
         if(this.modelRunner == null) {
             // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.
             // UDF in pig client will be initialized to get some metadata issues
             List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig, evalConfig.getDataSet()
-                    .getSource(), evalConfig.getGbtConvertToProb());
+                    .getSource(), evalConfig.getGbtConvertToProb(), evalConfig.getGbtScoreConvertStrategy());
             this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
-                    .getDataDelimiter(), models);
+                    .getDataDelimiter(), models, this.outputHiddenLayerIndex);
 
             List<ModelSpec> subModels = CommonUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
-                    evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb());
+                    evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb(),
+                    evalConfig.getGbtScoreConvertStrategy());
             if(CollectionUtils.isNotEmpty(subModels)) {
                 for(ModelSpec modelSpec: subModels) {
                     this.modelRunner.addSubModels(modelSpec);
@@ -118,13 +209,12 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
         }
 
-        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.headers);
-        if ( MapUtils.isEmpty(rawDataNsMap) ) {
+        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.headers, this.segFilterSize);
+        if(MapUtils.isEmpty(rawDataNsMap)) {
             return null;
         }
 
-        String tag = CommonUtils.trimTag(rawDataNsMap.get(
-                new NSColumn(modelConfig.getTargetColumnName(evalConfig))));
+        String tag = CommonUtils.trimTag(rawDataNsMap.get(new NSColumn(modelConfig.getTargetColumnName(evalConfig))));
 
         // filter invalid tag record out
         // disable the tag check, since there is no bad tag in eval data set
@@ -172,6 +262,9 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         if(modelConfig.isRegression()) {
             if(CollectionUtils.isNotEmpty(cs.getScores())) {
                 appendModelScore(tuple, cs, true);
+                if(this.outputHiddenLayerIndex != 0) {
+                    appendFirstHiddenOutputScore(tuple, cs.getHiddenLayerScores(), true);
+                }
             }
 
             if(MapUtils.isNotEmpty(subModelScores)) {
@@ -206,6 +299,12 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         return tuple;
+    }
+
+    private void appendFirstHiddenOutputScore(Tuple tuple, SortedMap<String, Double> hiddenLayerScores, boolean b) {
+        for(Entry<String, Double> entry: hiddenLayerScores.entrySet()) {
+            tuple.append(entry.getValue());
+        }
     }
 
     /**
@@ -369,6 +468,18 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             if(modelConfig.isRegression()) {
                 if(this.modelCnt > 0) {
                     addModelSchema(tupleSchema, this.modelCnt, "");
+                } else {
+                    throw new IllegalStateException("No any model found!");
+                }
+
+                if(this.outputHiddenLayerIndex != 0) {
+                    for(int i = 0; i < this.modelCnt; i++) {
+                        // +1 to add bias neuron
+                        for(int j = 0; j < (hiddenNodeList.get(outputHiddenLayerIndex - 1) + 1); j++) {
+                            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "model_" + i + "_" + outputHiddenLayerIndex
+                                    + "_" + j, DataType.DOUBLE));
+                        }
+                    }
                 }
 
                 if(MapUtils.isNotEmpty(this.subModelsCnt)) {
@@ -385,6 +496,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             } else {
                 if(this.modelCnt > 0) {
                     addModelTagSchema(tupleSchema, modelCnt, "");
+                } else {
+                    throw new IllegalStateException("No any model found!");
                 }
 
                 if(MapUtils.isNotEmpty(this.subModelsCnt)) {

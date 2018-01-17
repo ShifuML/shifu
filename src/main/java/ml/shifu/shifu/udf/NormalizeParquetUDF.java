@@ -121,7 +121,7 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
             }
 
             // append normalize data.
-            if(!CommonUtils.isGoodCandidate(config)) {
+            if(!CommonUtils.isGoodCandidate(config, super.hasCandidates)) {
                 tuple.append((Double) null);
             } else {
                 if(CommonUtils.isTreeModel(this.alg)) {
@@ -138,8 +138,10 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
                     }
                     tuple.append(df.format(normVal));
                 } else {
-                    Double normVal = Normalizer.normalize(config, val, cutoff, normType);
-                    tuple.append(df.format(normVal));
+                    List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType);
+                    for(Double normVal: normVals) {
+                        tuple.append(df.format(normVal));
+                    }
                 }
             }
         }
