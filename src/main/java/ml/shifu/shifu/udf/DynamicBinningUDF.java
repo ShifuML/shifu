@@ -15,20 +15,41 @@
  */
 package ml.shifu.shifu.udf;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.binning.AbstractBinning;
 import ml.shifu.shifu.core.binning.DynamicBinning;
 import ml.shifu.shifu.core.binning.obj.NumBinInfo;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.util.HDFSUtils;
+
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.io.Charsets;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
-
-import java.io.IOException;
-import java.util.*;
+import org.apache.pig.impl.util.UDFContext;
 
 /**
  * Created by zhanhu on 7/6/16.
@@ -51,14 +72,9 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
         // OOM in there
         if(smallBinsMap == null) {
             smallBinsMap = new HashMap<Integer, String>();
-            List<String> smallBinsList = ShifuFileUtils.readFilePartsIntoList(smallBinsPath, SourceType.HDFS);
-            for(String smallBin: smallBinsList) {
-                String[] fields = StringUtils.split(smallBin, '\u0007');
-                if(fields.length == 2) {
-                    smallBinsMap.put(Integer.parseInt(fields[0]), fields[1]);
-                }
-            }
+            initSmallBinMap();
         }
+
         if(input == null || input.size() != 1) {
             return null;
         }
@@ -132,6 +148,84 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
         output.set(1, binsData);
 
         return output;
+    }
+
+    private void initSmallBinMap() throws IOException, FileNotFoundException {
+        long start = System.currentTimeMillis();
+        Configuration jobConf = UDFContext.getUDFContext().getJobConf();
+        String partFile = smallBinsPath + File.separator + "part-*-*" + jobConf.get("mapreduce.task.partition") + "*";
+
+        FileStatus[] fileStatus = ShifuFileUtils.getFilePartStatus(partFile, SourceType.HDFS);
+        if(fileStatus.length < 1) {
+            throw new FileNotFoundException("small bin part file not found");
+        }
+        Path smallBinPartFilePath = fileStatus[0].getPath();
+
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS);
+        CompressionCodecFactory compressionFactory = new CompressionCodecFactory(jobConf);
+        BufferedReader reader = null;
+
+        try {
+            CompressionCodec codec = compressionFactory.getCodec(smallBinPartFilePath);
+            InputStream is = null;
+            if(codec != null) {
+                is = codec.createInputStream(fs.open(smallBinPartFilePath));
+            } else {
+                is = fs.open(smallBinPartFilePath);
+            }
+
+            reader = new BufferedReader(new InputStreamReader(is, Charsets.toCharset("UTF-8")));
+            String line = reader.readLine();
+            while(line != null) {
+                String[] fields = StringUtils.split(line, '\u0007');
+                if(fields.length == 2) {
+                    smallBinsMap.put(Integer.parseInt(fields[0]), fields[1]);
+                }
+                line = reader.readLine();
+            }
+        } finally {
+            IOUtils.closeQuietly(reader);
+        }
+        log.info("smallBinPartFilePath is " + smallBinPartFilePath + " initialized in"
+                + (System.currentTimeMillis() - start) + "ms.");
+    }
+
+    @SuppressWarnings("unused")
+    private String readByColumnId(String smallBinsPath, Integer columnId) throws IOException {
+        long start = System.currentTimeMillis();
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS);
+        FileStatus[] fileStatsArr = ShifuFileUtils.getFilePartStatus(smallBinsPath, SourceType.HDFS);
+
+        CompressionCodecFactory compressionFactory = new CompressionCodecFactory(HDFSUtils.getConf());
+        for(FileStatus fileStatus: fileStatsArr) {
+            BufferedReader reader = null;
+            try {
+                CompressionCodec codec = compressionFactory.getCodec(fileStatus.getPath());
+                InputStream is = null;
+                if(codec != null) {
+                    is = codec.createInputStream(fs.open(fileStatus.getPath()));
+                } else {
+                    is = fs.open(fileStatus.getPath());
+                }
+                reader = new BufferedReader(new InputStreamReader(is, Charsets.toCharset("UTF-8")));
+                String line = reader.readLine();
+                while(line != null) {
+                    String[] fields = StringUtils.split(line, '\u0007');
+                    if(fields.length == 2) {
+                        if(columnId == Integer.parseInt(fields[0])) {
+                            log.info("Read small bins with columnId " + columnId + " in time "
+                                    + (System.currentTimeMillis() - start) + "ms.");
+                            return fields[1];
+                        }
+                    }
+                    line = reader.readLine();
+                }
+            } finally {
+                IOUtils.closeQuietly(reader);
+            }
+        }
+
+        throw new RuntimeException("No such column in small bins output, please check small bin pig job");
     }
 
     public NumBinInfo binaryLocate(List<NumBinInfo> binInfoList, Double d) {
