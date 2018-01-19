@@ -21,6 +21,7 @@ import ml.shifu.shifu.core.binning.AbstractBinning;
 import ml.shifu.shifu.core.binning.DynamicBinning;
 import ml.shifu.shifu.core.binning.obj.NumBinInfo;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.util.HdfsPartFile;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
@@ -35,7 +36,7 @@ import java.util.*;
  */
 public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
 
-    private Map<Integer, String> smallBinsMap;
+    private String[] smallBinsMap;
 
     private String smallBinsPath;
 
@@ -50,15 +51,18 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
         // move initialization from constructor to be here because of Pig UDF will be called in client which will cause
         // OOM in there
         if(smallBinsMap == null) {
-            smallBinsMap = new HashMap<Integer, String>();
-            List<String> smallBinsList = ShifuFileUtils.readFilePartsIntoList(smallBinsPath, SourceType.HDFS);
-            for(String smallBin: smallBinsList) {
+            smallBinsMap = new String[super.columnConfigList.size()];
+            HdfsPartFile smallBinFile = new HdfsPartFile(smallBinsPath, SourceType.HDFS);
+            String smallBin = null;
+            while ((smallBin = smallBinFile.readLine()) != null) {
                 String[] fields = StringUtils.split(smallBin, '\u0007');
                 if(fields.length == 2) {
-                    smallBinsMap.put(Integer.parseInt(fields[0]), fields[1]);
+                    smallBinsMap[Integer.parseInt(fields[0])] = fields[1];
                 }
             }
+            smallBinFile.close();
         }
+
         if(input == null || input.size() != 1) {
             return null;
         }
@@ -85,7 +89,8 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
                     columnConfig = super.columnConfigList.get(columnId);
                 }
 
-                String smallBins = smallBinsMap.get(columnId);
+                String smallBins = smallBinsMap[columnId];
+                smallBinsMap[columnId] = null; // release memory, since it won't be used anymore
                 if(columnConfig.isCategorical()) {
                     binsData = smallBins;
                     break;
