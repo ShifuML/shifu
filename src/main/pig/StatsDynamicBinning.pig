@@ -57,6 +57,8 @@ data_cols = FOREACH data_cols GENERATE FLATTEN($0);
 data_binning_grp = GROUP data_cols BY $0 PARALLEL $column_parallel;
 binning_info_small = FOREACH data_binning_grp GENERATE FLATTEN(GenSmallBinningInfo(data_cols));
 STORE binning_info_small INTO '$path_stats_small_bins' USING PigStorage('\u0007', '-schema');
+
+-- the final step depends on the small bins, let it run first
 EXEC;
 
 binning_info = FOREACH data_binning_grp GENERATE FLATTEN(DynamicBinning(data_cols));
