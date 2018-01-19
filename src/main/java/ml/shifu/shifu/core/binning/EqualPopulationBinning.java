@@ -60,7 +60,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     private LinkNode<HistogramUnit> header, tail;
 
     /**
-     * Use to cache frequecey sum of HistogramUnit, to improve getDataBin time performance, otherwise there maybe
+     * Use to cache frequency sum of HistogramUnit, to improve getDataBin time performance, otherwise there maybe
      * timeout in reducer
      */
     private Map<LinkNode<HistogramUnit>, Double> sumCache = new HashMap<LinkNode<HistogramUnit>, Double>();
@@ -236,7 +236,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
 
         double totalCnt = getTotalInHistogram();
         LinkNode<HistogramUnit> currStartPos = null;
-        //To imporve time performance
+        //To improve time performance
         sumCacheGen();
         for(int j = 1; j < toBinningNum; j++) {
             double s = (j * totalCnt) / toBinningNum; 
@@ -335,7 +335,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
 
     /**
      * Generate sum the histogram's frequency at exact histogram pos
-     * To imporve time performance
+     * To improve time performance
      */
     private void sumCacheGen() {
        LinkNode<HistogramUnit> cur = this.header;
