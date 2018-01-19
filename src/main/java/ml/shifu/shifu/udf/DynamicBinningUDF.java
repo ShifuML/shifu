@@ -15,48 +15,30 @@
  */
 package ml.shifu.shifu.udf;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.binning.AbstractBinning;
 import ml.shifu.shifu.core.binning.DynamicBinning;
 import ml.shifu.shifu.core.binning.obj.NumBinInfo;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.HDFSUtils;
-
+import ml.shifu.shifu.util.HdfsPartFile;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.io.Charsets;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.util.UDFContext;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
 
 /**
  * Created by zhanhu on 7/6/16.
  */
 public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
 
-    private Map<Integer, String> smallBinsMap;
+    private HashMap<Integer, String> smallBinsMap;
 
     private String smallBinsPath;
 
@@ -70,12 +52,12 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
     public Tuple exec(Tuple input) throws IOException {
         // move initialization from constructor to be here because of Pig UDF will be called in client which will cause
         // OOM in there
-        if(smallBinsMap == null) {
+        if (smallBinsMap == null) {
             smallBinsMap = new HashMap<Integer, String>();
             initSmallBinMap();
         }
 
-        if(input == null || input.size() != 1) {
+        if (input == null || input.size() != 1) {
             return null;
         }
 
@@ -88,13 +70,13 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
 
         DataBag columnDataBag = (DataBag) input.get(0);
         Iterator<Tuple> iterator = columnDataBag.iterator();
-        while(iterator.hasNext()) {
+        while (iterator.hasNext()) {
             Tuple tuple = iterator.next();
-            if(columnId == null) {
+            if (columnId == null) {
                 columnId = (Integer) tuple.get(0);
 
                 // for filter expansions
-                if(columnId >= super.columnConfigList.size()) {
+                if (columnId >= super.columnConfigList.size()) {
                     int newColumnId = columnId % super.columnConfigList.size();
                     columnConfig = super.columnConfigList.get(newColumnId);
                 } else {
@@ -102,7 +84,7 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
                 }
 
                 String smallBins = smallBinsMap.get(columnId);
-                if(columnConfig.isCategorical()) {
+                if (columnConfig.isCategorical()) {
                     binsData = smallBins;
                     break;
                 } else {
@@ -113,7 +95,7 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
             String val = (String) tuple.get(1);
             Boolean isPositiveInst = (Boolean) tuple.get(2);
 
-            if(missingValSet.contains(val)) {
+            if (missingValSet.contains(val)) {
                 continue;
             }
 
@@ -127,14 +109,14 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
             }
 
             NumBinInfo numBinInfo = binaryLocate(binInfoList, d);
-            if(numBinInfo != null) {
+            if (numBinInfo != null) {
                 numBinInfo.incInstCnt(isPositiveInst);
             }
         }
 
-        if(binsData == null && CollectionUtils.isNotEmpty(binInfoList)) {
+        if (binsData == null && CollectionUtils.isNotEmpty(binInfoList)) {
             int maxNumBin = modelConfig.getStats().getMaxNumBin();
-            if(maxNumBin <= 0) {
+            if (maxNumBin <= 0) {
                 maxNumBin = 1024;
             }
             DynamicBinning dynamicBinning = new DynamicBinning(binInfoList, maxNumBin);
@@ -150,96 +132,44 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
         return output;
     }
 
-    private void initSmallBinMap() throws IOException, FileNotFoundException {
+    private void initSmallBinMap() throws IOException {
         long start = System.currentTimeMillis();
         Configuration jobConf = UDFContext.getUDFContext().getJobConf();
-        String partFile = smallBinsPath + File.separator + "part-*-*" + jobConf.get("mapreduce.task.partition") + "*";
-
-        FileStatus[] fileStatus = ShifuFileUtils.getFilePartStatus(partFile, SourceType.HDFS);
-        if(fileStatus.length < 1) {
-            throw new FileNotFoundException("small bin part file not found");
-        }
-        Path smallBinPartFilePath = fileStatus[0].getPath();
-
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS);
-        CompressionCodecFactory compressionFactory = new CompressionCodecFactory(jobConf);
-        BufferedReader reader = null;
-
+        int partNum = Integer.parseInt(jobConf.get("mapreduce.task.partition"));
+        String partition = String.format("%05d", partNum);
+        HdfsPartFile partFile = new HdfsPartFile(
+                smallBinsPath + File.separator + "part-*-*" + partition + "*",
+                SourceType.HDFS);
         try {
-            CompressionCodec codec = compressionFactory.getCodec(smallBinPartFilePath);
-            InputStream is = null;
-            if(codec != null) {
-                is = codec.createInputStream(fs.open(smallBinPartFilePath));
-            } else {
-                is = fs.open(smallBinPartFilePath);
-            }
-
-            reader = new BufferedReader(new InputStreamReader(is, Charsets.toCharset("UTF-8")));
-            String line = reader.readLine();
-            while(line != null) {
+            String line = null;
+            int cnt = 0;
+            while ((line = partFile.readLine()) != null) {
                 String[] fields = StringUtils.split(line, '\u0007');
-                if(fields.length == 2) {
+                if (fields.length == 2) {
                     smallBinsMap.put(Integer.parseInt(fields[0]), fields[1]);
                 }
-                line = reader.readLine();
+                cnt ++;
             }
+            log.info(cnt + " lines are loaded in " + (System.currentTimeMillis() - start) + " milli-seconds.");
+        } catch (IOException e){
+            throw new IOException("Fail to load small bin map.", e);
         } finally {
-            IOUtils.closeQuietly(reader);
+            partFile.close();
         }
-        log.info("smallBinPartFilePath is " + smallBinPartFilePath + " initialized in"
-                + (System.currentTimeMillis() - start) + "ms.");
-    }
-
-    @SuppressWarnings("unused")
-    private String readByColumnId(String smallBinsPath, Integer columnId) throws IOException {
-        long start = System.currentTimeMillis();
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS);
-        FileStatus[] fileStatsArr = ShifuFileUtils.getFilePartStatus(smallBinsPath, SourceType.HDFS);
-
-        CompressionCodecFactory compressionFactory = new CompressionCodecFactory(HDFSUtils.getConf());
-        for(FileStatus fileStatus: fileStatsArr) {
-            BufferedReader reader = null;
-            try {
-                CompressionCodec codec = compressionFactory.getCodec(fileStatus.getPath());
-                InputStream is = null;
-                if(codec != null) {
-                    is = codec.createInputStream(fs.open(fileStatus.getPath()));
-                } else {
-                    is = fs.open(fileStatus.getPath());
-                }
-                reader = new BufferedReader(new InputStreamReader(is, Charsets.toCharset("UTF-8")));
-                String line = reader.readLine();
-                while(line != null) {
-                    String[] fields = StringUtils.split(line, '\u0007');
-                    if(fields.length == 2) {
-                        if(columnId == Integer.parseInt(fields[0])) {
-                            log.info("Read small bins with columnId " + columnId + " in time "
-                                    + (System.currentTimeMillis() - start) + "ms.");
-                            return fields[1];
-                        }
-                    }
-                    line = reader.readLine();
-                }
-            } finally {
-                IOUtils.closeQuietly(reader);
-            }
-        }
-
-        throw new RuntimeException("No such column in small bins output, please check small bin pig job");
     }
 
     public NumBinInfo binaryLocate(List<NumBinInfo> binInfoList, Double d) {
         int left = 0;
         int right = binInfoList.size() - 1;
 
-        while(left <= right) {
+        while (left <= right) {
             int middle = (left + right) / 2;
             NumBinInfo binInfo = binInfoList.get(middle);
-            if(d >= binInfo.getLeftThreshold() && d < binInfo.getRightThreshold()) {
+            if (d >= binInfo.getLeftThreshold() && d < binInfo.getRightThreshold()) {
                 return binInfo;
-            } else if(d >= binInfo.getRightThreshold()) {
+            } else if (d >= binInfo.getRightThreshold()) {
                 left = middle + 1;
-            } else if(d < binInfo.getLeftThreshold()) {
+            } else if (d < binInfo.getLeftThreshold()) {
                 right = middle - 1;
             } else {
                 return null;
