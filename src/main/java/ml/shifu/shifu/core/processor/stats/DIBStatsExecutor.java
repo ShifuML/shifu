@@ -47,8 +47,8 @@ public class DIBStatsExecutor extends MapReducerStatsWorker {
     protected void runStatsPig(Map<String, String> paramsMap) throws Exception {
         log.info("Run DynamicBinning to stats ... ");
 
-        //ShifuFileUtils.deleteFile(pathFinder.getStatsSmallBins(modelConfig.getDataSet().getSource()),
-        //        modelConfig.getDataSet().getSource());
+        ShifuFileUtils.deleteFile(pathFinder.getStatsSmallBins(modelConfig.getDataSet().getSource()),
+                modelConfig.getDataSet().getSource());
         ShifuFileUtils.deleteFile(pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource()),
                 modelConfig.getDataSet().getSource());
 
