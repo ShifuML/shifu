@@ -1,6 +1,6 @@
 language: java
 
-before_install:
+#before_install:
   # clone and install guagua before building shifu
   - git clone https://github.com/ShifuML/guagua.git
   - cd guagua
