@@ -2623,7 +2623,8 @@ public final class CommonUtils {
                         // hidden files,
                         continue;
                     }
-                    if(lfs.getLen() > 1024L) {
+                    // 20L is min gzip file size
+                    if(lfs.getLen() > 20L) {
                         firstValidFile = lfs.getPath().toString();
                         break;
                     }

@@ -4,6 +4,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import org.junit.Test;
 import org.testng.Assert;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -59,5 +60,22 @@ public class HdfsPartFileTest {
 
         hdfsPartFile.close();
         Assert.assertEquals(lineCnt, 50);
+    }
+
+    @Test
+    public void testPartsFileWild() throws IOException {
+        String partition = String.format("%05d", 3);
+        HdfsPartFile hdfsPartFile = new HdfsPartFile(
+                "src/test/resources/example/StatsSmallBins" + File.separator + "part-*-*" + partition + ".*",
+                SourceType.LOCAL);
+        String line = null;
+        int cnt = 0;
+        while ( (line = hdfsPartFile.readLine()) != null) {
+            System.out.println(line);
+            cnt++;
+        }
+
+        hdfsPartFile.close();
+        Assert.assertEquals(cnt, 10);
     }
 }
