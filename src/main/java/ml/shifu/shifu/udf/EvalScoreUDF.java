@@ -121,9 +121,9 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
         String filterExpressions = "";
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
-            filterExpressions = UDFContext.getUDFContext().getJobConf().get("shifu.segment.expressions");
+            filterExpressions = UDFContext.getUDFContext().getJobConf().get(Constants.SHIFU_SEGMENT_EXPRESSIONS);
         } else {
-            filterExpressions = Environment.getProperty("shifu.segment.expressions");
+            filterExpressions = Environment.getProperty(Constants.SHIFU_SEGMENT_EXPRESSIONS);
         }
 
         if(StringUtils.isNotBlank(filterExpressions)) {

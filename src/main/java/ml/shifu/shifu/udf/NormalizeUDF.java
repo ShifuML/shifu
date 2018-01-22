@@ -54,8 +54,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
     private static final String POSRATE = "posrate";
 
-    private static final String SHIFU_NORM_CATEGORY_MISSING_NORM = "shifu.norm.category.missing.norm";
-
     private List<Set<String>> tags;
 
     private Double cutoff;
@@ -107,10 +105,10 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private void setCategoryMissingNormType() {
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
             this.categoryMissingNormType = CategoryMissingNormType.of(UDFContext.getUDFContext().getJobConf()
-                    .get(SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
+                    .get(Constants.SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
         } else {
             this.categoryMissingNormType = CategoryMissingNormType.of(Environment.getProperty(
-                    SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
+                    Constants.SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
         }
         if(this.categoryMissingNormType == null) {
             this.categoryMissingNormType = CategoryMissingNormType.POSRATE;
@@ -156,9 +154,9 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         String filterExpressions = "";
 
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
-            filterExpressions = UDFContext.getUDFContext().getJobConf().get("shifu.segment.expressions");
+            filterExpressions = UDFContext.getUDFContext().getJobConf().get(Constants.SHIFU_SEGMENT_EXPRESSIONS);
         } else {
-            filterExpressions = Environment.getProperty("shifu.segment.expressions");
+            filterExpressions = Environment.getProperty(Constants.SHIFU_SEGMENT_EXPRESSIONS);
         }
 
         if(StringUtils.isNotBlank(filterExpressions)) {
