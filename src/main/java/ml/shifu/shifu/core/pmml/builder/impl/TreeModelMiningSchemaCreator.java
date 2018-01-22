@@ -45,8 +45,8 @@ public class TreeModelMiningSchemaCreator extends AbstractPmmlElementCreator<Min
         for(ColumnConfig columnConfig: columnConfigList) {
             if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
                 MiningField miningField = new MiningField();
-
-                miningField.setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig)));
+                // TODO, how to support segment variable in tree model, here should be changed
+                miningField.setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig.getColumnName())));
                 miningField.setOptype(getOptype(columnConfig));
                 if(columnConfig.isNumerical()) {
                     miningField.setMissingValueReplacement(String.valueOf(columnConfig.getColumnStats().getMean()));

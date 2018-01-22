@@ -86,7 +86,8 @@ public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.d
         if(columnConfig.isNumerical()) {
             SimplePredicate p = new SimplePredicate();
             p.setValue(String.valueOf(split.getThreshold()));
-            p.setField(new FieldName(CommonUtils.getSimpleColumnName(columnConfig)));
+            // TODO, how to support segment variable in tree model, here should be changed
+            p.setField(new FieldName(CommonUtils.getSimpleColumnName(columnConfig.getColumnName())));
             if(isLeft) {
                 p.setOperator(SimplePredicate.Operator.fromValue("lessThan"));
             } else {
@@ -96,8 +97,8 @@ public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.d
         } else if(columnConfig.isCategorical()) {
             SimpleSetPredicate p = new SimpleSetPredicate();
             Set<Short> childCategories = split.getLeftOrRightCategories();
-
-            p.setField(new FieldName(CommonUtils.getSimpleColumnName(columnConfig)));
+            // TODO, how to support segment variable in tree model, here should be changed
+            p.setField(new FieldName(CommonUtils.getSimpleColumnName(columnConfig.getColumnName())));
             StringBuilder arrayStr = new StringBuilder();
             List<String> valueList = treeModel.getCategoricalColumnNameNames().get(columnConfig.getColumnNum());
             for(Short sh: childCategories) {

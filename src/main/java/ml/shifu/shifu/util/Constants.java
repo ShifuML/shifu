@@ -311,4 +311,7 @@ public interface Constants {
     public static String GBT_SCORE_HALF_CUTOFF_CONVETER = "HALF_CUTOFF";
     public static String GBT_SCORE_MAXMIN_SCALE_CONVETER = "MAXMIN";
 
+    public static final String SHIFU_SEGMENT_EXPRESSIONS = "shifu.segment.expressions";
+    public static final String SHIFU_NORM_CATEGORY_MISSING_NORM = "shifu.norm.category.missing.norm";
+
 }

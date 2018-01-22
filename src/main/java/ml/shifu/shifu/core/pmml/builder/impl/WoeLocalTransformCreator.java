@@ -51,7 +51,8 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
      * @return DerivedField for variable
      */
     @Override
-    protected List<DerivedField> createNumericalDerivedField(ColumnConfig config, double cutoff, ModelNormalizeConf.NormType normType) {
+    protected List<DerivedField> createNumericalDerivedField(ColumnConfig config, double cutoff,
+            ModelNormalizeConf.NormType normType) {
         List<Double> binWoeList = (normType.equals(ModelNormalizeConf.NormType.WOE) ? config.getBinCountWoe() : config
                 .getBinWeightedWoe());
         List<Double> binBoundaryList = config.getBinBoundary();
@@ -63,9 +64,8 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
             Interval interval = new Interval();
 
             if(i == 0) {
-                if ( binBoundaryList.size() == 1 ) {
-                    interval.withClosure(Interval.Closure.OPEN_OPEN)
-                            .withLeftMargin(Double.NEGATIVE_INFINITY)
+                if(binBoundaryList.size() == 1) {
+                    interval.withClosure(Interval.Closure.OPEN_OPEN).withLeftMargin(Double.NEGATIVE_INFINITY)
                             .withRightMargin(Double.POSITIVE_INFINITY);
                 } else {
                     interval.withClosure(Interval.Closure.OPEN_OPEN).withRightMargin(binBoundaryList.get(i + 1));
@@ -84,7 +84,9 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
         Discretize discretize = new Discretize();
         discretize
                 .withDataType(DataType.DOUBLE)
-                .withField(FieldName.create(CommonUtils.getSimpleColumnName(config)))
+                .withField(
+                        FieldName.create(CommonUtils.getSimpleColumnName(config, columnConfigList, segmentExpansions,
+                                datasetHeaders)))
                 .withMapMissingTo(Normalizer.normalize(config, null, cutoff, normType).get(0).toString())
                 .withDefaultValue(Normalizer.normalize(config, null, cutoff, normType).get(0).toString())
                 .withDiscretizeBins(discretizeBinList);
@@ -92,7 +94,8 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
         // derived field name is consisted of FieldName and "_zscl"
         List<DerivedField> derivedFields = new ArrayList<DerivedField>();
         derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
-                FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config), normType))).withExpression(discretize));
+                FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config.getColumnName()), normType)))
+                .withExpression(discretize));
         return derivedFields;
     }
 }

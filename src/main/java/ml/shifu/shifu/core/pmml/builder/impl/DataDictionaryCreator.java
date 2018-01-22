@@ -52,6 +52,11 @@ public class DataDictionaryCreator extends AbstractPmmlElementCreator<DataDictio
             BasicFloatNetwork bfn = (BasicFloatNetwork) basicML;
             Set<Integer> featureSet = bfn.getFeatureSet();
             for(ColumnConfig columnConfig: columnConfigList) {
+                if(columnConfig.getColumnNum() >= datasetHeaders.length) {
+                    // segment expansion column no need print in DataDictionary part, assuming columnConfigList are read
+                    // in order
+                    break;
+                }
                 if(isConcise) {
                     if(columnConfig.isFinalSelect()
                             && (CollectionUtils.isEmpty(featureSet) || featureSet.contains(columnConfig.getColumnNum()))
@@ -64,6 +69,11 @@ public class DataDictionaryCreator extends AbstractPmmlElementCreator<DataDictio
             }
         } else {
             for(ColumnConfig columnConfig: columnConfigList) {
+                if(columnConfig.getColumnNum() >= datasetHeaders.length) {
+                    // segment expansion column no need print in DataDictionary part, assuming columnConfigList are read
+                    // in order
+                    break;
+                }
                 if(isConcise) {
                     if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
                         fields.add(convertColumnToDataField(columnConfig));
@@ -81,7 +91,7 @@ public class DataDictionaryCreator extends AbstractPmmlElementCreator<DataDictio
 
     private DataField convertColumnToDataField(ColumnConfig columnConfig) {
         DataField field = new DataField();
-        field.setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig)));
+        field.setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig.getColumnName())));
         field.setOptype(getOptype(columnConfig));
         field.setDataType(getDataType(field.getOptype()));
         return field;

@@ -74,9 +74,14 @@ public class PMMLConstructorFactory {
         ModelNormalizeConf.NormType normType = modelConfig.getNormalizeType();
         if(normType.equals(ModelNormalizeConf.NormType.WOE) || normType.equals(ModelNormalizeConf.NormType.WEIGHT_WOE)) {
             localTransformationsCreator = new WoeLocalTransformCreator(modelConfig, columnConfigList, isConcise);
-        } else if(normType.equals(ModelNormalizeConf.NormType.WOE_ZSCORE)) {
+        } else if(normType == ModelNormalizeConf.NormType.WOE_ZSCORE
+                || normType == ModelNormalizeConf.NormType.WOE_ZSCALE) {
             localTransformationsCreator = new WoeZscoreLocalTransformCreator(modelConfig, columnConfigList, isConcise,
                     false);
+        } else if(normType == ModelNormalizeConf.NormType.WEIGHT_WOE_ZSCORE
+                || normType == ModelNormalizeConf.NormType.WEIGHT_WOE_ZSCALE) {
+            localTransformationsCreator = new WoeZscoreLocalTransformCreator(modelConfig, columnConfigList, isConcise,
+                    true);
         } else {
             localTransformationsCreator = new ZscoreLocalTransformCreator(modelConfig, columnConfigList, isConcise);
         }
