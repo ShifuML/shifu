@@ -378,13 +378,13 @@
                 </DerivedField>
             </NeuralInput>
             <NeuralInput id="0,1">
-                <DerivedField name="temperature_1_woe_zscale" optype="continuous" dataType="double">
-                    <FieldRef field="temperature_1_woe_zscale"/>
+                <DerivedField name="temperature_woe_zscale" optype="continuous" dataType="double">
+                    <FieldRef field="temperature_woe_zscale"/>
                 </DerivedField>
             </NeuralInput>
             <NeuralInput id="0,2">
-                <DerivedField name="humidity_1_woe_zscale" optype="continuous" dataType="double">
-                    <FieldRef field="humidity_1_woe_zscale"/>
+                <DerivedField name="humidity_woe_zscale" optype="continuous" dataType="double">
+                    <FieldRef field="humidity_woe_zscale"/>
                 </DerivedField>
             </NeuralInput>
             <NeuralInput id="0,3">
@@ -395,6 +395,16 @@
             <NeuralInput id="0,4">
                 <DerivedField name="type_woe_zscale" optype="continuous" dataType="double">
                     <FieldRef field="type_woe_zscale"/>
+                </DerivedField>
+            </NeuralInput>
+            <NeuralInput id="0,5">
+                <DerivedField name="temperature_1_woe_zscale" optype="continuous" dataType="double">
+                    <FieldRef field="temperature_1_woe_zscale"/>
+                </DerivedField>
+            </NeuralInput>
+            <NeuralInput id="0,6">
+                <DerivedField name="humidity_1_woe_zscale" optype="continuous" dataType="double">
+                    <FieldRef field="humidity_1_woe_zscale"/>
                 </DerivedField>
             </NeuralInput>
             <NeuralInput id="bias">
