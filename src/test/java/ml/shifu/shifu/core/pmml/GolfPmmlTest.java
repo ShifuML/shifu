@@ -24,11 +24,11 @@ import org.dmg.pmml.FieldName;
 import org.dmg.pmml.PMML;
 import org.jpmml.evaluator.FieldValue;
 import org.jpmml.evaluator.NeuralNetworkEvaluator;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 public class GolfPmmlTest {
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "incomplete-switch" })
     @Test
     public void testOldNNPMMlModel() throws Exception {
         PMML pmml = PMMLUtils.loadPMML("src/test/resources/dttest/model/golf0.pmml");
