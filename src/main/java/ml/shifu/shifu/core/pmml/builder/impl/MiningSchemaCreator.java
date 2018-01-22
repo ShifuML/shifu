@@ -50,10 +50,16 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
             BasicFloatNetwork bfn = (BasicFloatNetwork) basicML;
             Set<Integer> featureSet = bfn.getFeatureSet();
             for(ColumnConfig columnConfig: columnConfigList) {
+                if(columnConfig.getColumnNum() >= datasetHeaders.length) {
+                    // segment expansion column no need print in DataDictionary part, assuming columnConfigList are read
+                    // in order
+                    break;
+                }
                 if(isActiveColumn(featureSet, columnConfig)) {
                     MiningField miningField = new MiningField();
 
-                    miningField.setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig)));
+                    miningField
+                            .setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig.getColumnName())));
                     miningField.setOptype(getOptype(columnConfig));
                     if(columnConfig.isTarget()) {
                         miningField.setUsageType(FieldUsageType.TARGET);
@@ -66,11 +72,18 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
             }
         } else {
             for(ColumnConfig columnConfig: columnConfigList) {
+                if(columnConfig.getColumnNum() >= datasetHeaders.length) {
+                    // segment expansion column no need print in DataDictionary part, assuming columnConfigList are read
+                    // in order
+                    break;
+                }
+
                 // FIXME, if no variable is selected
                 if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
                     MiningField miningField = new MiningField();
 
-                    miningField.setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig)));
+                    miningField
+                            .setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig.getColumnName())));
                     miningField.setOptype(getOptype(columnConfig));
 
                     if(columnConfig.isTarget()) {

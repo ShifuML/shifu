@@ -153,6 +153,8 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
     private void initSmallBinMap() throws IOException, FileNotFoundException {
         long start = System.currentTimeMillis();
         Configuration jobConf = UDFContext.getUDFContext().getJobConf();
+        // only load nesscary part files
+        // this assumes dynamic binning and small bin job has the same reducers, not good but works
         String partFile = smallBinsPath + File.separator + "part-*-*" + jobConf.get("mapreduce.task.partition") + "*";
 
         FileStatus[] fileStatus = ShifuFileUtils.getFilePartStatus(partFile, SourceType.HDFS);

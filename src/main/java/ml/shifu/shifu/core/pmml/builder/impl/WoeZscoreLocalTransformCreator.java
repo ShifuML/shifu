@@ -79,7 +79,7 @@ public class WoeZscoreLocalTransformCreator extends WoeLocalTransformCreator {
 
         // derived field name is consisted of FieldName and "_zscl"
         derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE)
-                .withName(FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config), normType)))
+                .withName(FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config.getColumnName()), normType)))
                 .withExpression(normContinuous));
 
         return derivedFields;
@@ -92,6 +92,7 @@ public class WoeZscoreLocalTransformCreator extends WoeLocalTransformCreator {
      * @param cutoff - cutoff for normalization
      * @return DerivedField for variable
      */
+    @Override
     protected List<DerivedField> createCategoricalDerivedField(ColumnConfig config, double cutoff, ModelNormalizeConf.NormType normType) {
         List<DerivedField> derivedFields = new ArrayList<DerivedField>();
 
@@ -109,7 +110,7 @@ public class WoeZscoreLocalTransformCreator extends WoeLocalTransformCreator {
 
         // derived field name is consisted of FieldName and "_zscl"
         derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE)
-                .withName(FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config), normType)))
+                .withName(FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config.getColumnName()), normType)))
                 .withExpression(normContinuous));
 
         return derivedFields;
