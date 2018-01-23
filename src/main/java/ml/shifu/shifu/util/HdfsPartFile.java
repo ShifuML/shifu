@@ -19,6 +19,7 @@ import java.io.InputStreamReader;
  */
 public class HdfsPartFile {
 
+    @SuppressWarnings("unused")
     private String filePath;
     private SourceType sourceType;
     private FileStatus[] fileStatsArr;

@@ -87,6 +87,7 @@ public class NeuralNetworkModelIntegrator {
         // comment here
         List<MiningField> miningList = model.getMiningSchema().getMiningFields();
         int index = 0;
+
         for(DerivedField dField: model.getLocalTransformations().getDerivedFields()) {
             List<FieldName> list = treeMapOfTransform.get(dField.getName());
             boolean isLeaf = (list == null || list.size() == 0);
@@ -98,9 +99,9 @@ public class NeuralNetworkModelIntegrator {
             }
         }
 
-        DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE)
-                .withName(new FieldName(PluginConstants.biasValue))
-                .withExpression(new FieldRef(new FieldName(PluginConstants.biasValue)));
+        DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
+                new FieldName(PluginConstants.biasValue)).withExpression(
+                new FieldRef(new FieldName(PluginConstants.biasValue)));
         nnInputs.withNeuralInputs(new NeuralInput(field, PluginConstants.biasValue));
         return nnInputs;
     }
@@ -136,8 +137,8 @@ public class NeuralNetworkModelIntegrator {
         List<DerivedField> derivedFields = model.getLocalTransformations().getDerivedFields();
 
         // add bias
-        DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE)
-                .withName(new FieldName(PluginConstants.biasValue));
+        DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(new FieldName(
+                PluginConstants.biasValue));
         field.withExpression(new Constant(String.valueOf(PluginConstants.bias)));
         derivedFields.add(field);
         return new LocalTransformations().withDerivedFields(derivedFields);
