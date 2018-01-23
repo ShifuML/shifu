@@ -82,6 +82,7 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
         this.alg = this.modelConfig.getAlgorithm();
     }
 
+    @SuppressWarnings("deprecation")
     public Tuple exec(Tuple input) throws IOException {
         if(input == null || input.size() == 0) {
             return null;
