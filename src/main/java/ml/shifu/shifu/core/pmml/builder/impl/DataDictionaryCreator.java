@@ -48,6 +48,10 @@ public class DataDictionaryCreator extends AbstractPmmlElementCreator<DataDictio
     public DataDictionary build(BasicML basicML) {
         DataDictionary dict = new DataDictionary();
         List<DataField> fields = new ArrayList<DataField>();
+
+        boolean isSegExpansionMode = columnConfigList.size() > datasetHeaders.length;
+        int segSize = segmentExpansions.size();
+
         if(basicML != null && basicML instanceof BasicFloatNetwork) {
             BasicFloatNetwork bfn = (BasicFloatNetwork) basicML;
             Set<Integer> featureSet = bfn.getFeatureSet();
@@ -62,7 +66,18 @@ public class DataDictionaryCreator extends AbstractPmmlElementCreator<DataDictio
                             && (CollectionUtils.isEmpty(featureSet) || featureSet.contains(columnConfig.getColumnNum()))
                             || columnConfig.isTarget()) {
                         fields.add(convertColumnToDataField(columnConfig));
-                    } // else ignore
+                    } else if(isSegExpansionMode) {
+                        // even current column not selected, if segment column selected, we should keep raw column
+                        for(int i = 0; i < segSize; i++) {
+                            int newIndex = datasetHeaders.length * (i + 1) + columnConfig.getColumnNum();
+                            ColumnConfig cc = columnConfigList.get(newIndex);
+                            if(cc.isFinalSelect()) {
+                                // if one segment feature is selected, we should put raw column in
+                                fields.add(convertColumnToDataField(columnConfig));
+                                break;
+                            }
+                        }
+                    }
                 } else {
                     fields.add(convertColumnToDataField(columnConfig));
                 }
@@ -77,7 +92,18 @@ public class DataDictionaryCreator extends AbstractPmmlElementCreator<DataDictio
                 if(isConcise) {
                     if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
                         fields.add(convertColumnToDataField(columnConfig));
-                    } // else ignore
+                    } else if(isSegExpansionMode) {
+                        // even current column not selected, if segment column selected, we should keep raw column
+                        for(int i = 0; i < segSize; i++) {
+                            int newIndex = datasetHeaders.length * (i + 1) + columnConfig.getColumnNum();
+                            ColumnConfig cc = columnConfigList.get(newIndex);
+                            if(cc.isFinalSelect()) {
+                                // if one segment feature is selected, we should put raw column in
+                                fields.add(convertColumnToDataField(columnConfig));
+                                break;
+                            }
+                        }
+                    }
                 } else {
                     fields.add(convertColumnToDataField(columnConfig));
                 }

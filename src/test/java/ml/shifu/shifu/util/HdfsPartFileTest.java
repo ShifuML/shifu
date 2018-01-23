@@ -26,6 +26,7 @@ public class HdfsPartFileTest {
         hdfsPartFile.close();
     }
 
+    @SuppressWarnings("unused")
     @Test
     public void testPartsFile() throws IOException {
         HdfsPartFile hdfsPartFile = new HdfsPartFile(
