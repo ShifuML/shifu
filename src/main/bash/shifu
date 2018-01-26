@@ -86,9 +86,9 @@ function find_ld_library_path() {
         fi
 
         if [ -d ${_hadoop_root}/lib/native/Linux-${LINUX_ARCH} ] ; then
-            _ld_library_path="${_hadoop_root}/lib/native/Linux-${LINUX_ARCH}":${LD_LIBRARY_PATH}
+            _ld_library_path="${_hadoop_root}/lib/native/Linux-${LINUX_ARCH}:${_hadoop_root}/lib/native"
         elif [ -d ${_hadoop_root}/lib/native ]; then
-            _ld_library_path="${_hadoop_root}/lib/native":${LD_LIBRARY_PATH}
+            _ld_library_path="${_hadoop_root}/lib/native"
         fi
     fi
 
@@ -142,7 +142,7 @@ CLASSPATH=`find ${SHIFU_HOME}/lib -name "*.jar" | grep -v javadoc | xargs | sed 
 
 # ---------------- HADOOP Environment Detection -----------------------------
 if [ "${HADOOP_ROOT}" == "" ]; then
-    if [ "${HADOOP_HOME}" == "" ]; then
+    if [ "${HADOOP_HOME}" != "" ]; then # if HADOOP_HOME is set, use it as HADOOP_ROOT
         HADOOP_ROOT="${HADOOP_HOME}"
     else
         HADOOP_ROOT=`find_hadoop_root`
