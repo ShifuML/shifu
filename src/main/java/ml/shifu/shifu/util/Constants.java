@@ -64,6 +64,9 @@ public interface Constants {
     public static final String IS_COMPRESS = "is_compress";
     public static final String IS_NORM_FOR_CLEAN = "is_norm_for_clean";
 
+    public static final String ENHANCE_DATA_TYPE = "enhance_data_type";
+    public static final String EVAL_SET_NAME = "eval_set_name";
+
     public static final String STATS_SAMPLE_RATE = "statsSampleRate";
     public static final String WITH_SCORE = "with_score";
     public static final String SOURCE_TYPE = "source_type";
@@ -125,6 +128,12 @@ public interface Constants {
 
     public static final String DEFAULT_DELIMITER = "|";
 
+    public static final String MAP_KEY_VALUE_DELIMITER = ":";
+
+    public static final String ENHANCE_METHOD_DELIMITER = ",";
+
+    public static final String ENHANCE_NAME_JOIN_CHARACTER = "_";
+
     public static final String BINNING_INFO_FILE_NAME = "binning_info.txt";
 
     public static final String AUTO_TYPE_PATH = "AutoTypePath";
@@ -159,6 +168,7 @@ public interface Constants {
 
     public static final String DEFAULT_META_COLUMN_FILE = "meta.column.names";
     public static final String DEFAULT_CATEGORICAL_COLUMN_FILE = "categorical.column.names";
+    public static final String DEFAULT_ENHANCE_COLUMN_FILE = "enhance.column.config";
     public static final String DEFAULT_HYBRID_COLUMN_FILE = "hybrid.column.names";
     public static final String DEFAULT_CANDIDATE_COLUMN_FILE = "candidate.column.names";
     public static final String DEFAULT_FORCESELECT_COLUMN_FILE = "forceselect.column.names";

@@ -2381,6 +2381,51 @@ public final class CommonUtils {
         return columnNameList;
     }
 
+    /**
+     * Read configure file into map. Each line contain an key, value pair. And the same key should not in multi line,
+     * else the value before will be covered by the last value with the same key.
+     *
+     * @param columnConfFile, config file path
+     * @param sourceType, config file source type
+     * @param delimiter, configure file key, value separator
+     * @return Configure map contain all key,value pair
+     * @throws IOException
+     */
+    public static Map<String, String> readConfFileIntoMap(String columnConfFile, SourceType sourceType, String
+            delimiter)
+            throws IOException {
+        Map<String, String> configMap = new HashMap<String, String>();
+
+        if(StringUtils.isBlank(columnConfFile) || !ShifuFileUtils.isFileExists(columnConfFile, sourceType)) {
+            return configMap;
+        }
+
+        List<String> strList = null;
+        Reader reader = ShifuFileUtils.getReader(columnConfFile, sourceType);
+        try {
+            strList = IOUtils.readLines(reader);
+        } finally {
+            IOUtils.closeQuietly(reader);
+        }
+
+        if(CollectionUtils.isNotEmpty(strList)) {
+            for(String line: strList) {
+                if(line.trim().equals("") || line.trim().startsWith("#") || ! line.trim().contains(delimiter)) {
+                    continue;
+                }
+
+                String[] keyValue = line.trim().split(delimiter, 2);
+                if(keyValue.length != 2 || keyValue[0].trim().equals("")){
+                    continue;
+                }
+
+                configMap.put(keyValue[0].trim(), keyValue[1].trim());
+            }
+        }
+
+        return configMap;
+    }
+
     public static Map<String, Integer> generateColumnSeatMap(List<ColumnConfig> columnConfigList) {
         List<ColumnConfig> selectedColumnList = new ArrayList<ColumnConfig>();
         for(ColumnConfig columnConfig: columnConfigList) {

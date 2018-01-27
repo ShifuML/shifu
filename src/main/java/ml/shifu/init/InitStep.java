@@ -17,9 +17,14 @@ package ml.shifu.init;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import ml.shifu.shifu.core.processor.BasicModelProcessor;
+import ml.shifu.shifu.core.processor.stats.AbstractStatsExecutor;
+import ml.shifu.shifu.pig.PigExecutor;
+import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -33,7 +38,7 @@ import ml.shifu.shifu.util.CommonUtils;
 
 /**
  * Init Step in Shifu to call ColumnConfig initialization.
- * 
+ *
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class InitStep extends Step<List<ColumnConfig>> {
@@ -46,7 +51,7 @@ public class InitStep extends Step<List<ColumnConfig>> {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see ml.shifu.common.Step#process()
      */
     @Override
@@ -93,6 +98,16 @@ public class InitStep extends Step<List<ColumnConfig>> {
                 LOG.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
                 LOG.warn("Please make sure weight column and tag column are also taking index as name.");
             }
+        }
+
+        if(isSchemaProvided && StringUtils.isNotBlank(modelConfig.getDataSet().getEnhanceColumnFile())) {
+            String enhancePigPath = pathFinder.getScriptPath("scripts/EnhanceColumn.pig");
+            Map<String, String> paramsMap = new HashMap<String, String>();
+            paramsMap.put(Constants.ENHANCE_DATA_TYPE, "train");
+            paramsMap.put(Constants.EVAL_SET_NAME, "null");
+            paramsMap.put(Constants.IS_COMPRESS, "false");
+            PigExecutor.getExecutor().submitJob(modelConfig, enhancePigPath, paramsMap,
+                    modelConfig.getDataSet().getSource(), super.pathFinder);
         }
 
         columnConfigList = new ArrayList<ColumnConfig>();

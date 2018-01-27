@@ -157,6 +157,10 @@
                 "name": "categoricalColumnNameFile",
                 "type" : "text",
                 "directive": "input"
+            }, {
+                "name": "enhanceColumnFile",
+                "type" : "text",
+                "directive": "input"
             }
         ]
     },

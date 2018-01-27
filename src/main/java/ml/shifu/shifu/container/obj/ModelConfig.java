@@ -227,6 +227,11 @@ public class ModelConfig {
                 + Constants.DEFAULT_CATEGORICAL_COLUMN_FILE).toString(), SourceType.LOCAL);
         dataSet.setCategoricalColumnNameFile(Constants.COLUMN_META_FOLDER_NAME + File.separator
                 + Constants.DEFAULT_CATEGORICAL_COLUMN_FILE);
+        // create empty <ModelName>/columns/enhance.column.config
+        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.DEFAULT_ENHANCE_COLUMN_FILE).toString(), SourceType.LOCAL);
+        dataSet.setEnhanceColumnFile(Constants.COLUMN_META_FOLDER_NAME + File.separator
+                + Constants.DEFAULT_ENHANCE_COLUMN_FILE);
         modelConfig.setDataSet(dataSet);
 
         // build stats info
