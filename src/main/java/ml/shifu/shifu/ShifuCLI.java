@@ -350,9 +350,9 @@ public class ShifuCLI {
                     params.put(ExportModelProcessor.MINIMUM_BIN_INST_CNT, cmd.getOptionValue(BIC));
                     status = exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE), params);
                     if(status == 0) {
-                        log.info("Export models/columnstats to PMML/csv format successfully in current folder.");
+                        log.info("Export models/columnstats/corr successfully.");
                     } else {
-                        log.warn("Export models/columnstats to PMML/csv format with error, please check or report issue.");
+                        log.warn("Fail to export models/columnstats/corr, please check or report issue.");
                     }
                 } else {
                     log.error("Invalid command, please check help message.");
@@ -686,7 +686,7 @@ public class ShifuCLI {
         System.out
                 .println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
         System.out
-                .println("\texport [-t pmml|columnstats|woemapping|bagging|baggingpmml] [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
+                .println("\texport [-t pmml|columnstats|woemapping|bagging|baggingpmml|corr] [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
         System.out
                 .println("\t                                        Export model to PMML format or export ColumnConfig.");
         System.out

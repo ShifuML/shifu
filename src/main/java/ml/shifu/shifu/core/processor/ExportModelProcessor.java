@@ -17,14 +17,6 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -45,10 +37,10 @@ import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.HDFSUtils;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -57,6 +49,12 @@ import org.dmg.pmml.PMML;
 import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
 
 /**
  * ExportModelProcessor class
@@ -74,6 +72,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     public static final String ONE_BAGGING_MODEL = "bagging";
     public static final String ONE_BAGGING_PMML_MODEL = "baggingpmml";
     public static final String WOE_MAPPING = "woemapping";
+    public static final String CORRELATION = "corr";
 
     public static final String IS_CONCISE = "IS_CONCISE";
     public static final String REQUEST_VARS = "REQUEST_VARS";
@@ -192,6 +191,13 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 }
                 FileUtils.write(new File("woemapping.txt"), StringUtils.join(woeMappings, ",\n"));
             }
+        } else if (type.equalsIgnoreCase(CORRELATION)) {
+            // export correlation into mapping list
+            if(!ShifuFileUtils.isFileExists(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL)) {
+                log.warn("The correlation file doesn't exist. Please make sure you have ran `shifu stats -c`.");
+                return 2;
+            }
+            return exportVariableCorr();
         } else {
             log.error("Unsupported output format - {}", type);
             status = -1;
@@ -349,6 +355,55 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         }
     }
 
+    private int exportVariableCorr() throws IOException {
+        Set<VarCorrInfo> varCorrInfoSet = new HashSet<VarCorrInfo>();
+        BufferedReader reader = ShifuFileUtils.getReader(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL);
+        try {
+            int lineNum = 0;
+            String line = null;
+            while((line = reader.readLine()) != null) {
+                lineNum += 1;
+                if (lineNum <= 2) {
+                    // skip first 2 lines which are indexes and names
+                    continue;
+                }
+                String[] columns = CommonUtils.split(line, ",");
+                if (columns != null && columns.length == columnConfigList.size() + 2) {
+                    int columnIndex = Integer.parseInt(columns[0].trim());
+                    ColumnConfig fromConfig = this.columnConfigList.get(columnIndex);
+
+                    double[] corrArray = getCorrArray(columns);
+                    for (int i = 0; i < corrArray.length; i++) {
+                        if (i != columnIndex) {
+                            ColumnConfig toConfig = this.columnConfigList.get(i);
+                            varCorrInfoSet.add(new VarCorrInfo(fromConfig.getColumnName(),
+                                    toConfig.getColumnName(), corrArray[i]));
+                        }
+                    }
+                }
+            }
+        } finally {
+            IOUtils.closeQuietly(reader);
+        }
+
+        List<VarCorrInfo> varCorrInfoList = new ArrayList<VarCorrInfo>(varCorrInfoSet);
+        Collections.sort(varCorrInfoList);
+
+        String corrExportPath = this.pathFinder.getCorrExportPath();
+        ShifuFileUtils.writeLines(varCorrInfoList, corrExportPath, SourceType.LOCAL);
+        log.info("Done. The correlations are exported to {}", corrExportPath);
+
+        return 0;
+    }
+
+    private double[] getCorrArray(String[] columns) {
+        double[] corr = new double[columns.length - 2];
+        for(int i = 2; i < corr.length; i++) {
+            corr[i - 2] = Double.parseDouble(columns[i].trim());
+        }
+        return corr;
+    }
+
     private boolean isConcise() {
         if(MapUtils.isNotEmpty(this.params) && this.params.get(IS_CONCISE) instanceof Boolean) {
             return (Boolean) this.params.get(IS_CONCISE);
@@ -400,5 +455,53 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             }
         }
         return 0;
+    }
+
+    public static class VarCorrInfo implements Comparable<VarCorrInfo>{
+        private String leftVarName;
+        private String rightVarName;
+        private double corrVal;
+
+        public VarCorrInfo(String fromVarName, String toVarName, double corrVal) {
+            if ( fromVarName.compareTo(toVarName) < 0 ) {
+                this.leftVarName = fromVarName;
+                this.rightVarName = toVarName;
+            } else {
+                this.leftVarName = toVarName;
+                this.rightVarName = fromVarName;
+            }
+            this.corrVal = corrVal;
+        }
+
+        @Override
+        public String toString() {
+            return leftVarName + "," + rightVarName + "," + corrVal;
+        }
+
+        @Override
+        public int hashCode() {
+            return this.leftVarName.hashCode() * this.rightVarName.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if ( obj == this ) {
+                return true;
+            }
+
+            if (!(obj instanceof VarCorrInfo)) {
+                return false;
+            }
+
+            VarCorrInfo other = (VarCorrInfo) obj;
+            return this.leftVarName.equalsIgnoreCase(other.leftVarName)
+                    && this.rightVarName.equalsIgnoreCase(other.rightVarName);
+        }
+
+        @Override
+        public int compareTo(VarCorrInfo other) {
+            // order by corrVal desc
+            return Double.compare(other.corrVal, this.corrVal);
+        }
     }
 }

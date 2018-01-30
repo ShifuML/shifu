@@ -1010,4 +1010,8 @@ public class PathFinder {
     public String getVarSelHistory() {
         return getPathBySourceType(new Path(Constants.TMP, Constants.VAR_SEL_HISTORY), SourceType.LOCAL);
     }
+
+    public String getCorrExportPath() {
+        return getPathBySourceType(new Path(Constants.TMP, Constants.CORR_EXPORT_PATH), SourceType.LOCAL);
+    }
 }

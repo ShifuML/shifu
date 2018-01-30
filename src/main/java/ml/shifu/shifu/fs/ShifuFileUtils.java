@@ -636,14 +636,17 @@ public class ShifuFileUtils {
         return size;
     }
 
-    public static void writeLines(Collection collection, String varselHistory, SourceType sourceType) throws IOException {
-        BufferedWriter writer = getWriter(varselHistory, sourceType);
-        for ( Object object : collection ) {
-            if ( object != null ) {
-                writer.write(object.toString());
-                writer.newLine();
+    public static void writeLines(Collection collection, String filePath, SourceType sourceType) throws IOException {
+        BufferedWriter writer = getWriter(filePath, sourceType);
+        try {
+            for (Object object : collection) {
+                if (object != null) {
+                    writer.write(object.toString());
+                    writer.newLine();
+                }
             }
+        } finally {
+            IOUtils.closeQuietly(writer);
         }
-        IOUtils.closeQuietly(writer);
     }
 }
