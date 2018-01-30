@@ -19,6 +19,7 @@ package ml.shifu.shifu.core.processor;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
+import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ColumnStatsCalculator;
 import ml.shifu.shifu.core.TreeModel;
@@ -34,8 +35,10 @@ import ml.shifu.shifu.core.pmml.PMMLTranslator;
 import ml.shifu.shifu.core.pmml.PMMLUtils;
 import ml.shifu.shifu.core.pmml.builder.PMMLConstructorFactory;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
+import ml.shifu.shifu.core.varselect.ColumnStatistics;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.HDFSUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -43,6 +46,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.dmg.pmml.PMML;
@@ -82,6 +86,11 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
 
     private String type;
     private Map<String, Object> params;
+
+    /**
+     * SE stats mao for correlation variable selection,if not se, this field will be null.
+     */
+    private Map<Integer, ColumnStatistics> seStatsMap;
 
     public ExportModelProcessor(String type, Map<String, Object> params) {
         this.type = type;
@@ -358,6 +367,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     private int exportVariableCorr() throws IOException {
         Set<VarCorrInfo> varCorrInfoSet = new HashSet<VarCorrInfo>();
         BufferedReader reader = ShifuFileUtils.getReader(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL);
+        PostCorrelationMetric metric = this.modelConfig.getVarSelect().getPostCorrelationMetric();
         try {
             int lineNum = 0;
             String line = null;
@@ -377,7 +387,8 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                         if (i != columnIndex) {
                             ColumnConfig toConfig = this.columnConfigList.get(i);
                             varCorrInfoSet.add(new VarCorrInfo(fromConfig.getColumnName(),
-                                    toConfig.getColumnName(), corrArray[i]));
+                                    toConfig.getColumnName(), corrArray[i],
+                                    getColumnMetric(fromConfig, metric), getColumnMetric(toConfig, metric)));
                         }
                     }
                 }
@@ -394,6 +405,60 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         log.info("Done. The correlations are exported to {}", corrExportPath);
 
         return 0;
+    }
+
+    private double getColumnMetric(ColumnConfig config, PostCorrelationMetric metric) throws IOException {
+        if ( metric == null || metric.equals(PostCorrelationMetric.IV) ) {
+            // default is iv, if no PostCorrelationMetric specified
+            return config.getIv();
+        } else if ( metric.equals(PostCorrelationMetric.KS) ) {
+            return config.getKs();
+        } else if ( metric.equals(PostCorrelationMetric.SE) ) {
+            if ( this.seStatsMap == null ) {
+                SourceType source = this.modelConfig.getDataSet().getSource();
+                String varSelectMSEOutputPath = pathFinder.getVarSelectMSEOutputPath(source);
+                this.seStatsMap = readSEValuesToMap(varSelectMSEOutputPath + Path.SEPARATOR
+                        + Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME + "-*", source);
+            }
+
+            return this.seStatsMap.get(config.getColumnNum()).getRms();
+        }
+        return -1.0d;
+    }
+
+    //TODO duplicate code with VarSelectModelProcessor. Needs do code refactor
+    private Map<Integer, ColumnStatistics> readSEValuesToMap(String seOutputFiles, SourceType source)
+            throws IOException {
+        // here only works for 1 reducer
+        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source).globStatus(new Path(seOutputFiles));
+        if(globStatus == null || globStatus.length == 0) {
+            throw new RuntimeException("Var select MSE stats output file not exist.");
+        }
+        Map<Integer, ColumnStatistics> map = new HashMap<Integer, ColumnStatistics>();
+        List<Scanner> scanners = null;
+        try {
+            scanners = ShifuFileUtils.getDataScanners(globStatus[0].getPath().toString(), source);
+            for(Scanner scanner: scanners) {
+                String str = null;
+                while(scanner.hasNext()) {
+                    str = scanner.nextLine().trim();
+                    String[] splits = CommonUtils.split(str, "\t");
+                    if(splits.length == 5) {
+                        map.put(Integer.parseInt(splits[0].trim()), new ColumnStatistics(Double.parseDouble(splits[2]),
+                                Double.parseDouble(splits[3]), Double.parseDouble(splits[4])));
+                    }
+                }
+            }
+        } finally {
+            if(scanners != null) {
+                for(Scanner scanner: scanners) {
+                    if(scanner != null) {
+                        scanner.close();
+                    }
+                }
+            }
+        }
+        return map;
     }
 
     private double[] getCorrArray(String[] columns) {
@@ -461,21 +526,27 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         private String leftVarName;
         private String rightVarName;
         private double corrVal;
+        private double leftMetricVal;
+        private double rightMetricVal;
 
-        public VarCorrInfo(String fromVarName, String toVarName, double corrVal) {
+        public VarCorrInfo(String fromVarName, String toVarName, double corrVal, double fromMetricVal, double toMetricVal) {
             if ( fromVarName.compareTo(toVarName) < 0 ) {
                 this.leftVarName = fromVarName;
                 this.rightVarName = toVarName;
+                this.leftMetricVal = fromMetricVal;
+                this.rightMetricVal = toMetricVal;
             } else {
                 this.leftVarName = toVarName;
                 this.rightVarName = fromVarName;
+                this.leftMetricVal = toMetricVal;
+                this.rightMetricVal = fromMetricVal;
             }
             this.corrVal = corrVal;
         }
 
         @Override
         public String toString() {
-            return leftVarName + "," + rightVarName + "," + corrVal;
+            return leftVarName + "," + rightVarName + "," + corrVal + "," + leftMetricVal + "," + rightMetricVal;
         }
 
         @Override
