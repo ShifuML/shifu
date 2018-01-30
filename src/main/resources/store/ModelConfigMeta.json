@@ -295,6 +295,11 @@
                 "directive": "checkbox",
                 "defval": false
             }, {
+                "name": "autoFilterEnable",
+                "type": "boolean",
+                "directive": "checkbox",
+                "defval" : true
+            }, {
                 "name": "missingRateThreshold",
                 "type": "number",
                 "directive": "input",

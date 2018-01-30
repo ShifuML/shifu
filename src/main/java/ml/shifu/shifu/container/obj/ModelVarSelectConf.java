@@ -85,6 +85,13 @@ public class ModelVarSelectConf {
     private double[] epsilons;
 
     /**
+     * Sometimes user may don't want to auto filter variables. Use this option to give user the freedom
+     * The default value is true. Some separate command will be provided do auto filter.
+     * "shifu varsel -autofilter"
+     */
+    private Boolean autoFilterEnable = Boolean.TRUE;
+
+    /**
      * If column missing rate is larger than this value, this column will be removed even it is set as 'FinalSelect'.
      */
     private Float missingRateThreshold = 0.98f;
@@ -194,6 +201,14 @@ public class ModelVarSelectConf {
         this.params = params;
     }
 
+    public Boolean getAutoFilterEnable() {
+        return autoFilterEnable;
+    }
+
+    public void setAutoFilterEnable(Boolean autoFilterEnable) {
+        this.autoFilterEnable = autoFilterEnable;
+    }
+
     /**
      * @return the missingRateThreshold
      */
@@ -292,17 +307,28 @@ public class ModelVarSelectConf {
         if(epsilons != null) {
             other.setEpsilons(Arrays.copyOf(epsilons, epsilons.length));
         }
-        other.setFilterBy(filterBy);
-        other.setFilterEnable(filterEnable);
+
+        // parameters for force variables selection
         other.setForceEnable(forceEnable);
-        other.setFilterNum(filterNum);
         other.setForceRemoveColumnNameFile(forceRemoveColumnNameFile);
         other.setForceSelectColumnNameFile(forceSelectColumnNameFile);
+        // parameters for variable filter selection
+        other.setFilterEnable(filterEnable);
+        other.setFilterBy(filterBy);
+        other.setFilterNum(filterNum);
+        other.setFilerOutRatio(filterOutRatio);
+        // parameters for auto variable filter selection
+        other.setAutoFilterEnable(autoFilterEnable);
         other.setMissingRateThreshold(missingRateThreshold);
+        other.setMinIvThreshold(minIvThreshold);
+        other.setMinKsThreshold(minKsThreshold);
+        other.setPostCorrelationMetric(postCorrelationMetric);
+        other.setCorrelationThreshold(correlationThreshold);
+
         if(params != null) {
             other.setParams(new HashMap<String, Object>(params));
         }
-        other.setFilerOutRatio(filterOutRatio);
+
         return other;
     }
 }
