@@ -368,6 +368,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         Set<VarCorrInfo> varCorrInfoSet = new HashSet<VarCorrInfo>();
         BufferedReader reader = ShifuFileUtils.getReader(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL);
         PostCorrelationMetric metric = this.modelConfig.getVarSelect().getPostCorrelationMetric();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         try {
             int lineNum = 0;
             String line = null;
@@ -381,14 +382,15 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 if (columns != null && columns.length == columnConfigList.size() + 2) {
                     int columnIndex = Integer.parseInt(columns[0].trim());
                     ColumnConfig fromConfig = this.columnConfigList.get(columnIndex);
-
-                    double[] corrArray = getCorrArray(columns);
-                    for (int i = 0; i < corrArray.length; i++) {
-                        if (i != columnIndex) {
+                    if (fromConfig.isTarget() || CommonUtils.isGoodCandidate(fromConfig, hasCandidates)) {
+                        double[] corrArray = getCorrArray(columns);
+                        for (int i = 0; i < corrArray.length; i++) {
                             ColumnConfig toConfig = this.columnConfigList.get(i);
-                            varCorrInfoSet.add(new VarCorrInfo(fromConfig.getColumnName(),
-                                    toConfig.getColumnName(), corrArray[i],
-                                    getColumnMetric(fromConfig, metric), getColumnMetric(toConfig, metric)));
+                            if (i != columnIndex && !toConfig.isTarget() && !toConfig.isMeta()) {
+                                varCorrInfoSet.add(new VarCorrInfo(fromConfig.getColumnName(),
+                                        toConfig.getColumnName(), corrArray[i],
+                                        getColumnMetric(fromConfig, metric), getColumnMetric(toConfig, metric)));
+                            }
                         }
                     }
                 }
@@ -410,9 +412,9 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     private double getColumnMetric(ColumnConfig config, PostCorrelationMetric metric) throws IOException {
         if ( metric == null || metric.equals(PostCorrelationMetric.IV) ) {
             // default is iv, if no PostCorrelationMetric specified
-            return config.getIv();
+            return (config.getIv() == null ? Double.NaN : config.getIv());
         } else if ( metric.equals(PostCorrelationMetric.KS) ) {
-            return config.getKs();
+            return (config.getKs() == null ? Double.NaN : config.getKs());
         } else if ( metric.equals(PostCorrelationMetric.SE) ) {
             if ( this.seStatsMap == null ) {
                 SourceType source = this.modelConfig.getDataSet().getSource();
