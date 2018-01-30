@@ -127,11 +127,11 @@ public class BasicModelProcessor {
                 validateColumnConfig();
 
                 // if in stats but stats -c or stats -p or stats -rebin, column update should be called because of
-                // such stats substep should all be caclled after 'shifu stats', this is actually to call VoidUpdater
+                // such stats steps should all be called after 'shifu stats', this is actually to call VoidUpdater
                 boolean strictCallVoidUpdate = (step == ModelStep.STATS)
                         && (getBooleanParam(this.params, Constants.IS_COMPUTE_CORR)
-                                || getBooleanParam(this.params, Constants.IS_COMPUTE_PSI) || getBooleanParam(
-                                    this.params, Constants.IS_REBIN));
+                            || getBooleanParam(this.params, Constants.IS_COMPUTE_PSI)
+                            || getBooleanParam(this.params, Constants.IS_REBIN));
 
                 // update ColumnConfig and save to disk
                 ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, columnConfigList, step, strictCallVoidUpdate);

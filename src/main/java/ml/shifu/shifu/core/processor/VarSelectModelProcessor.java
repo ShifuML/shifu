@@ -15,8 +15,7 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import java.io.BufferedReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
 import ml.shifu.guagua.GuaguaConstants;
@@ -39,6 +38,8 @@ import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
 import ml.shifu.shifu.core.dvarsel.wrapper.CandidateGenerator;
 import ml.shifu.shifu.core.dvarsel.wrapper.WrapperMasterConductor;
 import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
+import ml.shifu.shifu.core.history.VarSelDesc;
+import ml.shifu.shifu.core.history.VarSelReason;
 import ml.shifu.shifu.core.mr.input.CombineInputFormat;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.core.varselect.ColumnInfo;
@@ -56,6 +57,7 @@ import ml.shifu.shifu.util.Environment;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.jexl2.JexlException;
 import org.apache.commons.lang.StringUtils;
@@ -72,6 +74,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.pig.data.FileList;
 import org.apache.pig.impl.util.JarManager;
 import org.apache.zookeeper.ZooKeeper;
 import org.encog.ml.BasicML;
@@ -99,21 +102,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     private final static Logger log = LoggerFactory.getLogger(VarSelectModelProcessor.class);
 
-    private boolean isToReset = false;
-    private boolean isToList = false;
-
-    public VarSelectModelProcessor() {
-        // default constructor
-    }
-
-    public VarSelectModelProcessor(Map<String, Object> otherConfigs) {
-        super.otherConfigs = otherConfigs;
-    }
-
-    public VarSelectModelProcessor(boolean isToReset) {
-        this.isToReset = isToReset;
-    }
-
     @SuppressWarnings("unused")
     private static final double BAD_IV_THRESHOLD = 0.02d;
 
@@ -122,17 +110,12 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
      */
     private Map<Integer, ColumnStatistics> seStatsMap;
 
-    private void validateParameters() throws Exception {
-        // String alg = super.getModelConfig().getTrain().getAlgorithm();
-        String filterBy = this.modelConfig.getVarSelectFilterBy();
-        if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_SE) || filterBy.equalsIgnoreCase(Constants.FILTER_BY_ST)) {
-            validateSEParameters();
-            validateNormalize();
-        }
+    public VarSelectModelProcessor() {
+        // default constructor
     }
 
-    public void setToList(boolean toList) {
-        isToList = toList;
+    public VarSelectModelProcessor(Map<String, Object> otherConfigs) {
+        super.otherConfigs = otherConfigs;
     }
 
     /**
@@ -147,10 +130,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             validateParameters();
 
             // reset all selections if user specify or select by absolute number
-            if(isToReset) {
+            if(getIsToReset()) {
                 log.info("Reset all selections data including type final select etc!");
                 resetAllFinalSelect();
-            } else if(isToList) {
+            } else if(getIsToList()) {
                 log.info("Below variables are selected - ");
                 for(ColumnConfig columnConfig: this.columnConfigList) {
                     if(columnConfig.isFinalSelect()) {
@@ -158,6 +141,19 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     }
                 }
                 log.info("-----  Done -----");
+            } else if( getIsToAutoFilter() ) {
+                log.info("Start to run variable auto filter.");
+                runAutoVarFilter();
+                log.info("-----  Done -----");
+            } else if ( getIsRecoverAuto() ) {
+                String varselHistory = pathFinder.getVarSelHistory();
+                if ( ShifuFileUtils.isFileExists(varselHistory, SourceType.LOCAL) ) {
+                    log.info("!!! Auto filtered variables will be recovered from history.");
+                    recoverVarselStatusFromHist(varselHistory);
+                    log.info("-----  Done -----");
+                } else {
+                    log.warn("No variables auto filter history is found.");
+                }
             } else {
                 // sync to make sure load from hdfs config is consistent with local configuration
                 syncDataToHdfs(super.modelConfig.getDataSet().getSource());
@@ -179,11 +175,11 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                             break;
                         }
                     }
-                }
 
-                this.saveColumnConfigList();
-                // sync to make sure load from hdfs config is consistent with local configuration
-                syncDataToHdfs(super.modelConfig.getDataSet().getSource());
+                    this.saveColumnConfigList();
+                    // sync to make sure load from hdfs config is consistent with local configuration
+                    syncDataToHdfs(super.modelConfig.getDataSet().getSource());
+                }
 
                 if(modelConfig.isRegression()) {
                     VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
@@ -219,7 +215,15 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         }
                     }
                 }
+
+                // clean shadow targets for multi-segments
+                cleanShadowTargetsForSegments();
+
+                if ( modelConfig.getVarSelect().getAutoFilterEnable() ) {
+                    runAutoVarFilter();
+                }
             }
+
             // save column config to file and sync to
             clearUp(ModelStep.VARSELECT);
         } catch (Exception e) {
@@ -228,6 +232,45 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
         log.info("Step Finished: varselect with {} ms", (System.currentTimeMillis() - start));
         return 0;
+    }
+
+    /**
+     * Recover auto-filtered variable status from varsel history file
+     * @param varselHistory - variable selection history file
+     * @throws IOException
+     */
+    private void recoverVarselStatusFromHist(String varselHistory) throws IOException {
+        List<VarSelDesc> varSelDescList = loadVarSelDescList(varselHistory);
+        for(VarSelDesc varSelDesc : varSelDescList) {
+            ColumnConfig columnConfig = this.columnConfigList.get(varSelDesc.getColumnId());
+            if ( columnConfig.isFinalSelect() == varSelDesc.getNewSelStatus() ) {
+                log.info("Recover column - {} from {} to {}", varSelDesc.getColumnName(),
+                        varSelDesc.getNewSelStatus(), varSelDesc.getOldSelStatus());
+                columnConfig.setFinalSelect(varSelDesc.getOldSelStatus());
+            }
+        }
+    }
+
+    /**
+     * Load variable selection history file into VarSelDesc
+     * @param varselHistory - variable selection history file file
+     * @return
+     * @throws IOException
+     */
+    private List<VarSelDesc> loadVarSelDescList(String varselHistory) throws IOException {
+        Reader reader = ShifuFileUtils.getReader(varselHistory, SourceType.LOCAL);
+        List<String> autoFilterList = IOUtils.readLines(reader);
+        IOUtils.closeQuietly(reader);;
+
+        List<VarSelDesc> varSelDescList = new ArrayList<VarSelDesc>();
+        for ( String filterDesc : autoFilterList ) {
+            VarSelDesc varSelDesc = VarSelDesc.fromString(filterDesc);
+            if ( varSelDesc != null ) {
+                varSelDescList.add(varSelDesc);
+            }
+        }
+
+        return varSelDescList;
     }
 
     private void selectByFeatureImportance() throws Exception {
@@ -247,6 +290,31 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 .computeTreeModelFeatureImportance(models);
         if(super.modelConfig.getVarSelect().getFilterEnable()) {
             this.postProcessFIVarSelect(featureImportances);
+        }
+    }
+
+    public boolean getIsToReset() {
+        return getBooleanParam(this.otherConfigs, Constants.IS_TO_RESET);
+    }
+
+    public boolean getIsToList() {
+        return getBooleanParam(this.otherConfigs, Constants.IS_TO_LIST);
+    }
+
+    public boolean getIsToAutoFilter() {
+        return getBooleanParam(this.otherConfigs, Constants.IS_TO_FILTER_AUTO);
+    }
+
+    public boolean getIsRecoverAuto() {
+        return getBooleanParam(this.otherConfigs, Constants.IS_TO_RECOVER_AUTO);
+    }
+
+    private void validateParameters() throws Exception {
+        // String alg = super.getModelConfig().getTrain().getAlgorithm();
+        String filterBy = this.modelConfig.getVarSelectFilterBy();
+        if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_SE) || filterBy.equalsIgnoreCase(Constants.FILTER_BY_ST)) {
+            validateSEParameters();
+            validateNormalize();
         }
     }
 
@@ -840,13 +908,19 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     @Override
     protected void clearUp(ModelStep step) throws IOException {
-        if(!isToReset) {
-            autoVarSelCondition();
+        try {
+            this.saveColumnConfigList();
+        } catch (Exception e) {
+            throw new ShifuException(ShifuErrorCode.ERROR_WRITE_COLCONFIG, e);
         }
+        this.syncDataToHdfs(this.modelConfig.getDataSet().getSource());
+    }
 
+    private void cleanShadowTargetsForSegments() throws IOException {
         String filterExpressions = super.modelConfig.getSegmentFilterExpressionsAsString();
         Environment.getProperties().put("shifu.segment.expressions", filterExpressions);
         if(StringUtils.isNotBlank(filterExpressions)) {
+            log.info("There are segments. Set all target shadow columns to ForceRemove and final select false");
             String[] splits = CommonUtils.split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
             for(int i = 0; i < super.columnConfigList.size(); i++) {
                 ColumnConfig config = super.columnConfigList.get(i);
@@ -861,13 +935,19 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 }
             }
         }
+    }
 
-        try {
-            this.saveColumnConfigList();
-        } catch (Exception e) {
-            throw new ShifuException(ShifuErrorCode.ERROR_WRITE_COLCONFIG, e);
+    /**
+     *
+     * @throws IOException
+     */
+    private void runAutoVarFilter() throws IOException {
+        List<VarSelDesc> varSelDescList = new ArrayList<VarSelDesc>();
+        autoVarSelCondition(varSelDescList);
+        if ( CollectionUtils.isNotEmpty(varSelDescList) ) {
+            String varselHistory = this.pathFinder.getVarSelHistory();
+            ShifuFileUtils.writeLines(varSelDescList, varselHistory, SourceType.LOCAL);
         }
-        this.syncDataToHdfs(this.modelConfig.getDataSet().getSource());
     }
 
     /**
@@ -876,38 +956,41 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
      * @throws IOException
      *             any IO exception
      */
-    private void autoVarSelCondition() throws IOException {
+    private void autoVarSelCondition(List<VarSelDesc> varSelDescList) throws IOException {
         // here we do loop again as it is not bad for variables less than 100,000
         // 1. check missing rate
         for(ColumnConfig config: columnConfigList) {
-            if(!config.isTarget() && !config.isMeta() && !config.isForceSelect() && config.isFinalSelect()
-                    && isHighMissingRateColumn(config)) {
-                log.warn(
-                        "Column {} is with very high missing rate, set final select to false. If not, you can check it manually in ColumnConfig.json",
+            if(!config.isTarget() && !config.isMeta() && !config.isForceSelect() // column needs check
+                    && config.isFinalSelect() && isHighMissingRateColumn(config)) {
+                log.warn("Column {} is with very high missing rate, set final select to false. " +
+                                "If not, you can check it manually in ColumnConfig.json",
                         config.getColumnName());
                 config.setFinalSelect(false);
+                varSelDescList.add(new VarSelDesc(config, VarSelReason.HIGH_MISSING_RATE));
             }
         }
 
         // 2. check KS and IV min threshold value
         for(ColumnConfig config: columnConfigList) {
             if(!config.isTarget() && !config.isMeta() && !config.isForceSelect() && config.isFinalSelect()) {
-                float minIvThreshold = super.modelConfig.getVarSelect().getMinIvThreshold() == null ? 0f
-                        : super.modelConfig.getVarSelect().getMinIvThreshold();
+                float minIvThreshold = (super.modelConfig.getVarSelect().getMinIvThreshold() == null
+                        ? 0f : super.modelConfig.getVarSelect().getMinIvThreshold());
                 if(config.getIv() != null && config.getIv() < minIvThreshold) {
-                    log.warn(
-                            "IV of column {} is less than minimal IV threshold, set final select to false. If not, you can check it manually in ColumnConfig.json",
+                    log.warn("IV of column {} is less than minimal IV threshold, set final select to false. " +
+                                    "If not, you can check it manually in ColumnConfig.json",
                             config.getColumnName());
                     config.setFinalSelect(false);
+                    varSelDescList.add(new VarSelDesc(config, VarSelReason.IV_TOO_LOW));
                 }
 
-                float minKsThreshold = super.modelConfig.getVarSelect().getMinKsThreshold() == null ? 0f
-                        : super.modelConfig.getVarSelect().getMinKsThreshold();
+                float minKsThreshold = ( super.modelConfig.getVarSelect().getMinKsThreshold() == null
+                        ? 0f : super.modelConfig.getVarSelect().getMinKsThreshold());
                 if(config.getKs() != null && config.getKs() < minKsThreshold) {
-                    log.warn(
-                            "KS of column {} is less than minimal KS threshold, set final select to false. If not, you can check it manually in ColumnConfig.json",
+                    log.warn("KS of column {} is less than minimal KS threshold, set final select to false. " +
+                                    "If not, you can check it manually in ColumnConfig.json",
                             config.getColumnName());
                     config.setFinalSelect(false);
+                    varSelDescList.add(new VarSelDesc(config, VarSelReason.KS_TOO_LOW));
                 }
             }
         }
@@ -916,11 +999,11 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         if(!ShifuFileUtils.isFileExists(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL)) {
             return;
         }
-        varSelectByCorrelation();
+        varSelectByCorrelation(varSelDescList);
     }
 
     // TODO refactor me please, bad function
-    private void varSelectByCorrelation() throws IOException {
+    private void varSelectByCorrelation(List<VarSelDesc> varSelDescList) throws IOException {
         BufferedReader reader = ShifuFileUtils.getReader(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL);
         int lineNum = 0;
         try {
@@ -957,6 +1040,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                                                 modelConfig.getVarSelect().getCorrelationThreshold(), columnConfigList
                                                         .get(i).getColumnNum(), columnConfigList.get(i).getColumnName());
                                         columnConfigList.get(i).setFinalSelect(false);
+                                        varSelDescList.add(new VarSelDesc(columnConfigList.get(i), VarSelReason.HIGH_CORRELATED));
                                     } else if(!config.isForceSelect() && columnConfigList.get(i).isForceSelect()) {
                                         log.warn(
                                                 "Absolute correlation value {} in column pair ({}, {}) ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} name {} is not force-selected will not be selected, set finalSelect to false.",
@@ -964,6 +1048,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                                                 modelConfig.getVarSelect().getCorrelationThreshold(),
                                                 config.getColumnNum(), config.getColumnName());
                                         config.setFinalSelect(false);
+                                        varSelDescList.add(new VarSelDesc(config, VarSelReason.HIGH_CORRELATED));
                                     } else if(config.isTarget() && columnConfigList.get(i).isFinalSelect()) {
                                         log.warn(
                                                 "{} and {} has high correlated value while {} is target, {} is set to NOT final-selected no matter it is force-selected or not.",
@@ -974,6 +1059,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                                                 "{} and {} has high correlated value while {} is target, {} is set to NOT final-selected no matter it is force-selected or not.",
                                                 columnIndex, i, columnIndex);
                                         config.setFinalSelect(false);
+                                        varSelDescList.add(new VarSelDesc(config, VarSelReason.HIGH_CORRELATED));
                                     } else {
                                         // both columns are not target and all final selected
                                         ColumnConfig dropConfig = null;
@@ -1010,6 +1096,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                                         }
                                         // de-select column which is dropped in current logic
                                         dropConfig.setFinalSelect(false);
+                                        varSelDescList.add(new VarSelDesc(dropConfig, VarSelReason.HIGH_CORRELATED));
                                     }
                                 }
                             }
@@ -1061,10 +1148,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
      */
     private boolean isHighMissingRateColumn(ColumnConfig config) {
         Double missingPercentage = config.getMissingPercentage();
-        if(missingPercentage != null && missingPercentage >= modelConfig.getVarSelect().getMissingRateThreshold()) {
-            return true;
-        }
-        return false;
+        return ( missingPercentage != null
+                && missingPercentage >= modelConfig.getVarSelect().getMissingRateThreshold());
     }
 
     /**

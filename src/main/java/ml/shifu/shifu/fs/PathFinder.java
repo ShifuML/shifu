@@ -977,15 +977,37 @@ public class PathFinder {
         return getPathBySourceType(new Path(Constants.TMP, evalName + "AssembleEvalData"), sourceType);
     }
 
+    /**
+     * Get the shuffle data path
+     * @return
+     */
     public String getShuffleDataPath() {
         return getShuffleDataPath(modelConfig.getDataSet().getSource());
     }
 
+    /**
+     * Get the shuffle data path according SourceType
+     * @param sourceType
+     * @return
+     */
     private String getShuffleDataPath(SourceType sourceType) {
         return getPathBySourceType(new Path(Constants.TMP, Constants.SHUFFLED_DATA_PATH), sourceType);
     }
 
+    /**
+     * Get the backup ColumnConfig
+     * @return
+     */
     public String getBackupColumnConfig() {
         return getPathBySourceType(new Path(Constants.TMP, Constants.COLUMN_CONFIG_JSON_FILE_NAME), SourceType.LOCAL);
+    }
+
+
+    /**
+     * Get the varsel auto filter history to let user have the opportunity to change
+     * @return
+     */
+    public String getVarSelHistory() {
+        return getPathBySourceType(new Path(Constants.TMP, Constants.VAR_SEL_HISTORY), SourceType.LOCAL);
     }
 }
