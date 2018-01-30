@@ -15,9 +15,10 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import java.io.*;
-import java.util.*;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Splitter;
 import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
@@ -30,11 +31,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.VariableSelector;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
-import ml.shifu.shifu.core.dvarsel.VarSelMaster;
-import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
-import ml.shifu.shifu.core.dvarsel.VarSelOutput;
-import ml.shifu.shifu.core.dvarsel.VarSelWorker;
-import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
+import ml.shifu.shifu.core.dvarsel.*;
 import ml.shifu.shifu.core.dvarsel.wrapper.CandidateGenerator;
 import ml.shifu.shifu.core.dvarsel.wrapper.WrapperMasterConductor;
 import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
@@ -53,11 +50,9 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.jexl2.JexlException;
 import org.apache.commons.lang.StringUtils;
@@ -74,7 +69,6 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
-import org.apache.pig.data.FileList;
 import org.apache.pig.impl.util.JarManager;
 import org.apache.zookeeper.ZooKeeper;
 import org.encog.ml.BasicML;
@@ -83,10 +77,10 @@ import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Splitter;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.Reader;
+import java.util.*;
 
 /**
  * Variable selection processor, select the variable based on KS/IV value, or
@@ -903,7 +897,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 }
             }
         }
-        return null;
+        return map; // should be a bug, if it always return null
     }
 
     @Override
@@ -942,6 +936,14 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
      * @throws IOException
      */
     private void runAutoVarFilter() throws IOException {
+        if ( this.modelConfig.getVarSelect().getPostCorrelationMetric().equals(PostCorrelationMetric.SE)
+                && this.seStatsMap == null ) {
+            SourceType source = this.modelConfig.getDataSet().getSource();
+            String varSelectMSEOutputPath = super.getPathFinder().getVarSelectMSEOutputPath(source);
+            this.seStatsMap = readSEValuesToMap(varSelectMSEOutputPath + Path.SEPARATOR
+                    + Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME + "-*", source);
+        }
+
         List<VarSelDesc> varSelDescList = new ArrayList<VarSelDesc>();
         autoVarSelCondition(varSelDescList);
         if ( CollectionUtils.isNotEmpty(varSelDescList) ) {
@@ -1073,9 +1075,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
                                         // if SE filterBy and SE postcorrelationMetric, seStatsMap has stats, do
                                         // correlation comparison by SE RMS value
-                                        if((this.modelConfig.getVarSelectFilterBy().equalsIgnoreCase(
-                                                Constants.FILTER_BY_SE) || this.modelConfig.getVarSelectFilterBy()
-                                                .equalsIgnoreCase(Constants.FILTER_BY_ST))
+                                        if((this.modelConfig.getVarSelectFilterBy().equalsIgnoreCase(Constants.FILTER_BY_SE)
+                                                || this.modelConfig.getVarSelectFilterBy().equalsIgnoreCase(Constants.FILTER_BY_ST))
                                                 && corrMetric == PostCorrelationMetric.SE
                                                 && this.seStatsMap != null
                                                 && this.seStatsMap.get(config.getColumnNum()) != null
