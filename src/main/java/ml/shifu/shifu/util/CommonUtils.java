@@ -1975,8 +1975,8 @@ public final class CommonUtils {
                 if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
                     // only select numerical feature with getBinBoundary().size() larger than 1
                     // or categorical feature with getBinCategory().size() larger than 0
-                    if((config.isNumerical() && config.getBinBoundary().size() > 1)
-                            || (config.isCategorical() && config.getBinCategory().size() > 0)) {
+                    if((config.isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 1)
+                            || (config.isCategorical() && config.getBinCategory() != null && config.getBinCategory().size() > 0)) {
                         features.add(config.getColumnNum());
                     }
                 }
@@ -1984,8 +1984,8 @@ public final class CommonUtils {
                 if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config, hasCandidate)) {
                     // only select numerical feature with getBinBoundary().size() larger than 1
                     // or categorical feature with getBinCategory().size() larger than 0
-                    if((config.isNumerical() && config.getBinBoundary().size() > 1)
-                            || (config.isCategorical() && config.getBinCategory().size() > 0)) {
+                    if((config.isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 1)
+                            || (config.isCategorical() && config.getBinCategory() != null && config.getBinCategory().size() > 0)) {
                         features.add(config.getColumnNum());
                     }
                 }
