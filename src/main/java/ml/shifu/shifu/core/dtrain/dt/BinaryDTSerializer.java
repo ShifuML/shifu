@@ -121,14 +121,7 @@ public class BinaryDTSerializer {
                         // if the category value is larger than 10k, write a marker -1 and write bytes instead of
                         // writeUTF;
                         // in read part logic should be changed also to readByte not readUTF according to the marker
-                        if(category.length() > Constants.MAX_CATEGORICAL_VAL_LEN) {
-                            int pos = category.lastIndexOf(Constants.CATEGORICAL_GROUP_VAL_DELIMITER,
-                                    Constants.MAX_CATEGORICAL_VAL_LEN);
-                            if(pos >= 0) {
-                                category = category.substring(0, pos);
-                            } else {
-                                category = category.substring(0, Constants.MAX_CATEGORICAL_VAL_LEN);
-                            }
+                        if(category.length() < Constants.MAX_CATEGORICAL_VAL_LEN) {
                             fos.writeUTF(category);
                         } else {
                             fos.writeShort(UTF_BYTES_MARKER); // marker here

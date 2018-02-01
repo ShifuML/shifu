@@ -45,7 +45,7 @@ public class NewTreeModelEvalAndScoreTest {
 
     @BeforeClass
     public void setUp() throws IOException {
-        String modelPath = "src/test/resources/dttest/model/newatom2.gbt";
+        String modelPath = "src/test/resources/dttest/model/newatom.gbt";
         FileInputStream fi = null;
         try {
             fi = new FileInputStream(modelPath);
@@ -62,7 +62,7 @@ public class NewTreeModelEvalAndScoreTest {
             fi.close();
         }
     }
-//
+
 //    @Test
 //    public void testNewModel() throws IOException {
 //        ModelConfig modelConfig = CommonUtils.loadModelConfig(
@@ -70,7 +70,7 @@ public class NewTreeModelEvalAndScoreTest {
 //        List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList(
 //                "src/test/resources/dttest/newatomconfig/ColumnConfig.json", SourceType.LOCAL);
 //
-//        FileOutputStream fileOutput = new FileOutputStream("atom.gbt");
+//        FileOutputStream fileOutput = new FileOutputStream("atom22.gbt");
 //
 //        BinaryDTSerializer.save(modelConfig, columnConfigList, iTreeModel.getTrees(), "squared", 807, fileOutput);
 //        
