@@ -15,19 +15,13 @@
  */
 package ml.shifu.shifu.udf;
 
-import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import ml.shifu.shifu.container.WeightAmplifier;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.util.CommonUtils;
-
+import ml.shifu.shifu.util.Constants;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.jexl2.Expression;
 import org.apache.commons.jexl2.JexlContext;
@@ -38,6 +32,12 @@ import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.util.Utils;
+import org.apache.pig.tools.pigstats.PigStatusReporter;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * For parquet format, only double type data will be saved. Not string like in {@link NormalizeUDF}. TODO, should merge
@@ -51,7 +51,6 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
     private NormType normType;
     private Expression weightExpr;
     private JexlContext weightContext;
-    private DecimalFormat df = new DecimalFormat("#.######");
     private String alg;
 
     // private DecimalFormat df = new DecimalFormat("#.######");
@@ -83,13 +82,22 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
         this.alg = this.modelConfig.getAlgorithm();
     }
 
+    @SuppressWarnings("deprecation")
     public Tuple exec(Tuple input) throws IOException {
         if(input == null || input.size() == 0) {
             return null;
         }
 
         // do data sampling. Unselected data or data with invalid tag will be filtered out.
-        final String rawTag = CommonUtils.trimTag(input.get(tagColumnNum).toString());
+        Object tag = input.get(tagColumnNum);
+        if(tag == null) {
+            log.warn("The tag is NULL, just skip it!!");
+            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1);
+            }
+            return null;
+        }
+        final String rawTag = CommonUtils.trimTag(tag.toString());
         boolean isNotSampled = DataSampler.isNotSampled(posTags, negTags, modelConfig.getNormalizeSampleRate(),
                 modelConfig.isNormalizeSampleNegOnly(), rawTag);
         if(isNotSampled) {
@@ -136,11 +144,11 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
                             normVal = Normalizer.defaultMissingValue(config);
                         }
                     }
-                    tuple.append(df.format(normVal));
+                    tuple.append(normVal);
                 } else {
                     List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType);
                     for(Double normVal: normVals) {
-                        tuple.append(df.format(normVal));
+                        tuple.append(normVal);
                     }
                 }
             }
