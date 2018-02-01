@@ -19,6 +19,8 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UTFDataFormatException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -933,7 +935,7 @@ public class IndependentTreeModel {
             Map<String, Integer> categoryIndexMapping = new HashMap<String, Integer>(categoryListSize, 1f);
             List<String> categories = new ArrayList<String>(categoryListSize);
             for(int j = 0; j < categoryListSize; j++) {
-                String category = dis.readUTF();
+                String category = readCategory(dis);
                 // categories is merged category list
                 categories.add(category);
                 if(category.contains(Constants.CATEGORICAL_GROUP_VAL_DELIMITER)) {
@@ -990,6 +992,110 @@ public class IndependentTreeModel {
                 columnCategoryIndexMapping, columnMapping, isOptimizeMode, bagTrees, bagWgts,
                 CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm), isClassification && !isOneVsAll,
                 isConvertToProb, lossStr, algorithm, inputNode, version, gbtScoreConvertStrategy);
+    }
+
+    /**
+     * Read category by marker, if marker<-1, read from bytes or read from readUTF
+     * 
+     * @param dis
+     *            input stream
+     * @return catregory read from input stream
+     * @throws IOException
+     *             any io exception
+     * @throws UnsupportedEncodingException
+     *             not supported encoding exception
+     */
+    private static String readCategory(DataInputStream dis) throws IOException, UnsupportedEncodingException {
+        String category = null;
+        short markerOrLen = dis.readShort();
+        if(markerOrLen < 0) {
+            int len = dis.readInt();
+            byte[] bytes = new byte[len];
+            for(int k = 0; k < bytes.length; k++) {
+                bytes[k] = dis.readByte();
+            }
+            category = new String(bytes, "UTF-8");
+        } else {
+            category = readUTF(dis, markerOrLen);
+        }
+        return category;
+    }
+
+    /**
+     * Copied from DataInputStream since we need't read utflen in the beginning of the method.
+     * 
+     * @param in
+     *            input stream
+     * @param utflen
+     *            len of utf string
+     * @return the string read from stream
+     * @throws IOException
+     *             any io exception
+     */
+    private final static String readUTF(DataInputStream in, int utflen) throws IOException {
+        byte[] bytearr = null;
+        char[] chararr = null;
+        bytearr = new byte[utflen];
+        chararr = new char[utflen];
+
+        int c, char2, char3;
+        int count = 0;
+        int chararr_count = 0;
+
+        in.readFully(bytearr, 0, utflen);
+
+        while(count < utflen) {
+            c = (int) bytearr[count] & 0xff;
+            if(c > 127)
+                break;
+            count++;
+            chararr[chararr_count++] = (char) c;
+        }
+
+        while(count < utflen) {
+            c = (int) bytearr[count] & 0xff;
+            switch(c >> 4) {
+                case 0:
+                case 1:
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                case 6:
+                case 7:
+                    /* 0xxxxxxx */
+                    count++;
+                    chararr[chararr_count++] = (char) c;
+                    break;
+                case 12:
+                case 13:
+                    /* 110x xxxx 10xx xxxx */
+                    count += 2;
+                    if(count > utflen)
+                        throw new UTFDataFormatException("malformed input: partial character at end");
+                    char2 = (int) bytearr[count - 1];
+                    if((char2 & 0xC0) != 0x80)
+                        throw new UTFDataFormatException("malformed input around byte " + count);
+                    chararr[chararr_count++] = (char) (((c & 0x1F) << 6) | (char2 & 0x3F));
+                    break;
+                case 14:
+                    /* 1110 xxxx 10xx xxxx 10xx xxxx */
+                    count += 3;
+                    if(count > utflen)
+                        throw new UTFDataFormatException("malformed input: partial character at end");
+                    char2 = (int) bytearr[count - 2];
+                    char3 = (int) bytearr[count - 1];
+                    if(((char2 & 0xC0) != 0x80) || ((char3 & 0xC0) != 0x80))
+                        throw new UTFDataFormatException("malformed input around byte " + (count - 1));
+                    chararr[chararr_count++] = (char) (((c & 0x0F) << 12) | ((char2 & 0x3F) << 6) | ((char3 & 0x3F) << 0));
+                    break;
+                default:
+                    /* 10xx xxxx, 1111 xxxx */
+                    throw new UTFDataFormatException("malformed input around byte " + count);
+            }
+        }
+        // The number of chars produced may be less than utflen
+        return new String(chararr, 0, chararr_count);
     }
 
     /**
