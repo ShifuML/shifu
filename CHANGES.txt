@@ -16,6 +16,10 @@
  
 Shifu Change Log
 
+Changes for Shifu-0.11.1
+    * TreeModel Load Failed for Category > 10K
+       https://github.com/ShifuML/shifu/issues/482
+
 Changes for Shifu-0.11.0
     * Python Module Support
        https://github.com/ShifuML/pyshifu

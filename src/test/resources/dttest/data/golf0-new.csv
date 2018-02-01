@@ -1,0 +1,4 @@
+outlook|temperature|humidity|windy|result|type
+overcast|81|70|false|Play|1
+rain|71|80|true|Don't Play|1
+sunny|85|85|false|Don't Play|0

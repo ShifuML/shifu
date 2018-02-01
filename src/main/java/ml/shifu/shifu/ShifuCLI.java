@@ -88,6 +88,8 @@ public class ShifuCLI {
     private static final String CMD_COMBO = "combo";
 
     private static final String RESET = "reset";
+    private static final String FILTER_AUTO = "autofilter";
+    private static final String RECOVER_AUTO = "recoverauto";
 
     private static final String CORRELATION = "correlation";
 
@@ -236,8 +238,14 @@ public class ShifuCLI {
                         log.warn("Error in model set stats computation, please report issue on http:/github.com/shifuml/shifu/issues.");
                     }
                 } else if(cleanedArgs[0].equals(VARSELECT_CMD) || cleanedArgs[0].equals(VARSEL_CMD)) {
+                    Map<String, Object> params = new HashMap<String, Object>();
+                    params.put(Constants.IS_TO_RESET, cmd.hasOption(RESET));
+                    params.put(Constants.IS_TO_LIST, cmd.hasOption(LIST));
+                    params.put(Constants.IS_TO_FILTER_AUTO, cmd.hasOption(FILTER_AUTO));
+                    params.put(Constants.IS_TO_RECOVER_AUTO, cmd.hasOption(RECOVER_AUTO));
+
                     // variable selected step
-                    status = selectModelVar(cmd.hasOption(RESET), cmd.hasOption(LIST));
+                    status = selectModelVar(params);
                     if(status == 0) {
                         log.info("Do model set variables selection successfully. Please continue next step by using 'shifu train'.");
                     } else {
@@ -342,9 +350,9 @@ public class ShifuCLI {
                     params.put(ExportModelProcessor.MINIMUM_BIN_INST_CNT, cmd.getOptionValue(BIC));
                     status = exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE), params);
                     if(status == 0) {
-                        log.info("Export models/columnstats to PMML/csv format successfully in current folder.");
+                        log.info("Export models/columnstats/corr successfully.");
                     } else {
-                        log.warn("Export models/columnstats to PMML/csv format with error, please check or report issue.");
+                        log.warn("Fail to export models/columnstats/corr, please check or report issue.");
                     }
                 } else {
                     log.error("Invalid command, please check help message.");
@@ -426,9 +434,8 @@ public class ShifuCLI {
     /*
      * Select variables for model
      */
-    public static int selectModelVar(boolean isToReset, boolean isToList) throws Exception {
-        VarSelectModelProcessor p = new VarSelectModelProcessor(isToReset);
-        p.setToList(isToList);
+    public static int selectModelVar(Map<String, Object> params) throws Exception {
+        VarSelectModelProcessor p = new VarSelectModelProcessor(params);
         return p.run();
     }
 
@@ -574,6 +581,11 @@ public class ShifuCLI {
         Option opt_concise = OptionBuilder.hasArg(false).withDescription("Export concise PMML").create(EXPORT_CONCISE);
         Option opt_reset = OptionBuilder.hasArg(false).withDescription("Reset all variables to finalSelect = false")
                 .create(RESET);
+        Option opt_filter_auto = OptionBuilder.hasArg(false).withDescription("Auto filter variables by MissingRate, IV/KS, Correlation")
+                .create(FILTER_AUTO);
+        Option opt_recover_auto = OptionBuilder.hasArg(false).withDescription("Recover auto filtered variables from history.")
+                .create(RECOVER_AUTO);
+
         Option opt_correlation = OptionBuilder.hasArg(false)
                 .withDescription("Compute correlation value for all column pairs.").create(CORRELATION);
         Option opt_correlation_short = OptionBuilder.hasArg(false)
@@ -614,6 +626,8 @@ public class ShifuCLI {
         opts.addOption(opt_model);
         opts.addOption(opt_concise);
         opts.addOption(opt_reset);
+        opts.addOption(opt_filter_auto);
+        opts.addOption(opt_recover_auto);
         opts.addOption(opt_eval);
         opts.addOption(opt_init);
         opts.addOption(opt_shuffle);
@@ -647,17 +661,17 @@ public class ShifuCLI {
         System.out.println("Usage: shifu [-Dkey=value] COMMAND");
         System.out.println("where COMMAND is one of:");
         System.out.println("\tnew <ModelSetName> [-t <NN|LR|RF|GBT>]  Create a new model set.");
-        System.out
-                .println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
-        System.out
-                .println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
-        System.out
-                .println("\tstats -correlation(c)                   Calculate correlation values between column pairs.");
+        System.out.println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
+        System.out.println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
+        System.out.println("\tstats -correlation(c)                   Calculate correlation values between column pairs.");
         System.out.println("\tstats -psi(p)                           Calculate psi values if psi column is provided.");
         System.out.println("\tstats -rebin [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
         System.out.println("\t                                        Do the variable Re-bin.");
-        System.out
-                .println("\tvarselect/varsel [-reset] [-list]         Variable selection, will update finalSelect in ColumnConfig.json.");
+        System.out.println("\tvarselect/varsel -list                  Variable selection, will update finalSelect in ColumnConfig.json.");
+        System.out.println("\tvarselect/varsel -list                  List all finalSelect=true variables");
+        System.out.println("\tvarselect/varsel -reset                 Set finalSelect=false for all variables");
+        System.out.println("\tvarselect/varsel -autofilter            Auto filter variables by MissingRate, KS/IV, and Correlation.");
+        System.out.println("\tvarselect/varsel -recoverauto           Recover those variables that are auto-filtered.");
         System.out.println("\tnormalize/norm/transform [-shuffle]     Normalize the columns with finalSelect as true.");
         System.out.println("\ttrain [-dry] [-shuffle]                 Train the model with the normalized data.");
         System.out.println("\tposttrain                               Post-process data after training models.");
@@ -672,7 +686,7 @@ public class ShifuCLI {
         System.out
                 .println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
         System.out
-                .println("\texport [-t pmml|columnstats|woemapping|bagging|baggingpmml] [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
+                .println("\texport [-t pmml|columnstats|woemapping|bagging|baggingpmml|corr] [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
         System.out
                 .println("\t                                        Export model to PMML format or export ColumnConfig.");
         System.out
