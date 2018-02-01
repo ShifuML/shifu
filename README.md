@@ -3,7 +3,7 @@
 #
 
 ## Download
-Please [download](https://github.com/ShifuML/shifu/wiki/shifu-0.11.0-hdp-yarn.tar.gz) latest shifu [here](https://github.com/ShifuML/shifu/wiki/shifu-0.11.0-hdp-yarn.tar.gz).
+Please [download](https://github.com/ShifuML/shifu/wiki/shifu-0.11.0-hdp-yarn.tar.gz) latest shifu [here](https://github.com/ShifuML/shifu/wiki/shifu-0.11.1-hdp-yarn.tar.gz).
 
 ## Getting Started
 After shifu downloading, build your first model with Shifu [tutorial](https://github.com/ShifuML/shifu/wiki/Tutorial---Build-Your-First-ML-Model). More details about shifu can be found in our [wiki pages](https://github.com/ShifuML/shifu/wiki).
