@@ -17,6 +17,7 @@ package ml.shifu.shifu.core.dtrain.dt;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,14 +45,24 @@ public class BinaryDTSerializer {
 
     private static final Logger LOG = LoggerFactory.getLogger(BinaryDTSerializer.class);
 
+    /**
+     * MARKER if we need to readUTF or readByte
+     */
+    public static final int UTF_BYTES_MARKER = -1;
+
     public static void save(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-            List<List<TreeNode>> baggingTrees, String loss , int inputCount, FileSystem fs, Path output)
+            List<List<TreeNode>> baggingTrees, String loss, int inputCount, FileSystem fs, Path output)
             throws IOException {
+        LOG.info("Writing trees to {}.", output);
+        save(modelConfig, columnConfigList, baggingTrees, loss, inputCount, fs.create(output));
+    }
+
+    public static void save(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            List<List<TreeNode>> baggingTrees, String loss, int inputCount, OutputStream output) throws IOException {
         DataOutputStream fos = null;
 
         try {
-            fos = new DataOutputStream(new GZIPOutputStream(fs.create(output)));
-            LOG.info("Writing trees to {}.", output);
+            fos = new DataOutputStream(new GZIPOutputStream(output));
             // version
             fos.writeInt(CommonConstants.TREE_FORMAT_VERSION);
             fos.writeUTF(modelConfig.getAlgorithm());
@@ -107,17 +118,19 @@ public class BinaryDTSerializer {
                     fos.writeInt(categories.size());
                     for(String category: categories) {
                         // There is 16k limitation when using writeUTF() function.
-                        // if the category value is larger than 10k, then treat it as missing value
-                        if(category.length() > Constants.MAX_CATEGORICAL_VAL_LEN) {
-                            int pos = category.lastIndexOf(Constants.CATEGORICAL_GROUP_VAL_DELIMITER,
-                                    Constants.MAX_CATEGORICAL_VAL_LEN);
-                            if(pos >= 0) {
-                                category = category.substring(0, pos);
-                            } else {
-                                category = category.substring(0, Constants.MAX_CATEGORICAL_VAL_LEN);
+                        // if the category value is larger than 10k, write a marker -1 and write bytes instead of
+                        // writeUTF;
+                        // in read part logic should be changed also to readByte not readUTF according to the marker
+                        if(category.length() < Constants.MAX_CATEGORICAL_VAL_LEN) {
+                            fos.writeUTF(category);
+                        } else {
+                            fos.writeShort(UTF_BYTES_MARKER); // marker here
+                            byte[] bytes = category.getBytes("UTF-8");
+                            fos.writeInt(bytes.length);
+                            for(int i = 0; i < bytes.length; i++) {
+                                fos.writeByte(bytes[i]);
                             }
                         }
-                        fos.writeUTF(category);
                     }
                 }
             }

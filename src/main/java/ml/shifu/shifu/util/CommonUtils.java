@@ -1093,6 +1093,22 @@ public final class CommonUtils {
         }
     }
 
+    /**
+     * Get ColumnConfig from ColumnConfig list by columnId, since the columnId may not represent the position
+     * in ColumnConfig list after the segments (Column Expansion).
+     * @param columnConfigList - list of ColumnConfig
+     * @param columnId - the column id that want to search
+     * @return - ColumnConfig
+     */
+    public static ColumnConfig getColumnConfig(List<ColumnConfig> columnConfigList, Integer columnId) {
+        for ( ColumnConfig columnConfig : columnConfigList ) {
+            if ( columnConfig.getColumnNum().equals(columnId) ) {
+                return columnConfig;
+            }
+        }
+        return null;
+    }
+
     public static class GzipStreamPair {
 
         private DataInputStream input;
@@ -1837,20 +1853,36 @@ public final class CommonUtils {
     }
 
     /**
-     * Simple name without name space part.
+     * Simple name without name space part. For segment expansion, only retain raw column name but not current column
+     * name.
      * 
      * @param columnConfig
      *            the column configuration
+     * @param columnConfigList
+     *            the column config list inculding all segment expansion columns if have
+     * @param segmentExpansions
+     *            segment expansion expressions
+     * @param dataSetHeaders
+     *            data set headers for all raw columns
      * @return the simple name not including name space part
      */
-    public static String getSimpleColumnName(ColumnConfig columnConfig) {
-        String columnName = columnConfig.getColumnName();
-        // remove name-space in column name to make it be called by simple name
-        if(columnName.contains(CommonConstants.NAMESPACE_DELIMITER)) {
-            columnName = columnName.substring(columnName.lastIndexOf(CommonConstants.NAMESPACE_DELIMITER)
-                    + CommonConstants.NAMESPACE_DELIMITER.length(), columnName.length());
+    public static String getSimpleColumnName(ColumnConfig columnConfig, List<ColumnConfig> columnConfigList,
+            List<String> segmentExpansions, String[] dataSetHeaders) {
+        if(segmentExpansions == null || segmentExpansions.size() == 0) {
+            return getSimpleColumnName(columnConfig.getColumnName());
         }
-        return columnName;
+
+        // if(columnConfigList.size() != dataSetHeaders.size() * (segmentExpansions.size() + 1)) {
+        // throw new IllegalStateException(
+        // "Segment expansion enabled but # of columns in ColumnConfig.json is not consistent with segment expansion files.");
+        // }
+
+        if(columnConfig.getColumnNum() >= dataSetHeaders.length) {
+            return getSimpleColumnName(columnConfigList.get(columnConfig.getColumnNum() % dataSetHeaders.length)
+                    .getColumnName());
+        } else {
+            return getSimpleColumnName(columnConfig.getColumnName());
+        }
     }
 
     public static String getSimpleColumnName(String columnName) {
@@ -1959,8 +1991,8 @@ public final class CommonUtils {
                 if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
                     // only select numerical feature with getBinBoundary().size() larger than 1
                     // or categorical feature with getBinCategory().size() larger than 0
-                    if((config.isNumerical() && config.getBinBoundary().size() > 1)
-                            || (config.isCategorical() && config.getBinCategory().size() > 0)) {
+                    if((config.isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 1)
+                            || (config.isCategorical() && config.getBinCategory() != null && config.getBinCategory().size() > 0)) {
                         features.add(config.getColumnNum());
                     }
                 }
@@ -1968,8 +2000,8 @@ public final class CommonUtils {
                 if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config, hasCandidate)) {
                     // only select numerical feature with getBinBoundary().size() larger than 1
                     // or categorical feature with getBinCategory().size() larger than 0
-                    if((config.isNumerical() && config.getBinBoundary().size() > 1)
-                            || (config.isCategorical() && config.getBinCategory().size() > 0)) {
+                    if((config.isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 1)
+                            || (config.isCategorical() && config.getBinCategory() != null && config.getBinCategory().size() > 0)) {
                         features.add(config.getColumnNum());
                     }
                 }
@@ -2623,7 +2655,8 @@ public final class CommonUtils {
                         // hidden files,
                         continue;
                     }
-                    if(lfs.getLen() > 1024L) {
+                    // 20L is min gzip file size
+                    if(lfs.getLen() > 20L) {
                         firstValidFile = lfs.getPath().toString();
                         break;
                     }
