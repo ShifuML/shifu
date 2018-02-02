@@ -137,6 +137,8 @@ public interface Constants {
     public static final String CLEANED_VALIDATION_DATA = "CleanedValidationData";
     public static final String SHUFFLED_DATA_PATH = "ShuffledData";
 
+    public static final String VAR_SEL_HISTORY = "varsel.history";
+    public static final String CORR_EXPORT_PATH = "vars_corr.csv";
     public static final String TRAIN_SCORES = "TrainScores";
     public static final String BIN_AVG_SCORE = "BinAvgScore";
     public static final String CORRELATION_PATH = "CorrelationPath";
@@ -300,6 +302,11 @@ public interface Constants {
     public static final String EXPECTED_BIN_NUM = "EXPECTED_BIN_NUM";
     public static final String IV_KEEP_RATIO = "IV_KEEP_RATIO";
     public static final String MINIMUM_BIN_INST_CNT = "MINIMUM_BIN_INST_CNT";
+
+    public static final String IS_TO_RESET = "IS_TO_RESET";
+    public static final String IS_TO_LIST = "IS_TO_LIST";
+    public static final String IS_TO_FILTER_AUTO = "IS_TO_FILTER_AUTO";
+    public static final String IS_TO_RECOVER_AUTO = "IS_TO_RECOVER_AUTO";
 
     /**
      * GBT score range is not in [0, 1], to make it in [0, 1], such strategies are provided with case insensitive.
