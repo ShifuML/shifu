@@ -1093,6 +1093,22 @@ public final class CommonUtils {
         }
     }
 
+    /**
+     * Get ColumnConfig from ColumnConfig list by columnId, since the columnId may not represent the position
+     * in ColumnConfig list after the segments (Column Expansion).
+     * @param columnConfigList - list of ColumnConfig
+     * @param columnId - the column id that want to search
+     * @return - ColumnConfig
+     */
+    public static ColumnConfig getColumnConfig(List<ColumnConfig> columnConfigList, Integer columnId) {
+        for ( ColumnConfig columnConfig : columnConfigList ) {
+            if ( columnConfig.getColumnNum().equals(columnId) ) {
+                return columnConfig;
+            }
+        }
+        return null;
+    }
+
     public static class GzipStreamPair {
 
         private DataInputStream input;

@@ -838,7 +838,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     break;
                 }
                 Integer columnId = candidateColumnIdList.get(i++);
-                ColumnConfig columnConfig = this.columnConfigList.get(columnId);
+                // after supporting segments, the columns will expansion. the columnId may not the position
+                // in columnConfigList. It's safe to columnId to search (make sure columnNum == columnId)
+                ColumnConfig columnConfig = CommonUtils.getColumnConfig(this.columnConfigList, columnId);
                 if(CollectionUtils.isNotEmpty(userCandidateColumns)
                         && !userCandidateColumns.contains(new NSColumn(columnConfig.getColumnName()))) {
                     log.info("Variable {} is not in user's candidate list. Skip it.", columnConfig.getColumnName());
