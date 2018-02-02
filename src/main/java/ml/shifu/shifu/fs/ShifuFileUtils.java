@@ -15,23 +15,15 @@
  */
 package ml.shifu.shifu.fs;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Scanner;
+import java.io.*;
+import java.util.*;
 import java.util.zip.GZIPInputStream;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.history.VarSelDesc;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.HDFSUtils;
@@ -644,4 +636,17 @@ public class ShifuFileUtils {
         return size;
     }
 
+    public static void writeLines(Collection collection, String filePath, SourceType sourceType) throws IOException {
+        BufferedWriter writer = getWriter(filePath, sourceType);
+        try {
+            for (Object object : collection) {
+                if (object != null) {
+                    writer.write(object.toString());
+                    writer.newLine();
+                }
+            }
+        } finally {
+            IOUtils.closeQuietly(writer);
+        }
+    }
 }
