@@ -1093,6 +1093,22 @@ public final class CommonUtils {
         }
     }
 
+    /**
+     * Get ColumnConfig from ColumnConfig list by columnId, since the columnId may not represent the position
+     * in ColumnConfig list after the segments (Column Expansion).
+     * @param columnConfigList - list of ColumnConfig
+     * @param columnId - the column id that want to search
+     * @return - ColumnConfig
+     */
+    public static ColumnConfig getColumnConfig(List<ColumnConfig> columnConfigList, Integer columnId) {
+        for ( ColumnConfig columnConfig : columnConfigList ) {
+            if ( columnConfig.getColumnNum().equals(columnId) ) {
+                return columnConfig;
+            }
+        }
+        return null;
+    }
+
     public static class GzipStreamPair {
 
         private DataInputStream input;
@@ -1975,8 +1991,8 @@ public final class CommonUtils {
                 if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
                     // only select numerical feature with getBinBoundary().size() larger than 1
                     // or categorical feature with getBinCategory().size() larger than 0
-                    if((config.isNumerical() && config.getBinBoundary().size() > 1)
-                            || (config.isCategorical() && config.getBinCategory().size() > 0)) {
+                    if((config.isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 1)
+                            || (config.isCategorical() && config.getBinCategory() != null && config.getBinCategory().size() > 0)) {
                         features.add(config.getColumnNum());
                     }
                 }
@@ -1984,8 +2000,8 @@ public final class CommonUtils {
                 if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config, hasCandidate)) {
                     // only select numerical feature with getBinBoundary().size() larger than 1
                     // or categorical feature with getBinCategory().size() larger than 0
-                    if((config.isNumerical() && config.getBinBoundary().size() > 1)
-                            || (config.isCategorical() && config.getBinCategory().size() > 0)) {
+                    if((config.isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 1)
+                            || (config.isCategorical() && config.getBinCategory() != null && config.getBinCategory().size() > 0)) {
                         features.add(config.getColumnNum());
                     }
                 }
