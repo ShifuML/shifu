@@ -8,6 +8,7 @@ import java.util.Map.Entry;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.ModelConfig;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -36,6 +37,18 @@ public class VarSelUpdater extends BasicUpdater {
                 if(this.isForSegs) {
                     for(int i = 0; i < segs.size(); i++) {
                         setMeta.add(new NSColumn(meta + "_" + (i + 1)));
+                    }
+                }
+            }
+        }
+
+        this.setCategorialColumns = new HashSet<NSColumn>();
+        if (CollectionUtils.isNotEmpty(modelConfig.getCategoricalColumnNames())) {
+            for(String category: modelConfig.getCategoricalColumnNames()) {
+                this.setCategorialColumns.add(new NSColumn(category));
+                if(this.isForSegs) {
+                    for(int i = 0; i < segs.size(); i++) {
+                        this.setCategorialColumns.add(new NSColumn(category + "_" + (i + 1)));
                     }
                 }
             }
@@ -83,6 +96,8 @@ public class VarSelUpdater extends BasicUpdater {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Weight);
         } else if(this.setCandidates.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Candidate);
+        } else if ( this.setCategorialColumns.contains(new NSColumn(varName)) ) {
+            columnConfig.setColumnType(ColumnType.C);
         }
     }
 }
