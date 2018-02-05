@@ -274,7 +274,11 @@ public class VariableSelector {
 
         // update column config list and set finalSelect to true
         for(int n: selectedColumnNumList) {
-            this.columnConfigList.get(n).setFinalSelect(true);
+            // get ColumnConfig by column id. The id may not the position in array list after support segments
+            ColumnConfig columnConfig = CommonUtils.getColumnConfig(this.columnConfigList, n);
+            if ( columnConfig != null ) {
+                columnConfig.setFinalSelect(true);
+            }
         }
 
         return columnConfigList;
