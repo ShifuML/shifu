@@ -60,6 +60,21 @@
 			<organization>PayPal</organization>
 			<organizationUrl>http://www.paypal.com</organizationUrl>
 		</developer>
+		<developer>
+			<name>Sharma Nitin</name>
+			<organization>PayPal</organization>
+			<organizationUrl>http://www.paypal.com</organizationUrl>
+		</developer>
+		<developer>
+			<name>Zhu Wayne</name>
+			<organization>PayPal</organization>
+			<organizationUrl>http://www.paypal.com</organizationUrl>
+		</developer>
+		<developer>
+			<name>Wu Devin</name>
+			<organization>PayPal</organization>
+			<organizationUrl>http://www.paypal.com</organizationUrl>
+		</developer>
 	</developers>
 	<scm>
 		<developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
