@@ -290,7 +290,7 @@ public class ShifuCLITest {
         Assert.assertTrue(tmpModel.lastModified() > timestamp);
 
         FileUtils.deleteQuietly(tmpModel);
-        FileUtils.deleteQuietly(new File("EvalC" + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE));
+        FileUtils.deleteQuietly(new File("EvalC" + Constants.DEFAULT_CHAMPIONSCORE_META_COLUMN_FILE));
     }
 
     @Test
