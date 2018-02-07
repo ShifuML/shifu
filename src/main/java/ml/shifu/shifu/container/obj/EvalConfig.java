@@ -48,6 +48,11 @@ public class EvalConfig {
     private String scoreMetaColumnNameFile;
     private Map<String, String> customPaths;
     private Long scoreScale = 1000L;
+    
+    /**
+     * if eval -norm need norm all columns or final selected columns(finalSelect=true), by default false
+     */
+    private boolean normAllColumns = false;
 
     /**
      * For typical 0-1 binary regression, this is set to be true, while for other regression, better to set it to false
@@ -307,5 +312,19 @@ public class EvalConfig {
         other.setPerformanceScoreSelector(performanceScoreSelector);
         other.setScoreMetaColumnNameFile(scoreMetaColumnNameFile);
         return other;
+    }
+
+    /**
+     * @return the normAllColumns
+     */
+    public boolean isNormAllColumns() {
+        return normAllColumns;
+    }
+
+    /**
+     * @param normAllColumns the normAllColumns to set
+     */
+    public void setNormAllColumns(boolean normAllColumns) {
+        this.normAllColumns = normAllColumns;
     }
 }
