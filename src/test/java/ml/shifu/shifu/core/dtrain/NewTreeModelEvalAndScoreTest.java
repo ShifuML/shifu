@@ -17,6 +17,7 @@ package ml.shifu.shifu.core.dtrain;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,6 +31,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.Scorer;
 import ml.shifu.shifu.core.TreeModel;
+import ml.shifu.shifu.core.dtrain.dt.BinaryDTSerializer;
 import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
 import ml.shifu.shifu.util.CommonUtils;
 
@@ -45,7 +47,7 @@ public class NewTreeModelEvalAndScoreTest {
 
     @BeforeClass
     public void setUp() throws IOException {
-        String modelPath = "src/test/resources/dttest/model/newatom.gbt";
+        String modelPath = "src/test/resources/dttest/model/newatom2.gbt";
         FileInputStream fi = null;
         try {
             fi = new FileInputStream(modelPath);
@@ -63,19 +65,24 @@ public class NewTreeModelEvalAndScoreTest {
         }
     }
 
-//    @Test
-//    public void testNewModel() throws IOException {
-//        ModelConfig modelConfig = CommonUtils.loadModelConfig(
-//                "src/test/resources/dttest/newatomconfig/ModelConfig.json", SourceType.LOCAL);
-//        List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList(
-//                "src/test/resources/dttest/newatomconfig/ColumnConfig.json", SourceType.LOCAL);
-//
-//        FileOutputStream fileOutput = new FileOutputStream("atom22.gbt");
-//
-//        BinaryDTSerializer.save(modelConfig, columnConfigList, iTreeModel.getTrees(), "squared", 807, fileOutput);
-//        
-//        fileOutput.close();
-//    }
+    @Test
+    public void testGenerateNewModel() throws IOException {
+        ModelConfig modelConfig = CommonUtils.loadModelConfig(
+                "src/test/resources/dttest/newatomconfig/ModelConfig.json", SourceType.LOCAL);
+        List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList(
+                "src/test/resources/dttest/newatomconfig/ColumnConfig.json", SourceType.LOCAL);
+
+        File file = new File("atom22.gbt");
+        FileOutputStream fileOutput = null;
+        try {
+            fileOutput = new FileOutputStream(file);
+
+            BinaryDTSerializer.save(modelConfig, columnConfigList, iTreeModel.getTrees(), "squared", 807, fileOutput);
+        } finally {
+            fileOutput.close();
+            FileUtils.deleteQuietly(file);
+        }
+    }
 
     @Test
     public void testEvalScore() throws IOException {
@@ -96,7 +103,7 @@ public class NewTreeModelEvalAndScoreTest {
         }
         String[] headers = CommonUtils.split(lines.get(0), "|");
         // score with format <String, String>
-        for(int i = 1; i < lines.size(); i++) {
+        for(int i = 8; i < 9; i++) {
             Map<String, String> map = new HashMap<String, String>();
             Map<String, Object> mapObj = new HashMap<String, Object>();
 
@@ -117,11 +124,8 @@ public class NewTreeModelEvalAndScoreTest {
             double[] scores = iTreeModel.compute(mapObj);
 
             ScoreObject scoreObject = scorer.score(map);
-
-            System.out.println("Eval score is: " + scoreObject.getMeanScore() / 1000 + "; shifu score: " + scores[0]);
-            // + "; raw eval score is " + Double.parseDouble(map.get("model0").toString()) / 1000L);
+            org.testng.Assert.assertEquals(scoreObject.getMeanScore() / 1000, scores[0], 0.0000001d);
         }
-
     }
 
 }
