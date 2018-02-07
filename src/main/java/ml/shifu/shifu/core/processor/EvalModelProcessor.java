@@ -578,7 +578,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
         // create empty <EvalSetName>.meta.column.names
         String namesFilePath = Constants.COLUMN_META_FOLDER_NAME + File.separator + evalConfig.getName() + "."
-                + Constants.DEFAULT_APPEND_COLUMN_FILE;
+                + Constants.DEFAULT_META_COLUMN_FILE;
         ShifuFileUtils.createFileIfNotExists(new Path(namesFilePath).toString(), SourceType.LOCAL);
         evalConfig.getDataSet().setMetaColumnNameFile(namesFilePath);
 
