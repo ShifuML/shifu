@@ -92,6 +92,11 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
 
         evalConfig = modelConfig.getEvalConfigByName(evalSetName);
 
+        if(!evalConfig.isNormAllColumns()) {
+            // log such un compactiable
+            log.warn("Default behanior is changed in eval norm to only norm selected columns.");
+        }
+
         if(StringUtils.isBlank(evalConfig.getDataSet().getHeaderPath())) {
             log.warn("eval header path is empty, take the first line as schema (for csv format)");
         }
@@ -152,8 +157,11 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             if(isAfterVarSelect) {
                 if(columnConfig.isFinalSelect() && (!columnConfig.isMeta() && !columnConfig.isTarget())) {
                     if(evalNamesSet.contains(columnConfig.getColumnName())) {
-                        if(!outputNames.contains(columnConfig.getColumnName())) {
-                            outputNames.add(columnConfig.getColumnName());
+                        // if has variables finalSelect=true and normAllColumns is false
+                        if(!evalConfig.isNormAllColumns() && columnConfig.isFinalSelect()) {
+                            if(!outputNames.contains(columnConfig.getColumnName())) {
+                                outputNames.add(columnConfig.getColumnName());
+                            }
                         }
                     } else {
                         throw new RuntimeException("FinalSelect variable - " + columnConfig.getColumnName()
@@ -163,6 +171,8 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             } else {
                 if(!columnConfig.isMeta() && !columnConfig.isTarget()) {
                     if(evalNamesSet.contains(columnConfig.getColumnName())) {
+                        // no variable selected, no matter evalConfig.isNormAllColumns() true or false, just select all
+                        // columns
                         if(!outputNames.contains(columnConfig.getColumnName())) {
                             outputNames.add(columnConfig.getColumnName());
                         }
