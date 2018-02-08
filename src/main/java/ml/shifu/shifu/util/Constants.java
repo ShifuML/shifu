@@ -321,5 +321,6 @@ public interface Constants {
 
     public static final String SHIFU_SEGMENT_EXPRESSIONS = "shifu.segment.expressions";
     public static final String SHIFU_NORM_CATEGORY_MISSING_NORM = "shifu.norm.category.missing.norm";
-
+    
+    public static final String SHIFU_EVAL_NORM_APPEND_SCORE = "shifu.eval.norm.appendscore";
 }
