@@ -86,13 +86,18 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
      */
     private int segFilterSize = 0;
 
+    /**
+     * If append model score at last column
+     */
+    private boolean isAppendScore = false;
+
     public EvalNormUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName, String scale)
             throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
 
         evalConfig = modelConfig.getEvalConfigByName(evalSetName);
 
-        if(!evalConfig.isNormAllColumns()) {
+        if(!evalConfig.getNormAllColumns()) {
             // log such un compactiable
             log.warn("Default behanior is changed in eval norm to only norm selected columns.");
         }
@@ -109,10 +114,22 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
         } else {
             filterExpressions = Environment.getProperty(Constants.SHIFU_SEGMENT_EXPRESSIONS);
         }
-
         if(StringUtils.isNotBlank(filterExpressions)) {
             this.segFilterSize = CommonUtils.split(filterExpressions,
                     Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER).length;
+        }
+
+        String isAppendScoreStr = "false";
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            isAppendScoreStr = UDFContext.getUDFContext().getJobConf().get(Constants.SHIFU_EVAL_NORM_APPEND_SCORE);
+        } else {
+            isAppendScoreStr = Environment.getProperty(Constants.SHIFU_EVAL_NORM_APPEND_SCORE);
+        }
+
+        if(StringUtils.isNotBlank(isAppendScoreStr)) {
+            isAppendScore = isAppendScoreStr.equalsIgnoreCase(Boolean.TRUE.toString());
+        } else {
+            isAppendScore = false;
         }
 
         Set<String> evalNamesSet = new HashSet<String>(Arrays.asList(this.headers));
@@ -158,7 +175,7 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
                 if(columnConfig.isFinalSelect() && (!columnConfig.isMeta() && !columnConfig.isTarget())) {
                     if(evalNamesSet.contains(columnConfig.getColumnName())) {
                         // if has variables finalSelect=true and normAllColumns is false
-                        if(!evalConfig.isNormAllColumns() && columnConfig.isFinalSelect()) {
+                        if(!evalConfig.getNormAllColumns() && columnConfig.isFinalSelect()) {
                             if(!outputNames.contains(columnConfig.getColumnName())) {
                                 outputNames.add(columnConfig.getColumnName());
                             }
@@ -207,7 +224,7 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
     }
 
     public Tuple exec(Tuple input) throws IOException {
-        if(this.modelRunner == null) {
+        if(this.modelRunner == null && this.isAppendScore) {
             // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.
             // UDF in pig client will be initialized to get some metadata issues
             @SuppressWarnings("deprecation")
@@ -247,13 +264,15 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
-        CaseScoreResult score = this.modelRunner.computeNsData(rawDataNsMap);
-        if(this.modelRunner == null || this.modelRunner.getModelsCnt() == 0 || score == null) {
-            tuple.append(-999.0);
-        } else if(this.scIndex < 0) {
-            tuple.append(score.getAvgScore());
-        } else {
-            tuple.append(score.getScores().get(this.scIndex));
+        if(this.isAppendScore) {
+            CaseScoreResult score = this.modelRunner.computeNsData(rawDataNsMap);
+            if(this.modelRunner == null || this.modelRunner.getModelsCnt() == 0 || score == null) {
+                tuple.append(-999.0);
+            } else if(this.scIndex < 0) {
+                tuple.append(score.getAvgScore());
+            } else {
+                tuple.append(score.getScores().get(this.scIndex));
+            }
         }
 
         return tuple;
@@ -283,8 +302,10 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
                             this.modelConfig.getNormalizeType()), DataType.DOUBLE));
                 }
             }
-            tupleSchema.add(new FieldSchema(StringUtils.isBlank(this.scoreName) ? "default_score" : this.scoreName,
-                    DataType.DOUBLE));
+            if(this.isAppendScore) {
+                tupleSchema.add(new FieldSchema(StringUtils.isBlank(this.scoreName) ? "default_score" : this.scoreName,
+                        DataType.DOUBLE));
+            }
             return new Schema(new FieldSchema("EvalNorm", tupleSchema, DataType.TUPLE));
         } catch (IOException e) {
             log.error("Error in outputSchema", e);

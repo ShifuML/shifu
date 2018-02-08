@@ -52,7 +52,7 @@ public class EvalConfig {
     /**
      * if eval -norm need norm all columns or final selected columns(finalSelect=true), by default false
      */
-    private boolean normAllColumns = false;
+    private Boolean normAllColumns = false;
 
     /**
      * For typical 0-1 binary regression, this is set to be true, while for other regression, better to set it to false
@@ -317,14 +317,15 @@ public class EvalConfig {
     /**
      * @return the normAllColumns
      */
-    public boolean isNormAllColumns() {
+    public Boolean getNormAllColumns() {
         return normAllColumns;
     }
 
     /**
      * @param normAllColumns the normAllColumns to set
      */
-    public void setNormAllColumns(boolean normAllColumns) {
+    public void setNormAllColumns(Boolean normAllColumns) {
         this.normAllColumns = normAllColumns;
     }
+
 }
