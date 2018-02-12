@@ -574,7 +574,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         evalConfig.setDataSet(modelConfig.getDataSet().cloneRawSourceData());
         // create empty <EvalSetName>Score.meta.column.names
         ShifuFileUtils.createFileIfNotExists(new Path(evalConfig.getName()
-                + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE).toString(), SourceType.LOCAL);
+                + Constants.DEFAULT_CHAMPIONSCORE_META_COLUMN_FILE).toString(), SourceType.LOCAL);
 
         // create empty <EvalSetName>.meta.column.names
         String namesFilePath = Constants.COLUMN_META_FOLDER_NAME + File.separator + evalConfig.getName() + "."

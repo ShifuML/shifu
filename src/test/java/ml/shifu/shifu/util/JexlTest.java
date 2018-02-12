@@ -15,16 +15,15 @@
  */
 package ml.shifu.shifu.util;
 
+import java.text.DecimalFormat;
+
 import org.apache.commons.jexl2.Expression;
 import org.apache.commons.jexl2.JexlContext;
 import org.apache.commons.jexl2.JexlEngine;
 import org.apache.commons.jexl2.MapContext;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.testng.Assert;
 import org.testng.annotations.Test;
-
-import java.text.DecimalFormat;
 
 /**
  * JexlTest class

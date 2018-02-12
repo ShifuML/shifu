@@ -503,11 +503,9 @@ public final class CommonUtils {
         for(int i = 0; i < fields.length; i++) {
             if(!isSchemaProvided) {
                 fields[i] = i + "";
-            } /*
-               * else { // namespace support
-               * fields[i] = getRelativePigHeaderColumnName(fields[i]);
-               * }
-               */
+            } else {
+                fields[i] = getRelativePigHeaderColumnName(fields[i]);
+            }
         }
         return fields;
     }

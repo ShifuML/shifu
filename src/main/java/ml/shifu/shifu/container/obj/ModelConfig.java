@@ -307,7 +307,7 @@ public class ModelConfig {
 
         // create empty <ModelName>/<EvalSetName>Score.meta.column.names
         namesFilePath = Constants.COLUMN_META_FOLDER_NAME + File.separator + evalConfig.getName()
-                + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE;
+                + Constants.DEFAULT_CHAMPIONSCORE_META_COLUMN_FILE;
         ShifuFileUtils.createFileIfNotExists(new Path(modelName, namesFilePath).toString(), SourceType.LOCAL);
         evalConfig.setScoreMetaColumnNameFile(namesFilePath);
 

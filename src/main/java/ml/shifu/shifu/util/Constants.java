@@ -160,12 +160,13 @@ public interface Constants {
     public static final String KEY_CORRELATION_PATH = "correlationPath";
 
     public static final String DEFAULT_META_COLUMN_FILE = "meta.column.names";
+    public static final String DEFAULT_APPEND_COLUMN_FILE = "append.column.names";
     public static final String DEFAULT_CATEGORICAL_COLUMN_FILE = "categorical.column.names";
     public static final String DEFAULT_HYBRID_COLUMN_FILE = "hybrid.column.names";
     public static final String DEFAULT_CANDIDATE_COLUMN_FILE = "candidate.column.names";
     public static final String DEFAULT_FORCESELECT_COLUMN_FILE = "forceselect.column.names";
     public static final String DEFAULT_FORCEREMOVE_COLUMN_FILE = "forceremove.column.names";
-    public static final String DEFAULT_EVALSCORE_META_COLUMN_FILE = "score.meta.column.names";
+    public static final String DEFAULT_CHAMPIONSCORE_META_COLUMN_FILE = "champion.score.column.names";
     public static final String DEFAULT_EXPRESSION_COLUMN_FILE = "filter.expressions";
 
     public static final String VAR_SEL_MASTER_CONDUCTOR = "dvarsel.master.conductor.cls";
@@ -320,5 +321,6 @@ public interface Constants {
 
     public static final String SHIFU_SEGMENT_EXPRESSIONS = "shifu.segment.expressions";
     public static final String SHIFU_NORM_CATEGORY_MISSING_NORM = "shifu.norm.category.missing.norm";
-
+    
+    public static final String SHIFU_EVAL_NORM_APPEND_SCORE = "shifu.eval.norm.appendscore";
 }
