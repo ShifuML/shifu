@@ -197,11 +197,18 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                     }
                 }
 
+                // user provide candidate variable list or not
+                boolean hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
+
                 List<ColumnConfig> rebinColumns = new ArrayList<ColumnConfig>();
                 List<String> catVariables = getStringList(this.params, Constants.REQUEST_VARS, ",");
                 for(ColumnConfig columnConfig: this.columnConfigList) {
                     if(CollectionUtils.isEmpty(catVariables) || isRequestColumn(catVariables, columnConfig)) {
-                        rebinColumns.add(columnConfig);
+                        if (CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
+                            rebinColumns.add(columnConfig);
+                        } else {
+                            log.warn("Column - {} is not a good candidate. Skip it.");
+                        }
                     }
                 }
 
