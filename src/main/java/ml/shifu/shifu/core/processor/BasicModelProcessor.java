@@ -655,7 +655,7 @@ public class BasicModelProcessor {
         return null;
     }
 
-    protected int getIntParam(Map<String, Object> params, String propKey) {
+    protected int getIntParam(Map<String, Object> params, String propKey, int defval) {
         if(MapUtils.isNotEmpty(params) && params.get(propKey) instanceof String) {
             String propVal = (String) params.get(propKey);
             try {
@@ -664,7 +664,11 @@ public class BasicModelProcessor {
                 LOG.warn("Invalid int value for {}. Ignore it...", propKey);
             }
         }
-        return 0;
+        return defval;
+    }
+
+    protected int getIntParam(Map<String, Object> params, String propKey) {
+        return getIntParam(params, propKey, 0);
     }
 
     protected double getDoubleParam(Map<String, Object> params, String propKey, double defval) {
