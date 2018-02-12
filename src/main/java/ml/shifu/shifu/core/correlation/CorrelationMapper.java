@@ -230,7 +230,9 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
 
                 for(int j = 0; j < columnConfigList.size(); j++) {
                     ColumnConfig otherColumnConfig = columnConfigList.get(j);
-                    if(otherColumnConfig.getColumnFlag() == ColumnFlag.Meta) {
+                    if( (otherColumnConfig.getColumnFlag() != ColumnFlag.Target)
+                            && ( (otherColumnConfig.getColumnFlag() == ColumnFlag.Meta)
+                            || (hasCandidates && !ColumnFlag.Candidate.equals(otherColumnConfig.getColumnFlag())) )) {
                         continue;
                     }
                     if(i > j && !this.isComputeAll) {

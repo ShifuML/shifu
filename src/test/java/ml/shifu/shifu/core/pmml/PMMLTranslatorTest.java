@@ -32,7 +32,7 @@ public class PMMLTranslatorTest {
         Environment.setProperty(Environment.SHIFU_HOME, ".");
     }
 
-    // @Test
+    @Test
     public void testAllNumericVariablePmmlCase() throws Exception {
         PMMLVerifySuit verifySuit = new PMMLVerifySuit("cancer-judgement",
                 "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
@@ -52,7 +52,7 @@ public class PMMLTranslatorTest {
         Assert.assertTrue(verifySuit.doVerification());
     }
 
-    // @Test
+    @Test
     public void testMixTypeVariablePmmlCase() throws Exception {
         PMMLVerifySuit verifySuit = new PMMLVerifySuit("ModelK",
                 "src/test/resources/example/labor-neg/DataStore/DataSet1/ModelConfig.json",
@@ -83,7 +83,7 @@ public class PMMLTranslatorTest {
         Assert.assertTrue(verifySuit.doVerification());
     }
 
-    // @Test
+    @Test
     public void testWoeZscorePmmlCase() throws Exception {
         PMMLVerifySuit verifySuit = new PMMLVerifySuit("TestWoeZscale",
                 "src/test/resources/example/cancer-judgement/ModelStore/ModelSet3/ModelConfig.json",
@@ -93,7 +93,7 @@ public class PMMLTranslatorTest {
         Assert.assertTrue(verifySuit.doVerification());
     }
 
-    // @Test
+    @Test
     public void testMixTypeWoeZscorePmmlCase() throws Exception {
         PMMLVerifySuit verifySuit = new PMMLVerifySuit("TestMixTypeWoeZscale",
                 "src/test/resources/example/labor-neg/DataStore/ModelSet3/ModelConfig.json",
