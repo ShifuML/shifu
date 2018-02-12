@@ -196,7 +196,21 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                             throw new IllegalArgumentException(
                                     "Filter by SE/ST only works well in NN/LR. Please check your modelconfig::train.");
                         }
-                        distributedSEWrapper();
+                        int recursiveCnt = getRecursiveCnt();
+                        int i = 0;
+                        // create varsel directory and write original copy of ColumnConfig.json
+                        ShifuFileUtils.createDirIfNotExists(pathFinder.getVarSelDir(),SourceType.LOCAL);
+                        super.saveColumnConfigList(pathFinder.getVarSelColumnConfig(i), this.columnConfigList);
+                        while ( (i++) < recursiveCnt ) {
+                            distributedSEWrapper();
+                            String varSelectMSEOutputPath = pathFinder.getVarSelectMSEOutputPath(modelConfig.getDataSet().getSource());
+                            // even fail to run SE, still to create an empty se.x file
+                            String varSelMSEHistPath = pathFinder.getVarSelMSEHistPath(i - 1);
+                            ShifuFileUtils.createFileIfNotExists(varSelMSEHistPath, SourceType.LOCAL);
+                            ShifuFileUtils.copyToLocal(varSelectMSEOutputPath,
+                                    Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME, varSelMSEHistPath);
+                            super.saveColumnConfigList(pathFinder.getVarSelColumnConfig(i), this.columnConfigList);
+                        }
                     } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_VOTED)) {
                         votedVariablesSelection();
                     }
@@ -289,6 +303,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     public boolean getIsToReset() {
         return getBooleanParam(this.otherConfigs, Constants.IS_TO_RESET);
+    }
+
+    public int getRecursiveCnt() {
+        return getIntParam(this.otherConfigs, Constants.RECURSIVE_CNT, 1);
     }
 
     public boolean getIsToList() {

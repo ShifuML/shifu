@@ -27,12 +27,16 @@ public class HdfsPartFile {
     private int currentFileOps;
     private BufferedReader reader;
 
-    public HdfsPartFile(String filePath, SourceType sourceType) throws IOException {
+    public HdfsPartFile(String filePath, SourceType sourceType, String partFilePrefix) throws IOException {
         this.filePath = filePath;
         this.sourceType = sourceType;
 
-        this.fileStatsArr = ShifuFileUtils.getFilePartStatus(filePath, sourceType);
+        this.fileStatsArr = ShifuFileUtils.getFilePartStatus(filePath, sourceType, partFilePrefix);
         this.currentFileOps = 0;
+    }
+
+    public HdfsPartFile(String filePath, SourceType sourceType) throws IOException {
+        this(filePath, sourceType, Constants.HADOOP_PART_PREFIX);
     }
 
     public String readLine() throws IOException {
