@@ -894,7 +894,12 @@
                 "type": "boolean",
                 "directive": "input",
                 "defval": true
-             }, {
+            }, { 
+                "name": "normAllColumns",
+                "type": "boolean",
+                "directive": "input",
+                "defval": false
+            }, {
                 "name" : "gbtScoreConvertStrategy",
                 "type" : "text",
                 "directive": "select",
