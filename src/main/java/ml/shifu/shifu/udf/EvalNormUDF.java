@@ -55,6 +55,7 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
 
     @SuppressWarnings("unused")
     private static final String SCHEMA_PREFIX = "eval::";
+    private static final String ORIG_POSTFIX = "_orig";
 
     private EvalConfig evalConfig;
     private String[] headers;
@@ -79,7 +80,7 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
     /**
      * If output raw variables together with norm variables
      */
-    private boolean isOutputRaw = true;
+    private boolean isOutputRaw = false;
 
     /**
      * Splits for filter expressions
@@ -189,10 +190,10 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
 
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
             this.isOutputRaw = Boolean.TRUE.toString().equalsIgnoreCase(
-                    UDFContext.getUDFContext().getJobConf().get(SHIFU_EVAL_NORM_OUTPUTRAW, Boolean.TRUE.toString()));
+                    UDFContext.getUDFContext().getJobConf().get(SHIFU_EVAL_NORM_OUTPUTRAW, Boolean.FALSE.toString()));
         } else {
             this.isOutputRaw = Boolean.TRUE.toString().equalsIgnoreCase(
-                    Environment.getProperty(SHIFU_EVAL_NORM_OUTPUTRAW, Boolean.TRUE.toString()));
+                    Environment.getProperty(SHIFU_EVAL_NORM_OUTPUTRAW, Boolean.FALSE.toString()));
         }
     }
 
@@ -264,13 +265,12 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
                     if(this.isOutputRaw) {
                         ColumnConfig columnConfig = this.columnConfigMap.get(name);
                         if(columnConfig.isNumerical()) {
-                            tupleSchema.add(new FieldSchema(name, DataType.DOUBLE));
+                            tupleSchema.add(new FieldSchema(name + ORIG_POSTFIX, DataType.DOUBLE));
                         } else {
-                            tupleSchema.add(new FieldSchema(name, DataType.CHARARRAY));
+                            tupleSchema.add(new FieldSchema(name + ORIG_POSTFIX, DataType.CHARARRAY));
                         }
                     }
-                    tupleSchema.add(new FieldSchema(ZscoreLocalTransformCreator.genPmmlColumnName(name,
-                            this.modelConfig.getNormalizeType()), DataType.DOUBLE));
+                    tupleSchema.add(new FieldSchema(name, DataType.DOUBLE));
                 }
             }
             tupleSchema.add(new FieldSchema(StringUtils.isBlank(this.scoreName) ? "default_score" : this.scoreName,
