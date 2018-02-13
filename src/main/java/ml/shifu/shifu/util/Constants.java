@@ -311,6 +311,7 @@ public interface Constants {
     public static final String IS_TO_RECOVER_AUTO = "IS_TO_RECOVER_AUTO";
 
     public static final String RECURSIVE_CNT = "RECURSIVE_CNT";
+    public static final String IS_TO_SHUFFLE_DATA = "IS_TO_SHUFFLE_DATA";
 
     /**
      * GBT score range is not in [0, 1], to make it in [0, 1], such strategies are provided with case insensitive.
@@ -326,4 +327,6 @@ public interface Constants {
     public static final String SHIFU_NORM_CATEGORY_MISSING_NORM = "shifu.norm.category.missing.norm";
     
     public static final String SHIFU_EVAL_NORM_APPEND_SCORE = "shifu.eval.norm.appendscore";
+    public static final String SHIFU_EVAL_NORM_OUTPUTRAW = "shifu.eval.norm.outputraw";
+    public static final String SHIFU_NORM_ONLY_SELECTED = "shifu.norm.only.selected";
 }
