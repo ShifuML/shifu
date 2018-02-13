@@ -233,7 +233,9 @@ public class ShifuCLI {
                 } else if(cleanedArgs[0].equals(NORMALIZE_CMD) || cleanedArgs[0].equals(NORM_CMD)
                         || cleanedArgs[0].equals(TRANSFORM_CMD)) {
                     // normalize step
-                    status = normalizeTrainData(cmd.hasOption(SHUFFLE));
+                    Map<String, Object> params = new HashMap<String, Object>();
+                    params.put(Constants.IS_TO_SHUFFLE_DATA, cmd.hasOption(SHUFFLE));
+                    status = normalizeTrainData(params);
                     if(status == 0) {
                         log.info("Do model set normalization successfully. Please continue next step by using 'shifu varselect or shifu varsel'.");
                     } else {
@@ -446,14 +448,14 @@ public class ShifuCLI {
      * Normalize the training data
      */
     public static int normalizeTrainData() throws Exception {
-        return normalizeTrainData(false);
+        return normalizeTrainData(null);
     }
 
     /*
      * Normalize the training data
      */
-    public static int normalizeTrainData(boolean isToShuffleData) throws Exception {
-        NormalizeModelProcessor p = new NormalizeModelProcessor(isToShuffleData);
+    public static int normalizeTrainData(Map<String, Object> params) throws Exception {
+        NormalizeModelProcessor p = new NormalizeModelProcessor(params);
         return p.run();
     }
 

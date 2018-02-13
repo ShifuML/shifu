@@ -10,9 +10,9 @@
   },
   "dataSet" : {
     "source" : "LOCAL",
-    "dataPath" : "/x/home/zhanhu/shifu/shifu-0.2.8-SNAPSHOT-fixpmml/example/cancer-judgement/DataStore/DataSet1",
+    "dataPath" : "src/test/resources/example/cancer-judgement/DataStore/DataSet1",
     "dataDelimiter" : "|",
-    "headerPath" : "/x/home/zhanhu/shifu/shifu-0.2.8-SNAPSHOT-fixpmml/example/cancer-judgement/DataStore/DataSet1/.pig_header",
+    "headerPath" : "src/test/resources/example/cancer-judgement/DataStore/DataSet1/.pig_header",
     "headerDelimiter" : "|",
     "filterExpressions" : "",
     "weightColumnName" : "",

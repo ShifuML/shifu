@@ -207,7 +207,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                         if (CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
                             rebinColumns.add(columnConfig);
                         } else {
-                            log.warn("Column - {} is not a good candidate. Skip it.");
+                            log.warn("Column - {} is not a good candidate. Skip it.", columnConfig.getColumnName());
                         }
                     }
                 }
