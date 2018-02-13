@@ -52,11 +52,12 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
     private boolean isToShuffleData = false;
 
     public NormalizeModelProcessor() {
-        this(false);
+        // default constructor
     }
 
-    public NormalizeModelProcessor(boolean isToShuffleData) {
-        this.isToShuffleData = isToShuffleData;
+    public NormalizeModelProcessor(Map<String, Object> otherConfigs) {
+        super.otherConfigs = otherConfigs;
+        this.isToShuffleData = getIsToShuffleData();
     }
 
     /**
@@ -241,6 +242,10 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public boolean getIsToShuffleData() {
+        return getBooleanParam(this.otherConfigs, Constants.IS_TO_SHUFFLE_DATA);
     }
 
 }

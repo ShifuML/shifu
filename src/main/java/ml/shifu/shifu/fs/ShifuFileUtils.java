@@ -15,13 +15,7 @@
  */
 package ml.shifu.shifu.fs;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -37,6 +31,8 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.HDFSUtils;
 
+import ml.shifu.shifu.util.HdfsPartFile;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -591,6 +587,10 @@ public class ShifuFileUtils {
     }
 
     public static FileStatus[] getFilePartStatus(String filePath, SourceType sourceType) throws IOException {
+        return getFilePartStatus(filePath, sourceType, Constants.HADOOP_PART_PREFIX);
+    }
+
+    public static FileStatus[] getFilePartStatus(String filePath, SourceType sourceType, final String partFilePrefix) throws IOException {
         FileSystem fs = getFileSystemBySourceType(sourceType);
 
         PathFilter filter = new PathFilter() {
@@ -598,7 +598,7 @@ public class ShifuFileUtils {
             public boolean accept(Path path) {
                 // FIXME, should only skip _SUCCESS, .pig_header such files, not start from part, some files may not
                 // start from part.
-                return path.getName().startsWith("part");
+                return path.getName().startsWith(partFilePrefix);
             }
         };
 
@@ -656,6 +656,27 @@ public class ShifuFileUtils {
             }
         } finally {
             IOUtils.closeQuietly(writer);
+        }
+    }
+
+    public static void copyToLocal(String hdfsFilePath, String localOutputPath) throws IOException {
+        copyToLocal(hdfsFilePath, Constants.HADOOP_PART_PREFIX, localOutputPath);
+    }
+
+    public static void copyToLocal(String hdfsFilePath, String partFilePrefix, String localOutputPath) throws IOException {
+        HdfsPartFile hdfsPartFile = new HdfsPartFile(hdfsFilePath, SourceType.HDFS, partFilePrefix);
+        BufferedWriter writer = new BufferedWriter(new FileWriter(localOutputPath));
+        String line = null;
+        try {
+            while ((line = hdfsPartFile.readLine()) != null) {
+                writer.write(line);
+                writer.newLine();
+            }
+        } catch (Exception e) {
+            // ignore
+        } finally {
+            IOUtils.closeQuietly(writer);
+            hdfsPartFile.close();
         }
     }
 }

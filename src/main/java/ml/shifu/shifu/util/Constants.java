@@ -37,6 +37,7 @@ public interface Constants {
     public static final String MODEL_SETS = "ModelSets";
 
     public static final String TMP = "tmp";
+    public static final String VAR_SELECT = "varsel";
     public static final String MODELS_TMP = "modelsTmp";
 
     public static final String PIG_HEADER = ".pig_header";
@@ -84,7 +85,7 @@ public interface Constants {
     public static final String BZ2_SUFFIX = ".bz2";
     public static final String GZ_SUFFIX = ".gz";
 
-    public static final String MAPREDUCE_OUTPUT_PREFIX = "part-";
+    public static final String HADOOP_PART_PREFIX = "part";
     public static final String HIDDEN_FILES = ".";
     public static final String BACK_SLASH = "\\";
     public static final String SLASH = "/";
@@ -309,6 +310,9 @@ public interface Constants {
     public static final String IS_TO_FILTER_AUTO = "IS_TO_FILTER_AUTO";
     public static final String IS_TO_RECOVER_AUTO = "IS_TO_RECOVER_AUTO";
 
+    public static final String RECURSIVE_CNT = "RECURSIVE_CNT";
+    public static final String IS_TO_SHUFFLE_DATA = "IS_TO_SHUFFLE_DATA";
+
     /**
      * GBT score range is not in [0, 1], to make it in [0, 1], such strategies are provided with case insensitive.
      */
@@ -323,4 +327,6 @@ public interface Constants {
     public static final String SHIFU_NORM_CATEGORY_MISSING_NORM = "shifu.norm.category.missing.norm";
     
     public static final String SHIFU_EVAL_NORM_APPEND_SCORE = "shifu.eval.norm.appendscore";
+    public static final String SHIFU_EVAL_NORM_OUTPUTRAW = "shifu.eval.norm.outputraw";
+    public static final String SHIFU_NORM_ONLY_SELECTED = "shifu.norm.only.selected";
 }
