@@ -1028,6 +1028,7 @@ public class PathFinder {
 
     /**
      * Get the ColumnConfig.json history by index
+     * @param index - the iteration of variable selection
      * @return - ColumnConfig.json path for variable selection history
      */
     public String getVarSelColumnConfig(int index) {
@@ -1036,6 +1037,7 @@ public class PathFinder {
 
     /**
      * Get the SE history by index
+     * @param index - the iteration of variable selection
      * @return - se path for variable selection history
      */
     public String getVarSelMSEHistPath(int index) {

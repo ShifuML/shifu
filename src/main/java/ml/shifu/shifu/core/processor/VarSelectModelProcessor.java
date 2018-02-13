@@ -209,7 +209,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                             ShifuFileUtils.createFileIfNotExists(varSelMSEHistPath, SourceType.LOCAL);
                             ShifuFileUtils.copyToLocal(varSelectMSEOutputPath,
                                     Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME, varSelMSEHistPath);
+                            // save as backup
                             super.saveColumnConfigList(pathFinder.getVarSelColumnConfig(i), this.columnConfigList);
+                            // save as current copy
+                            super.saveColumnConfigList();
                         }
                     } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_VOTED)) {
                         votedVariablesSelection();

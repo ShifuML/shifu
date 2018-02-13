@@ -51,8 +51,6 @@ import org.encog.ml.BasicML;
  */
 public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
 
-    private static final String SHIFU_EVAL_NORM_OUTPUTRAW = "shifu.eval.norm.outputraw";
-
     @SuppressWarnings("unused")
     private static final String SCHEMA_PREFIX = "eval::";
     private static final String ORIG_POSTFIX = "_orig";
@@ -217,10 +215,10 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
 
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
             this.isOutputRaw = Boolean.TRUE.toString().equalsIgnoreCase(
-                    UDFContext.getUDFContext().getJobConf().get(SHIFU_EVAL_NORM_OUTPUTRAW, Boolean.FALSE.toString()));
+                    UDFContext.getUDFContext().getJobConf().get(Constants.SHIFU_EVAL_NORM_OUTPUTRAW, Boolean.FALSE.toString()));
         } else {
             this.isOutputRaw = Boolean.TRUE.toString().equalsIgnoreCase(
-                    Environment.getProperty(SHIFU_EVAL_NORM_OUTPUTRAW, Boolean.FALSE.toString()));
+                    Environment.getProperty(Constants.SHIFU_EVAL_NORM_OUTPUTRAW, Boolean.FALSE.toString()));
         }
     }
 
