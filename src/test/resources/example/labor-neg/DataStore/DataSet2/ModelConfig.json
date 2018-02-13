@@ -10,9 +10,9 @@
   },
   "dataSet" : {
     "source" : "LOCAL",
-    "dataPath" : "/x/home/zhanhu/shifu/shifu-0.2.8-SNAPSHOT-fixpmml/example/labor-neg/DataStore/DataSet1/labor-neg.train",
+    "dataPath" : "src/test/resources/example/labor-neg/DataStore/DataSet1/labor-neg.train",
     "dataDelimiter" : ",",
-    "headerPath" : "/x/home/zhanhu/shifu/shifu-0.2.8-SNAPSHOT-fixpmml/example/labor-neg/DataStore/DataSet1/labor-neg.names",
+    "headerPath" : "src/test/resources/example/labor-neg/DataStore/DataSet1/labor-neg.names",
     "headerDelimiter" : ",",
     "filterExpressions" : null,
     "targetColumnName" : "result",

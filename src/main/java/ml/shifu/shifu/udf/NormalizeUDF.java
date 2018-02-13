@@ -65,6 +65,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private List<DataPurifier> dataPurifiers;
 
     private boolean isForExpressions = false;
+    private boolean isCompactNorm = false;
 
     public static enum CategoryMissingNormType {
         MEAN, POSRATE;
@@ -168,6 +169,14 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            this.isCompactNorm = Boolean.TRUE.toString().equalsIgnoreCase(
+                    UDFContext.getUDFContext().getJobConf().get(Constants.SHIFU_NORM_ONLY_SELECTED, Boolean.FALSE.toString()));
+        } else {
+            this.isCompactNorm = Boolean.TRUE.toString().equalsIgnoreCase(
+                    Environment.getProperty(Constants.SHIFU_NORM_ONLY_SELECTED, Boolean.FALSE.toString()));
+        }
+
     }
 
     @SuppressWarnings("deprecation")
@@ -269,12 +278,13 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     }
                 } else {
                     // append normalize data. exclude data clean, for data cleaning, no need check good or bad candidate
-                    if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
+                    if ( (this.isCompactNorm && config.isFinalSelect())
+                            ||  ( !this.isCompactNorm && CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression()) ) ) {
                         // for multiple classification, binPosRate means rate of such category over all counts, reuse
                         // binPosRate for normalize
                         List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
                                 this.categoryMissingNormType);
-                        for(Double normVal: normVals) {
+                        for (Double normVal : normVals) {
                             tuple.append(df.format(normVal));
                         }
                     } else {
