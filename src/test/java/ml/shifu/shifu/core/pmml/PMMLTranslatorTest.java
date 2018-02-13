@@ -42,7 +42,7 @@ public class PMMLTranslatorTest {
         Assert.assertTrue(verifySuit.doVerification());
     }
 
-    // @Test
+    @Test
     public void testWoeVariablePmmlCase() throws Exception {
         PMMLVerifySuit verifySuit = new PMMLVerifySuit("testWoePmml",
                 "src/test/resources/example/cancer-judgement/ModelStore/ModelSet2/ModelConfig.json",
@@ -73,7 +73,7 @@ public class PMMLTranslatorTest {
         Assert.assertTrue(verifySuit.doVerification());
     }
 
-    // @Test
+    @Test
     public void testMixTypeWoePmmlCase() throws Exception {
         PMMLVerifySuit verifySuit = new PMMLVerifySuit("testWoe2Pmml",
                 "src/test/resources/example/labor-neg/DataStore/DataSet2/ModelConfig.json",

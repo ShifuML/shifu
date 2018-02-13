@@ -87,14 +87,22 @@ public class ShifuCLI {
 
     private static final String CMD_COMBO = "combo";
 
+    // options for stats
+    private static final String CORRELATION = "correlation";
+    private static final String PSI = "psi";
+    private static final String SHORT_PSI = "p";
+    // options for variable re-binning
+    private static final String REBIN = "rebin";
+    private static final String VARS = "vars";
+    private static final String N = "n";
+    private static final String IVR = "ivr";
+    private static final String BIC = "bic";
+
+    // options for variable select
     private static final String RESET = "reset";
     private static final String FILTER_AUTO = "autofilter";
     private static final String RECOVER_AUTO = "recoverauto";
-
-    private static final String CORRELATION = "correlation";
-
-    private static final String PSI = "psi";
-    private static final String SHORT_PSI = "p";
+    private static final String RECURSIVE = "r";
 
     // for evaluation
     private static final String LIST = "list";
@@ -111,12 +119,6 @@ public class ShifuCLI {
 
     private static final String SHUFFLE = "shuffle";
     private static final String RESUME = "resume";
-
-    private static final String REBIN = "rebin";
-    private static final String VARS = "vars";
-    private static final String N = "n";
-    private static final String IVR = "ivr";
-    private static final String BIC = "bic";
 
     static private final Logger log = LoggerFactory.getLogger(ShifuCLI.class);
 
@@ -231,7 +233,9 @@ public class ShifuCLI {
                 } else if(cleanedArgs[0].equals(NORMALIZE_CMD) || cleanedArgs[0].equals(NORM_CMD)
                         || cleanedArgs[0].equals(TRANSFORM_CMD)) {
                     // normalize step
-                    status = normalizeTrainData(cmd.hasOption(SHUFFLE));
+                    Map<String, Object> params = new HashMap<String, Object>();
+                    params.put(Constants.IS_TO_SHUFFLE_DATA, cmd.hasOption(SHUFFLE));
+                    status = normalizeTrainData(params);
                     if(status == 0) {
                         log.info("Do model set normalization successfully. Please continue next step by using 'shifu varselect or shifu varsel'.");
                     } else {
@@ -243,6 +247,7 @@ public class ShifuCLI {
                     params.put(Constants.IS_TO_LIST, cmd.hasOption(LIST));
                     params.put(Constants.IS_TO_FILTER_AUTO, cmd.hasOption(FILTER_AUTO));
                     params.put(Constants.IS_TO_RECOVER_AUTO, cmd.hasOption(RECOVER_AUTO));
+                    params.put(Constants.RECURSIVE_CNT, cmd.getOptionValue(RECURSIVE));
 
                     // variable selected step
                     status = selectModelVar(params);
@@ -443,14 +448,14 @@ public class ShifuCLI {
      * Normalize the training data
      */
     public static int normalizeTrainData() throws Exception {
-        return normalizeTrainData(false);
+        return normalizeTrainData(null);
     }
 
     /*
      * Normalize the training data
      */
-    public static int normalizeTrainData(boolean isToShuffleData) throws Exception {
-        NormalizeModelProcessor p = new NormalizeModelProcessor(isToShuffleData);
+    public static int normalizeTrainData(Map<String, Object> params) throws Exception {
+        NormalizeModelProcessor p = new NormalizeModelProcessor(params);
         return p.run();
     }
 
@@ -579,12 +584,16 @@ public class ShifuCLI {
                 .create(TRAIN_CMD_DEBUG);
         Option opt_model = OptionBuilder.hasArg(false).withDescription("Init model").create(INIT_CMD_MODEL);
         Option opt_concise = OptionBuilder.hasArg(false).withDescription("Export concise PMML").create(EXPORT_CONCISE);
-        Option opt_reset = OptionBuilder.hasArg(false).withDescription("Reset all variables to finalSelect = false")
-                .create(RESET);
-        Option opt_filter_auto = OptionBuilder.hasArg(false).withDescription("Auto filter variables by MissingRate, IV/KS, Correlation")
-                .create(FILTER_AUTO);
-        Option opt_recover_auto = OptionBuilder.hasArg(false).withDescription("Recover auto filtered variables from history.")
-                .create(RECOVER_AUTO);
+
+        // options for variable selection
+        Option opt_reset = OptionBuilder.hasArg(false)
+                .withDescription("Reset all variables to finalSelect = false").create(RESET);
+        Option opt_filter_auto = OptionBuilder.hasArg(false)
+                .withDescription("Auto filter variables by MissingRate, IV/KS, Correlation").create(FILTER_AUTO);
+        Option opt_recover_auto = OptionBuilder.hasArg(false)
+                .withDescription("Recover auto filtered variables from history.").create(RECOVER_AUTO);
+        Option opt_recursive = OptionBuilder.hasArg()
+                .withDescription("Run variable selection recursively").create(RECURSIVE);
 
         Option opt_correlation = OptionBuilder.hasArg(false)
                 .withDescription("Compute correlation value for all column pairs.").create(CORRELATION);
@@ -605,6 +614,7 @@ public class ShifuCLI {
         Option opt_eval = OptionBuilder.hasArg(false).create(EVAL_CMD);
         Option opt_init = OptionBuilder.hasArg(false).create(INIT_CMD);
 
+        // options for variable re-binning
         Option opt_rebin = OptionBuilder.hasArg(false).create(REBIN);
         Option opt_vars = OptionBuilder.hasArg().create(VARS);
         Option opt_n = OptionBuilder.hasArg().create(N);
@@ -625,9 +635,12 @@ public class ShifuCLI {
         opts.addOption(opt_debug);
         opts.addOption(opt_model);
         opts.addOption(opt_concise);
+
         opts.addOption(opt_reset);
         opts.addOption(opt_filter_auto);
         opts.addOption(opt_recover_auto);
+        opts.addOption(opt_recursive);
+
         opts.addOption(opt_eval);
         opts.addOption(opt_init);
         opts.addOption(opt_shuffle);
