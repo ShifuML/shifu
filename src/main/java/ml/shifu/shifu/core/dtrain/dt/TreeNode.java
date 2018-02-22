@@ -244,6 +244,16 @@ public class TreeNode implements Bytable {
         }
     }
 
+    public void readFields(DataInput in, int version) throws IOException {
+        this.readFieldsWithoutFeatures(in, version);
+
+        int len = in.readInt();
+        this.features = new ArrayList<Integer>();
+        for(int i = 0; i < len; i++) {
+            this.features.add(in.readInt());
+        }
+    }
+
     /**
      * This is serialization version to de-serialize TreeNode without sub-sampling features.
      * 
@@ -257,6 +267,18 @@ public class TreeNode implements Bytable {
         this.nodeNum = in.readInt();
         this.node = new Node();
         this.node.readFields(in);
+        this.learningRate = in.readDouble();
+
+        if(this.node.getId() == Node.ROOT_INDEX) {
+            this.rootWgtCnt = in.readDouble();
+        }
+    }
+
+    public void readFieldsWithoutFeatures(DataInput in, int version) throws IOException {
+        this.treeId = in.readInt();
+        this.nodeNum = in.readInt();
+        this.node = new Node();
+        this.node.readFields(in, version);
         this.learningRate = in.readDouble();
 
         if(this.node.getId() == Node.ROOT_INDEX) {
