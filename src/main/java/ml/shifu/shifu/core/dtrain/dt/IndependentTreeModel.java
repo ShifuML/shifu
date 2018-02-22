@@ -899,7 +899,7 @@ public class IndependentTreeModel {
         }
 
         int version = dis.readInt();
-        IndependentTreeModel.setVersion(version);
+        // IndependentTreeModel.setVersion(version);
         String algorithm = dis.readUTF();
         String lossStr = dis.readUTF();
         boolean isClassification = dis.readBoolean();
@@ -962,7 +962,7 @@ public class IndependentTreeModel {
         List<List<TreeNode>> bagTrees = new ArrayList<List<TreeNode>>(1);
         List<List<Double>> bagWgts = new ArrayList<List<Double>>();
         int bags = 0;
-        if(IndependentTreeModel.getVersion() < 4) {
+        if(version < 4) {
             bags = 1;
         } else {
             // if version >=4, model saving first is size
@@ -974,7 +974,7 @@ public class IndependentTreeModel {
             List<Double> weights = new ArrayList<Double>(treeNum);
             for(int i = 0; i < treeNum; i++) {
                 TreeNode treeNode = new TreeNode();
-                treeNode.readFields(dis);
+                treeNode.readFields(dis, version);
                 trees.add(treeNode);
                 weights.add(treeNode.getLearningRate());
 
