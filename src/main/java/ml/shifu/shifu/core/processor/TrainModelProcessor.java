@@ -1606,7 +1606,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             return offset;
         }
 
-        public static void appendError(String msg,String filePath) throws IOException {
+        public static void appendError(String msg, String filePath) throws IOException {
             BufferedWriter bw = null;
 
             bw = new BufferedWriter(new FileWriter(filePath, true));
@@ -1616,18 +1616,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             bw.newLine();
             bw.flush();
             bw.close();
-//            try {
-                // APPEND MODE SET HERE
-
-//            } catch (IOException ioe) {
-//                ioe.printStackTrace();
-//            } finally {                       // always close the file
-//                if (bw != null) try {
-//                    bw.close();
-//                } catch (IOException ioe2) {
-//                    // just ignore it
-//                }
-//            } // end try/catch/finally
         }
 
         public void deleteProgressFiles() throws IOException {
