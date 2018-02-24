@@ -21,6 +21,8 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.*;
+
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -94,6 +96,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.pig.LoadPushDown.RequiredField;
 import org.apache.pig.LoadPushDown.RequiredFieldList;
 import org.apache.pig.data.DataType;
@@ -165,7 +168,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Constructor
-     * 
+     *
      * @param isDryTrain
      *            dryTrain flag, if it's true, the trainer would start training
      * @param isDebug
@@ -233,7 +236,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * run training process with number of bags
-     * 
+     *
      * @param numBags
      *            number of bags, it decide how much trainer will start training
      * @throws IOException
@@ -292,7 +295,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Get the trainer list
-     * 
+     *
      * @return the trainer list
      */
     public List<AbstractTrainer> getTrainers() {
@@ -301,7 +304,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Get the trainer
-     * 
+     *
      * @param index
      *            the index of trainer
      * @return the trainer
@@ -316,7 +319,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         String alg = super.getModelConfig().getTrain().getAlgorithm();
         if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) // NN algorithm
                 || LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) // LR algorithm
-        || CommonUtils.isTreeModel(alg))) { // RF or GBT algortihm
+                || CommonUtils.isTreeModel(alg))) { // RF or GBT algortihm
             throw new IllegalArgumentException(
                     "Currently we only support NN, LR, RF(RandomForest) and GBDT(Gradient Boost Desicion Tree) distributed training.");
         }
@@ -857,7 +860,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      * Return 1, continuous training, 0, not continuous training, -1 GBT existing trees is over treeNum
      */
     private int checkContinuousTraining(FileSystem fileSystem, List<String> localArgs, Path modelPath,
-            Map<String, Object> modelParams) throws IOException {
+                                        Map<String, Object> modelParams) throws IOException {
         int finalContinuous = 0;
         if(Boolean.TRUE.toString().equals(this.modelConfig.getTrain().getIsContinuous().toString())) {
             // if varselect d-training or no such existing models, directly to disable continuous training.
@@ -990,7 +993,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         thread.deleteProgressFiles();
     }
 
-    private TailThread startTailThread(final String[] progressLog) {
+    private TailThread startTailThread(final String[] progressLog) throws IOException {
         TailThread thread = new TailThread(progressLog);
         thread.setName("Training Progress");
         thread.setDaemon(true);
@@ -1184,7 +1187,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private List<Integer> getSubsamplingFeatures(List<Integer> allFeatures,
-            FeatureSubsetStrategy featureSubsetStrategy, double featureSubsetRate, int inputNum) {
+                                                 FeatureSubsetStrategy featureSubsetStrategy, double featureSubsetRate, int inputNum) {
         if(featureSubsetStrategy == null) {
             if(Double.compare(1d, featureSubsetRate) == 0) {
                 return new ArrayList<Integer>();
@@ -1399,7 +1402,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     /**
      * For RF/GBT model, no need do normalizing, but clean and filter data is needed. Before real training, we have to
      * clean and filter data.
-     * 
+     *
      * @param isToShuffle
      *            if shuffle data before training
      * @throws IOException
@@ -1451,7 +1454,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(Boolean.TRUE.toString().equalsIgnoreCase(needReGen)
                 || !ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)
                 || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath()) && !ShifuFileUtils.isFileExists(
-                        pathFinder.getCleanedValidationDataPath(), sourceType))) {
+                pathFinder.getCleanedValidationDataPath(), sourceType))) {
             runDataClean(isToShuffle);
         } else {
             // no need regen data
@@ -1462,7 +1465,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Get model name
-     * 
+     *
      * @param i
      *            index for model name
      * @return the ith model name
@@ -1515,10 +1518,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     private static class TailThread extends Thread {
         private long offset[];
         private String[] progressLogs;
-
-        public TailThread(String[] progressLogs) {
+        private BufferedWriter bw ;
+        private String filePath = "trainErrorLog.csv";
+        public TailThread(String[] progressLogs) throws IOException {
             this.progressLogs = progressLogs;
             this.offset = new long[this.progressLogs.length];
+
             for(String progressLog: progressLogs) {
                 try {
                     // delete it firstly, it will be updated from master
@@ -1527,6 +1532,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     LOG.error("Error in delete progressLog", e);
                 }
             }
+            bw = new BufferedWriter(new FileWriter(filePath, false));
+            bw.write("Trainer,Epoch,Training_Error,Validation_Error");
+            bw.newLine();
+            bw.flush();
+            bw.close();
         }
 
         public void run() {
@@ -1578,6 +1588,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 if(StringUtils.isNotEmpty(msgs)) {
                     for(String msg: Splitter.on('\n').split(msgs)) {
                         LOG.info(msg.trim());
+                        // add writting errors to csv
+                        appendError(msg,filePath);
                     }
                 }
                 offset = in.getPos();
@@ -1592,6 +1604,30 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 IOUtils.closeStream(dataOut);
             }
             return offset;
+        }
+
+        public static void appendError(String msg,String filePath) throws IOException {
+            BufferedWriter bw = null;
+
+            bw = new BufferedWriter(new FileWriter(filePath, true));
+
+            String[] splitStr = msg.split("\\s+");
+            bw.write(splitStr[1] + ',' + splitStr[3].replace("#", "") + ',' + splitStr[5].split(":")[1] + ',' + splitStr[7].split(":")[1]);
+            bw.newLine();
+            bw.flush();
+            bw.close();
+//            try {
+                // APPEND MODE SET HERE
+
+//            } catch (IOException ioe) {
+//                ioe.printStackTrace();
+//            } finally {                       // always close the file
+//                if (bw != null) try {
+//                    bw.close();
+//                } catch (IOException ioe2) {
+//                    // just ignore it
+//                }
+//            } // end try/catch/finally
         }
 
         public void deleteProgressFiles() throws IOException {
