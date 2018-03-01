@@ -362,6 +362,33 @@ public class ShifuFileUtils {
     }
 
     /**
+     * Move src file to dst file in the same FileSystem.
+     * 
+     * @param srcPath
+     *            - source file to copy
+     * @param destPath
+     *            - destination file
+     * @param sourceType
+     *            - local/hdfs
+     * @throws IOException
+     *             - if any I/O exception in processing
+     */
+    public static void moveTo(String srcPath, String destPath, SourceType sourceType) throws IOException {
+        if(StringUtils.isEmpty(srcPath) || StringUtils.isEmpty(destPath) || sourceType == null) {
+            throw new IllegalArgumentException(String.format(
+                    "Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", srcPath, destPath,
+                    sourceType));
+        }
+
+        FileSystem fs = getFileSystemBySourceType(sourceType);
+        if(!fs.exists(new Path(destPath))) {
+            throw new RuntimeException(destPath + " does not exist.");
+        }
+
+        FileUtil.copy(fs, new Path(srcPath), fs, new Path(destPath), false, new Configuration());
+    }
+
+    /**
      * Check the path is directory or not, the SourceType is used to find the file system
      * 
      * @param sourceFile
@@ -596,7 +623,8 @@ public class ShifuFileUtils {
         return getFilePartStatus(filePath, sourceType, Constants.HADOOP_PART_PREFIX);
     }
 
-    public static FileStatus[] getFilePartStatus(String filePath, SourceType sourceType, final String partFilePrefix) throws IOException {
+    public static FileStatus[] getFilePartStatus(String filePath, SourceType sourceType, final String partFilePrefix)
+            throws IOException {
         FileSystem fs = getFileSystemBySourceType(sourceType);
 
         PathFilter filter = new PathFilter() {
@@ -651,11 +679,12 @@ public class ShifuFileUtils {
         return size;
     }
 
-    public static void writeLines(@SuppressWarnings("rawtypes") Collection collection, String filePath, SourceType sourceType) throws IOException {
+    public static void writeLines(@SuppressWarnings("rawtypes") Collection collection, String filePath,
+            SourceType sourceType) throws IOException {
         BufferedWriter writer = getWriter(filePath, sourceType);
         try {
-            for (Object object : collection) {
-                if (object != null) {
+            for(Object object: collection) {
+                if(object != null) {
                     writer.write(object.toString());
                     writer.newLine();
                 }
@@ -669,12 +698,13 @@ public class ShifuFileUtils {
         copyToLocal(hdfsFilePath, Constants.HADOOP_PART_PREFIX, localOutputPath);
     }
 
-    public static void copyToLocal(String hdfsFilePath, String partFilePrefix, String localOutputPath) throws IOException {
+    public static void copyToLocal(String hdfsFilePath, String partFilePrefix, String localOutputPath)
+            throws IOException {
         HdfsPartFile hdfsPartFile = new HdfsPartFile(hdfsFilePath, SourceType.HDFS, partFilePrefix);
         BufferedWriter writer = new BufferedWriter(new FileWriter(localOutputPath));
         String line = null;
         try {
-            while ((line = hdfsPartFile.readLine()) != null) {
+            while((line = hdfsPartFile.readLine()) != null) {
                 writer.write(line);
                 writer.newLine();
             }
