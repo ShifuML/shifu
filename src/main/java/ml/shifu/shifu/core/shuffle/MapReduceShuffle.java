@@ -9,6 +9,7 @@ import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
@@ -111,6 +112,16 @@ public class MapReduceShuffle {
 
         // submit job
         if(job.waitForCompletion(true)) {
+            // copy pig header and schema file at first to make sure such two files are at final output
+            if(ShifuFileUtils.isFileExists(new Path(rawNormPath, ".pig_header"), SourceType.HDFS)) {
+                ShifuFileUtils.copy(new Path(rawNormPath, ".pig_header").toString(),
+                        this.pathFinder.getShuffleDataPath(), SourceType.HDFS);
+            }
+
+            if(ShifuFileUtils.isFileExists(new Path(rawNormPath, ".pig_schema"), SourceType.HDFS)) {
+                ShifuFileUtils.copy(new Path(rawNormPath, ".pig_schema").toString(),
+                        this.pathFinder.getShuffleDataPath(), SourceType.HDFS);
+            }
             ShifuFileUtils.deleteFile(rawNormPath, source);
             ShifuFileUtils.move(this.pathFinder.getShuffleDataPath(), rawNormPath, source);
         } else {
