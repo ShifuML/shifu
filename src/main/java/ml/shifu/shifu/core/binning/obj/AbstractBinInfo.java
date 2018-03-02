@@ -43,8 +43,8 @@ public abstract class AbstractBinInfo implements Comparable<AbstractBinInfo> {
     }
 
     public double getPositiveRate() {
-        assert getTotalInstCnt() != 0;
-        return ((double) positiveCnt) / getTotalInstCnt();
+        long totalInstCnt = getTotalInstCnt();
+        return ((totalInstCnt == 0) ? 0.0 : ((double) positiveCnt) / totalInstCnt);
     }
 
     public long getTotalInstCnt() {
