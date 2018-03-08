@@ -499,7 +499,7 @@ public class Normalizer {
     }
 
     /**
-     * Compute the normalized data for hbrid normalize. Use zscore noramlize for numerical data. Use woe normalize
+     * Compute the normalized data for hybrid normalize. Use zscore noramlize for numerical data. Use woe normalize
      * for categorical data while use weight woe normalize when isWeightedNorm is true.
      * 
      * @param config
