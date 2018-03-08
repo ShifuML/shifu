@@ -91,5 +91,7 @@ public interface CommonConstants {
     public static final long MAX_RECORDS_PER_WORKER = 100000L;
 
     public static final int PART_FILE_COUNT_THRESHOLD = 20;
+    
+    public static final String MAPREDUCE_MAP_CPU_VCORES = "mapreduce.map.cpu.vcores";
 
 }
