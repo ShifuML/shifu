@@ -61,7 +61,9 @@ public class TreeModelEvalAndScoreTest {
             // System.out.println(SizeEstimator.estimate(iTreeModel.getColumnNumIndexMapping()));
 
         } finally {
-            fi.close();
+            if(fi != null) {
+                fi.close();
+            }
         }
 
         System.gc();
@@ -72,7 +74,9 @@ public class TreeModelEvalAndScoreTest {
             fi = new FileInputStream(modelPath);
             model = TreeModel.loadFromStream(fi, true);
         } finally {
-            fi.close();
+            if(fi != null) {
+                fi.close();
+            }
         }
 
         System.gc();

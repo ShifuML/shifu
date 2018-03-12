@@ -44,7 +44,7 @@ public class ModelNormalizeConf {
 
         public boolean isWoe() {
             return this == WOE || this == WEIGHT_WOE || this == WOE_ZSCORE || this == WOE_ZSCALE
-                    || this == WEIGHT_WOE_ZSCORE || this == WEIGHT_WOE_ZSCORE;
+                    || this == WEIGHT_WOE_ZSCORE || this == WEIGHT_WOE_ZSCALE;
         }
     }
 

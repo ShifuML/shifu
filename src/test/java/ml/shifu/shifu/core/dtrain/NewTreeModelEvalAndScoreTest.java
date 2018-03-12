@@ -53,7 +53,9 @@ public class NewTreeModelEvalAndScoreTest {
             fi = new FileInputStream(modelPath);
             iTreeModel = IndependentTreeModel.loadFromStream(fi, true);
         } finally {
-            fi.close();
+            if(fi != null) {
+                fi.close();
+            }
         }
 
         fi = null;
@@ -61,16 +63,18 @@ public class NewTreeModelEvalAndScoreTest {
             fi = new FileInputStream(modelPath);
             model = TreeModel.loadFromStream(fi, true);
         } finally {
-            fi.close();
+            if(fi != null) {
+                fi.close();
+            }
         }
     }
 
     @Test
     public void testGenerateNewModel() throws IOException {
-        ModelConfig modelConfig = CommonUtils.loadModelConfig(
-                "src/test/resources/dttest/newatomconfig/ModelConfig.json", SourceType.LOCAL);
-        List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList(
-                "src/test/resources/dttest/newatomconfig/ColumnConfig.json", SourceType.LOCAL);
+        ModelConfig modelConfig = CommonUtils
+                .loadModelConfig("src/test/resources/dttest/newatomconfig/ModelConfig.json", SourceType.LOCAL);
+        List<ColumnConfig> columnConfigList = CommonUtils
+                .loadColumnConfigList("src/test/resources/dttest/newatomconfig/ColumnConfig.json", SourceType.LOCAL);
 
         File file = new File("atom22.gbt");
         FileOutputStream fileOutput = null;
@@ -79,7 +83,9 @@ public class NewTreeModelEvalAndScoreTest {
 
             BinaryDTSerializer.save(modelConfig, columnConfigList, iTreeModel.getTrees(), "squared", 807, fileOutput);
         } finally {
-            fileOutput.close();
+            if(fileOutput != null) {
+                fileOutput.close();
+            }
             FileUtils.deleteQuietly(file);
         }
     }
@@ -89,10 +95,10 @@ public class NewTreeModelEvalAndScoreTest {
         List<BasicML> models = new ArrayList<BasicML>();
         models.add(model);
 
-        ModelConfig modelConfig = CommonUtils.loadModelConfig(
-                "src/test/resources/dttest/newatomconfig/ModelConfig.json", SourceType.LOCAL);
-        List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList(
-                "src/test/resources/dttest/newatomconfig/ColumnConfig.json", SourceType.LOCAL);
+        ModelConfig modelConfig = CommonUtils
+                .loadModelConfig("src/test/resources/dttest/newatomconfig/ModelConfig.json", SourceType.LOCAL);
+        List<ColumnConfig> columnConfigList = CommonUtils
+                .loadColumnConfigList("src/test/resources/dttest/newatomconfig/ColumnConfig.json", SourceType.LOCAL);
 
         Scorer scorer = new Scorer(models, columnConfigList, "GBT", modelConfig);
 
