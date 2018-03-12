@@ -747,13 +747,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 return;
             }
             FileStatus[] fss = fs.listStatus(new Path(localFsFolder));
-            Arrays.sort(fss, new Comparator<FileStatus>() {
-                @Override
-                public int compare(FileStatus o1, FileStatus o2) {
-                    return o2.getPath().toString().compareTo(o1.getPath().toString());
-                }
-            });
             if(fss != null && fss.length > 0) {
+                Arrays.sort(fss, new Comparator<FileStatus>() {
+                    @Override
+                    public int compare(FileStatus o1, FileStatus o2) {
+                        return o2.getPath().toString().compareTo(o1.getPath().toString());
+                    }
+                });
                 for(FileStatus fileStatus: fss) {
                     String strPath = fileStatus.getPath().getName();
                     if(strPath.endsWith(PathFinder.FEATURE_IMPORTANCE_FILE)) {

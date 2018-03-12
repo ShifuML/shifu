@@ -51,7 +51,9 @@ public class TreeModelTest {
             fi = new FileInputStream(modelPath);
             iTreeModel = IndependentTreeModel.loadFromStream(fi, true);
         } finally {
-            fi.close();
+            if(fi != null) {
+                fi.close();
+            }
         }
 
         fi = null;
@@ -59,7 +61,9 @@ public class TreeModelTest {
             fi = new FileInputStream(modelPath);
             model = TreeModel.loadFromStream(fi);
         } finally {
-            fi.close();
+            if(fi != null) {
+                fi.close();
+            }
         }
         random = new Random();
     }
