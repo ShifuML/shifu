@@ -127,8 +127,8 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 } else {
                     log.info("Convert nn models into one binary bagging model.");
                     Configuration conf = new Configuration();
-                    Path output = new Path(pathFinder.getBaggingModelPath(SourceType.LOCAL), "model.b"
-                            + modelConfig.getAlgorithm());
+                    Path output = new Path(pathFinder.getBaggingModelPath(SourceType.LOCAL),
+                            "model.b" + modelConfig.getAlgorithm());
                     if("nn".equalsIgnoreCase(modelConfig.getAlgorithm())) {
                         BinaryNNSerializer.save(modelConfig, columnConfigList, models, FileSystem.getLocal(conf),
                                 output);
@@ -145,8 +145,9 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                         // numerical + categorical = # of all input
                         int inputCount = inputOutputIndex[0] + inputOutputIndex[1];
 
-                        BinaryDTSerializer.save(modelConfig, columnConfigList, baggingTrees, modelConfig.getParams()
-                                .get("Loss").toString(), inputCount, FileSystem.getLocal(conf), output);
+                        BinaryDTSerializer.save(modelConfig, columnConfigList, baggingTrees,
+                                modelConfig.getParams().get("Loss").toString(), inputCount, FileSystem.getLocal(conf),
+                                output);
                     }
                     log.info("Please find one unified bagging model in local {}.", output);
                 }
@@ -200,7 +201,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 }
                 FileUtils.write(new File("woemapping.txt"), StringUtils.join(woeMappings, ",\n"));
             }
-        } else if (type.equalsIgnoreCase(CORRELATION)) {
+        } else if(type.equalsIgnoreCase(CORRELATION)) {
             // export correlation into mapping list
             if(!ShifuFileUtils.isFileExists(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL)) {
                 log.warn("The correlation file doesn't exist. Please make sure you have ran `shifu stats -c`.");
@@ -236,10 +237,10 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             binCountNeg[i] = binInfo.getNegativeCnt();
             binCountPos[i] = binInfo.getPositiveCnt();
         }
-        binCountNeg[binCountNeg.length - 1] = columnConfig.getBinCountNeg().get(
-                columnConfig.getBinCountNeg().size() - 1);
-        binCountPos[binCountPos.length - 1] = columnConfig.getBinCountPos().get(
-                columnConfig.getBinCountPos().size() - 1);
+        binCountNeg[binCountNeg.length - 1] = columnConfig.getBinCountNeg()
+                .get(columnConfig.getBinCountNeg().size() - 1);
+        binCountPos[binCountPos.length - 1] = columnConfig.getBinCountPos()
+                .get(columnConfig.getBinCountPos().size() - 1);
         ColumnStatsCalculator.ColumnMetrics columnMetrics = ColumnStatsCalculator.calculateColumnMetrics(binCountNeg,
                 binCountPos);
 
@@ -307,8 +308,8 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                     values.add("'" + subCval + "'");
                 }
             }
-            buffer.append("\twhen " + columnConfig.getColumnName() + " in (" + StringUtils.join(values, ',')
-                    + ") then " + columnMetrics.getBinningWoe().get(i) + "\n");
+            buffer.append("\twhen " + columnConfig.getColumnName() + " in (" + StringUtils.join(values, ',') + ") then "
+                    + columnMetrics.getBinningWoe().get(i) + "\n");
         }
         buffer.append("\telse " + columnMetrics.getBinningWoe().get(columnMetrics.getBinningWoe().size() - 1) + "\n");
         buffer.append("  end ) as " + columnConfig.getColumnName() + "_" + categoricalBinInfos.size());
@@ -360,7 +361,9 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 writer.write(builder.toString());
             }
         } finally {
-            writer.close();
+            if(writer != null) {
+                writer.close();
+            }
         }
     }
 
@@ -374,22 +377,22 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             String line = null;
             while((line = reader.readLine()) != null) {
                 lineNum += 1;
-                if (lineNum <= 2) {
+                if(lineNum <= 2) {
                     // skip first 2 lines which are indexes and names
                     continue;
                 }
                 String[] columns = CommonUtils.split(line, ",");
-                if (columns != null && columns.length == columnConfigList.size() + 2) {
+                if(columns != null && columns.length == columnConfigList.size() + 2) {
                     int columnIndex = Integer.parseInt(columns[0].trim());
                     ColumnConfig fromConfig = this.columnConfigList.get(columnIndex);
-                    if (fromConfig.isTarget() || CommonUtils.isGoodCandidate(fromConfig, hasCandidates)) {
+                    if(fromConfig.isTarget() || CommonUtils.isGoodCandidate(fromConfig, hasCandidates)) {
                         double[] corrArray = getCorrArray(columns);
-                        for (int i = 0; i < corrArray.length; i++) {
+                        for(int i = 0; i < corrArray.length; i++) {
                             ColumnConfig toConfig = this.columnConfigList.get(i);
-                            if (i != columnIndex && !toConfig.isTarget() && !toConfig.isMeta()) {
-                                varCorrInfoSet.add(new VarCorrInfo(fromConfig.getColumnName(),
-                                        toConfig.getColumnName(), corrArray[i],
-                                        getColumnMetric(fromConfig, metric), getColumnMetric(toConfig, metric)));
+                            if(i != columnIndex && !toConfig.isTarget() && !toConfig.isMeta()) {
+                                varCorrInfoSet.add(new VarCorrInfo(fromConfig.getColumnName(), toConfig.getColumnName(),
+                                        corrArray[i], getColumnMetric(fromConfig, metric),
+                                        getColumnMetric(toConfig, metric)));
                             }
                         }
                     }
@@ -410,17 +413,18 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     }
 
     private double getColumnMetric(ColumnConfig config, PostCorrelationMetric metric) throws IOException {
-        if ( metric == null || metric.equals(PostCorrelationMetric.IV) ) {
+        if(metric == null || metric.equals(PostCorrelationMetric.IV)) {
             // default is iv, if no PostCorrelationMetric specified
             return (config.getIv() == null ? Double.NaN : config.getIv());
-        } else if ( metric.equals(PostCorrelationMetric.KS) ) {
+        } else if(metric.equals(PostCorrelationMetric.KS)) {
             return (config.getKs() == null ? Double.NaN : config.getKs());
-        } else if ( metric.equals(PostCorrelationMetric.SE) ) {
-            if ( this.seStatsMap == null ) {
+        } else if(metric.equals(PostCorrelationMetric.SE)) {
+            if(this.seStatsMap == null) {
                 SourceType source = this.modelConfig.getDataSet().getSource();
                 String varSelectMSEOutputPath = pathFinder.getVarSelectMSEOutputPath(source);
-                this.seStatsMap = readSEValuesToMap(varSelectMSEOutputPath + Path.SEPARATOR
-                        + Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME + "-*", source);
+                this.seStatsMap = readSEValuesToMap(
+                        varSelectMSEOutputPath + Path.SEPARATOR + Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME + "-*",
+                        source);
             }
 
             return this.seStatsMap.get(config.getColumnNum()).getRms();
@@ -428,7 +432,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         return -1.0d;
     }
 
-    //TODO duplicate code with VarSelectModelProcessor. Needs do code refactor
+    // TODO duplicate code with VarSelectModelProcessor. Needs do code refactor
     private Map<Integer, ColumnStatistics> readSEValuesToMap(String seOutputFiles, SourceType source)
             throws IOException {
         // here only works for 1 reducer
@@ -524,15 +528,16 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         return 0;
     }
 
-    public static class VarCorrInfo implements Comparable<VarCorrInfo>{
+    public static class VarCorrInfo implements Comparable<VarCorrInfo> {
         private String leftVarName;
         private String rightVarName;
         private double corrVal;
         private double leftMetricVal;
         private double rightMetricVal;
 
-        public VarCorrInfo(String fromVarName, String toVarName, double corrVal, double fromMetricVal, double toMetricVal) {
-            if ( fromVarName.compareTo(toVarName) < 0 ) {
+        public VarCorrInfo(String fromVarName, String toVarName, double corrVal, double fromMetricVal,
+                double toMetricVal) {
+            if(fromVarName.compareTo(toVarName) < 0) {
                 this.leftVarName = fromVarName;
                 this.rightVarName = toVarName;
                 this.leftMetricVal = fromMetricVal;
@@ -558,11 +563,11 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
 
         @Override
         public boolean equals(Object obj) {
-            if ( obj == this ) {
+            if(obj == this) {
                 return true;
             }
 
-            if (!(obj instanceof VarCorrInfo)) {
+            if(!(obj instanceof VarCorrInfo)) {
                 return false;
             }
 

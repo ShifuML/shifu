@@ -192,8 +192,8 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
                             outputNames.add(columnConfig.getColumnName());
                         }
                     } else {
-                        throw new RuntimeException("Variable - " + columnConfig.getColumnName()
-                                + " couldn't be found in eval dataset!");
+                        throw new RuntimeException(
+                                "Variable - " + columnConfig.getColumnName() + " couldn't be found in eval dataset!");
                     }
                 }
             }
@@ -206,15 +206,15 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             try {
                 this.scIndex = Integer.parseInt(this.scoreName.toLowerCase().replaceAll("model", ""));
             } catch (Exception e) {
-                throw new RuntimeException("Invalid setting for performanceScoreSelector in EvalConfig - "
-                        + this.scoreName);
+                throw new RuntimeException(
+                        "Invalid setting for performanceScoreSelector in EvalConfig - " + this.scoreName);
             }
         }
         this.scale = scale;
 
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
-            this.isOutputRaw = Boolean.TRUE.toString().equalsIgnoreCase(
-                    UDFContext.getUDFContext().getJobConf().get(Constants.SHIFU_EVAL_NORM_OUTPUTRAW, Boolean.FALSE.toString()));
+            this.isOutputRaw = Boolean.TRUE.toString().equalsIgnoreCase(UDFContext.getUDFContext().getJobConf()
+                    .get(Constants.SHIFU_EVAL_NORM_OUTPUTRAW, Boolean.FALSE.toString()));
         } else {
             this.isOutputRaw = Boolean.TRUE.toString().equalsIgnoreCase(
                     Environment.getProperty(Constants.SHIFU_EVAL_NORM_OUTPUTRAW, Boolean.FALSE.toString()));
@@ -226,10 +226,11 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.
             // UDF in pig client will be initialized to get some metadata issues
             @SuppressWarnings("deprecation")
-            List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig, evalConfig.getDataSet()
-                    .getSource(), evalConfig.getGbtConvertToProb(), evalConfig.getGbtScoreConvertStrategy());
-            this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers, evalConfig.getDataSet()
-                    .getDataDelimiter(), models);
+            List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig,
+                    evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb(),
+                    evalConfig.getGbtScoreConvertStrategy());
+            this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,
+                    evalConfig.getDataSet().getDataDelimiter(), models);
             this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
         }
 
@@ -262,7 +263,7 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
-        if(this.isAppendScore) {
+        if(this.isAppendScore && this.modelRunner != null) {
             CaseScoreResult score = this.modelRunner.computeNsData(rawDataNsMap);
             if(this.modelRunner == null || this.modelRunner.getModelsCnt() == 0 || score == null) {
                 tuple.append(-999.0);
