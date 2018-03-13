@@ -87,4 +87,7 @@ shifu.namespace.strict.mode = false
 # add worker get result waiting timeout to 10 minutes
 guagua.worker.getresult.timeout=600000
 
+# set vcores to 1 for better cluster scheduling, if cpu scheduling is enabled in cluster, better set it to 
+# ModelConfig#trains#workerThreadCount
+mapreduce.map.cpu.vcores=1
 
