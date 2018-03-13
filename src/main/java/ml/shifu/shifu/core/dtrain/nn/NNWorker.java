@@ -61,7 +61,8 @@ public class NNWorker extends AbstractNNWorker<Text> {
 
         if(super.isDry) {
             // dry train, use empty data.
-            addDataPairToDataSet(0, new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal)));
+            addDataPairToDataSet(0,
+                    new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal)));
             return;
         }
 
@@ -72,7 +73,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
         // the function in akka mode.
         int index = 0, inputsIndex = 0, outputIndex = 0;
         String[] fields = currentValue.getWritable().toString().split("\\|", -1);
-        for ( int pos = 0; pos < fields.length; ) {
+        for(int pos = 0; pos < fields.length;) {
             String input = fields[pos];
             // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
             float floatValue = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(input, 0f);
@@ -115,31 +116,33 @@ public class NNWorker extends AbstractNNWorker<Text> {
                             ideal[ideaIndex] = 1f;
                         }
                     }
-                    pos ++;
+                    pos++;
                 } else {
                     if(subFeatureSet.contains(index)) {
-                        if ( columnConfig.isCategorical() && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT) ) {
-                               for ( int k = 0; k < columnConfig.getBinCategory().size() + 1; k ++ ) {
-                                   String tval = fields[pos];
-                                   // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-                                   float fval = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
-                                   // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
-                                   fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? 0f : fval;
-                                   inputs[inputsIndex++] = fval;
-                                   pos ++;
-                               }
+                        if(columnConfig != null && columnConfig.isCategorical()
+                                && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)) {
+                            for(int k = 0; k < columnConfig.getBinCategory().size() + 1; k++) {
+                                String tval = fields[pos];
+                                // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+                                float fval = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
+                                // no idea about why NaN in input data, we should process it as missing value TODO ,
+                                // according to norm type
+                                fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? 0f : fval;
+                                inputs[inputsIndex++] = fval;
+                                pos++;
+                            }
                         } else {
                             inputs[inputsIndex++] = floatValue;
-                            pos ++;
+                            pos++;
                         }
                         hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
                     } else {
-                        if ( columnConfig.isCategorical()
+                        if(columnConfig.isCategorical()
                                 && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
-                                && columnConfig.getBinCategory().size() > 1 ) {
+                                && columnConfig.getBinCategory().size() > 1) {
                             pos = pos + columnConfig.getBinCategory().size() + 1;
                         } else {
-                            pos ++;
+                            pos++;
                         }
                     }
                 }
@@ -156,8 +159,9 @@ public class NNWorker extends AbstractNNWorker<Text> {
                 // should take 1-0.8 to check endHashCode
                 int endHashCode = startHashCode
                         + Double.valueOf((1d - this.modelConfig.getBaggingSampleRate()) * 100).intValue();
-                if((modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
-                        .isOneVsAll())) // regression or onevsall
+                if((modelConfig.isRegression()
+                        || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll())) // regression or
+                                                                                                    // onevsall
                         && (int) (ideal[0] + 0.01d) == 0 // negative record
                         && isInRange(hashcode, startHashCode, endHashCode)) {
                     return;
@@ -165,8 +169,9 @@ public class NNWorker extends AbstractNNWorker<Text> {
             } else {
                 // if not fixed initial input, and for regression or onevsall multiple classification (regression also).
                 // if negative record
-                if((modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
-                        .isOneVsAll())) // regression or onevsall
+                if((modelConfig.isRegression()
+                        || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll())) // regression or
+                                                                                                    // onevsall
                         && (int) (ideal[0] + 0.01d) == 0 // negative record
                         && Double.compare(super.sampelNegOnlyRandom.nextDouble(),
                                 this.modelConfig.getBaggingSampleRate()) >= 0) {

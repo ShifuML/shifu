@@ -130,8 +130,8 @@ public class BasicModelProcessor {
                 // such stats steps should all be called after 'shifu stats', this is actually to call VoidUpdater
                 boolean strictCallVoidUpdate = (step == ModelStep.STATS)
                         && (getBooleanParam(this.params, Constants.IS_COMPUTE_CORR)
-                            || getBooleanParam(this.params, Constants.IS_COMPUTE_PSI)
-                            || getBooleanParam(this.params, Constants.IS_REBIN));
+                                || getBooleanParam(this.params, Constants.IS_COMPUTE_PSI)
+                                || getBooleanParam(this.params, Constants.IS_REBIN));
 
                 // update ColumnConfig and save to disk
                 ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, columnConfigList, step, strictCallVoidUpdate);
@@ -154,6 +154,8 @@ public class BasicModelProcessor {
                     throw new IllegalArgumentException(
                             "Segment expression is only supported in NN or LR model, please check train:algrithm setting in ModelConfig.json.");
                 }
+                break;
+            default:
                 break;
         }
     }
@@ -193,14 +195,14 @@ public class BasicModelProcessor {
         }
 
         if(!names.contains(new NSColumn(modelConfig.getTargetColumnName()))) {
-            throw new IllegalArgumentException("target column " + modelConfig.getTargetColumnName()
-                    + " does not exist.");
+            throw new IllegalArgumentException(
+                    "target column " + modelConfig.getTargetColumnName() + " does not exist.");
         }
 
         if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())
                 && !names.contains(new NSColumn(modelConfig.getWeightColumnName()))) {
-            throw new IllegalArgumentException("weight column " + modelConfig.getWeightColumnName()
-                    + " does not exist.");
+            throw new IllegalArgumentException(
+                    "weight column " + modelConfig.getWeightColumnName() + " does not exist.");
         }
     }
 
@@ -469,8 +471,9 @@ public class BasicModelProcessor {
      *             in load model config
      */
     private void loadModelConfig() throws IOException {
-        modelConfig = CommonUtils.loadModelConfig(new Path(CommonUtils.getLocalModelSetPath(otherConfigs),
-                Constants.LOCAL_MODEL_CONFIG_JSON).toString(), SourceType.LOCAL);
+        modelConfig = CommonUtils.loadModelConfig(
+                new Path(CommonUtils.getLocalModelSetPath(otherConfigs), Constants.LOCAL_MODEL_CONFIG_JSON).toString(),
+                SourceType.LOCAL);
     }
 
     /**
@@ -490,8 +493,9 @@ public class BasicModelProcessor {
      *             in load column config
      */
     private void loadColumnConfig() throws IOException {
-        columnConfigList = CommonUtils.loadColumnConfigList(new Path(CommonUtils.getLocalModelSetPath(otherConfigs),
-                Constants.LOCAL_COLUMN_CONFIG_JSON).toString(), SourceType.LOCAL, false);
+        columnConfigList = CommonUtils.loadColumnConfigList(
+                new Path(CommonUtils.getLocalModelSetPath(otherConfigs), Constants.LOCAL_COLUMN_CONFIG_JSON).toString(),
+                SourceType.LOCAL, false);
     }
 
     /**
@@ -521,7 +525,8 @@ public class BasicModelProcessor {
 
         BufferedWriter writer = null;
         try {
-            writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(header), Constants.DEFAULT_CHARSET));
+            writer = new BufferedWriter(
+                    new OutputStreamWriter(new FileOutputStream(header), Constants.DEFAULT_CHARSET));
             writer.write("master");
         } catch (IOException e) {
             LOG.error("Fail to create HEAD file to store the current workspace");

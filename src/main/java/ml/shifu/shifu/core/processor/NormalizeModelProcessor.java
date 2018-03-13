@@ -118,11 +118,20 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         // how many part-m-*.gz file in for gzip file, norm depends on how many gzip files
         int filePartCnt = ShifuFileUtils.getFilePartCount(this.pathFinder.getNormalizedDataPath(), SourceType.HDFS);
         // average count is over threshold, try to do shuffle to avoid big worker there
-        if(filePartCnt > 0 && filePartCnt <= CommonConstants.PART_FILE_COUNT_THRESHOLD
-                && totalCount * 1.0d / filePartCnt >= CommonConstants.MAX_RECORDS_PER_WORKER
+        // max record is for 1000 variables, for
+        if(filePartCnt > 0
+                && filePartCnt <= CommonConstants.PART_FILE_COUNT_THRESHOLD
+                && ((totalCount * 1.0d / filePartCnt) * (super.columnConfigList.size() / 1000d)) >= CommonConstants.MAX_RECORDS_PER_WORKER
                 && ShifuFileUtils.isPartFileAllGzip(this.pathFinder.getNormalizedDataPath(), SourceType.HDFS)) {
-            long shuffleSize = totalCount / CommonConstants.MAX_RECORDS_PER_WORKER;
-            log.info("New shiffle size is {}.", shuffleSize);
+            long shuffleSize = (long) ((totalCount * 1d / CommonConstants.MAX_RECORDS_PER_WORKER) * (super.columnConfigList
+                    .size() / 1000d));
+            if(shuffleSize <= 0) {
+                shuffleSize = 10;
+            }
+            if(shuffleSize >= 1000) {
+                shuffleSize = 1000;
+            }
+            log.info("New shuffle size is adapted to {}.", shuffleSize);
 
             this.isToShuffleData = true;
             Integer shuffleSizeInteger = Environment.getInt(Constants.SHIFU_NORM_SHUFFLE_SIZE);
