@@ -67,16 +67,18 @@ public class NNModelEvalAndScoreTest {
             fi = new FileInputStream(modelPath);
             iNNModel = IndependentNNModel.loadFromStream(fi);
         } finally {
-            fi.close();
+            if(fi != null) {
+                fi.close();
+            }
         }
 
         ModelConfig modelConfig = CommonUtils.loadModelConfig("src/test/resources/dttest/config/nn/ModelConfig.json",
                 SourceType.LOCAL);
-        List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList(
-                "src/test/resources/dttest/config/nn/ColumnConfig.json", SourceType.LOCAL);
+        List<ColumnConfig> columnConfigList = CommonUtils
+                .loadColumnConfigList("src/test/resources/dttest/config/nn/ColumnConfig.json", SourceType.LOCAL);
 
-        nnModel = (BasicFloatNetwork) CommonUtils.loadModel(modelConfig, new Path(
-                "src/test/resources/dttest/model/nn/encog.nn"), HDFSUtils.getLocalFS());
+        nnModel = (BasicFloatNetwork) CommonUtils.loadModel(modelConfig,
+                new Path("src/test/resources/dttest/model/nn/encog.nn"), HDFSUtils.getLocalFS());
 
         List<BasicML> models = new ArrayList<BasicML>();
         models.add(nnModel);
@@ -187,7 +189,7 @@ public class NNModelEvalAndScoreTest {
             }
             double[] scores = iNNModel.compute(mapObj);
             ScoreObject scoreObject = scorer.score(map);
-//            System.out.println("Eval score is: " + scoreObject.getMeanScore() / 1000 + "; bi score: " + scores[0]);
+            // System.out.println("Eval score is: " + scoreObject.getMeanScore() / 1000 + "; bi score: " + scores[0]);
         }
 
     }

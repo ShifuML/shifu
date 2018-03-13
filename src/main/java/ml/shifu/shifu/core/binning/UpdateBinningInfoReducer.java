@@ -93,12 +93,12 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
      */
     private void loadConfigFiles(final Context context) {
         try {
-            SourceType sourceType = SourceType.valueOf(context.getConfiguration().get(
-                    Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
-            this.modelConfig = CommonUtils.loadModelConfig(
-                    context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG), sourceType);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+            SourceType sourceType = SourceType.valueOf(
+                    context.getConfiguration().get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
+            this.modelConfig = CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
+                    sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -118,8 +118,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
     }
 
     @Override
-    protected void reduce(IntWritable key, Iterable<BinningInfoWritable> values, Context context) throws IOException,
-            InterruptedException {
+    protected void reduce(IntWritable key, Iterable<BinningInfoWritable> values, Context context)
+            throws IOException, InterruptedException {
         long start = System.currentTimeMillis();
         double sum = 0d;
         double squaredSum = 0d;
@@ -162,8 +162,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 hyperLogLogPlus = HyperLogLogPlus.Builder.build(cfiw.getHyperBytes());
             } else {
                 try {
-                    hyperLogLogPlus = (HyperLogLogPlus) hyperLogLogPlus.merge(HyperLogLogPlus.Builder.build(cfiw
-                            .getHyperBytes()));
+                    hyperLogLogPlus = (HyperLogLogPlus) hyperLogLogPlus
+                            .merge(HyperLogLogPlus.Builder.build(cfiw.getHyperBytes()));
                 } catch (CardinalityMergeException e) {
                     throw new RuntimeException(e);
                 }
@@ -266,8 +266,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
 
         // To merge categorical binning
         if(columnConfig.isCategorical() && modelConfig.getStats().getCateMaxNumBin() > 0) {
-            CateBinningStats cateBinningStats = rebinCategoricalValues(new CateBinningStats(binCategories, binCountPos,
-                    binCountNeg, binWeightPos, binWeightNeg));
+            CateBinningStats cateBinningStats = rebinCategoricalValues(
+                    new CateBinningStats(binCategories, binCountPos, binCountNeg, binWeightPos, binWeightNeg));
             LOG.info("For variable - {}, {} bins is rebined to {} bins", columnConfig.getColumnName(),
                     binCategories.size(), cateBinningStats.binCategories.size());
 
@@ -288,23 +288,22 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         String binBounString = null;
 
         if(columnConfig.isHybrid()) {
-            if(binCategories.size() < 0 || binCategories.size() > MAX_CATEGORICAL_BINC_COUNT) {
+            if(binCategories.size() > MAX_CATEGORICAL_BINC_COUNT) {
                 LOG.warn("Column {} {} with invalid bin category size.", key.get(), columnConfig.getColumnName(),
                         binCategories.size());
                 return;
             }
             binBounString = binBoundaryList.toString();
-            binBounString += Constants.HYBRID_BIN_STR_DILIMETER
-                    + Base64Utils.base64Encode("["
-                            + StringUtils.join(binCategories, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR) + "]");
+            binBounString += Constants.HYBRID_BIN_STR_DILIMETER + Base64Utils.base64Encode(
+                    "[" + StringUtils.join(binCategories, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR) + "]");
         } else if(columnConfig.isCategorical()) {
-            if(binCategories.size() < 0 || binCategories.size() > MAX_CATEGORICAL_BINC_COUNT) {
+            if(binCategories.size() > MAX_CATEGORICAL_BINC_COUNT) {
                 LOG.warn("Column {} {} with invalid bin category size.", key.get(), columnConfig.getColumnName(),
                         binCategories.size());
                 return;
             }
-            binBounString = Base64Utils.base64Encode("["
-                    + StringUtils.join(binCategories, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR) + "]");
+            binBounString = Base64Utils.base64Encode(
+                    "[" + StringUtils.join(binCategories, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR) + "]");
             // recompute such value for categorical variables
             min = Double.MAX_VALUE;
             max = Double.MIN_VALUE;
@@ -356,20 +355,15 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
 
         sb.append(key.get())
                 // column id
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(binBounString)
+                .append(Constants.DEFAULT_DELIMITER).append(binBounString)
                 // column bins
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(Arrays.toString(binCountNeg))
+                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binCountNeg))
                 // bin count negative
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(Arrays.toString(binCountPos))
+                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binCountPos))
                 // bin count positive
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(Arrays.toString(new double[0]))
+                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(new double[0]))
                 // deprecated
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(Arrays.toString(binPosRate))
+                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binPosRate))
                 // bin positive rate
                 .append(Constants.DEFAULT_DELIMITER)
                 .append(columnCountMetrics == null ? "" : df.format(columnCountMetrics.getKs()))
@@ -377,38 +371,27 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 .append(Constants.DEFAULT_DELIMITER)
                 .append(columnCountMetrics == null ? "" : df.format(columnCountMetrics.getIv()))
                 // IV
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(max))
+                .append(Constants.DEFAULT_DELIMITER).append(df.format(max))
                 // max
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(min))
+                .append(Constants.DEFAULT_DELIMITER).append(df.format(min))
                 // min
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(mean))
+                .append(Constants.DEFAULT_DELIMITER).append(df.format(mean))
                 // mean
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(df.format(stdDev))
+                .append(Constants.DEFAULT_DELIMITER).append(df.format(stdDev))
                 // standard deviation
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(columnConfig.getColumnType().toString())
+                .append(Constants.DEFAULT_DELIMITER).append(columnConfig.getColumnType().toString())
                 // column type
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(median)
+                .append(Constants.DEFAULT_DELIMITER).append(median)
                 // median value ?
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(missingCount)
+                .append(Constants.DEFAULT_DELIMITER).append(missingCount)
                 // missing count
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(count)
+                .append(Constants.DEFAULT_DELIMITER).append(count)
                 // count
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(missingCount * 1.0d / count)
+                .append(Constants.DEFAULT_DELIMITER).append(missingCount * 1.0d / count)
                 // missing ratio
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(Arrays.toString(binWeightNeg))
+                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binWeightNeg))
                 // bin weighted negative
-                .append(Constants.DEFAULT_DELIMITER)
-                .append(Arrays.toString(binWeightPos))
+                .append(Constants.DEFAULT_DELIMITER).append(Arrays.toString(binWeightPos))
                 // bin weighted positive
                 .append(Constants.DEFAULT_DELIMITER)
                 .append(columnCountMetrics == null ? "" : columnCountMetrics.getWoe())
@@ -423,12 +406,12 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 .append(columnWeightMetrics == null ? "" : columnWeightMetrics.getIv())
                 // weighted IV
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(columnCountMetrics == null ? Arrays.toString(new double[binSize + 1]) : columnCountMetrics
-                        .getBinningWoe().toString())
+                .append(columnCountMetrics == null ? Arrays.toString(new double[binSize + 1])
+                        : columnCountMetrics.getBinningWoe().toString())
                 // bin WOE
                 .append(Constants.DEFAULT_DELIMITER)
-                .append(columnWeightMetrics == null ? Arrays.toString(new double[binSize + 1]) : columnWeightMetrics
-                        .getBinningWoe().toString()) // bin weighted WOE
+                .append(columnWeightMetrics == null ? Arrays.toString(new double[binSize + 1])
+                        : columnWeightMetrics.getBinningWoe().toString()) // bin weighted WOE
                 .append(Constants.DEFAULT_DELIMITER).append(skewness) // skewness
                 .append(Constants.DEFAULT_DELIMITER).append(kurtosis) // kurtosis
                 .append(Constants.DEFAULT_DELIMITER).append(totalCount) // total count

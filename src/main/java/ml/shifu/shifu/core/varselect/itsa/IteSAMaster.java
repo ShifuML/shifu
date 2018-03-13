@@ -24,12 +24,13 @@ import ml.shifu.shifu.core.dtrain.nn.NNMaster;
  */
 public class IteSAMaster extends AbstractMasterComputable<MasterIteSAParams, WorkerIteSAParams> {
 
+    @SuppressWarnings("unused")
     private NNMaster master;
 
     @Override
     public void init(MasterContext<MasterIteSAParams, WorkerIteSAParams> context) {
-        master = new NNMaster();
-        master.init(null);
+        //        master = new NNMaster();
+        //      master.init(null);
     }
 
 

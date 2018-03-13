@@ -195,6 +195,27 @@ public class Split implements Bytable {
         }
     }
 
+    public void readFields(DataInput in, int version) throws IOException {
+        this.columnNum = in.readInt();
+        this.featureType = in.readByte();
+
+        switch(this.featureType) {
+            case CATEGORICAL:
+                this.isLeft = in.readBoolean();
+                boolean isNull = in.readBoolean();
+                if(isNull) {
+                    leftOrRightCategories = null;
+                } else {
+                    leftOrRightCategories = new SimpleBitSet<Short>();
+                    ((Bytable) leftOrRightCategories).readFields(in);
+                }
+                break;
+            case CONTINUOUS:
+                this.threshold = in.readDouble();
+                break;
+        }
+    }
+
     @Override
     public String toString() {
         return "Split [featureIndex=" + columnNum + ", featureType=" + featureType + ", threshold=" + threshold

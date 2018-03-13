@@ -39,7 +39,9 @@ public class IndependentNNModelTest {
             fi = new FileInputStream(modelPath);
             nnModel = IndependentNNModel.loadFromStream(fi);
         } finally {
-            fi.close();
+            if(fi != null) {
+                fi.close();
+            }
         }
     }
 
