@@ -468,6 +468,12 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         for(int i = 0; i < fields.length; i++) {
             ColumnConfig config = new ColumnConfig();
             config.setColumnNum(i);
+
+            // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
+            // char or / in its name in shifu will be replaced;
+            fields[i] = fields[i].replaceAll(" ", "_");
+            fields[i] = fields[i].replaceAll("/", "_");
+
             if(isSchemaProvided) {
                 // config.setColumnName(CommonUtils.getRelativePigHeaderColumnName(fields[i]));
                 config.setColumnName(fields[i]);

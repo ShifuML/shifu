@@ -60,8 +60,8 @@ public class InitStep extends Step<List<ColumnConfig>> {
         String[] fields = null;
         boolean isSchemaProvided = true;
         if(StringUtils.isNotBlank(modelConfig.getHeaderPath())) {
-            fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(), modelConfig
-                    .getDataSet().getSource());
+            fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(),
+                    modelConfig.getDataSet().getSource());
             String[] dataInFirstLine = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(),
                     modelConfig.getDataSetDelimiter(), modelConfig.getDataSet().getSource());
             if(fields.length != dataInFirstLine.length) {
@@ -69,8 +69,9 @@ public class InitStep extends Step<List<ColumnConfig>> {
                         "Header length and data length are not consistent, please check you header setting and data set setting.");
             }
         } else {
-            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(), StringUtils.isBlank(modelConfig
-                    .getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter() : modelConfig.getHeaderDelimiter(),
+            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(),
+                    StringUtils.isBlank(modelConfig.getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter()
+                            : modelConfig.getHeaderDelimiter(),
                     modelConfig.getDataSet().getSource());
             if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
                 // if first line contains target column name, we guess it is csv format and first line is header.
@@ -79,7 +80,8 @@ public class InitStep extends Step<List<ColumnConfig>> {
                 // first line of data meaning second line in data files excluding first header line
                 String[] dataInFirstLine = CommonUtils.takeFirstTwoLines(modelConfig.getDataSetRawPath(),
                         StringUtils.isBlank(modelConfig.getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter()
-                                : modelConfig.getHeaderDelimiter(), modelConfig.getDataSet().getSource())[1];
+                                : modelConfig.getHeaderDelimiter(),
+                        modelConfig.getDataSet().getSource())[1];
 
                 if(dataInFirstLine != null && fields.length != dataInFirstLine.length) {
                     throw new IllegalArgumentException(
@@ -100,6 +102,10 @@ public class InitStep extends Step<List<ColumnConfig>> {
             ColumnConfig config = new ColumnConfig();
             config.setColumnNum(i);
             if(isSchemaProvided) {
+                // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
+                // char or / in its name in shifu will be replaced;
+                fields[i] = fields[i].replaceAll(" ", "_");
+                fields[i] = fields[i].replaceAll("/", "_");
                 config.setColumnName(CommonUtils.getRelativePigHeaderColumnName(fields[i]));
             } else {
                 config.setColumnName(i + "");
