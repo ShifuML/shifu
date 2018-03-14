@@ -108,19 +108,21 @@ fi
 
 SHIFU_OPTS=${JAVA_OPTS:=${SHIFU_OPTS}}
 
-#check SPARK_HOME for shifu spark eval
-if [ "${SPARK_HOME}" != "" ]; then
-   if [ "${SPARK_CONF_DIR}" != "" ]; then
-        SPARK_SUBMIT=`command -v "spark-submit"`
-        if [ "${SPAK_SUBMIT}" == "" ]; then
-            SPARK_SUBMIT="${SPARK_HOME}/bin/spark-submit"
-            SPARK_EVAL_JAR=`find ${SHIFU_HOME}/lib -name "shifu-spark-eval*.jar"`
-            SPARK_CLASSPATH=`find ${SHIFU_HOME}/lib -name "*.jar" | grep -v javadoc | xargs | sed 's/ /,/g'`
-        fi
-   else 
-        echo "SPARK_HOME is not set, please set SPARK_HOME to enable shifu spark eval."
-
-   fi
+#check SPARK_HOME for shifu spark eval, only when SHIFU_SPARK_EVAL is enabled
+if [ "${SHIFU_SPARK_EVAL}" == "TRUE" ]; then
+    if [ "${SPARK_HOME}" != "" ]; then
+       if [ "${SPARK_CONF_DIR}" != "" ]; then
+            SPARK_SUBMIT=`command -v "spark-submit"`
+            if [ "${SPAK_SUBMIT}" == "" ]; then
+                SPARK_SUBMIT="${SPARK_HOME}/bin/spark-submit"
+                SPARK_EVAL_JAR=`find ${SHIFU_HOME}/lib -name "shifu-spark-eval*.jar"`
+                SPARK_CLASSPATH=`find ${SHIFU_HOME}/lib -name "*.jar" | grep -v javadoc | xargs | sed 's/ /,/g'`
+            fi
+       else 
+            echo "SPARK_HOME is not set, please set SPARK_HOME to enable shifu spark eval."
+    
+       fi
+    fi
 fi
 
 cygwin=false
