@@ -60,9 +60,12 @@ public class ModelNormalizeConf {
 
     /**
      * STDDev cutoff threshold, if over this value after zscore, such value will be cutoff to current value or negative
-     * of this value.
+     * of this value. 
+     * 
+     * <p>
+     * Starting from 0.12.0, change default 4 to 6 for better tolerance.
      */
-    private Double stdDevCutOff = Double.valueOf(4.0);
+    private Double stdDevCutOff = Double.valueOf(6.0);
 
     /**
      * If do sampling in norm step, training will be impacted by sampling because norm output is train input
