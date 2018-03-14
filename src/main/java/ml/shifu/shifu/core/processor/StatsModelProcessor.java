@@ -252,8 +252,11 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
             syncDataToHdfs(modelConfig.getDataSet().getSource());
             clearUp(ModelStep.STATS);
+        } catch (ShifuException e) {
+            log.error("Error:" + e.getError().toString() + "; msg:" + e.getMessage(), e);
+            return -1;
         } catch (Exception e) {
-            log.error("Error:", e);
+            log.error("Error:" + e.getMessage(), e);
             return -1;
         }
 

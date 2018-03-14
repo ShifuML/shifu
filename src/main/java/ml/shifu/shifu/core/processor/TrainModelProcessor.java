@@ -220,9 +220,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
             clearUp(ModelStep.TRAIN);
+        } catch (ShifuException e) {
+            LOG.error("Error:" + e.getError().toString() + "; msg:" + e.getMessage(), e);
+            return -1;
         } catch (Exception e) {
-            LOG.error("Error:", e);
-            return 1;
+            LOG.error("Error:" + e.getMessage(), e);
+            return -1;
         }
         if(!this.isForVarSelect()) {
             LOG.info("Step Finished: train with {} ms", (System.currentTimeMillis() - start));
