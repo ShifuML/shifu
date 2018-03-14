@@ -281,10 +281,12 @@ public class IndependentNNModel {
                         break;
                     case OLD_ZSCALE:
                     case OLD_ZSCORE:
+                        value = getCategoricalPosRateZScoreValue(columnNum, obj, true);
+                        break;
                     case ZSCALE:
                     case ZSCORE:
                     default:
-                        value = getCategoricalPosRateZScoreValue(columnNum, obj);
+                        value = getCategoricalPosRateZScoreValue(columnNum, obj, false);
                         break;
                 }
             } else if(columnType == ColumnType.N) {
@@ -338,8 +340,8 @@ public class IndependentNNModel {
                     case HYBRID:
                     case WEIGHT_HYBRID:
                     default:
-                        throw new IllegalStateException("Column type of " + columnName
-                                + " is hybrid, but normType is not woe related.");
+                        throw new IllegalStateException(
+                                "Column type of " + columnName + " is hybrid, but normType is not woe related.");
                 }
             }
 
@@ -412,7 +414,7 @@ public class IndependentNNModel {
         return Normalizer.computeZScore(rawValue, mean, stddev, cutoff)[0];
     }
 
-    private double getCategoricalPosRateZScoreValue(Integer columnNum, Object obj) {
+    private double getCategoricalPosRateZScoreValue(Integer columnNum, Object obj, boolean isOld) {
         double value = 0d;
         Map<String, Double> posRateMapping = this.binPosRateMap.get(columnNum);
         if(obj == null) {
@@ -425,6 +427,11 @@ public class IndependentNNModel {
                 value = posRate;
             }
         }
+
+        if(isOld) {
+            return value;
+        }
+
         double mean = this.numerMeanMap.get(columnNum);
         double stddev = this.numerStddevMap.get(columnNum);
         double cutoff = Normalizer.checkCutOff(this.cutOffMap.get(columnNum));
