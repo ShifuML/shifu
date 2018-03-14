@@ -63,6 +63,8 @@ public class TreeModelPmmlTest {
                         case CATEGORICAL:
                             newMap.put(key.getValue(), value.getValue().toString());
                             break;
+                        default:
+                            break;
                     }
                 }
                 double[] results = model.compute(newMap);
