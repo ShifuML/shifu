@@ -243,17 +243,18 @@ public class Normalizer {
                 return discreteZScoreNormalize(config, raw, cutoff, categoryMissingNormType);
             case OLD_ZSCALE:
             case OLD_ZSCORE:
+                return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, true);
             case ZSCALE:
             case ZSCORE:
             default:
-                return zScoreNormalize(config, raw, cutoff, categoryMissingNormType);
+                return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, false);
         }
     }
 
     private static List<Double> woeOneHotNormalize(ColumnConfig config, String raw, Double cutoff,
             CategoryMissingNormType categoryMissingNormType) {
         if(config.isNumerical()) {
-            return zScoreNormalize(config, raw, cutoff, categoryMissingNormType);
+            return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, false);
         } else {
             Double[] normVals = new Double[config.getBinCategory().size() + 1];
             Arrays.fill(normVals, 0.0d);
@@ -304,9 +305,12 @@ public class Normalizer {
      * @return normalized value for ZScore method.
      */
     private static List<Double> zScoreNormalize(ColumnConfig config, String raw, Double cutoff,
-            CategoryMissingNormType categoryMissingNormType) {
+            CategoryMissingNormType categoryMissingNormType, boolean isOld) {
         double stdDevCutOff = checkCutOff(cutoff);
         double value = parseRawValue(config, raw, categoryMissingNormType);
+        if(isOld && config.isCategorical()) {
+            return Arrays.asList(value);
+        }
         return Arrays.asList(computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff));
     }
 
@@ -378,7 +382,8 @@ public class Normalizer {
      *         corresponding double value. For missing data, return default value using
      *         {@link Normalizer#defaultMissingValue}.
      */
-    private static double parseRawValue(ColumnConfig config, String raw, CategoryMissingNormType categoryMissingNormType) {
+    private static double parseRawValue(ColumnConfig config, String raw,
+            CategoryMissingNormType categoryMissingNormType) {
         if(categoryMissingNormType == null) {
             categoryMissingNormType = CategoryMissingNormType.POSRATE;
         }
@@ -512,7 +517,8 @@ public class Normalizer {
      *            if use weighted woe
      * @return normalized value for hybrid method.
      */
-    private static List<Double> hybridNormalize(ColumnConfig config, String raw, Double cutoff, boolean isWeightedNorm) {
+    private static List<Double> hybridNormalize(ColumnConfig config, String raw, Double cutoff,
+            boolean isWeightedNorm) {
         List<Double> normValue;
         if(config.isNumerical()) {
             // For numerical data, use zscore.
