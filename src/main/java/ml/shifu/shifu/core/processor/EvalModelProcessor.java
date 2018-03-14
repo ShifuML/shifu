@@ -716,6 +716,12 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                             "Eval header length and eval data length are not consistent, please check you header setting and data set setting in eval.");
                 }
 
+                // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
+                // char or / in its name in shifu will be replaced;
+                for(int i = 0; i < fields.length; i++) {
+                    fields[i] = fields[i].replaceAll(" ", "_");
+                    fields[i] = fields[i].replaceAll("/", "_");
+                }
                 evalColumnNames = fields;
                 // for(int i = 0; i < fields.length; i++) {
                 // evalColumnNames[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);

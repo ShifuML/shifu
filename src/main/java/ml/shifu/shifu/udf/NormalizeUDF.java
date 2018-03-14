@@ -23,17 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import ml.shifu.shifu.column.NSColumn;
-import ml.shifu.shifu.container.WeightAmplifier;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
-import ml.shifu.shifu.core.DataPurifier;
-import ml.shifu.shifu.core.DataSampler;
-import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.jexl2.Expression;
 import org.apache.commons.jexl2.JexlContext;
@@ -46,6 +35,17 @@ import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.impl.util.Utils;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
+
+import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.container.WeightAmplifier;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
+import ml.shifu.shifu.core.DataPurifier;
+import ml.shifu.shifu.core.DataSampler;
+import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 
 /**
  * NormalizeUDF class normalize the training data for parquet format.
@@ -105,11 +105,11 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
     private void setCategoryMissingNormType() {
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
-            this.categoryMissingNormType = CategoryMissingNormType.of(UDFContext.getUDFContext().getJobConf()
-                    .get(Constants.SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
+            this.categoryMissingNormType = CategoryMissingNormType.of(
+                    UDFContext.getUDFContext().getJobConf().get(Constants.SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
         } else {
-            this.categoryMissingNormType = CategoryMissingNormType.of(Environment.getProperty(
-                    Constants.SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
+            this.categoryMissingNormType = CategoryMissingNormType
+                    .of(Environment.getProperty(Constants.SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
         }
         if(this.categoryMissingNormType == null) {
             this.categoryMissingNormType = CategoryMissingNormType.POSRATE;
@@ -170,9 +170,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
-            this.isCompactNorm = Boolean.TRUE.toString().equalsIgnoreCase(
-                    UDFContext.getUDFContext().getJobConf()
-                            .get(Constants.SHIFU_NORM_ONLY_SELECTED, Boolean.FALSE.toString()));
+            this.isCompactNorm = Boolean.TRUE.toString().equalsIgnoreCase(UDFContext.getUDFContext().getJobConf()
+                    .get(Constants.SHIFU_NORM_ONLY_SELECTED, Boolean.FALSE.toString()));
         } else {
             this.isCompactNorm = Boolean.TRUE.toString().equalsIgnoreCase(
                     Environment.getProperty(Constants.SHIFU_NORM_ONLY_SELECTED, Boolean.FALSE.toString()));
@@ -278,9 +277,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     }
                 } else {
                     // append normalize data. exclude data clean, for data cleaning, no need check good or bad candidate
-                    if((this.isCompactNorm && config.isFinalSelect())
-                            || (!this.isCompactNorm && CommonUtils.isGoodCandidate(config, super.hasCandidates,
-                                    modelConfig.isRegression()))) {
+                    if((this.isCompactNorm && config.isFinalSelect()) || (!this.isCompactNorm
+                            && CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression()))) {
                         // for multiple classification, binPosRate means rate of such category over all counts, reuse
                         // binPosRate for normalize
                         List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
@@ -307,7 +305,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         type = 0;
                     } else {
                         log.error("Invalid data! The target value is not listed - " + rawTag);
-                        warn("Invalid data! The target value is not listed - " + rawTag, WarnInNormalizeUDF.INVALID_TAG);
+                        warn("Invalid data! The target value is not listed - " + rawTag,
+                                WarnInNormalizeUDF.INVALID_TAG);
                         return null;
                     }
                     tuple.append(type);
