@@ -368,26 +368,26 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             schemaStr.append("Normalized:Tuple(");
             for(ColumnConfig config: columnConfigList) {
                 if(config.isMeta()) {
-                    schemaStr.append(config.getColumnName() + ":chararray" + ",");
+                    schemaStr.append(normColumnName(config.getColumnName()) + ":chararray" + ",");
                 } else if(!config.isMeta() && config.isNumerical()) {
-                    schemaStr.append(config.getColumnName() + ":float" + ",");
+                    schemaStr.append(normColumnName(config.getColumnName()) + ":float" + ",");
                 } else if(config.isTarget()) {
-                    schemaStr.append(config.getColumnName() + ":int" + ",");
+                    schemaStr.append(normColumnName(config.getColumnName()) + ":int" + ",");
                 } else {
                     if(config.isCategorical() && this.isForClean) {
                         // clean data for DT algorithms, only store index, short is ok while Pig only have int type
-                        schemaStr.append(config.getColumnName() + ":chararray" + ",");
+                        schemaStr.append(normColumnName(config.getColumnName()) + ":chararray" + ",");
                     } else {
                         // for others, set to float, no matter LR/NN categorical or filter out feature with null
                         if(modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT)) {
                             if(CommonUtils.isGoodCandidate(config, super.hasCandidates)) {
                                 for(int i = 0; i < config.getBinCategory().size(); i++) {
-                                    schemaStr.append(config.getColumnName() + "_" + i + ":float" + ",");
+                                    schemaStr.append(normColumnName(config.getColumnName()) + "_" + i + ":float" + ",");
                                 }
                             }
-                            schemaStr.append(config.getColumnName() + "_missing" + ":float" + ",");
+                            schemaStr.append(normColumnName(config.getColumnName()) + "_missing" + ":float" + ",");
                         } else {
-                            schemaStr.append(config.getColumnName() + ":float" + ",");
+                            schemaStr.append(normColumnName(config.getColumnName()) + ":float" + ",");
                         }
                     }
                 }
@@ -398,6 +398,24 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             log.error("error in outputSchema", e);
             return null;
         }
+    }
+
+    /**
+     * Some column name has illegal chars which are all be normed in shifu. Such as ' ', '/' ..., are changed to '_'.
+     * 
+     * @param columnName
+     *            the column name to be normed
+     * @return normed column name
+     */
+    public static String normColumnName(String columnName) {
+        if(StringUtils.isBlank(columnName)) {
+            return columnName;
+        }
+        // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
+        // char or / in its name in shifu will be replaced;
+        String newColumnName = columnName.replaceAll(" ", "_");
+        newColumnName = newColumnName.replaceAll("/", "_");
+        return newColumnName;
     }
 
     /*
