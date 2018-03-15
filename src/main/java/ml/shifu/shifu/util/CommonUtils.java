@@ -427,21 +427,15 @@ public final class CommonUtils {
     }
 
     /**
-     * Some column name has illegal chars which are all be normed in shifu. Such as ' ', '/' ..., are changed to '_'.
+     * Some column name has illegal chars which are all be normed in shifu. This is a hook to norm column name but 
+     * actually so far it is just return;
      * 
      * @param columnName
      *            the column name to be normed
      * @return normed column name
      */
     public static String normColumnName(String columnName) {
-        if(StringUtils.isBlank(columnName)) {
-            return columnName;
-        }
-        // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
-        // char or / in its name in shifu will be replaced;
-        String newColumnName = columnName.replaceAll(" ", "_");
-        newColumnName = newColumnName.replaceAll("/", "_");
-        return newColumnName;
+        return columnName;
     }
 
     /**
