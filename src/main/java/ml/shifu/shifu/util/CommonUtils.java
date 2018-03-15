@@ -427,6 +427,24 @@ public final class CommonUtils {
     }
 
     /**
+     * Some column name has illegal chars which are all be normed in shifu. Such as ' ', '/' ..., are changed to '_'.
+     * 
+     * @param columnName
+     *            the column name to be normed
+     * @return normed column name
+     */
+    public static String normColumnName(String columnName) {
+        if(StringUtils.isBlank(columnName)) {
+            return columnName;
+        }
+        // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
+        // char or / in its name in shifu will be replaced;
+        String newColumnName = columnName.replaceAll(" ", "_");
+        newColumnName = newColumnName.replaceAll("/", "_");
+        return newColumnName;
+    }
+
+    /**
      * Return final selected column collection.
      * 
      * @param columnConfigList
@@ -472,10 +490,7 @@ public final class CommonUtils {
             } else {
                 fields[i] = getRelativePigHeaderColumnName(fields[i]);
             }
-            // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
-            // char or / in its name in shifu will be replaced;
-            fields[i] = fields[i].replaceAll(" ", "_");
-            fields[i] = fields[i].replaceAll("/", "_");
+            fields[i] = normColumnName(fields[i]);
         }
         return fields;
     }
@@ -515,11 +530,7 @@ public final class CommonUtils {
             } else {
                 fields[i] = getRelativePigHeaderColumnName(fields[i]);
             }
-
-            // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
-            // char or / in its name in shifu will be replaced;
-            fields[i] = fields[i].replaceAll(" ", "_");
-            fields[i] = fields[i].replaceAll("/", "_");
+            fields[i] = normColumnName(fields[i]);
         }
         return fields;
     }
@@ -613,10 +624,7 @@ public final class CommonUtils {
                 columnName = columnName + "_" + index;
             }
 
-            // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
-            // char or / in its name in shifu will be replaced;
-            columnName = columnName.replaceAll(" ", "_");
-            columnName = columnName.replaceAll("/", "_");
+            columnName = normColumnName(columnName);
             headerSet.add(columnName);
             index++;
             headerList.add(columnName);
@@ -2429,11 +2437,8 @@ public final class CommonUtils {
                     // String column = CommonUtils.getRelativePigHeaderColumnName(str);
                     if(StringUtils.isNotBlank(str)) {
                         str = str.trim();
-                        // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
-                        // char or / in its name in shifu will be replaced;
-                        str = str.replaceAll(" ", "_");
-                        str = str.replaceAll("/", "_");
-                        columnNameList.add(str.trim());
+                        str = normColumnName(str);
+                        columnNameList.add(str);
                     }
                 }
             }
