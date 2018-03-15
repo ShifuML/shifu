@@ -102,10 +102,7 @@ public class InitStep extends Step<List<ColumnConfig>> {
             ColumnConfig config = new ColumnConfig();
             config.setColumnNum(i);
             if(isSchemaProvided) {
-                // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
-                // char or / in its name in shifu will be replaced;
-                fields[i] = fields[i].replaceAll(" ", "_");
-                fields[i] = fields[i].replaceAll("/", "_");
+                fields[i] = CommonUtils.normColumnName(fields[i]);
                 config.setColumnName(CommonUtils.getRelativePigHeaderColumnName(fields[i]));
             } else {
                 config.setColumnName(i + "");

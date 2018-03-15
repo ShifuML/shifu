@@ -719,8 +719,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
                 // char or / in its name in shifu will be replaced;
                 for(int i = 0; i < fields.length; i++) {
-                    fields[i] = fields[i].replaceAll(" ", "_");
-                    fields[i] = fields[i].replaceAll("/", "_");
+                    fields[i] = CommonUtils.normColumnName(fields[i]);
                 }
                 evalColumnNames = fields;
                 // for(int i = 0; i < fields.length; i++) {
