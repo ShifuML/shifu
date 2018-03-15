@@ -85,10 +85,7 @@ public class ColumnProjector extends AbstractTrainerUDF<Tuple> {
             if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
                 this.headers = new String[fields.length];
                 for(int i = 0; i < fields.length; i++) {
-                    // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
-                    // char or / in its name in shifu will be replaced;
-                    fields[i] = fields[i].replaceAll(" ", "_");
-                    fields[i] = fields[i].replaceAll("/", "_");
+                    fields[i] = CommonUtils.normColumnName(fields[i]);
                     this.headers[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
                 }
                 log.warn("No header path is provided, we will try to read first line and detect schema.");

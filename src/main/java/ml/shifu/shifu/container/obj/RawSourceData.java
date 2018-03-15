@@ -199,11 +199,7 @@ public class RawSourceData implements Cloneable {
     }
 
     public String getWeightColumnName() {
-        // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
-        // char or / in its name in shifu will be replaced;
-        String newWeightName = weightColumnName.replaceAll(" ", "_");
-        newWeightName = newWeightName.replaceAll("/", "_");
-        return newWeightName;
+        return CommonUtils.normColumnName(weightColumnName);
     }
 
     public void setWeightColumnName(String weightColumnName) {
@@ -211,11 +207,7 @@ public class RawSourceData implements Cloneable {
     }
 
     public String getTargetColumnName() {
-        // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
-        // char or / in its name in shifu will be replaced;
-        String newTargetName = targetColumnName.replaceAll(" ", "_");
-        newTargetName = newTargetName.replaceAll("/", "_");
-        return newTargetName;
+        return CommonUtils.normColumnName(targetColumnName);
     }
 
     public void setTargetColumnName(String targetColumnName) {
