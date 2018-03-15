@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.Lists;
+
 import ml.shifu.shifu.util.CommonUtils;
 
 /**
@@ -96,7 +97,7 @@ public class RawSourceData implements Cloneable {
      * Positive tag list: Example like ["0", "1"];
      */
     private List<String> posTags;
-    
+
     /**
      * Negative tag list: Example like ["2", "3"]
      */
@@ -198,7 +199,7 @@ public class RawSourceData implements Cloneable {
     }
 
     public String getWeightColumnName() {
-        return weightColumnName;
+        return CommonUtils.normColumnName(weightColumnName);
     }
 
     public void setWeightColumnName(String weightColumnName) {
@@ -206,7 +207,7 @@ public class RawSourceData implements Cloneable {
     }
 
     public String getTargetColumnName() {
-        return targetColumnName;
+        return CommonUtils.normColumnName(targetColumnName);
     }
 
     public void setTargetColumnName(String targetColumnName) {

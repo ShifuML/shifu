@@ -20,6 +20,7 @@ import java.io.IOException;
 
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
+import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.util.HDFSUtils;
 import ml.shifu.shifu.util.JSONUtils;
 
@@ -96,8 +97,11 @@ public class CreateModelProcessor extends BasicModelProcessor implements Process
             createHead(modelSetFolder.getCanonicalPath());
 
             log.info("Step Finished: new");
+        } catch (ShifuException e) {
+            log.error("Error:" + e.getError().toString() + "; msg:" + e.getMessage(), e);
+            return -1;
         } catch (Exception e) {
-            log.error("Error:", e);
+            log.error("Error:" + e.getMessage(), e);
             return -1;
         }
         return 0;
