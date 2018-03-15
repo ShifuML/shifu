@@ -285,6 +285,7 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             Schema tupleSchema = new Schema();
             for(int i = 0; i < this.outputNames.size(); i++) {
                 String name = this.outputNames.get(i);
+                name = normColumnName(name);
                 if(i < 2 + validMetaSize) {
                     // set target, weight and meta columns to string
                     tupleSchema.add(new FieldSchema(name, DataType.CHARARRAY));
@@ -310,5 +311,22 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             return null;
         }
     }
-
+    
+    /**
+     * Some column name has illegal chars which are all be normed in shifu. Such as ' ', '/' ..., are changed to '_'.
+     * 
+     * @param columnName
+     *            the column name to be normed
+     * @return normed column name
+     */
+    public static String normColumnName(String columnName) {
+        if(StringUtils.isBlank(columnName)) {
+            return columnName;
+        }
+        // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
+        // char or / in its name in shifu will be replaced;
+        String newColumnName = columnName.replaceAll(" ", "_");
+        newColumnName = newColumnName.replaceAll("/", "_");
+        return newColumnName;
+    }
 }

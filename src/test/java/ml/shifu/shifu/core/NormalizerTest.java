@@ -68,7 +68,7 @@ public class NormalizerTest {
         config.setBinPosCaseRate(Arrays.asList(new Double[] { 0.1, 2.0, 0.3, 0.1 }));
         Assert.assertEquals(0.0, Normalizer.normalize(config, "2", 0.1).get(0));
 
-//        Assert.assertEquals(0.0, Normalizer.normalize(config, "5", 0.1);
+        // Assert.assertEquals(0.0, Normalizer.normalize(config, "5", 0.1);
     }
 
     @Test
@@ -160,14 +160,19 @@ public class NormalizerTest {
         // Test zscore normalization
         Assert.assertEquals(Normalizer.normalize(config, "b", 4.0, NormType.ZSCALE).get(0), 0.2);
         Assert.assertEquals(Normalizer.normalize(config, "b", null, NormType.ZSCALE).get(0), 0.2);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 4.0, NormType.ZSCALE, CategoryMissingNormType.MEAN).get(0), 0.0);
-        Assert.assertEquals(Normalizer.normalize(config, null, 4.0, NormType.ZSCALE, CategoryMissingNormType.MEAN).get(0), 0.0);
+        Assert.assertEquals(
+                Normalizer.normalize(config, "wrong_format", 4.0, NormType.ZSCALE, CategoryMissingNormType.MEAN).get(0),
+                0.0);
+        Assert.assertEquals(
+                Normalizer.normalize(config, null, 4.0, NormType.ZSCALE, CategoryMissingNormType.MEAN).get(0), 0.0);
 
         // Test old zscore normalization
-        Assert.assertEquals(Normalizer.normalize(config, "b", 4.0, NormType.OLD_ZSCALE).get(0), 0.2);
-        Assert.assertEquals(Normalizer.normalize(config, "b", null, NormType.OLD_ZSCALE).get(0), 0.2);
-        Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 4.0, NormType.OLD_ZSCALE, CategoryMissingNormType.MEAN).get(0), 0.0);
-        Assert.assertEquals(Normalizer.normalize(config, null, 4.0, NormType.OLD_ZSCALE, CategoryMissingNormType.MEAN).get(0), 0.0);
+        Assert.assertEquals(Normalizer.normalize(config, "b", 4.0, NormType.OLD_ZSCALE).get(0), 0.4);
+        Assert.assertEquals(Normalizer.normalize(config, "b", null, NormType.OLD_ZSCALE).get(0), 0.4);
+        Assert.assertEquals(Normalizer
+                .normalize(config, "wrong_format", 4.0, NormType.OLD_ZSCALE, CategoryMissingNormType.MEAN).get(0), 0.2);
+        Assert.assertEquals(
+                Normalizer.normalize(config, null, 4.0, NormType.OLD_ZSCALE, CategoryMissingNormType.MEAN).get(0), 0.2);
 
         // Test woe normalization
         Assert.assertEquals(Normalizer.normalize(config, "c", null, NormType.WEIGHT_WOE).get(0), 22.0);

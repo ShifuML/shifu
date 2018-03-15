@@ -28,7 +28,7 @@ import org.junit.Test;
 
 public class GolfPmmlTest {
 
-    @SuppressWarnings({ "unchecked", "incomplete-switch" })
+    @SuppressWarnings({ "unchecked" })
     @Test
     public void testOldNNPMMlModel() throws Exception {
         PMML pmml = PMMLUtils.loadPMML("src/test/resources/dttest/model/golf0.pmml");
@@ -54,12 +54,14 @@ public class GolfPmmlTest {
                     case CATEGORICAL:
                         newMap.put(key.getValue(), value.getValue().toString());
                         break;
+                    default:
+                        break;
                 }
             }
             System.out.println(pmmlScore);
         }
     }
-    
+
     @SuppressWarnings("unchecked")
     @Test
     public void testNewPMMLModel() throws Exception {
@@ -87,11 +89,12 @@ public class GolfPmmlTest {
                     case CATEGORICAL:
                         newMap.put(key.getValue(), value.getValue().toString());
                         break;
+                    default:
+                        break;
                 }
             }
             System.out.println(pmmlScore);
         }
     }
-
 
 }
