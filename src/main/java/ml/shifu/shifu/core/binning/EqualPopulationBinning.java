@@ -46,7 +46,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
 
     /**
      * The threshold to define extra small bin.
-     *  If (binCount / average binCount) &lt; EXTRA_BIN_COUNT_PERCENTAGE, it will be assume as extra small bin.
+     * If (binCount / average binCount) &lt; EXTRA_BIN_COUNT_PERCENTAGE, it will be assume as extra small bin.
      */
     public static final double EXTRA_SMALL_BIN_PERCENTAGE = 0.003d;
 
@@ -70,6 +70,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * timeout in reducer
      */
     private Map<LinkNode<HistogramUnit>, Double> sumCache = new HashMap<LinkNode<HistogramUnit>, Double>();
+
     /**
      * Empty constructor : it is just for bin merging
      */
@@ -247,18 +248,18 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         }
 
         LinkNode<HistogramUnit> currStartPos = null;
-        //To improve time performance
+        // To improve time performance
         sumCacheGen();
         for(int j = 1; j < toBinningNum; j++) {
-            double s = (j * totalCnt) / toBinningNum; 
+            double s = (j * totalCnt) / toBinningNum;
             LinkNode<HistogramUnit> pos = locateHistogram(s, currStartPos);
-            if(pos == null || pos == currStartPos) {
+            if(pos == null || pos == currStartPos || pos.next() == null) {
                 continue;
             } else {
                 HistogramUnit chu = pos.data();
                 HistogramUnit nhu = pos.next().data();
 
-                //double d = s - sum(chu.getHval());
+                // double d = s - sum(chu.getHval());
                 double d = s - sumCache.get(pos);
                 if(d < 0) {
                     double u = (chu.getHval() + nhu.getHval()) / 2;
@@ -290,11 +291,14 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
 
     /**
      * merge extra small bin into its nearest node
-     * @param totalCnt - total instance count
-     * @param toBinningNum - the expected binning number
+     * 
+     * @param totalCnt
+     *            - total instance count
+     * @param toBinningNum
+     *            - the expected binning number
      */
     private void mergeExtraSmallBins(double totalCnt, int toBinningNum) {
-        if ( this.header == null || this.header == this.tail ) {
+        if(this.header == null || this.header == this.tail) {
             // if no node or just one node, do nothing
             return;
         }
@@ -303,11 +307,11 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
 
         // there are two and more nodes
         LinkNode<HistogramUnit> tmp = this.header;
-        while (tmp != null) {
-            if (tmp.data().getHcnt() < minimumBinCnt) {
+        while(tmp != null) {
+            if(tmp.data().getHcnt() < minimumBinCnt) {
                 HistogramUnit chu = tmp.data();
 
-                if ( tmp == this.header ) {
+                if(tmp == this.header) {
                     HistogramUnit nhu = tmp.next().data();
                     // merge to next
                     nhu.setHcnt(chu.getHcnt() + nhu.getHcnt());
@@ -315,7 +319,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
                             / (chu.getHcnt() + nhu.getHcnt()));
                     this.header = tmp.next();
                     this.header.setPrev(null);
-                } else if (tmp == this.tail) {
+                } else if(tmp == this.tail) {
                     HistogramUnit phu = tmp.prev().data();
                     phu.setHcnt(chu.getHcnt() + phu.getHcnt());
                     phu.setHval((chu.getHval() * chu.getHcnt() + phu.getHval() * phu.getHcnt())
@@ -326,7 +330,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
                     HistogramUnit phu = tmp.prev().data();
                     HistogramUnit nhu = tmp.next().data();
 
-                    if (chu.getHval() - phu.getHval() < nhu.getHval() - chu.getHval()) {
+                    if(chu.getHval() - phu.getHval() < nhu.getHval() - chu.getHval()) {
                         // closer to previous, so to merge to previous
                         phu.setHcnt(chu.getHcnt() + phu.getHcnt());
                         phu.setHval((chu.getHval() * chu.getHcnt() + phu.getHval() * phu.getHcnt())
@@ -391,6 +395,10 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
                 startPos = this.header;
             }
 
+            if(startPos.next() == null) {
+                return startPos;
+            }
+
             double sc = sumCache.get(startPos);
             double sn = sumCache.get(startPos.next());
 
@@ -409,14 +417,14 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      * To improve time performance
      */
     private void sumCacheGen() {
-       LinkNode<HistogramUnit> cur = this.header;
-       double sum = 0;
-       sumCache.clear();
-       while(cur != null) {
-           sumCache.put(cur, sum + cur.data().getHcnt() / 2d);
-           sum += cur.data().getHcnt();
-           cur = cur.next();
-       }
+        LinkNode<HistogramUnit> cur = this.header;
+        double sum = 0;
+        sumCache.clear();
+        while(cur != null) {
+            sumCache.put(cur, sum + cur.data().getHcnt() / 2d);
+            sum += cur.data().getHcnt();
+            cur = cur.next();
+        }
     }
 
     /**
@@ -446,8 +454,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         if(posHistogramUnit != null) {
             HistogramUnit chu = posHistogramUnit.data();
             HistogramUnit nhu = posHistogramUnit.next().data();
-            double mb = chu.getHcnt() + (nhu.getHcnt() - chu.getHcnt()) * (hval - chu.getHval())
-                    / (nhu.getHval() - chu.getHval());
+            double mb = chu.getHcnt()
+                    + (nhu.getHcnt() - chu.getHcnt()) * (hval - chu.getHval()) / (nhu.getHval() - chu.getHval());
             double s = (chu.getHcnt() + mb) * (hval - chu.getHval()) / (nhu.getHval() - chu.getHval());
             s = s / 2;
 
@@ -572,8 +580,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             LinkNode<HistogramUnit> nextNode = minIntervalOpsUnit.next();
             HistogramUnit chu = minIntervalOpsUnit.data();
             HistogramUnit nhu = nextNode.data();
-            nhu.setHval((chu.getHval() * chu.getHcnt() + nhu.getHval() * nhu.getHcnt())
-                    / (chu.getHcnt() + nhu.getHcnt()));
+            nhu.setHval(
+                    (chu.getHval() * chu.getHcnt() + nhu.getHval() * nhu.getHcnt()) / (chu.getHcnt() + nhu.getHcnt()));
             nhu.setHcnt(chu.getHcnt() + nhu.getHcnt());
             removeCurrentNode(minIntervalOpsUnit, nextNode);
         } else {
