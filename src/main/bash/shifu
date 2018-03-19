@@ -95,6 +95,27 @@ function find_ld_library_path() {
     echo ${_ld_library_path}
 }
 
+function getProperty () {
+    PROP_NAME=$1
+    CFG=$2
+    PROP_VAL=$(sed -n "/^${PROP_NAME}[ ]*=/p" $CFG | awk -F'=' '{print $2}' | sed -e 's/^[[:space:]]//g' -e 's/[[:space:]]$//g')
+    echo ${PROP_VAL}
+}
+
+function record_shifu_usage() {
+    if [ ${HADOOP_ROOT} != "" ]; then
+        statistics_dir=$(getProperty "shifu.usage.statistics.dir" ${SHIFU_HOME}/conf/shifuconfig)
+        if [ "${statistics_dir}" == "" ]; then
+            statistics_dir=/tmp/shifu
+            hdfs dfs -mkdir -p ${statistics_dir} >& /dev/null
+            hdfs dfs -chmod 777 ${statistics_dir} >& /dev/null
+        fi
+        log_file="shifu-${USER}-$(date +%s).txt"
+        echo "${USER}@${PWD} > shifu $@" > /tmp/${log_file}
+        hdfs dfs -put /tmp/${log_file} ${statistics_dir} >& /dev/null
+    fi
+}
+
 if [ "${SHIFU_HOME}" == "" ]; then
     COMMAND=`which $0`
     if [ -L ${COMMAND} ]; then
@@ -198,34 +219,42 @@ JAVA_OPTIONS="-server -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:CMSInitiating
 
 case ${COMMAND} in
     "modelset")
+    	record_shifu_usage "$@"
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     "varselect"|"varsel")
         sanity_check
+        record_shifu_usage "$@"
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     "init"|"stats"|"normalize"|"norm"|"posttrain")
         sanity_check
+        record_shifu_usage "$@"
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     "train")
         sanity_check
+        record_shifu_usage "$@"
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     "combo")
         sanity_check
+        record_shifu_usage "$@"
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     "syncUp")
         sanity_check
+        record_shifu_usage "$@"
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     "syncHDFS")
         sanity_check
+        record_shifu_usage "$@"
         sync_model_to_hdfs
         ;;
     "eval")
         sanity_check
+        record_shifu_usage "$@"
         #TODO : to change spark executor instance automaticaly adapted
         if [ "${SPARK_SUBMIT}" != "" -a "${SHIFU_SPARK_EVAL}" == "TRUE" ]; then
                 ${SPARK_SUBMIT} --class ml.shifu.shifu.spark.eval.ShifuEval --conf spark.executor.instances=200 --conf spark.executor.memory=4g  --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --jars ${SPARK_CLASSPATH} ${SHIFU_HOME}/lib/${SPARK_EVAL_JAR}
@@ -237,6 +266,7 @@ case ${COMMAND} in
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     *)
+    	record_shifu_usage "$@"
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
 esac
