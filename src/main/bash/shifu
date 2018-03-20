@@ -111,7 +111,7 @@ function record_shifu_usage() {
             hdfs dfs -chmod 777 ${statistics_dir} >& /dev/null
         fi
         log_file="shifu-${USER}-$(date +%s).txt"
-        echo "${USER}@${PWD} > shifu $@" > /tmp/${log_file}
+        echo "${USER}@$(hostname):${PWD} > shifu $@" > /tmp/${log_file}
         hdfs dfs -put /tmp/${log_file} ${statistics_dir} >& /dev/null
     fi
 }
