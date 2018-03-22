@@ -252,6 +252,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         }
                         if(index == -1) {
                             log.error("Invalid data! The target value is not listed - " + rawTag);
+                            warn("Invalid data! The target value is not listed - " + rawTag,
+                                    WarnInNormalizeUDF.INVALID_TAG);
                             return null;
                         }
                         tuple.append(index);
@@ -292,25 +294,50 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 }
             }
         } else {
+            // for segment expansion variables
             int rawSize = input.size();
             for(int i = 0; i < this.columnConfigList.size(); i++) {
                 ColumnConfig config = this.columnConfigList.get(i);
                 int newIndex = i >= rawSize ? i % rawSize : i;
                 String val = (input.get(newIndex) == null) ? "" : input.get(newIndex).toString().trim();
+
+                // for target column
                 if(config.isTarget()) {
-                    int type = 0;
-                    if(super.posTagSet.contains(rawTag)) {
-                        type = 1;
-                    } else if(super.negTagSet.contains(rawTag)) {
-                        type = 0;
+                    if(modelConfig.isRegression()) {
+                        int type = 0;
+                        if(super.posTagSet.contains(rawTag)) {
+                            type = 1;
+                        } else if(super.negTagSet.contains(rawTag)) {
+                            type = 0;
+                        } else {
+                            log.error("Invalid data! The target value is not listed - " + rawTag);
+                            warn("Invalid data! The target value is not listed - " + rawTag,
+                                    WarnInNormalizeUDF.INVALID_TAG);
+                            return null;
+                        }
+                        tuple.append(type);
                     } else {
-                        log.error("Invalid data! The target value is not listed - " + rawTag);
-                        warn("Invalid data! The target value is not listed - " + rawTag,
-                                WarnInNormalizeUDF.INVALID_TAG);
-                        return null;
+                        int index = -1;
+                        for(int j = 0; j < tags.size(); j++) {
+                            Set<String> tagSet = tags.get(j);
+                            if(tagSet.contains(rawTag)) {
+                                index = j;
+                                break;
+                            }
+                        }
+                        if(index == -1) {
+                            log.error("Invalid data! The target value is not listed - " + rawTag);
+                            warn("Invalid data! The target value is not listed - " + rawTag,
+                                    WarnInNormalizeUDF.INVALID_TAG);
+                            return null;
+                        }
+                        tuple.append(index);
                     }
-                    tuple.append(type);
-                } else if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
+                    continue;
+                }
+
+                // for others
+                if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
                     List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
                             this.categoryMissingNormType);
                     for(Double normVal: normVals) {
