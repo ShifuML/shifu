@@ -91,3 +91,6 @@ guagua.worker.getresult.timeout=600000
 # ModelConfig#trains#workerThreadCount
 mapreduce.map.cpu.vcores=1
 
+# the HDFS directory that used to store all user's usage info. This is for summary shifu usage
+# the directory should have 777 permission so that other user have permission to write it
+# shifu.usage.statistics.dir=
