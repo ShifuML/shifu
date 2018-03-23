@@ -76,6 +76,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     public static final String ONE_BAGGING_MODEL = "bagging";
     public static final String ONE_BAGGING_PMML_MODEL = "baggingpmml";
     public static final String WOE_MAPPING = "woemapping";
+    public static final String WOE = "woe";
     public static final String CORRELATION = "corr";
 
     public static final String IS_CONCISE = "IS_CONCISE";
@@ -201,6 +202,20 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 }
                 FileUtils.write(new File("woemapping.txt"), StringUtils.join(woeMappings, ",\n"));
             }
+        } else if (type.equalsIgnoreCase(WOE)) {
+            List<String> woeInfos = new ArrayList<String>();
+            for ( ColumnConfig columnConfig : this.columnConfigList ) {
+                if ( columnConfig.getBinLength() > 1 &&
+                        ( (columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinCategory()))
+                        || (columnConfig.isNumerical() && CollectionUtils.isNotEmpty(columnConfig.getBinBoundary()) && columnConfig.getBinBoundary().size() > 1)) ) {
+                    List<String> varWoeInfos = generateWoeInfos(columnConfig);
+                    if ( CollectionUtils.isNotEmpty(varWoeInfos) ) {
+                        woeInfos.addAll(varWoeInfos);
+                        woeInfos.add("");
+                    }
+                }
+                FileUtils.writeLines(new File("varwoe_info.txt"), woeInfos);
+            }
         } else if(type.equalsIgnoreCase(CORRELATION)) {
             // export correlation into mapping list
             if(!ShifuFileUtils.isFileExists(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL)) {
@@ -218,6 +233,29 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         log.info("Done.");
 
         return status;
+    }
+
+    private List<String> generateWoeInfos(ColumnConfig columnConfig) {
+        List<String> varWoeInfos = new ArrayList<String>();
+        varWoeInfos.add(columnConfig.getColumnName());
+        if ( columnConfig.isNumerical() ) {
+            for ( int i = 0; i < columnConfig.getBinBoundary().size(); i ++ ) {
+                if ( i == 0 ) {
+                    varWoeInfos.add("(-\u221E," + columnConfig.getBinBoundary().get(i + 1) + "]\t" + columnConfig.getBinCountWoe().get(i));
+                } else if ( i == columnConfig.getBinBoundary().size() - 1 ) {
+                    varWoeInfos.add("(" + columnConfig.getBinBoundary().get(i) + ",+\u221E]\t" + columnConfig.getBinCountWoe().get(i));
+                } else {
+                    varWoeInfos.add("(" + columnConfig.getBinBoundary().get(i) + "," + columnConfig.getBinBoundary().get(i + 1) + "]\t" + columnConfig.getBinCountWoe().get(i));
+                }
+            }
+            varWoeInfos.add("MISSING" + "\t" + columnConfig.getBinCountWoe().get(columnConfig.getBinCountWoe().size() - 1));
+        } else {
+            for ( int i = 0; i < columnConfig.getBinCategory().size(); i ++ ) {
+                varWoeInfos.add(columnConfig.getBinCategory().get(i) + "\t" + columnConfig.getBinCountWoe().get(i));
+            }
+            varWoeInfos.add("MISSING" + "\t" + columnConfig.getBinCountWoe().get(columnConfig.getBinCountWoe().size() - 1));
+        }
+        return varWoeInfos;
     }
 
     private String rebinAndExportWoeMapping(ColumnConfig columnConfig) throws IOException {
