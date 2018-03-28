@@ -734,8 +734,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             long missingSumCnt = binCountPos[binCountPos.length - 1] + binCountNeg[binCountNeg.length - 1];
             if(missingSumCnt > 0) {
                 binPosRates.add(binCountPos[binCountPos.length - 1] * 1d / missingSumCnt);
-            } else {
-                binPosRates.add(Double.NaN);
+            } else { // don't add NaN, but use average -- NaN will cause score NaN
+                binPosRates.add(calAverage(binPosRates));
             }
         }
 
@@ -753,6 +753,17 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         columnConfig.getColumnStats().setWeightedKs(columnWeightMetrics.getWoe());
         columnConfig.getColumnStats().setWeightedWoe(columnWeightMetrics.getWoe());
         columnConfig.getColumnBinning().setBinWeightedWoe(columnWeightMetrics.getBinningWoe());
+    }
+
+    private Double calAverage(List<Double> binPosRates) {
+        double average = 0.0;
+        if ( CollectionUtils.isNotEmpty(binPosRates) ) {
+            for ( Double posRate : binPosRates ) {
+                average += posRate;
+            }
+            average /= binPosRates.size();
+        }
+        return average;
     }
 
     private List<Double> convertIntoDoubleList(double[] binWeights) {
