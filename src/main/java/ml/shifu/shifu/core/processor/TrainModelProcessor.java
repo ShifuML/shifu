@@ -398,9 +398,20 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_TMP_MODELS_FOLDER,
                 tmpModelsPath.toString()));
         int baggingNum = isForVarSelect ? 1 : super.getModelConfig().getBaggingNum();
-        if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
-            // one vs all multiple classification, we need multiple bagging jobs to do ONEVSALL
-            baggingNum = modelConfig.getTags().size();
+        if(modelConfig.isClassification()) {
+            int classes = modelConfig.getTags().size();
+            if(classes == 2) {
+                // binary classification, only need one job
+                baggingNum = 1;
+            } else {
+                if(modelConfig.getTrain().isOneVsAll()) {
+                    // one vs all multiple classification, we need multiple bagging jobs to do ONEVSALL
+                    baggingNum = modelConfig.getTags().size();
+                } else {
+                    // native classification, need 1 job
+                    baggingNum = 1;
+                }
+            }
             if(baggingNum != super.getModelConfig().getBaggingNum()) {
                 LOG.warn("'train:baggingNum' is set to {} because of ONEVSALL multiple classification.", baggingNum);
             }

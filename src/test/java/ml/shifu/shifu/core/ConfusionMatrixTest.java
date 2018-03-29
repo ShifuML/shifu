@@ -54,7 +54,7 @@ public class ConfusionMatrixTest {
         evalConfig.setCustomPaths(customPaths);
 
         evalConfig.setPerformanceScoreSelector(null);
-        new ConfusionMatrix(modelConfig, evalConfig, this);
+        new ConfusionMatrix(modelConfig, null, evalConfig, this);
     }
 
     @Test(expectedExceptions = ShifuException.class)
@@ -64,7 +64,7 @@ public class ConfusionMatrixTest {
         evalConfig.setCustomPaths(customPaths);
 
         evalConfig.setPerformanceScoreSelector("mean");
-        new ConfusionMatrix(modelConfig, evalConfig, this);
+        new ConfusionMatrix(modelConfig, null, evalConfig, this);
     }
 
     @Test
@@ -74,7 +74,7 @@ public class ConfusionMatrixTest {
         evalConfig.setCustomPaths(customPaths);
 
         evalConfig.setPerformanceScoreSelector("diagnosis");
-        new ConfusionMatrix(modelConfig, evalConfig, this);
+        new ConfusionMatrix(modelConfig, null, evalConfig, this);
     }
 
     @Test(expectedExceptions = { ShifuException.class, FileNotFoundException.class })
@@ -84,7 +84,7 @@ public class ConfusionMatrixTest {
         evalConfig.setCustomPaths(customPaths);
 
         evalConfig.setPerformanceScoreSelector(null);
-        new ConfusionMatrix(modelConfig, evalConfig, this);
+        new ConfusionMatrix(modelConfig, null, evalConfig, this);
     }
 
     @Test(expectedExceptions = ShifuException.class)
@@ -95,7 +95,7 @@ public class ConfusionMatrixTest {
 
         evalConfig.setPerformanceScoreSelector("diagnosis");
         evalConfig.getDataSet().setTargetColumnName("xxxx");
-        new ConfusionMatrix(modelConfig, evalConfig, this);
+        new ConfusionMatrix(modelConfig, null, evalConfig, this);
     }
 
     @Test
@@ -106,7 +106,7 @@ public class ConfusionMatrixTest {
 
         evalConfig.setPerformanceScoreSelector("diagnosis");
         evalConfig.getDataSet().setTargetColumnName("diagnosis");
-        new ConfusionMatrix(modelConfig, evalConfig);
+        new ConfusionMatrix(modelConfig, null, evalConfig);
     }
 
     @AfterClass
