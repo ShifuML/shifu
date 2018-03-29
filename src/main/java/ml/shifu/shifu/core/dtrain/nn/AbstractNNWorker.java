@@ -403,7 +403,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         // if is one vs all classification, outputNodeCount is set to 1, if classes=2, outputNodeCount is also 1
         int classes = modelConfig.getTags().size();
-        int outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1]
+        this.outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1]
                 : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : (classes == 2 ? 1 : classes));
         this.candidateCount = inputOutputIndex[2];
         boolean isAfterVarSelect = inputOutputIndex[0] != 0;
