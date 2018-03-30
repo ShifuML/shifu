@@ -703,9 +703,13 @@ public class ConfusionMatrix {
                         // final prediction
                         int[] predClasses = new int[classes];
                         double[] scoress = new double[classes];
+                        double[] threhs = new double[classes];
+
                         for(int i = this.multiClassScore1Index; i < (classes + this.multiClassScore1Index); i++) {
                             double dd = NumberFormatUtils.getDouble(raw[i], 0d);
                             scoress[i - this.multiClassScore1Index] = dd;
+                            threhs[i - this.multiClassScore1Index] = (1d - binRatio[i - this.multiClassScore1Index])
+                                    * scoreScale;
                             if(dd > ((1d - binRatio[i - this.multiClassScore1Index]) * scoreScale)) {
                                 predClasses[i - this.multiClassScore1Index] = 1;
                             }

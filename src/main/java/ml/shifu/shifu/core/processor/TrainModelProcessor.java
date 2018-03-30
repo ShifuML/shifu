@@ -408,8 +408,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     // one vs all multiple classification, we need multiple bagging jobs to do ONEVSALL
                     baggingNum = modelConfig.getTags().size();
                 } else {
-                    // native classification, need 1 job
-                    baggingNum = 1;
+                    // native classification, using bagging from setting job, no need set here
                 }
             }
             if(baggingNum != super.getModelConfig().getBaggingNum()) {
