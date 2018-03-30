@@ -146,15 +146,20 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                     this.modelCnt = modelConfig.getTags().size();
                 }
             } else {
-                this.modelCnt = 1;
+                if(modelConfig.getTags().size() == 2) {
+                    // native binary
+                    this.modelCnt = 1;
+                } else {
+                    // native multiple classification model cnt is bagging num
+                    this.modelCnt = (this.modelCnt >= modelConfig.getBaggingNum() ? modelConfig.getBaggingNum()
+                            : this.modelCnt);
+                }
             }
         }
 
         this.scale = scale;
 
-        int modelSize = CommonUtils.locateBasicModels(modelConfig, evalConfig, evalConfig.getDataSet().getSource())
-                .size();
-        log.info("Run eval " + evalConfig.getName() + " with " + modelSize + " model(s).");
+        log.info("Run eval " + evalConfig.getName() + " with " + modelCnt + " model(s).");
 
         // only check if output first hidden layer in regression and NN
         if(modelConfig.isRegression() && Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())) {
@@ -230,14 +235,20 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                         this.modelCnt = modelConfig.getTags().size();
                     }
                 } else {
-                    this.modelCnt = 1;
+                    if(modelConfig.getTags().size() == 2) {
+                        // native binary
+                        this.modelCnt = 1;
+                    } else {
+                        // native multiple classification model cnt is bagging num
+                        this.modelCnt = (this.modelCnt >= modelConfig.getBaggingNum() ? modelConfig.getBaggingNum()
+                                : this.modelCnt);
+                    }
                 }
                 // reset models to
                 models = models.subList(0, this.modelCnt);
                 this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,
                         evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex);
             }
-
             this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
         }
 
