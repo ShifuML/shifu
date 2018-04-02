@@ -137,7 +137,12 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         this.tags = super.modelConfig.getSetTags();
 
+        boolean isColumnSelected = false;
         for(ColumnConfig config: columnConfigList) {
+            if(config.isFinalSelect() && !isColumnSelected) {
+                isColumnSelected = true;
+            }
+
             if(config.isCategorical()) {
                 Map<String, Integer> map = new HashMap<String, Integer>();
                 if(config.getBinCategory() != null) {
@@ -175,6 +180,12 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         } else {
             this.isCompactNorm = Boolean.TRUE.toString().equalsIgnoreCase(
                     Environment.getProperty(Constants.SHIFU_NORM_ONLY_SELECTED, Boolean.FALSE.toString()));
+        }
+
+        // check if has final-select column, then enable real compact norm if user set, isCompact now only works in non
+        // tree model norm output
+        if(isColumnSelected && isCompactNorm) {
+            isCompactNorm = true;
         }
     }
 
@@ -278,18 +289,35 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         tuple.append(df.format(normVal));
                     }
                 } else {
-                    // append normalize data. exclude data clean, for data cleaning, no need check good or bad candidate
-                    if((this.isCompactNorm && config.isFinalSelect()) || (!this.isCompactNorm
-                            && CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression()))) {
-                        // for multiple classification, binPosRate means rate of such category over all counts, reuse
-                        // binPosRate for normalize
-                        List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
-                                this.categoryMissingNormType);
-                        for(Double normVal: normVals) {
-                            tuple.append(df.format(normVal));
+                    if(this.isCompactNorm) {
+                        // only output features and target, weight in compact norm mode
+                        if(config.isFinalSelect()) {
+                            // for multiple classification, binPosRate means rate of such category over all counts,
+                            // reuse binPosRate for normalize
+                            List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
+                                    this.categoryMissingNormType);
+                            for(Double normVal: normVals) {
+                                tuple.append(df.format(normVal));
+                            }
+                        } else {
+                            // if is compact mode but such column is not final selected, should be empty, as only append
+                            // target and finalSelect feature, no need append here so this code block is empty. TODO, do
+                            // we need meta column?
                         }
                     } else {
-                        tuple.append(config.isMeta() ? val : null);
+                        // append normalize data. exclude data clean, for data cleaning, no need check good or bad
+                        // candidate
+                        if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
+                            // for multiple classification, binPosRate means rate of such category over all counts,
+                            // reuse binPosRate for normalize
+                            List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
+                                    this.categoryMissingNormType);
+                            for(Double normVal: normVals) {
+                                tuple.append(df.format(normVal));
+                            }
+                        } else {
+                            tuple.append(config.isMeta() ? val : null);
+                        }
                     }
                 }
             }
@@ -336,16 +364,32 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     continue;
                 }
 
-                // for others
-                if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
-                    List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
-                            this.categoryMissingNormType);
-                    for(Double normVal: normVals) {
-                        tuple.append(df.format(normVal));
+                if(this.isCompactNorm) {
+                    // only output features and target, weight in compact norm mode
+                    if(config.isFinalSelect()) {
+                        List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
+                                this.categoryMissingNormType);
+                        for(Double normVal: normVals) {
+                            tuple.append(df.format(normVal));
+                        }
+                    } else {
+                        // if is compact mode but such column is not final selected, should be empty, as only append
+                        // target and finalSelect feature, no need append here so this code block is empty. TODO, do we
+                        // need meta column?
                     }
                 } else {
-                    tuple.append(config.isMeta() ? val : null);
+                    // for others
+                    if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
+                        List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
+                                this.categoryMissingNormType);
+                        for(Double normVal: normVals) {
+                            tuple.append(df.format(normVal));
+                        }
+                    } else {
+                        tuple.append(config.isMeta() ? val : null);
+                    }
                 }
+
             }
         }
 
@@ -394,34 +438,47 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             StringBuilder schemaStr = new StringBuilder();
             schemaStr.append("Normalized:Tuple(");
             for(ColumnConfig config: columnConfigList) {
-                if(config.isMeta()) {
-                    schemaStr.append(normColumnName(config.getColumnName()) + ":chararray" + ",");
-                } else if(!config.isMeta() && config.isNumerical()) {
-                    schemaStr.append(normColumnName(config.getColumnName()) + ":float" + ",");
-                } else if(config.isTarget()) {
-                    schemaStr.append(normColumnName(config.getColumnName()) + ":int" + ",");
+                if(this.isCompactNorm) {
+                    // if compact norm, only target and final select variables are listed, TODO, follow eval part, do we
+                    // need append eval column
+                    if(config.isTarget()) {
+                        schemaStr.append(normColumnName(config.getColumnName()) + ":int" + ",");
+                    } else if(config.isFinalSelect()) {
+                        schemaStr.append(normColumnName(config.getColumnName()) + ":float" + ",");
+                    }
                 } else {
-                    if(config.isCategorical() && this.isForClean) {
-                        // clean data for DT algorithms, only store index, short is ok while Pig only have int type
+                    if(config.isMeta()) {
                         schemaStr.append(normColumnName(config.getColumnName()) + ":chararray" + ",");
+                    } else if(!config.isMeta() && config.isNumerical()) {
+                        schemaStr.append(normColumnName(config.getColumnName()) + ":float" + ",");
+                    } else if(config.isTarget()) {
+                        schemaStr.append(normColumnName(config.getColumnName()) + ":int" + ",");
                     } else {
-                        // for others, set to float, no matter LR/NN categorical or filter out feature with null
-                        if(modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT)) {
-                            if(CommonUtils.isGoodCandidate(config, super.hasCandidates)) {
-                                for(int i = 0; i < config.getBinCategory().size(); i++) {
-                                    schemaStr.append(normColumnName(config.getColumnName()) + "_" + i + ":float" + ",");
-                                }
-                            }
-                            schemaStr.append(normColumnName(config.getColumnName()) + "_missing" + ":float" + ",");
+                        if(config.isCategorical() && this.isForClean) {
+                            // clean data for DT algorithms, only store index, short is ok while Pig only have int type
+                            schemaStr.append(normColumnName(config.getColumnName()) + ":chararray" + ",");
                         } else {
-                            schemaStr.append(normColumnName(config.getColumnName()) + ":float" + ",");
+                            // for others, set to float, no matter LR/NN categorical or filter out feature with null
+                            if(modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT)) {
+                                if(CommonUtils.isGoodCandidate(config, super.hasCandidates)) {
+                                    for(int i = 0; i < config.getBinCategory().size(); i++) {
+                                        schemaStr.append(
+                                                normColumnName(config.getColumnName()) + "_" + i + ":float" + ",");
+                                    }
+                                }
+                                schemaStr.append(normColumnName(config.getColumnName()) + "_missing" + ":float" + ",");
+                            } else {
+                                schemaStr.append(normColumnName(config.getColumnName()) + ":float" + ",");
+                            }
                         }
                     }
                 }
             }
             schemaStr.append("weight:float)");
             return Utils.getSchemaFromString(schemaStr.toString());
-        } catch (Exception e) {
+        } catch (
+
+        Exception e) {
             log.error("error in outputSchema", e);
             return null;
         }
