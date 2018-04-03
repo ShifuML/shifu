@@ -29,6 +29,7 @@ import org.apache.commons.jexl2.JexlContext;
 import org.apache.commons.jexl2.JexlEngine;
 import org.apache.commons.jexl2.MapContext;
 import org.apache.commons.lang.StringUtils;
+import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
@@ -97,6 +98,16 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
      * POSRATE.
      */
     private CategoryMissingNormType categoryMissingNormType = CategoryMissingNormType.POSRATE;
+
+    /**
+     * Output compact column list for #isCompactNorm, schema is: tag, meta columns, feature list, weight
+     */
+    private List<String> outputCompactColumns;
+
+    /**
+     * Like schema in {@link #outputCompactColumns}, here is size of first tag and meta columns for output schema
+     */
+    private int cntOfTargetAndMetaColumns;
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         this(source, pathModelConfig, pathColumnConfig, "false");
@@ -187,6 +198,24 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         if(isColumnSelected && isCompactNorm) {
             isCompactNorm = true;
         }
+
+        // store schema list with format: tag, meta column, selected feature list, weight int a list
+        if(isCompactNorm) {
+            outputCompactColumns = new ArrayList<String>();
+            outputCompactColumns.add(normColumnName(CommonUtils.findTargetColumn(columnConfigList).getColumnName()));
+            for(ColumnConfig config: columnConfigList) {
+                if(config.isMeta() && !config.isTarget()) {
+                    outputCompactColumns.add(normColumnName(config.getColumnName()));
+                }
+            }
+            // set cnt for outputschema reference
+            cntOfTargetAndMetaColumns = outputCompactColumns.size();
+            for(ColumnConfig config: columnConfigList) {
+                if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
+                    outputCompactColumns.add(normColumnName(config.getColumnName()));
+                }
+            }
+        }
     }
 
     @SuppressWarnings("deprecation")
@@ -228,6 +257,11 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         Tuple tuple = TupleFactory.getInstance().newTuple();
         final NormType normType = modelConfig.getNormalizeType();
 
+        Map<String, Object> compactVarMap = null;
+        if(this.isCompactNorm) {
+            compactVarMap = new HashMap<String, Object>();
+        }
+
         if(!this.isForExpressions) {
             for(int i = 0; i < input.size(); i++) {
                 ColumnConfig config = columnConfigList.get(i);
@@ -251,7 +285,11 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                                     WarnInNormalizeUDF.INVALID_TAG);
                             return null;
                         }
-                        tuple.append(type);
+                        if(this.isCompactNorm) {
+                            compactVarMap.put(normColumnName(config.getColumnName()), type);
+                        } else {
+                            tuple.append(type);
+                        }
                     } else {
                         int index = -1;
                         for(int j = 0; j < tags.size(); j++) {
@@ -267,7 +305,11 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                                     WarnInNormalizeUDF.INVALID_TAG);
                             return null;
                         }
-                        tuple.append(index);
+                        if(this.isCompactNorm) {
+                            compactVarMap.put(normColumnName(config.getColumnName()), index);
+                        } else {
+                            tuple.append(index);
+                        }
                     }
                     continue;
                 }
@@ -291,14 +333,17 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 } else {
                     if(this.isCompactNorm) {
                         // only output features and target, weight in compact norm mode
-                        if(config.isFinalSelect()) {
+                        if(!config.isMeta() && config.isFinalSelect()) {
                             // for multiple classification, binPosRate means rate of such category over all counts,
                             // reuse binPosRate for normalize
                             List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
                                     this.categoryMissingNormType);
                             for(Double normVal: normVals) {
-                                tuple.append(df.format(normVal));
+                                String formatVal = df.format(normVal);
+                                compactVarMap.put(normColumnName(config.getColumnName()), formatVal);
                             }
+                        } else if(config.isMeta()) {
+                            compactVarMap.put(normColumnName(config.getColumnName()), val);
                         } else {
                             // if is compact mode but such column is not final selected, should be empty, as only append
                             // target and finalSelect feature, no need append here so this code block is empty. TODO, do
@@ -343,7 +388,11 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                                     WarnInNormalizeUDF.INVALID_TAG);
                             return null;
                         }
-                        tuple.append(type);
+                        if(this.isCompactNorm) {
+                            compactVarMap.put(normColumnName(config.getColumnName()), type);
+                        } else {
+                            tuple.append(type);
+                        }
                     } else {
                         int index = -1;
                         for(int j = 0; j < tags.size(); j++) {
@@ -359,23 +408,32 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                                     WarnInNormalizeUDF.INVALID_TAG);
                             return null;
                         }
-                        tuple.append(index);
+                        if(this.isCompactNorm) {
+                            compactVarMap.put(normColumnName(config.getColumnName()), index);
+                        } else {
+                            tuple.append(index);
+                        }
                     }
                     continue;
                 }
 
                 if(this.isCompactNorm) {
                     // only output features and target, weight in compact norm mode
-                    if(config.isFinalSelect()) {
+                    if(!config.isMeta() && config.isFinalSelect()) {
+                        // for multiple classification, binPosRate means rate of such category over all counts,
+                        // reuse binPosRate for normalize
                         List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
                                 this.categoryMissingNormType);
                         for(Double normVal: normVals) {
-                            tuple.append(df.format(normVal));
+                            String formatVal = df.format(normVal);
+                            compactVarMap.put(normColumnName(config.getColumnName()), formatVal);
                         }
+                    } else if(config.isMeta()) {
+                        compactVarMap.put(normColumnName(config.getColumnName()), val);
                     } else {
                         // if is compact mode but such column is not final selected, should be empty, as only append
-                        // target and finalSelect feature, no need append here so this code block is empty. TODO, do we
-                        // need meta column?
+                        // target and finalSelect feature, no need append here so this code block is empty. TODO, do
+                        // we need meta column?
                     }
                 } else {
                     // for others
@@ -390,6 +448,13 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     }
                 }
 
+            }
+        }
+
+        // for compact norm mode, output to tuple at here
+        if(this.isCompactNorm) {
+            for(int i = 0; i < outputCompactColumns.size(); i++) {
+                tuple.append(compactVarMap.get(outputCompactColumns.get(i)));
             }
         }
 
@@ -436,17 +501,31 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     public Schema outputSchema(Schema input) {
         try {
             StringBuilder schemaStr = new StringBuilder();
-            schemaStr.append("Normalized:Tuple(");
-            for(ColumnConfig config: columnConfigList) {
-                if(this.isCompactNorm) {
-                    // if compact norm, only target and final select variables are listed, TODO, follow eval part, do we
-                    // need append eval column
-                    if(config.isTarget()) {
-                        schemaStr.append(normColumnName(config.getColumnName()) + ":int" + ",");
-                    } else if(config.isFinalSelect()) {
-                        schemaStr.append(normColumnName(config.getColumnName()) + ":float" + ",");
+            Schema tupleSchema = null;
+            if(this.isCompactNorm) {
+                // compact norm, no need to Normalized schema
+                tupleSchema = new Schema();
+            } else {
+                schemaStr.append("Normalized:Tuple(");
+            }
+
+            if(this.isCompactNorm) {
+                // compact norm mode, schema is tag, meta columns, feature columns and weight
+                for(int i = 0; i < outputCompactColumns.size(); i++) {
+                    String normName = normColumnName(outputCompactColumns.get(i));
+                    if(i == 0) {
+                        // target column
+                        tupleSchema.add(new Schema.FieldSchema(normName, DataType.INTEGER));
+                    } else if(i < cntOfTargetAndMetaColumns) {
+                        // meta column
+                        tupleSchema.add(new Schema.FieldSchema(normName, DataType.CHARARRAY));
+                    } else {
+                        // feature column
+                        tupleSchema.add(new Schema.FieldSchema(normName, DataType.FLOAT));
                     }
-                } else {
+                }
+            } else {
+                for(ColumnConfig config: columnConfigList) {
                     if(config.isMeta()) {
                         schemaStr.append(normColumnName(config.getColumnName()) + ":chararray" + ",");
                     } else if(!config.isMeta() && config.isNumerical()) {
@@ -455,7 +534,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         schemaStr.append(normColumnName(config.getColumnName()) + ":int" + ",");
                     } else {
                         if(config.isCategorical() && this.isForClean) {
-                            // clean data for DT algorithms, only store index, short is ok while Pig only have int type
+                            // clean data for DT algorithms, only store index, short is ok while Pig only have int
+                            // type
                             schemaStr.append(normColumnName(config.getColumnName()) + ":chararray" + ",");
                         } else {
                             // for others, set to float, no matter LR/NN categorical or filter out feature with null
@@ -474,11 +554,17 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     }
                 }
             }
-            schemaStr.append("weight:float)");
-            return Utils.getSchemaFromString(schemaStr.toString());
-        } catch (
 
-        Exception e) {
+            if(this.isCompactNorm) {
+                tupleSchema.add(new Schema.FieldSchema("weight", DataType.FLOAT));
+                // TODO, Even set nul schema alias, final pig_header output still has null::weight or ::weight, we would
+                // like to have weight only.
+                return new Schema(new Schema.FieldSchema("Normalized", tupleSchema, DataType.TUPLE));
+            } else {
+                schemaStr.append("weight:float)");
+                return Utils.getSchemaFromString(schemaStr.toString());
+            }
+        } catch (Exception e) {
             log.error("error in outputSchema", e);
             return null;
         }
