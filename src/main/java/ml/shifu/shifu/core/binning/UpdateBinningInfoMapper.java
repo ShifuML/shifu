@@ -411,17 +411,6 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         }
     }
 
-    public static void main(String[] args) {
-        Set<String> missingOrInvalidValues = new HashSet<String>();
-        missingOrInvalidValues.add("?");
-        missingOrInvalidValues.add("");
-        missingOrInvalidValues.add("*");
-        missingOrInvalidValues.add("#");
-        missingOrInvalidValues.add("null");
-        missingOrInvalidValues.add("~");
-        System.out.println(missingOrInvalidValues.contains("160.1.100.36"));
-    }
-
     private void populateStats(String[] units, String tag, Double weight, int columnIndex, int newCCIndex) {
         ColumnConfig columnConfig = this.columnConfigList.get(columnIndex);
 
