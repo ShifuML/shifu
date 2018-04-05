@@ -57,8 +57,6 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
 
     private final static Logger LOG = LoggerFactory.getLogger(UpdateBinningInfoReducer.class);
 
-    private static final int MAX_CATEGORICAL_BINC_COUNT = 5000;
-
     private static final double EPS = 1e-6;
 
     /**
@@ -82,6 +80,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
     private DecimalFormat df = new DecimalFormat("##.######");
 
     private boolean statsExcludeMissingValue;
+
+    private int maxCateSize;
 
     /**
      * Model Config read from HDFS
@@ -109,6 +109,9 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
      */
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
+        this.maxCateSize = context.getConfiguration().getInt(Constants.SHIFU_MAX_CATEGORY_SIZE,
+                Constants.MAX_CATEGORICAL_BINC_COUNT);
+
         loadConfigFiles(context);
 
         this.statsExcludeMissingValue = context.getConfiguration().getBoolean(Constants.SHIFU_STATS_EXLCUDE_MISSING,
@@ -288,7 +291,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         String binBounString = null;
 
         if(columnConfig.isHybrid()) {
-            if(binCategories.size() > MAX_CATEGORICAL_BINC_COUNT) {
+            if(binCategories.size() > this.maxCateSize) {
                 LOG.warn("Column {} {} with invalid bin category size.", key.get(), columnConfig.getColumnName(),
                         binCategories.size());
                 return;
@@ -297,7 +300,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             binBounString += Constants.HYBRID_BIN_STR_DILIMETER + Base64Utils.base64Encode(
                     "[" + StringUtils.join(binCategories, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR) + "]");
         } else if(columnConfig.isCategorical()) {
-            if(binCategories.size() > MAX_CATEGORICAL_BINC_COUNT) {
+            if(binCategories.size() > this.maxCateSize) {
                 LOG.warn("Column {} {} with invalid bin category size.", key.get(), columnConfig.getColumnName(),
                         binCategories.size());
                 return;

@@ -111,9 +111,16 @@ public class NNWorker extends AbstractNNWorker<Text> {
                             // tags like [0, 1, 2, 3] compared with ["a", "b", "c", "d"]
                             ideal[outputIndex++] = Float.compare(floatValue, trainerId) == 0 ? 1f : 0f;
                         } else {
-                            LOG.info("target value is {}", floatValue);
-                            int ideaIndex = (int) floatValue;
-                            ideal[ideaIndex] = 1f;
+                            if(modelConfig.getTags().size() == 2) {
+                                // if only 2 classes, output node is 1 node. if target = 0 means 0 is the index for
+                                // positive prediction, set positive to 1 and negative to 0
+                                int ideaIndex = (int) floatValue;
+                                ideal[0] = ideaIndex == 0 ? 1f : 0f;
+                            } else {
+                                // for multiple classification
+                                int ideaIndex = (int) floatValue;
+                                ideal[ideaIndex] = 1f;
+                            }
                         }
                     }
                     pos++;
