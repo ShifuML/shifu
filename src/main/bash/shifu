@@ -97,7 +97,7 @@ function find_ld_library_path() {
 
 function record_shifu_usage() {
     if [ ${HADOOP_ROOT} != "" ]; then
-		nohup ${SHIFU_HOME}/bin/shifu_statistics.sh "$@" >& /dev/null &
+        nohup ${SHIFU_HOME}/bin/shifu_statistics.sh "$@" >& /dev/null &
     fi
 }
 
@@ -204,7 +204,7 @@ JAVA_OPTIONS="-server -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:CMSInitiating
 
 case ${COMMAND} in
     "modelset")
-    	record_shifu_usage "$@"
+        record_shifu_usage "$@"
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     "varselect"|"varsel")
@@ -251,7 +251,7 @@ case ${COMMAND} in
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     *)
-    	record_shifu_usage "$@"
+        record_shifu_usage "$@"
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
 esac
