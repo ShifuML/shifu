@@ -469,7 +469,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                 if(this.modelCnt > 0) {
                     addModelSchema(tupleSchema, this.modelCnt, "");
                 } else {
-                    throw new IllegalStateException("No any model found!");
+                    // throw new IllegalStateException("No any model found!");
                 }
 
                 if(this.outputHiddenLayerIndex != 0) {

@@ -380,6 +380,7 @@
                     {"label":"old zscale mode", "value":"OLD_ZSCALE"},
                     {"label":"zscale mode", "value":"ZSCALE"},
                     {"label":"same as zscale mode", "value":"ZSCORE"},
+                    {"label":"asIs mode", "value":"ASIS"},
                     {"label":"woe mode", "value":"WOE"},
                     {"label":"weight woe mode", "value":"WEIGHT_WOE"},
                     {"label":"hybrid mode", "value":"HYBRID"},
