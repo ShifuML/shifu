@@ -221,8 +221,10 @@ public class Normalizer {
     public static List<Double> normalize(ColumnConfig config, String raw, Double cutoff,
             ModelNormalizeConf.NormType type, CategoryMissingNormType categoryMissingNormType) {
         switch(type) {
-            case ASIS:
-                return asIsNormalize(config, raw);
+            case ASIS_WOE:
+                return asIsNormalize(config, raw, true);
+            case ASIS_PR:
+                return asIsNormalize(config, raw, false);
             case WOE:
                 return woeNormalize(config, raw, false);
             case WEIGHT_WOE:
@@ -252,7 +254,7 @@ public class Normalizer {
         }
     }
 
-    private static List<Double> asIsNormalize(ColumnConfig config, String raw) {
+    private static List<Double> asIsNormalize(ColumnConfig config, String raw, boolean toUseWoe) {
         if ( config.isNumerical() ) {
             Double values[] = new Double[1];
             try {
@@ -263,7 +265,11 @@ public class Normalizer {
             }
             return Arrays.asList(values);
         } else {
-            throw new RuntimeException("Categorical variable doesn't support ASIS normalization method.");
+            // categorical variables
+            List<Double> normVals = (toUseWoe ? config.getBinCountWoe() : config.getBinPosRate());
+            int binIndex = CommonUtils.getBinNum(config, raw);
+            return ((binIndex == -1) ? Arrays.asList(new Double[] { normVals.get(normVals.size() - 1) })
+                    : Arrays.asList(new Double[] { normVals.get(binIndex) }));
         }
     }
 
