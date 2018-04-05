@@ -202,4 +202,29 @@ public class NormalizerTest {
         // Assert.assertEquals(Normalizer.normalize(config, null, 23.0, NormType.WEIGHT_WOE_ZSCORE), -1.6);
     }
 
+    @Test
+    public void testAsIsNorm() {
+        // Input setting
+        ColumnConfig config = new ColumnConfig();
+        config.setMean(0.2);
+        config.setStdDev(1.0);
+        config.setColumnType(ColumnType.N);
+
+        Assert.assertEquals(Normalizer.normalize(config, "10", null , NormType.ASIS_PR).get(0), 10.0);
+        Assert.assertEquals(Normalizer.normalize(config, "10", null , NormType.ASIS_WOE).get(0), 10.0);
+        Assert.assertEquals(Normalizer.normalize(config, "10ab", null , NormType.ASIS_WOE).get(0), 0.2);
+
+        config.setColumnType(ColumnType.C);
+        config.setBinCategory(Arrays.asList(new String[]{"a", "b", "c"}));
+        config.getColumnBinning().setBinCountWoe(Arrays.asList(new Double[]{0.2, 0.3, -0.1, 0.5}));
+        config.getColumnBinning().setBinPosRate(Arrays.asList(new Double[]{0.1, 0.15, 0.4, 0.25}));
+
+        Assert.assertEquals(Normalizer.normalize(config, "b", null , NormType.ASIS_PR).get(0), 0.15);
+        Assert.assertEquals(Normalizer.normalize(config, "", null , NormType.ASIS_PR).get(0), 0.25);
+        Assert.assertEquals(Normalizer.normalize(config, "c", null , NormType.ASIS_PR).get(0), 0.4);
+        Assert.assertEquals(Normalizer.normalize(config, "b", null , NormType.ASIS_WOE).get(0), 0.3);
+        Assert.assertEquals(Normalizer.normalize(config, "", null , NormType.ASIS_WOE).get(0), 0.5);
+        Assert.assertEquals(Normalizer.normalize(config, "c", null , NormType.ASIS_WOE).get(0), -0.1);
+    }
+
 }
