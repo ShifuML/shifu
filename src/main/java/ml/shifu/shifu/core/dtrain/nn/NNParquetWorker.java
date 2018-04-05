@@ -69,7 +69,8 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
 
         if(super.isDry) {
             // dry train, use empty data.
-            addDataPairToDataSet(0, new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal)));
+            addDataPairToDataSet(0,
+                    new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(ideal)));
             return;
         }
 
@@ -96,8 +97,8 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                     floatValue = (Float) element;
                 } else {
                     // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-                    floatValue = element.toString().length() == 0 ? 0f : NumberFormatUtils.getFloat(element.toString(),
-                            0f);
+                    floatValue = element.toString().length() == 0 ? 0f
+                            : NumberFormatUtils.getFloat(element.toString(), 0f);
                 }
             }
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
@@ -117,8 +118,8 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                     significance = (Float) element;
                 } else {
                     // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-                    significance = element.toString().length() == 0 ? 1f : NumberFormatUtils.getFloat(
-                            element.toString(), 1f);
+                    significance = element.toString().length() == 0 ? 1f
+                            : NumberFormatUtils.getFloat(element.toString(), 1f);
                 }
                 // if invalid weight, set it to 1f and warning in log
                 if(Float.compare(significance, 0f) < 0) {
@@ -136,8 +137,8 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                         significance = (Float) element;
                     } else {
                         // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-                        significance = element.toString().length() == 0 ? 1f : NumberFormatUtils.getFloat(
-                                element.toString(), 1f);
+                        significance = element.toString().length() == 0 ? 1f
+                                : NumberFormatUtils.getFloat(element.toString(), 1f);
                     }
                     break;
                 } else {
@@ -146,14 +147,13 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                         if(modelConfig.isRegression()) {
                             ideal[outputIndex++] = floatValue;
                         } else {
-                            if(modelConfig.getTrain().isOneVsAll()) {
-                                // if one vs all, set correlated idea value according to trainerId which means in
-                                // trainer
-                                // with id 0, target 0 is treated with 1, other are 0. Such target value are set to
-                                // index of
-                                // tags like [0, 1, 2, 3] compared with ["a", "b", "c", "d"]
-                                ideal[outputIndex++] = Float.compare(floatValue, trainerId) == 0 ? 1f : 0f;
+                            if(modelConfig.getTags().size() == 2) {
+                                // if only 2 classes, output node is 1 node. if target = 0 means 0 is the index for
+                                // positive prediction, set positive to 1 and negative to 0
+                                int ideaIndex = (int) floatValue;
+                                ideal[0] = ideaIndex == 0 ? 1f : 0f;
                             } else {
+                                // for multiple classification
                                 int ideaIndex = (int) floatValue;
                                 ideal[ideaIndex] = 1f;
                             }
@@ -178,8 +178,9 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                 // should take 1-0.8 to check endHashCode
                 int endHashCode = startHashCode
                         + Double.valueOf((1d - this.modelConfig.getBaggingSampleRate()) * 100).intValue();
-                if((modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
-                        .isOneVsAll())) // regression or onevsall
+                if((modelConfig.isRegression()
+                        || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll())) // regression or
+                                                                                                    // onevsall
                         && (int) (ideal[0] + 0.01d) == 0 // negative record
                         && isInRange(hashcode, startHashCode, endHashCode)) {
                     return;
@@ -187,8 +188,9 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
             } else {
                 // if not fixed initial input, and for regression or onevsall multiple classification (regression also).
                 // if negative record
-                if((modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
-                        .isOneVsAll())) // regression or onevsall
+                if((modelConfig.isRegression()
+                        || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll())) // regression or
+                                                                                                    // onevsall
                         && (int) (ideal[0] + 0.01d) == 0 // negative record
                         && Double.compare(super.sampelNegOnlyRandom.nextDouble(),
                                 this.modelConfig.getBaggingSampleRate()) >= 0) {
@@ -233,8 +235,8 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
     private void initFieldList() {
         if(requiredFieldList == null) {
             try {
-                requiredFieldList = (RequiredFieldList) ObjectSerializer.deserialize(super.props
-                        .getProperty("parquet.private.pig.required.fields"));
+                requiredFieldList = (RequiredFieldList) ObjectSerializer
+                        .deserialize(super.props.getProperty("parquet.private.pig.required.fields"));
                 LOG.debug("required list: {}", requiredFieldList);
             } catch (IOException e) {
                 throw new RuntimeException(e);

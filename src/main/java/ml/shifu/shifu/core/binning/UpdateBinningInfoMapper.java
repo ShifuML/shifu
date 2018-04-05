@@ -143,12 +143,12 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
      */
     private void loadConfigFiles(final Context context) {
         try {
-            SourceType sourceType = SourceType.valueOf(context.getConfiguration().get(
-                    Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
-            this.modelConfig = CommonUtils.loadModelConfig(
-                    context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG), sourceType);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+            SourceType sourceType = SourceType.valueOf(
+                    context.getConfiguration().get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
+            this.modelConfig = CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
+                    sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -194,8 +194,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         this.missingOrInvalidValues = new HashSet<String>(this.modelConfig.getDataSet().getMissingOrInvalidValues());
 
-        this.isThrowforWeightException = "true".equalsIgnoreCase(context.getConfiguration().get(
-                "shifu.weight.exception", "false"));
+        this.isThrowforWeightException = "true"
+                .equalsIgnoreCase(context.getConfiguration().get("shifu.weight.exception", "false"));
 
         LOG.debug("Column binning info: {}", this.columnBinningInfo);
     }
@@ -349,7 +349,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         String[] units = CommonUtils.split(valueStr, this.dataSetDelimiter);
         // tagColumnNum should be in units array, if not IndexOutofBoundException
-        if ( units.length != this.columnConfigList.size() ) {
+        if(units.length != this.columnConfigList.size()) {
             LOG.error("Data column length doesn't match with ColumnConfig size. Just skip.");
             return;
         }
@@ -615,9 +615,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         for(Map.Entry<Integer, BinningInfoWritable> entry: this.columnBinningInfo.entrySet()) {
             CountAndFrequentItems cfi = this.variableCountMap.get(entry.getKey());
             if(cfi != null) {
-                entry.getValue().setCfiw(
-                        new CountAndFrequentItemsWritable(cfi.getCount(), cfi.getInvalidCount(),
-                                cfi.getValidNumCount(), cfi.getHyper().getBytes(), cfi.getFrequentItems()));
+                entry.getValue().setCfiw(new CountAndFrequentItemsWritable(cfi.getCount(), cfi.getInvalidCount(),
+                        cfi.getValidNumCount(), cfi.getHyper().getBytes(), cfi.getFrequentItems()));
             } else {
                 entry.getValue().setEmpty(true);
                 LOG.warn("cci is null for column {}", entry.getKey());

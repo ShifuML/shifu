@@ -155,8 +155,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             return;
         }
 
-        double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON) ? context.getMasterResult()
-                .getTrainError() : context.getMasterResult().getTestError());
+        double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON)
+                ? context.getMasterResult().getTrainError()
+                : context.getMasterResult().getTestError());
 
         // save the weights according the error decreasing
         if(currentError < this.minTestError) {
@@ -257,8 +258,8 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      * Save tmp nn model to HDFS.
      */
     private void saveTmpNNToHDFS(int iteration, double[] weights) {
-        Path out = new Path(DTrainUtils.getTmpModelName(this.tmpModelsFolder, this.trainerId, iteration, modelConfig
-                .getTrain().getAlgorithm().toLowerCase()));
+        Path out = new Path(DTrainUtils.getTmpModelName(this.tmpModelsFolder, this.trainerId, iteration,
+                modelConfig.getTrain().getAlgorithm().toLowerCase()));
         writeModelWeightsToFileSystem(weights, out, false);
     }
 
@@ -272,8 +273,8 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             loadConfigFiles(context.getProps());
             this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
             this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);
-            gridSearch = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
-                    .getGridConfigFileContent());
+            gridSearch = new GridSearch(modelConfig.getTrain().getParams(),
+                    modelConfig.getTrain().getGridConfigFileContent());
             validParams = this.modelConfig.getTrain().getParams();
             if(gridSearch.hasHyperParam()) {
                 validParams = gridSearch.getParams(Integer.parseInt(trainerId));
@@ -321,12 +322,12 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      */
     private void loadConfigFiles(final Properties props) {
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
-                    SourceType.HDFS.toString()));
+            SourceType sourceType = SourceType
+                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -338,9 +339,10 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
                 this.columnConfigList);
         @SuppressWarnings("unused")
         int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        // if is one vs all classification, outputNodeCount is set to 1
+        // if is one vs all classification, outputNodeCount is set to 1, if classes=2, outputNodeCount is also 1
+        int classes = modelConfig.getTags().size();
         int outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1]
-                : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : modelConfig.getTags().size());
+                : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : (classes == 2 ? 1 : classes));
         int numLayers = (Integer) validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
