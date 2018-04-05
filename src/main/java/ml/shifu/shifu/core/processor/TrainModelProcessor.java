@@ -398,9 +398,19 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_TMP_MODELS_FOLDER,
                 tmpModelsPath.toString()));
         int baggingNum = isForVarSelect ? 1 : super.getModelConfig().getBaggingNum();
-        if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
-            // one vs all multiple classification, we need multiple bagging jobs to do ONEVSALL
-            baggingNum = modelConfig.getTags().size();
+        if(modelConfig.isClassification()) {
+            int classes = modelConfig.getTags().size();
+            if(classes == 2) {
+                // binary classification, only need one job
+                baggingNum = 1;
+            } else {
+                if(modelConfig.getTrain().isOneVsAll()) {
+                    // one vs all multiple classification, we need multiple bagging jobs to do ONEVSALL
+                    baggingNum = modelConfig.getTags().size();
+                } else {
+                    // native classification, using bagging from setting job, no need set here
+                }
+            }
             if(baggingNum != super.getModelConfig().getBaggingNum()) {
                 LOG.warn("'train:baggingNum' is set to {} because of ONEVSALL multiple classification.", baggingNum);
             }
@@ -1305,7 +1315,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             // otherwise, let dynamic combine size works
         }
 
-        // set to dynamic to save mappers, sometimes maybe OOM, users should tune guagua.split.maxCombinedSplitSize
         // in shifuconfig; by default it is 200M, consider in some cases user selects only a half of features, this
         // number should be 400m
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
@@ -1325,12 +1334,19 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             // 0.85 is a factor if selected ratio is 0.5 and only be effective if selected ratio over 2
             ratio = 0.85 * ratio;
         }
+
         long finalCombineSize = Double.valueOf((maxCombineSize * 1d * (ratio))).longValue();
 
         if(finalCombineSize != 0L && actualFileSize / finalCombineSize < 25) {
             // we can leverage more workers.
             finalCombineSize /= 2;
         }
+
+        if((actualFileSize / finalCombineSize) > 1000L) {
+            // auto tunning, no more than 1500 workers
+            finalCombineSize = (actualFileSize / 1000L);
+        }
+
         return finalCombineSize;
     }
 
