@@ -134,6 +134,7 @@
                 <include>*:log4j:*</include>
                 <include>*:netty:*</include>
                 <include>*:pig:*</include>
+                <include>*:piggybank:*</include>
                 <include>*:scala-library:*</include>
                 <include>*:shifu:*</include>
                 <include>*:slf4j-api:*</include>

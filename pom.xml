@@ -220,6 +220,11 @@
 			<artifactId>commons-lang3</artifactId>
 			<version>3.3.2</version>
 		</dependency>
+        <dependency>
+            <groupId>org.apache.pig</groupId>
+            <artifactId>piggybank</artifactId>
+            <version>0.14.0</version>
+        </dependency>
 	</dependencies>
 	<build>
 		<resources>
@@ -731,6 +736,17 @@
 					</exclusions>
 					<classifier>h2</classifier>
 				</dependency>
+                <dependency>
+                    <groupId>org.apache.pig</groupId>
+                    <artifactId>piggybank</artifactId>
+                    <version>0.14.0</version>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>*</groupId>
+                            <artifactId>*</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
 				<dependency>
 					<groupId>dk.brics.automaton</groupId>
 					<artifactId>automaton</artifactId>
