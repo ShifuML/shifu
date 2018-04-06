@@ -37,6 +37,7 @@ public interface Constants {
     public static final String MODEL_SETS = "ModelSets";
 
     public static final String TMP = "tmp";
+    public static final String VAR_SELECT = "varsel";
     public static final String MODELS_TMP = "modelsTmp";
 
     public static final String PIG_HEADER = ".pig_header";
@@ -84,7 +85,7 @@ public interface Constants {
     public static final String BZ2_SUFFIX = ".bz2";
     public static final String GZ_SUFFIX = ".gz";
 
-    public static final String MAPREDUCE_OUTPUT_PREFIX = "part-";
+    public static final String HADOOP_PART_PREFIX = "part";
     public static final String HIDDEN_FILES = ".";
     public static final String BACK_SLASH = "\\";
     public static final String SLASH = "/";
@@ -137,6 +138,8 @@ public interface Constants {
     public static final String CLEANED_VALIDATION_DATA = "CleanedValidationData";
     public static final String SHUFFLED_DATA_PATH = "ShuffledData";
 
+    public static final String VAR_SEL_HISTORY = "varsel.history";
+    public static final String CORR_EXPORT_PATH = "vars_corr.csv";
     public static final String TRAIN_SCORES = "TrainScores";
     public static final String BIN_AVG_SCORE = "BinAvgScore";
     public static final String CORRELATION_PATH = "CorrelationPath";
@@ -158,12 +161,13 @@ public interface Constants {
     public static final String KEY_CORRELATION_PATH = "correlationPath";
 
     public static final String DEFAULT_META_COLUMN_FILE = "meta.column.names";
+    public static final String DEFAULT_APPEND_COLUMN_FILE = "append.column.names";
     public static final String DEFAULT_CATEGORICAL_COLUMN_FILE = "categorical.column.names";
     public static final String DEFAULT_HYBRID_COLUMN_FILE = "hybrid.column.names";
     public static final String DEFAULT_CANDIDATE_COLUMN_FILE = "candidate.column.names";
     public static final String DEFAULT_FORCESELECT_COLUMN_FILE = "forceselect.column.names";
     public static final String DEFAULT_FORCEREMOVE_COLUMN_FILE = "forceremove.column.names";
-    public static final String DEFAULT_EVALSCORE_META_COLUMN_FILE = "score.meta.column.names";
+    public static final String DEFAULT_CHAMPIONSCORE_META_COLUMN_FILE = "champion.score.column.names";
     public static final String DEFAULT_EXPRESSION_COLUMN_FILE = "filter.expressions";
 
     public static final String VAR_SEL_MASTER_CONDUCTOR = "dvarsel.master.conductor.cls";
@@ -301,13 +305,28 @@ public interface Constants {
     public static final String IV_KEEP_RATIO = "IV_KEEP_RATIO";
     public static final String MINIMUM_BIN_INST_CNT = "MINIMUM_BIN_INST_CNT";
 
+    public static final String IS_TO_RESET = "IS_TO_RESET";
+    public static final String IS_TO_LIST = "IS_TO_LIST";
+    public static final String IS_TO_FILTER_AUTO = "IS_TO_FILTER_AUTO";
+    public static final String IS_TO_RECOVER_AUTO = "IS_TO_RECOVER_AUTO";
+
+    public static final String RECURSIVE_CNT = "RECURSIVE_CNT";
+    public static final String IS_TO_SHUFFLE_DATA = "IS_TO_SHUFFLE_DATA";
+
     /**
      * GBT score range is not in [0, 1], to make it in [0, 1], such strategies are provided with case insensitive.
      */
     public static String GBT_SCORE_RAW_CONVETER = "RAW";
     public static String GBT_SCORE_SIGMOID_CONVETER = "SIGMOID";
+    public static String GBT_SCORE_OLD_SIGMOID_CONVETER = "OLD_SIGMOID";
     public static String GBT_SCORE_CUTOFF_CONVETER = "CUTOFF";
     public static String GBT_SCORE_HALF_CUTOFF_CONVETER = "HALF_CUTOFF";
     public static String GBT_SCORE_MAXMIN_SCALE_CONVETER = "MAXMIN";
 
+    public static final String SHIFU_SEGMENT_EXPRESSIONS = "shifu.segment.expressions";
+    public static final String SHIFU_NORM_CATEGORY_MISSING_NORM = "shifu.norm.category.missing.norm";
+    
+    public static final String SHIFU_EVAL_NORM_APPEND_SCORE = "shifu.eval.norm.appendscore";
+    public static final String SHIFU_EVAL_NORM_OUTPUTRAW = "shifu.eval.norm.outputraw";
+    public static final String SHIFU_NORM_ONLY_SELECTED = "shifu.norm.only.selected";
 }

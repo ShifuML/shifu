@@ -81,6 +81,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
         resultMap = new HashMap<Integer, StreamBulletin>();
 
         subModelsCnt = new TreeMap<String, Integer>();
+        @SuppressWarnings("deprecation")
         List<ModelSpec> subModels = CommonUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
                 evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb());
         if(CollectionUtils.isNotEmpty(subModels)) {

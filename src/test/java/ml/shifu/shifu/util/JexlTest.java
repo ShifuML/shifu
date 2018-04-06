@@ -15,6 +15,8 @@
  */
 package ml.shifu.shifu.util;
 
+import java.text.DecimalFormat;
+
 import org.apache.commons.jexl2.Expression;
 import org.apache.commons.jexl2.JexlContext;
 import org.apache.commons.jexl2.JexlEngine;
@@ -22,8 +24,6 @@ import org.apache.commons.jexl2.MapContext;
 import org.apache.commons.lang.math.NumberUtils;
 import org.testng.Assert;
 import org.testng.annotations.Test;
-
-import java.text.DecimalFormat;
 
 /**
  * JexlTest class
@@ -51,6 +51,28 @@ public class JexlTest {
         jc.set("bad_num", "2");
         isEqual = (Boolean) e.evaluate(jc);
         Assert.assertTrue(isEqual);
+    }
+
+    @Test
+    public void testJavaExpressionNotNull() {
+        JexlEngine jexl = new JexlEngine();
+        String jexlExp = "bad_num != \"NULL\"";
+
+        Expression e = jexl.createExpression(jexlExp);
+
+        JexlContext jc = new MapContext();
+        jc.set("bad_num", "2");
+
+        // Now evaluate the expression, getting the result
+        Boolean isEqual = (Boolean) e.evaluate(jc);
+        Assert.assertTrue(isEqual);
+
+        jc = new MapContext();
+        jc.set("bad_num", "NULL");
+
+        // Now evaluate the expression, getting the result
+        isEqual = (Boolean) e.evaluate(jc);
+        Assert.assertFalse(isEqual);
     }
 
     @Test
@@ -111,7 +133,32 @@ public class JexlTest {
         Assert.assertEquals(Boolean.TRUE, e.evaluate(jc));
         Assert.assertEquals(Boolean.FALSE, exp.evaluate(jc));
     }
-    
+
+    @Test
+    public void testJavaEqual() {
+        JexlEngine jexl = new JexlEngine();
+        String jexlExp = "arm14_seg==1 and time_window=='DEV'";
+
+        Expression e = jexl.createExpression(jexlExp);
+        JexlContext jc = new MapContext();
+        jc.set("arm14_seg", "1");
+        jc.set("time_window", "DEV");
+
+        Assert.assertEquals(Boolean.TRUE, e.evaluate(jc));
+    }
+
+    @Test
+    public void testJavaStrEmpty() {
+        JexlEngine jexl = new JexlEngine();
+        String jexlExp = "ARM17_score != null and !ARM17_score.isEmpty()";
+
+        Expression e = jexl.createExpression(jexlExp);
+        JexlContext jc = new MapContext();
+        jc.set("ARM17_score", null);
+
+        Assert.assertEquals(Boolean.FALSE, e.evaluate(jc));
+    }
+
     @Test
     public void testJavaMode() {
         JexlEngine jexl = new JexlEngine();

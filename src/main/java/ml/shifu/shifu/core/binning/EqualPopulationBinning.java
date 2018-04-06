@@ -45,6 +45,12 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     public static final int HIST_SCALE = 100;
 
     /**
+     * The threshold to define extra small bin.
+     * If (binCount / average binCount) &lt; EXTRA_BIN_COUNT_PERCENTAGE, it will be assume as extra small bin.
+     */
+    public static final double EXTRA_SMALL_BIN_PERCENTAGE = 0.003d;
+
+    /**
      * The maximum histogram unit count that could be hold
      */
     private int maxHistogramUnitCnt;
@@ -60,10 +66,11 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
     private LinkNode<HistogramUnit> header, tail;
 
     /**
-     * Use to cache frequecey sum of HistogramUnit, to improve getDataBin time performance, otherwise there maybe
+     * Use to cache frequency sum of HistogramUnit, to improve getDataBin time performance, otherwise there maybe
      * timeout in reducer
      */
     private Map<LinkNode<HistogramUnit>, Double> sumCache = new HashMap<LinkNode<HistogramUnit>, Double>();
+
     /**
      * Empty constructor : it is just for bin merging
      */
@@ -226,6 +233,12 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         List<Double> binBorders = new ArrayList<Double>();
         binBorders.add(Double.NEGATIVE_INFINITY);
 
+        double totalCnt = getTotalInHistogram();
+        // merge extra small bins
+        // extra small bin means : binCount less than 3% of average bin count
+        // binCount < ( total * (1/toBinningNum) * (3/100))
+        mergeExtraSmallBins(totalCnt, toBinningNum);
+
         if(this.currentHistogramUnitCnt <= toBinningNum) {
             // if the count of histogram unit is less than expected bin number
             // return each histogram unit as a bin. The boundary will be middle value
@@ -234,20 +247,19 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             return binBorders;
         }
 
-        double totalCnt = getTotalInHistogram();
         LinkNode<HistogramUnit> currStartPos = null;
-        //To imporve time performance
+        // To improve time performance
         sumCacheGen();
         for(int j = 1; j < toBinningNum; j++) {
-            double s = (j * totalCnt) / toBinningNum; 
+            double s = (j * totalCnt) / toBinningNum;
             LinkNode<HistogramUnit> pos = locateHistogram(s, currStartPos);
-            if(pos == null || pos == currStartPos) {
+            if(pos == null || pos == currStartPos || pos.next() == null) {
                 continue;
             } else {
                 HistogramUnit chu = pos.data();
                 HistogramUnit nhu = pos.next().data();
 
-                //double d = s - sum(chu.getHval());
+                // double d = s - sum(chu.getHval());
                 double d = s - sumCache.get(pos);
                 if(d < 0) {
                     double u = (chu.getHval() + nhu.getHval()) / 2;
@@ -275,6 +287,69 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         }
 
         return binBorders;
+    }
+
+    /**
+     * merge extra small bin into its nearest node
+     * 
+     * @param totalCnt
+     *            - total instance count
+     * @param toBinningNum
+     *            - the expected binning number
+     */
+    private void mergeExtraSmallBins(double totalCnt, int toBinningNum) {
+        if(this.header == null || this.header == this.tail) {
+            // if no node or just one node, do nothing
+            return;
+        }
+
+        double minimumBinCnt = ((totalCnt / toBinningNum) * EXTRA_SMALL_BIN_PERCENTAGE);
+
+        // there are two and more nodes
+        LinkNode<HistogramUnit> tmp = this.header;
+        while(tmp != null) {
+            if(tmp.data().getHcnt() < minimumBinCnt) {
+                HistogramUnit chu = tmp.data();
+
+                if(tmp == this.header) {
+                    HistogramUnit nhu = tmp.next().data();
+                    // merge to next
+                    nhu.setHcnt(chu.getHcnt() + nhu.getHcnt());
+                    nhu.setHval((chu.getHval() * chu.getHcnt() + nhu.getHval() * nhu.getHcnt())
+                            / (chu.getHcnt() + nhu.getHcnt()));
+                    this.header = tmp.next();
+                    this.header.setPrev(null);
+                } else if(tmp == this.tail) {
+                    HistogramUnit phu = tmp.prev().data();
+                    phu.setHcnt(chu.getHcnt() + phu.getHcnt());
+                    phu.setHval((chu.getHval() * chu.getHcnt() + phu.getHval() * phu.getHcnt())
+                            / (chu.getHcnt() + phu.getHcnt()));
+                    this.tail = tmp.prev();
+                    this.tail.setNext(null);
+                } else {
+                    HistogramUnit phu = tmp.prev().data();
+                    HistogramUnit nhu = tmp.next().data();
+
+                    if(chu.getHval() - phu.getHval() < nhu.getHval() - chu.getHval()) {
+                        // closer to previous, so to merge to previous
+                        phu.setHcnt(chu.getHcnt() + phu.getHcnt());
+                        phu.setHval((chu.getHval() * chu.getHcnt() + phu.getHval() * phu.getHcnt())
+                                / (chu.getHcnt() + phu.getHcnt()));
+                    } else {
+                        // merge to next
+                        nhu.setHcnt(chu.getHcnt() + nhu.getHcnt());
+                        nhu.setHval((chu.getHval() * chu.getHcnt() + nhu.getHval() * nhu.getHcnt())
+                                / (chu.getHcnt() + nhu.getHcnt()));
+                    }
+
+                    // remove tmp node from link
+                    tmp.prev().setNext(tmp.next());
+                    tmp.next().setPrev(tmp.prev());
+                }
+            }
+
+            tmp = tmp.next();
+        }
     }
 
     private void convertHistogramUnitIntoBin(List<Double> binBorders) {
@@ -320,6 +395,10 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
                 startPos = this.header;
             }
 
+            if(startPos.next() == null) {
+                return startPos;
+            }
+
             double sc = sumCache.get(startPos);
             double sn = sumCache.get(startPos.next());
 
@@ -335,17 +414,17 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
 
     /**
      * Generate sum the histogram's frequency at exact histogram pos
-     * To imporve time performance
+     * To improve time performance
      */
     private void sumCacheGen() {
-       LinkNode<HistogramUnit> cur = this.header;
-       double sum = 0;
-       sumCache.clear();
-       while(cur != null) {
-           sumCache.put(cur, sum + cur.data().getHcnt() / 2d);
-           sum += cur.data().getHcnt();
-           cur = cur.next();
-       }
+        LinkNode<HistogramUnit> cur = this.header;
+        double sum = 0;
+        sumCache.clear();
+        while(cur != null) {
+            sumCache.put(cur, sum + cur.data().getHcnt() / 2d);
+            sum += cur.data().getHcnt();
+            cur = cur.next();
+        }
     }
 
     /**
@@ -375,8 +454,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
         if(posHistogramUnit != null) {
             HistogramUnit chu = posHistogramUnit.data();
             HistogramUnit nhu = posHistogramUnit.next().data();
-            double mb = chu.getHcnt() + (nhu.getHcnt() - chu.getHcnt()) * (hval - chu.getHval())
-                    / (nhu.getHval() - chu.getHval());
+            double mb = chu.getHcnt()
+                    + (nhu.getHcnt() - chu.getHcnt()) * (hval - chu.getHval()) / (nhu.getHval() - chu.getHval());
             double s = (chu.getHcnt() + mb) * (hval - chu.getHval()) / (nhu.getHval() - chu.getHval());
             s = s / 2;
 
@@ -501,8 +580,8 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
             LinkNode<HistogramUnit> nextNode = minIntervalOpsUnit.next();
             HistogramUnit chu = minIntervalOpsUnit.data();
             HistogramUnit nhu = nextNode.data();
-            nhu.setHval((chu.getHval() * chu.getHcnt() + nhu.getHval() * nhu.getHcnt())
-                    / (chu.getHcnt() + nhu.getHcnt()));
+            nhu.setHval(
+                    (chu.getHval() * chu.getHcnt() + nhu.getHval() * nhu.getHcnt()) / (chu.getHcnt() + nhu.getHcnt()));
             nhu.setHcnt(chu.getHcnt() + nhu.getHcnt());
             removeCurrentNode(minIntervalOpsUnit, nextNode);
         } else {

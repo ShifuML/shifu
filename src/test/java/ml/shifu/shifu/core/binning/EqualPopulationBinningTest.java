@@ -23,13 +23,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import junit.framework.Assert;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 
 import org.apache.commons.io.IOUtils;
+import org.testng.Assert;
 import org.testng.annotations.Test;
 
 /**
@@ -39,6 +39,40 @@ import org.testng.annotations.Test;
  *
  */
 public class EqualPopulationBinningTest {
+
+    @Test void testExtraSmallBins() {
+        EqualPopulationBinning binning = new EqualPopulationBinning(10);
+        for ( int i = 0; i < 100000; i ++ ) {
+            binning.addData(5.0);
+        }
+
+        for ( int i = 0; i < 100000; i ++ ) {
+            binning.addData(8.0);
+        }
+
+        for ( int i = 0; i < 60; i ++ ) {
+            binning.addData(-10.0);
+        }
+
+        System.out.println(binning.getDataBin());
+        Assert.assertEquals(2, binning.getDataBin().size());
+
+        binning = new EqualPopulationBinning(10);
+        for ( int i = 0; i < 100000; i ++ ) {
+            binning.addData(5.0);
+        }
+
+        for ( int i = 0; i < 100000; i ++ ) {
+            binning.addData(8.0);
+        }
+
+        for ( int i = 0; i < 61; i ++ ) { // more then threshold
+            binning.addData(-10.0);
+        }
+
+        System.out.println(binning.getDataBin());
+        Assert.assertEquals(3, binning.getDataBin().size());
+    }
 
     @Test
     public void testBinning() {

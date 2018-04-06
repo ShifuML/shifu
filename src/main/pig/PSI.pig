@@ -28,7 +28,7 @@ DEFINE PSI               ml.shifu.shifu.udf.PSICalculatorUDF('$source_type', '$p
 DEFINE IsDataFilterOut   ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
 
 
-data = LOAD '$path_raw_data' USING PigStorage('$delimiter', '-noschema');
+data = LOAD '$path_raw_data' USING PigStorage('$delimiter', '-schema');
 data = FILTER data BY IsDataFilterOut(*);
 
 -- not need to filtering

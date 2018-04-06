@@ -61,6 +61,7 @@ public class RunModelWorker extends AbstractWorkerActor {
 
         modelRunner = new ModelRunner(modelConfig, columnConfigList, header, delimiter, models);
 
+        @SuppressWarnings("deprecation")
         boolean gbtConvertToProp = ((evalConfig == null) ? false :  evalConfig.getGbtConvertToProb());
         SourceType sourceType = ((evalConfig == null) ?
                 modelConfig.getDataSet().getSource() : evalConfig.getDataSet().getSource());

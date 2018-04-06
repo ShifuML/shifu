@@ -977,15 +977,70 @@ public class PathFinder {
         return getPathBySourceType(new Path(Constants.TMP, evalName + "AssembleEvalData"), sourceType);
     }
 
+    /**
+     * Get the shuffle data path
+     * @return - the shuffle data path
+     */
     public String getShuffleDataPath() {
         return getShuffleDataPath(modelConfig.getDataSet().getSource());
     }
 
+    /**
+     * Get the shuffle data path according SourceType
+     * @param sourceType - Local/HDFS
+     * @return - the shuffle data path
+     */
     private String getShuffleDataPath(SourceType sourceType) {
         return getPathBySourceType(new Path(Constants.TMP, Constants.SHUFFLED_DATA_PATH), sourceType);
     }
 
+    /**
+     * Get the backup ColumnConfig
+     * @return - the ColumnConfig.json path for backup
+     */
     public String getBackupColumnConfig() {
         return getPathBySourceType(new Path(Constants.TMP, Constants.COLUMN_CONFIG_JSON_FILE_NAME), SourceType.LOCAL);
+    }
+
+    /**
+     * Get the varsel auto filter history to let user have the opportunity to change
+     * @return - the varsel.history path for variable auto filter
+     */
+    public String getVarSelHistory() {
+        return getPathBySourceType(new Path(Constants.VAR_SELECT, Constants.VAR_SEL_HISTORY), SourceType.LOCAL);
+    }
+
+    /**
+     * Get the correlation export path
+     * @return - the correlation path for export
+     */
+    public String getCorrExportPath() {
+        return getPathBySourceType(new Path(Constants.TMP, Constants.CORR_EXPORT_PATH), SourceType.LOCAL);
+    }
+
+    /**
+     * Get the ColumnConfig.json history by index
+     * @return - ColumnConfig.json path for variable selection history
+     */
+    public String getVarSelDir() {
+        return getPathBySourceType(new Path(Constants.VAR_SELECT), SourceType.LOCAL);
+    }
+
+    /**
+     * Get the ColumnConfig.json history by index
+     * @param index - the iteration of variable selection
+     * @return - ColumnConfig.json path for variable selection history
+     */
+    public String getVarSelColumnConfig(int index) {
+        return getPathBySourceType(new Path(Constants.VAR_SELECT, Constants.COLUMN_CONFIG_JSON_FILE_NAME + "." + index), SourceType.LOCAL);
+    }
+
+    /**
+     * Get the SE history by index
+     * @param index - the iteration of variable selection
+     * @return - se path for variable selection history
+     */
+    public String getVarSelMSEHistPath(int index) {
+        return getPathBySourceType(new Path(Constants.VAR_SELECT, Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME + "." + index), SourceType.LOCAL);
     }
 }

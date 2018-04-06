@@ -295,6 +295,11 @@
                 "directive": "checkbox",
                 "defval": false
             }, {
+                "name": "autoFilterEnable",
+                "type": "boolean",
+                "directive": "checkbox",
+                "defval" : true
+            }, {
                 "name": "missingRateThreshold",
                 "type": "number",
                 "directive": "input",
@@ -375,6 +380,8 @@
                     {"label":"old zscale mode", "value":"OLD_ZSCALE"},
                     {"label":"zscale mode", "value":"ZSCALE"},
                     {"label":"same as zscale mode", "value":"ZSCORE"},
+                    {"label":"asIs and WOE mode", "value":"ASIS_WOE"},
+                    {"label":"asIs and positive rate mode", "value":"ASIS_PR"},
                     {"label":"woe mode", "value":"WOE"},
                     {"label":"weight woe mode", "value":"WEIGHT_WOE"},
                     {"label":"hybrid mode", "value":"HYBRID"},
@@ -889,13 +896,19 @@
                 "type": "boolean",
                 "directive": "input",
                 "defval": true
-             }, {
+            }, { 
+                "name": "normAllColumns",
+                "type": "boolean",
+                "directive": "input",
+                "defval": false
+            }, {
                 "name" : "gbtScoreConvertStrategy",
                 "type" : "text",
                 "directive": "select",
                 "defval" : "SIGMOID",
                 "options": [
                     {"label": "RAW", "value":"RAW"},
+                    {"label": "OLD_SIGMOID", "value":"OLD_SIGMOID"},
                     {"label": "SIGMOID", "value":"SIGMOID"},
                     {"label": "CUTOFF", "value":"CUTOFF"},
                     {"label": "HALF_CUTOFF", "value":"HALF_CUTOFF"},

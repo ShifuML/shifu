@@ -18,12 +18,14 @@ package ml.shifu.shifu.fs;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Scanner;
@@ -35,12 +37,18 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.HDFSUtils;
+import ml.shifu.shifu.util.HdfsPartFile;
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.slf4j.Logger;
@@ -257,7 +265,7 @@ public class ShifuFileUtils {
         Path p = new Path(path);
         if(fs.getFileStatus(p).isDir()) {
             // for folder we need filter pig header files
-            listStatus = fs.globStatus(p, new PathFilter() {
+            listStatus = fs.listStatus(p, new PathFilter() {
                 @Override
                 public boolean accept(Path path) {
                     boolean hiddenOrSuccessFile = path.getName().startsWith(Constants.HIDDEN_FILES)
@@ -348,6 +356,33 @@ public class ShifuFileUtils {
         // delete all files in dst firstly because of different folder if has dstDataPath
         if(!fs.delete(new Path(destPath), true)) {
             // ignore delete failed, it's ok.
+        }
+
+        FileUtil.copy(fs, new Path(srcPath), fs, new Path(destPath), false, new Configuration());
+    }
+
+    /**
+     * Move src file to dst file in the same FileSystem.
+     * 
+     * @param srcPath
+     *            - source file to copy
+     * @param destPath
+     *            - destination file
+     * @param sourceType
+     *            - local/hdfs
+     * @throws IOException
+     *             - if any I/O exception in processing
+     */
+    public static void moveTo(String srcPath, String destPath, SourceType sourceType) throws IOException {
+        if(StringUtils.isEmpty(srcPath) || StringUtils.isEmpty(destPath) || sourceType == null) {
+            throw new IllegalArgumentException(String.format(
+                    "Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", srcPath, destPath,
+                    sourceType));
+        }
+
+        FileSystem fs = getFileSystemBySourceType(sourceType);
+        if(!fs.exists(new Path(destPath))) {
+            throw new RuntimeException(destPath + " does not exist.");
         }
 
         FileUtil.copy(fs, new Path(srcPath), fs, new Path(destPath), false, new Configuration());
@@ -585,14 +620,34 @@ public class ShifuFileUtils {
     }
 
     public static FileStatus[] getFilePartStatus(String filePath, SourceType sourceType) throws IOException {
+        return getFilePartStatus(filePath, sourceType, Constants.HADOOP_PART_PREFIX);
+    }
+
+    public static FileStatus[] getFilePartStatus(String filePath, SourceType sourceType, final String partFilePrefix)
+            throws IOException {
         FileSystem fs = getFileSystemBySourceType(sourceType);
 
-        FileStatus[] fileStatsArr = fs.globStatus(new Path(filePath), new PathFilter() {
+        PathFilter filter = new PathFilter() {
             @Override
             public boolean accept(Path path) {
-                return path.getName().startsWith("part");
+                // FIXME, should only skip _SUCCESS, .pig_header such files, not start from part, some files may not
+                // start from part.
+                return path.getName().startsWith(partFilePrefix);
             }
-        });
+        };
+
+        FileStatus[] fileStatsArr;
+        try {
+            fileStatsArr = fs.listStatus(new Path(filePath), filter);
+        } catch (Exception e) {
+            // read from glob if not found in listStatus, it usually be a regex path
+            fileStatsArr = fs.globStatus(new Path(filePath), filter);
+        }
+
+        if(fileStatsArr == null || fileStatsArr.length == 0) {
+            // protected by reading glob status agaion
+            fileStatsArr = fs.globStatus(new Path(filePath), filter);
+        }
 
         return fileStatsArr;
     }
@@ -624,4 +679,40 @@ public class ShifuFileUtils {
         return size;
     }
 
+    public static void writeLines(@SuppressWarnings("rawtypes") Collection collection, String filePath,
+            SourceType sourceType) throws IOException {
+        BufferedWriter writer = getWriter(filePath, sourceType);
+        try {
+            for(Object object: collection) {
+                if(object != null) {
+                    writer.write(object.toString());
+                    writer.newLine();
+                }
+            }
+        } finally {
+            IOUtils.closeQuietly(writer);
+        }
+    }
+
+    public static void copyToLocal(String hdfsFilePath, String localOutputPath) throws IOException {
+        copyToLocal(hdfsFilePath, Constants.HADOOP_PART_PREFIX, localOutputPath);
+    }
+
+    public static void copyToLocal(String hdfsFilePath, String partFilePrefix, String localOutputPath)
+            throws IOException {
+        HdfsPartFile hdfsPartFile = new HdfsPartFile(hdfsFilePath, SourceType.HDFS, partFilePrefix);
+        BufferedWriter writer = new BufferedWriter(new FileWriter(localOutputPath));
+        String line = null;
+        try {
+            while((line = hdfsPartFile.readLine()) != null) {
+                writer.write(line);
+                writer.newLine();
+            }
+        } catch (Exception e) {
+            // ignore
+        } finally {
+            IOUtils.closeQuietly(writer);
+            hdfsPartFile.close();
+        }
+    }
 }

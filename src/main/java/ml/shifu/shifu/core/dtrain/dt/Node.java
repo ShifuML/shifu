@@ -659,6 +659,40 @@ public class Node implements Bytable {
         }
     }
 
+    public void readFields(DataInput in, int version) throws IOException {
+        this.id = in.readInt();
+
+        this.gain = in.readFloat();
+        // for back-forward compatibility, still need to read two floats here for wgtCntRatio
+        if(version <= 2) {
+            this.wgtCnt = in.readFloat();
+        } else {
+            this.wgtCnt = in.readDouble();
+        }
+
+        if(in.readBoolean()) {
+            this.split = new Split();
+            this.split.readFields(in, version);
+        }
+
+        boolean isRealLeaf = in.readBoolean();
+        if(isRealLeaf) {
+            if(in.readBoolean()) {
+                this.predict = new Predict();
+                this.predict.readFields(in, version);
+            }
+        }
+
+        if(in.readBoolean()) {
+            this.left = new Node();
+            this.left.readFields(in, version);
+        }
+
+        if(in.readBoolean()) {
+            this.right = new Node();
+            this.right.readFields(in, version);
+        }
+    }
     /**
      * @return the nodeStats
      */

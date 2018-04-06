@@ -19,6 +19,8 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UTFDataFormatException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -136,10 +138,17 @@ public class IndependentTreeModel {
      * GBT model scores are not in [0, 1], to make it in [0, 1], different strategies can be provided. Set this field as
      * String not Enum to avoid dependency on json related jars.
      */
-    private String gbtScoreConvertStrategy = "RAW";
+    private String gbtScoreConvertStrategy = Constants.GBT_SCORE_RAW_CONVETER;
 
     /**
-     * IF current scoring is for gbt sigmoid convert, a flag here to avoid multiple string comparsion
+     * IF current scoring is for gbt sigmoid convert, a flag here to avoid multiple string comparsion, for old sigmoid
+     * transform, which is code without scale: <code>1 / (1 + Math.min(1.0E19, Math.exp(- score))); </code>.
+     */
+    private boolean isGBTOldSigmoidConvert;
+
+    /**
+     * IF current scoring is for gbt sigmoid convert, a flag here to avoid multiple string comparsion, for new sigmoid
+     * transform, which is code without scale: <code>1 / (1 + Math.min(1.0E19, Math.exp(-20 * score))); </code>.
      */
     private boolean isGBTSigmoidConvert;
 
@@ -173,7 +182,7 @@ public class IndependentTreeModel {
         this.isConvertToProb = isConvertToProb;
 
         if(this.isConvertToProb) {
-            this.gbtScoreConvertStrategy = Constants.GBT_SCORE_SIGMOID_CONVETER;
+            this.gbtScoreConvertStrategy = Constants.GBT_SCORE_OLD_SIGMOID_CONVETER;
         } else {
             this.gbtScoreConvertStrategy = Constants.GBT_SCORE_RAW_CONVETER;
         }
@@ -199,6 +208,8 @@ public class IndependentTreeModel {
 
         isGBTSigmoidConvert = this.gbtScoreConvertStrategy != null
                 && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_SIGMOID_CONVETER);
+        isGBTOldSigmoidConvert = this.gbtScoreConvertStrategy != null
+                && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_OLD_SIGMOID_CONVETER);
         isGBTCutoffConvert = this.gbtScoreConvertStrategy != null
                 && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_CUTOFF_CONVETER);
         isGBTRawScore = this.gbtScoreConvertStrategy != null
@@ -214,8 +225,15 @@ public class IndependentTreeModel {
         this(numericalMeanMapping, numNameMapping, categoricalColumnNameNames, columnCategoryIndexMapping,
                 columnNumIndexMapping, isOptimizeMode, trees, weights, isGBDT, isClassification, isConvertToProb,
                 lossStr, algorithm, inputNode, version);
+
         if(isValidGbtScoreConvertStrategy(gbtScoreConvertStrategy)) {
-            this.gbtScoreConvertStrategy = gbtScoreConvertStrategy;
+            if(isGbtHalfCutOffOrMaxMinStrategy(gbtScoreConvertStrategy)) {
+                System.err
+                        .println("WARN: For HALF_CUTOFF and MAXMIN_SCALE gbt score scale strategy not supported in IndependentTreeModel and will be treated in RAW, in client side, such score can be rescaled by return score values.");
+                this.gbtScoreConvertStrategy = Constants.GBT_SCORE_RAW_CONVETER;
+            } else {
+                this.gbtScoreConvertStrategy = gbtScoreConvertStrategy;
+            }
         } else {
             // set gbtScoreConvertStrategy by isConvertToProb in the other constructor
         }
@@ -223,16 +241,25 @@ public class IndependentTreeModel {
         // re-check boolean flags compute for fast check in compute method
         isGBTSigmoidConvert = this.gbtScoreConvertStrategy != null
                 && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_SIGMOID_CONVETER);
+        isGBTOldSigmoidConvert = this.gbtScoreConvertStrategy != null
+                && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_OLD_SIGMOID_CONVETER);
         isGBTCutoffConvert = this.gbtScoreConvertStrategy != null
                 && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_CUTOFF_CONVETER);
         isGBTRawScore = this.gbtScoreConvertStrategy != null
                 && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_RAW_CONVETER);
     }
 
+    private static boolean isGbtHalfCutOffOrMaxMinStrategy(String gbtScoreConvertStrategy) {
+        return gbtScoreConvertStrategy != null
+                && (gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_HALF_CUTOFF_CONVETER) || gbtScoreConvertStrategy
+                        .equalsIgnoreCase(Constants.GBT_SCORE_MAXMIN_SCALE_CONVETER));
+    }
+
     public static boolean isValidGbtScoreConvertStrategy(String gbtScoreConvertStrategy) {
         return gbtScoreConvertStrategy != null
                 && (gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_RAW_CONVETER)
                         || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_SIGMOID_CONVETER)
+                        || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_OLD_SIGMOID_CONVETER)
                         || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_CUTOFF_CONVETER)
                         || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_HALF_CUTOFF_CONVETER) || gbtScoreConvertStrategy
                             .equalsIgnoreCase(Constants.GBT_SCORE_MAXMIN_SCALE_CONVETER));
@@ -299,8 +326,10 @@ public class IndependentTreeModel {
                     predict += score * wgtList.get(j);
                 }
 
-                if(this.isGBTSigmoidConvert) {
+                if(this.isGBTOldSigmoidConvert) {
                     predict = convertToSigmoid(predict);
+                } else if(this.isGBTSigmoidConvert) {
+                    predict = convertToNewSigmoid(predict);
                 } else if(this.isGBTCutoffConvert) {
                     predict = cutoffPredict(predict);
                 } else {
@@ -386,15 +415,28 @@ public class IndependentTreeModel {
 
     /**
      * Covert score to probability value which are in [0, 1], for GBT regression, scores can not be [0, 1]. Round score
-     * to 1.0E19 to avoid NaN in final return result.
+     * to 1.0E19 to avoid NaN in final return result. Sigmoid function is new one:
+     * <code>1 / (1 + Math.min(1.0E19, Math.exp(- score))); </code>.
+     * 
+     * @param score
+     *            the raw score
+     * @return score after sigmoid transform.
+     */
+    public double convertToNewSigmoid(double score) {
+        return 1 / (1 + Math.min(1.0E19, Math.exp(-20 * score)));
+    }
+
+    /**
+     * Covert score to probability value which are in [0, 1], for GBT regression, scores can not be [0, 1]. Round score
+     * to 1.0E19 to avoid NaN in final return result. Sigmoid function is old one for compatablity:
+     * <code>1 / (1 + Math.min(1.0E19, Math.exp(- 20 * score))); </code>.
      * 
      * @param score
      *            the raw score
      * @return score after sigmoid transform.
      */
     public double convertToSigmoid(double score) {
-        // sigmoid function to covert to [0, 1], TODO, how to make it configuable for users
-        return 1 / (1 + Math.min(1.0E19, Math.exp(-20 * score)));
+        return 1 / (1 + Math.min(1.0E19, Math.exp(-score)));
     }
 
     private double predictNode(Node topNode, double[] data) {
@@ -814,7 +856,7 @@ public class IndependentTreeModel {
     public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb,
             boolean isOptimizeMode, boolean isRemoveNameSpace) throws IOException {
         return loadFromStream(input, isConvertToProb, isOptimizeMode, isRemoveNameSpace,
-                isConvertToProb ? Constants.GBT_SCORE_SIGMOID_CONVETER : Constants.GBT_SCORE_RAW_CONVETER);
+                isConvertToProb ? Constants.GBT_SCORE_OLD_SIGMOID_CONVETER : Constants.GBT_SCORE_RAW_CONVETER);
     }
 
     /**
@@ -857,7 +899,7 @@ public class IndependentTreeModel {
         }
 
         int version = dis.readInt();
-        IndependentTreeModel.setVersion(version);
+        // IndependentTreeModel.setVersion(version);
         String algorithm = dis.readUTF();
         String lossStr = dis.readUTF();
         boolean isClassification = dis.readBoolean();
@@ -893,7 +935,7 @@ public class IndependentTreeModel {
             Map<String, Integer> categoryIndexMapping = new HashMap<String, Integer>(categoryListSize, 1f);
             List<String> categories = new ArrayList<String>(categoryListSize);
             for(int j = 0; j < categoryListSize; j++) {
-                String category = dis.readUTF();
+                String category = readCategory(dis);
                 // categories is merged category list
                 categories.add(category);
                 if(category.contains(Constants.CATEGORICAL_GROUP_VAL_DELIMITER)) {
@@ -920,7 +962,7 @@ public class IndependentTreeModel {
         List<List<TreeNode>> bagTrees = new ArrayList<List<TreeNode>>(1);
         List<List<Double>> bagWgts = new ArrayList<List<Double>>();
         int bags = 0;
-        if(IndependentTreeModel.getVersion() < 4) {
+        if(version < 4) {
             bags = 1;
         } else {
             // if version >=4, model saving first is size
@@ -932,7 +974,7 @@ public class IndependentTreeModel {
             List<Double> weights = new ArrayList<Double>(treeNum);
             for(int i = 0; i < treeNum; i++) {
                 TreeNode treeNode = new TreeNode();
-                treeNode.readFields(dis);
+                treeNode.readFields(dis, version);
                 trees.add(treeNode);
                 weights.add(treeNode.getLearningRate());
 
@@ -950,6 +992,110 @@ public class IndependentTreeModel {
                 columnCategoryIndexMapping, columnMapping, isOptimizeMode, bagTrees, bagWgts,
                 CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm), isClassification && !isOneVsAll,
                 isConvertToProb, lossStr, algorithm, inputNode, version, gbtScoreConvertStrategy);
+    }
+
+    /**
+     * Read category by marker, if marker<-1, read from bytes or read from readUTF
+     * 
+     * @param dis
+     *            input stream
+     * @return catregory read from input stream
+     * @throws IOException
+     *             any io exception
+     * @throws UnsupportedEncodingException
+     *             not supported encoding exception
+     */
+    private static String readCategory(DataInputStream dis) throws IOException, UnsupportedEncodingException {
+        String category = null;
+        short markerOrLen = dis.readShort();
+        if(markerOrLen < 0) {
+            int len = dis.readInt();
+            byte[] bytes = new byte[len];
+            for(int k = 0; k < bytes.length; k++) {
+                bytes[k] = dis.readByte();
+            }
+            category = new String(bytes, "UTF-8");
+        } else {
+            category = readUTF(dis, markerOrLen);
+        }
+        return category;
+    }
+
+    /**
+     * Copied from DataInputStream since we need't read utflen in the beginning of the method.
+     * 
+     * @param in
+     *            input stream
+     * @param utflen
+     *            len of utf string
+     * @return the string read from stream
+     * @throws IOException
+     *             any io exception
+     */
+    private final static String readUTF(DataInputStream in, int utflen) throws IOException {
+        byte[] bytearr = null;
+        char[] chararr = null;
+        bytearr = new byte[utflen];
+        chararr = new char[utflen];
+
+        int c, char2, char3;
+        int count = 0;
+        int chararr_count = 0;
+
+        in.readFully(bytearr, 0, utflen);
+
+        while(count < utflen) {
+            c = (int) bytearr[count] & 0xff;
+            if(c > 127)
+                break;
+            count++;
+            chararr[chararr_count++] = (char) c;
+        }
+
+        while(count < utflen) {
+            c = (int) bytearr[count] & 0xff;
+            switch(c >> 4) {
+                case 0:
+                case 1:
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                case 6:
+                case 7:
+                    /* 0xxxxxxx */
+                    count++;
+                    chararr[chararr_count++] = (char) c;
+                    break;
+                case 12:
+                case 13:
+                    /* 110x xxxx 10xx xxxx */
+                    count += 2;
+                    if(count > utflen)
+                        throw new UTFDataFormatException("malformed input: partial character at end");
+                    char2 = (int) bytearr[count - 1];
+                    if((char2 & 0xC0) != 0x80)
+                        throw new UTFDataFormatException("malformed input around byte " + count);
+                    chararr[chararr_count++] = (char) (((c & 0x1F) << 6) | (char2 & 0x3F));
+                    break;
+                case 14:
+                    /* 1110 xxxx 10xx xxxx 10xx xxxx */
+                    count += 3;
+                    if(count > utflen)
+                        throw new UTFDataFormatException("malformed input: partial character at end");
+                    char2 = (int) bytearr[count - 2];
+                    char3 = (int) bytearr[count - 1];
+                    if(((char2 & 0xC0) != 0x80) || ((char3 & 0xC0) != 0x80))
+                        throw new UTFDataFormatException("malformed input around byte " + (count - 1));
+                    chararr[chararr_count++] = (char) (((c & 0x0F) << 12) | ((char2 & 0x3F) << 6) | ((char3 & 0x3F) << 0));
+                    break;
+                default:
+                    /* 10xx xxxx, 1111 xxxx */
+                    throw new UTFDataFormatException("malformed input around byte " + count);
+            }
+        }
+        // The number of chars produced may be less than utflen
+        return new String(chararr, 0, chararr_count);
     }
 
     /**
