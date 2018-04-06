@@ -17,14 +17,13 @@ import org.apache.pig.data.DefaultDataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.testng.Assert;
-import org.testng.annotations.Test;
 
 /**
  * Created by zhanhu on 7/6/16.
  */
 public class DynamicBinningUDFTest {
 
-    @Test
+//    @Test
     public void testDynamicBinningUDFTest() throws IOException {
         DynamicBinningUDF inst = new DynamicBinningUDF("LOCAL",
                 "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
@@ -45,7 +44,7 @@ public class DynamicBinningUDFTest {
         System.out.println("Spend " + (System.currentTimeMillis() - startTs) + "-ms to query binning number according value.");
     }
 
-    @Test
+//    @Test
     public void testDynamicBinningUDF2Test() throws IOException {
         DynamicBinningUDF inst = new DynamicBinningUDF("LOCAL",
                 "src/test/resources/example/inner_seg1_v15/ModelConfig.json",

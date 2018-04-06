@@ -16,6 +16,37 @@
  
 Shifu Change Log
 
+Changes for Shifu-0.11.2
+    * Bug on GBT version when loading GBT model: if use static version, it will cause issue when loading multi GBT 
+      models
+       https://github.com/ShifuML/shifu/issues/487
+
+Changes for Shifu-0.11.1
+    * TreeModel Load Failed for Category > 10K
+       https://github.com/ShifuML/shifu/issues/482
+
+Changes for Shifu-0.11.0
+    * Python Module Support
+       https://github.com/ShifuML/pyshifu
+    * Shifu Eval Spark Module Support
+       https://github.com/ShifuML/shifu-spark
+    * New GBDT Model Score Converter
+       https://github.com/ShifuML/shifu/issues/473
+    * VarSel Sensitivity Analysis Job Performance Improvement
+       https://github.com/ShifuML/shifu/issues/466
+    * Segment Expansion Support
+       https://github.com/ShifuML/shifu/issues/438
+    * PMML One Unifed NN Model
+       https://github.com/ShifuML/shifu/issues/381
+    * NN Binary Model and Model Engine and Bagging Model Support
+       https://github.com/ShifuML/shifu/issues/402
+    * Hybrid Feature Support
+       https://github.com/ShifuML/shifu/issues/405
+    * New Loss Function Support
+       https://github.com/ShifuML/shifu/issues/442
+    * Others
+       https://github.com/ShifuML/shifu/issues?q=is%3Aissue+is%3Aclosed
+
 Changes for Shifu-0.10.5
     * Optimize IndependetTreeModel by decreaseing model memory to 70% and CPU time to 90%
     * Upgrade guagua to 0.7.0 t fix a bug on empty gzip files in one worker

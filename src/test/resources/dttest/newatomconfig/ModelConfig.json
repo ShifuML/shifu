@@ -1,0 +1,156 @@
+{
+  "basic" : {
+    "name" : "20171020_GBT_198_seg2",
+    "author" : "wzhao3",
+    "description" : "Created at 2016-12-15", 
+    "version" : "0.2.8",
+    "runMode" : "mapred",
+    "customPaths" : {"hdfsModelSetPath" : "hdfs://horton/apps/risk/det/wzhao3/ATOM18/SHIFU_20170828" }
+  },
+  "dataSet" : {
+    "source" : "hdfs",
+    "dataPath" : "hdfs://horton/apps/risk/det/wzhao3/ATOM18/Dataset_20171114/ATOM18_driver_1601_1707_Sim_New",
+    "dataDelimiter" : "\u0007",
+    "headerPath" : "hdfs://horton/apps/risk/det/wzhao3/ATOM18/Dataset_20171114/ATOM18_driver_1601_1707_Sim_New/.pig_header",
+    "headerDelimiter" : "\u0007",
+    "filterExpressions" : " data_flag.matches('normal|ncg_good')",
+		"weightColumnName" : "",
+    "targetColumnName" : "is_ato_bad_RT",
+    "autoType" : false, 
+    "posTags" : [ "1"],
+    "negTags" : [ "0" ],
+    "metaColumnNameFile" : "meta.column.names",
+    "categoricalColumnNameFile" : "categorical.column.names"
+  },
+  "stats" : {
+    "maxNumBin" : 20,
+    "cateMaxNumBin" : 50, 
+    "psiColumnName" : "",
+		"binningMethod" : "EqualPositive",
+    "sampleRate": 1.0,
+    "sampleNegOnly" : false,
+    "binningAlgorithm" : "SPDTI"
+  },
+  "varSelect" : {
+    "forceEnable" : true,
+    "forceSelectColumnNameFile" : "forceselect.column.names",
+    "forceRemoveColumnNameFile" : "forceremove.column.names",
+    "candidateColumnNameFile" : "candidate.column.names",
+    "filterEnable" : true,
+    "filterNum" : 2000,
+    "filterBy" : "IV",
+    "missingRateThreshold" : 0.98,
+    "params" : null
+  },
+  "normalize" : {
+    "stdDevCutOff" : 4.0,
+    "sampleRate" : 1.0,
+    "sampleNegOnly" : false,
+    "normType" : "WOE",
+	"isWeightNorm" : false
+  },
+  "train" : {
+    "baggingNum" : 3,
+    "baggingWithReplacement" : true,
+    "baggingSampleRate" : 1,
+    "validSetRate" : 0.2,
+    "numTrainEpochs" : 40000,
+    "epochsPerIteration" : 1,
+    "trainOnDisk" : true,
+    "isContinuous" : false,
+    "workerThreadCount" : 4,
+    "algorithm" : "GBT",
+    "params" : {
+      "TreeNum" : 3000,
+      "FeatureSubsetStrategy" : "ONETHIRD",
+      "MaxDepth" : 6,
+      "Impurity" : "variance",
+      "LearningRate" : 0.05,
+      "MinInstancesPerNode" : 5,
+      "MinInfoGain" : 0.0,
+      "Loss" : "squared"
+    },
+    "customPaths" : { }
+  }, 
+  "evals" : [ {
+    "name" : "OOT",
+    "dataSet" : {
+      "source" : "HDFS",
+      "dataPath" : "hdfs://horton/apps/risk/det/wzhao3/ATOM18/Dataset_20171015/OOT_1704_1711",
+      "dataDelimiter" : "\u0007",
+      "headerPath" : "hdfs://horton/apps/risk/det/wzhao3/ATOM18/Dataset_20171015/OOT_1704_1711/.pig_header",
+      "headerDelimiter" : "\u0007",
+      "filterExpressions" : "",
+      "weightColumnName" : "",
+      "targetColumnName" : "is_ato_bad",
+      "posTags" : [ "1" ],
+      "negTags" : [ "0", "2" ],
+      "missingOrInvalidValues" : [ "", "?" ]
+    },
+    "performanceBucketNum" : 100,
+    "performanceScoreSelector" : "mean",
+    "scoreMetaColumnNameFile" : "Evalscore.meta.column.names",
+    "customPaths" : { }
+  }   ,
+  {
+    "name" : "DEC",
+    "dataSet" : {
+      "source" : "HDFS",
+      "dataPath" : "hdfs://horton/apps/risk/det/wzhao3/ATOM18/Dataset_20171220/OOT_201712_1000",
+      "dataDelimiter" : "\u0007",
+      "headerPath" : "hdfs://horton/apps/risk/det/wzhao3/ATOM18/Dataset_20171220/OOT_201712_1000/.pig_header",
+      "headerDelimiter" : "\u0007",
+      "filterExpressions" : "",
+      "weightColumnName" : "",
+      "targetColumnName" : "is_ato_bad",
+      "posTags" : [ "1" ],
+      "negTags" : [ "0", "2" ],
+      "missingOrInvalidValues" : [ "", "?" ]
+    },
+    "performanceBucketNum" : 100,
+    "performanceScoreSelector" : "mean",
+    "scoreMetaColumnNameFile" : "Evalscore.meta.column.names",
+    "customPaths" : { }
+  }   ,
+  {
+    "name" : "JUL",
+    "dataSet" : {
+      "source" : "HDFS",
+      "dataPath" : "hdfs://horton/apps/risk/det/wzhao3/ATOM18/Dataset_20171220/OOT_1707_lynx",
+      "dataDelimiter" : "\u0007",
+      "headerPath" : "hdfs://horton/apps/risk/det/wzhao3/ATOM18/Dataset_20171220/OOT_1707_lynx/.pig_header",
+      "headerDelimiter" : "\u0007",
+      "filterExpressions" : "",
+      "weightColumnName" : "",
+      "targetColumnName" : "is_ato_bad",
+      "posTags" : [ "1" ],
+      "negTags" : [ "0", "2" ],
+      "missingOrInvalidValues" : [ "", "?" ]
+    },
+    "performanceBucketNum" : 100,
+    "performanceScoreSelector" : "mean",
+    "scoreMetaColumnNameFile" : "Evalscore.meta.column.names",
+    "customPaths" : { }
+  }   ,
+  {
+    "name" : "JAN",
+    "dataSet" : {
+      "source" : "HDFS",
+      "dataPath" : "hdfs://horton/apps/risk/det/wzhao3/ATOM18/Dataset_20171220/OOT_1801",
+      "dataDelimiter" : "\u0007",
+      "headerPath" : "hdfs://horton/apps/risk/det/wzhao3/ATOM18/Dataset_20171220/OOT_1801/.pig_header",
+      "headerDelimiter" : "\u0007",
+      "filterExpressions" : "",
+      "weightColumnName" : "",
+      "targetColumnName" : "is_ato_bad",
+      "posTags" : [ "1" ],
+      "negTags" : [ "0", "2" ],
+      "missingOrInvalidValues" : [ "", "?" ]
+    },
+    "performanceBucketNum" : 100,
+    "performanceScoreSelector" : "mean",
+    "scoreMetaColumnNameFile" : "Evalscore.meta.column.names",
+    "customPaths" : { }
+  }  
+   ]
+}

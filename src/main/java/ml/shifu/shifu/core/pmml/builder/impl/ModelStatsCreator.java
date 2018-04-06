@@ -54,7 +54,10 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
                 if(columnConfig.isFinalSelect()
                         && (CollectionUtils.isEmpty(featureSet) || featureSet.contains(columnConfig.getColumnNum()))) {
                     UnivariateStats univariateStats = new UnivariateStats();
-                    univariateStats.setField(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig)));
+                    // here, no need to consider if column is in segment expansion as we need to address new stats
+                    // variable
+                    univariateStats.setField(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig
+                            .getColumnName())));
 
                     if(columnConfig.isCategorical()) {
                         DiscrStats discrStats = new DiscrStats();
@@ -83,7 +86,10 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
             for(ColumnConfig columnConfig: columnConfigList) {
                 if(columnConfig.isFinalSelect()) {
                     UnivariateStats univariateStats = new UnivariateStats();
-                    univariateStats.setField(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig)));
+                    // here, no need to consider if column is in segment expansion as we need to address new stats
+                    // variable
+                    univariateStats.setField(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig
+                            .getColumnName())));
 
                     if(columnConfig.isCategorical()) {
                         DiscrStats discrStats = new DiscrStats();

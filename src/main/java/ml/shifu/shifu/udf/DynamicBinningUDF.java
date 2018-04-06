@@ -20,13 +20,16 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.binning.AbstractBinning;
 import ml.shifu.shifu.core.binning.DynamicBinning;
 import ml.shifu.shifu.core.binning.obj.NumBinInfo;
-import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.util.HdfsPartFile;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
+import org.apache.pig.impl.util.UDFContext;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
@@ -35,23 +38,24 @@ import java.util.*;
  */
 public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
 
-    private Map<Integer, String> smallBinsMap;
+    private HashMap<Integer, String> smallBinsMap;
 
-    public DynamicBinningUDF(String source, String pathModelConfig, String pathColumnConfig, String smallBinsPath) throws IOException {
+    private String smallBinsPath;
+
+    public DynamicBinningUDF(String source, String pathModelConfig, String pathColumnConfig, String smallBinsPath)
+            throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
-
-        smallBinsMap = new HashMap<Integer, String>();
-        List<String> smallBinsList = ShifuFileUtils.readFilePartsIntoList(smallBinsPath, SourceType.HDFS);
-        for (String smallBin : smallBinsList) {
-            String[] fields = StringUtils.split(smallBin, '\u0007');
-            if (fields.length == 2) {
-                smallBinsMap.put(Integer.parseInt(fields[0]), fields[1]);
-            }
-        }
+        this.smallBinsPath = smallBinsPath;
     }
 
     @Override
     public Tuple exec(Tuple input) throws IOException {
+        // move initialization from constructor to be here because of Pig UDF will be called in client which will cause
+        // OOM in there
+        if (smallBinsMap == null) {
+            smallBinsMap = new HashMap<Integer, String>();
+            initSmallBinMap();
+        }
 
         if (input == null || input.size() != 1) {
             return null;
@@ -70,7 +74,15 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
             Tuple tuple = iterator.next();
             if (columnId == null) {
                 columnId = (Integer) tuple.get(0);
-                columnConfig = super.columnConfigList.get(columnId);
+
+                // for filter expansions
+                if (columnId >= super.columnConfigList.size()) {
+                    int newColumnId = columnId % super.columnConfigList.size();
+                    columnConfig = super.columnConfigList.get(newColumnId);
+                } else {
+                    columnConfig = super.columnConfigList.get(columnId);
+                }
+
                 String smallBins = smallBinsMap.get(columnId);
                 if (columnConfig.isCategorical()) {
                     binsData = smallBins;
@@ -104,7 +116,7 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
 
         if (binsData == null && CollectionUtils.isNotEmpty(binInfoList)) {
             int maxNumBin = modelConfig.getStats().getMaxNumBin();
-            if ( maxNumBin <= 0 ) {
+            if (maxNumBin <= 0) {
                 maxNumBin = 1024;
             }
             DynamicBinning dynamicBinning = new DynamicBinning(binInfoList, maxNumBin);
@@ -118,6 +130,32 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
         output.set(1, binsData);
 
         return output;
+    }
+
+    private void initSmallBinMap() throws IOException {
+        long start = System.currentTimeMillis();
+        Configuration jobConf = UDFContext.getUDFContext().getJobConf();
+        int partNum = Integer.parseInt(jobConf.get("mapreduce.task.partition"));
+        String partition = String.format("%05d", partNum);
+        HdfsPartFile partFile = new HdfsPartFile(
+                smallBinsPath + File.separator + "part-*-*" + partition + "*",
+                SourceType.HDFS);
+        try {
+            String line = null;
+            int cnt = 0;
+            while ((line = partFile.readLine()) != null) {
+                String[] fields = StringUtils.split(line, '\u0007');
+                if (fields.length == 2) {
+                    smallBinsMap.put(Integer.parseInt(fields[0]), fields[1]);
+                }
+                cnt ++;
+            }
+            log.info(cnt + " lines are loaded in " + (System.currentTimeMillis() - start) + " milli-seconds.");
+        } catch (IOException e){
+            throw new IOException("Fail to load small bin map.", e);
+        } finally {
+            partFile.close();
+        }
     }
 
     public NumBinInfo binaryLocate(List<NumBinInfo> binInfoList, Double d) {

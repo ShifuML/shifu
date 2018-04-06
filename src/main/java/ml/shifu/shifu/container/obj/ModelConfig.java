@@ -189,10 +189,10 @@ public class ModelConfig {
         if(enableHadoop) {
             Path dst = new Path(File.separator + "user" + File.separator
                     + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement");
-            HDFSUtils.getFS().delete(dst, true);
-            HDFSUtils.getFS().mkdirs(dst);
-
-            HDFSUtils.getFS().copyFromLocalFile(new Path(exampleLocalDSPath), dst);
+            if ( !ShifuFileUtils.isFileExists(dst, SourceType.HDFS) ) {
+                HDFSUtils.getFS().mkdirs(dst);
+                HDFSUtils.getFS().copyFromLocalFile(new Path(exampleLocalDSPath), dst);
+            }
             dataSet.setSource(SourceType.HDFS);
             dataSet.setDataPath(new File(File.separator + "user" + File.separator
                     + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement"
@@ -285,7 +285,9 @@ public class ModelConfig {
             evalSet.setSource(SourceType.HDFS);
             Path dst = new Path(File.separator + "user" + File.separator
                     + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement");
-            HDFSUtils.getFS().copyFromLocalFile(new Path(exampleLocalESFolder), dst);
+            if ( !ShifuFileUtils.isFileExists(dst, SourceType.HDFS) ) {
+                HDFSUtils.getFS().copyFromLocalFile(new Path(exampleLocalESFolder), dst);
+            }
 
             evalSet.setDataPath(new File(File.separator + "user" + File.separator
                     + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement"
@@ -307,7 +309,7 @@ public class ModelConfig {
 
         // create empty <ModelName>/<EvalSetName>Score.meta.column.names
         namesFilePath = Constants.COLUMN_META_FOLDER_NAME + File.separator + evalConfig.getName()
-                + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE;
+                + Constants.DEFAULT_CHAMPIONSCORE_META_COLUMN_FILE;
         ShifuFileUtils.createFileIfNotExists(new Path(modelName, namesFilePath).toString(), SourceType.LOCAL);
         evalConfig.setScoreMetaColumnNameFile(namesFilePath);
 
