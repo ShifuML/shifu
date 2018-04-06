@@ -179,6 +179,8 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         paramsMap.put("sampleRate", modelConfig.getNormalizeSampleRate().toString());
         paramsMap.put("sampleNegOnly", ((Boolean) modelConfig.isNormalizeSampleNegOnly()).toString());
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
+        paramsMap.put("is_csv", String.valueOf(Boolean.TRUE.toString().equalsIgnoreCase(
+            Environment.getProperty(Constants.SHIFU_NORM_ONLY_SELECTED, Boolean.FALSE.toString()))));
 
         String expressionsAsString = super.modelConfig.getSegmentFilterExpressionsAsString();
         Environment.getProperties().put("shifu.segment.expressions", expressionsAsString);
