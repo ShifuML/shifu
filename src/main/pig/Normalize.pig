@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 REGISTER $path_jar;
-
 SET pig.exec.reducers.max 999;
 SET pig.exec.reducers.bytes.per.reducer 536870912;
 SET mapred.job.queue.name $queue_name;
@@ -45,4 +44,4 @@ normalized = FOREACH filtered GENERATE Normalize(*);
 normalized = FILTER normalized BY $0 IS NOT NULL;
 normalized = FOREACH normalized GENERATE FLATTEN($0);
 
-STORE normalized INTO '$pathNormalizedData' USING PigStorage('|', '-schema');
+STORE normalized INTO '$pathNormalizedData' USING ml.shifu.shifu.pig.ShifuPigStorage('$is_csv', '|');
