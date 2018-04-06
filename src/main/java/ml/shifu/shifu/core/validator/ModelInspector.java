@@ -20,13 +20,17 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ml.shifu.shifu.container.meta.MetaFactory;
 import ml.shifu.shifu.container.meta.ValidateResult;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
-import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningAlgorithm;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
@@ -42,11 +46,6 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
-
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * ModelInspector class is to do Safety Testing for model.
@@ -121,18 +120,15 @@ public class ModelInspector {
             result = ValidateResult.mergeResult(result, checkStatsConf(modelConfig));
             // verify categorical name file
             if(StringUtils.isNotBlank(modelConfig.getDataSet().getCategoricalColumnNameFile())) {
-                result = ValidateResult.mergeResult(
-                        result,
+                result = ValidateResult.mergeResult(result,
                         checkFile(modelConfig.getDataSet().getCategoricalColumnNameFile(), SourceType.LOCAL,
                                 "categorical columns configuration "));
             }
 
             // verify meta name file
             if(StringUtils.isNotBlank(modelConfig.getDataSet().getMetaColumnNameFile())) {
-                result = ValidateResult.mergeResult(
-                        result,
-                        checkFile(modelConfig.getDataSet().getMetaColumnNameFile(), SourceType.LOCAL,
-                                "meta columns configuration "));
+                result = ValidateResult.mergeResult(result, checkFile(modelConfig.getDataSet().getMetaColumnNameFile(),
+                        SourceType.LOCAL, "meta columns configuration "));
             }
             // check column stats
             if(result.getStatus()) {
@@ -154,8 +150,8 @@ public class ModelInspector {
                 if(!"nn".equalsIgnoreCase((modelConfig.getTrain().getAlgorithm()))
                         && !CommonConstants.RF_ALG_NAME.equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
                     ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult
-                            .addCause("Native multiple classification is only effective in neural network (nn) or random forest (rf) training method.");
+                    tmpResult.addCause(
+                            "Native multiple classification is only effective in neural network (nn) or random forest (rf) training method.");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
             }
@@ -164,8 +160,8 @@ public class ModelInspector {
                 if(!CommonUtils.isTreeModel(modelConfig.getAlgorithm())
                         && !modelConfig.getAlgorithm().equalsIgnoreCase("nn")) {
                     ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult
-                            .addCause("OneVSAll multiple classification is only effective in gradient boosted trees (GBT) or random forest (RF) or Neural Network (NN) training method.");
+                    tmpResult.addCause(
+                            "OneVSAll multiple classification is only effective in gradient boosted trees (GBT) or random forest (RF) or Neural Network (NN) training method.");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
             }
@@ -178,10 +174,8 @@ public class ModelInspector {
                     result = ValidateResult.mergeResult(result,
                             checkRawData(evalConfig.getDataSet(), "Eval Set - " + evalConfig.getName() + ": "));
                     if(StringUtils.isNotBlank(evalConfig.getScoreMetaColumnNameFile())) {
-                        result = ValidateResult.mergeResult(
-                                result,
-                                checkFile(evalConfig.getScoreMetaColumnNameFile(), SourceType.LOCAL, "Eval Set - "
-                                        + evalConfig.getName() + ": "));
+                        result = ValidateResult.mergeResult(result, checkFile(evalConfig.getScoreMetaColumnNameFile(),
+                                SourceType.LOCAL, "Eval Set - " + evalConfig.getName() + ": "));
                     }
                 }
             }
@@ -246,20 +240,20 @@ public class ModelInspector {
             if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())) {
                 String columnColumn = CommonUtils.containsAny(metaColumns, forceRemoveColumns);
                 if(columnColumn != null) {
-                    result.addCause("Column - " + columnColumn
-                            + " exists both in meta column conf and force remove conf.");
+                    result.addCause(
+                            "Column - " + columnColumn + " exists both in meta column conf and force remove conf.");
                 }
 
                 columnColumn = CommonUtils.containsAny(metaColumns, forceSelectColumns);
                 if(columnColumn != null) {
-                    result.addCause("Column - " + columnColumn
-                            + " exists both in meta column conf and force select conf.");
+                    result.addCause(
+                            "Column - " + columnColumn + " exists both in meta column conf and force select conf.");
                 }
 
                 columnColumn = CommonUtils.containsAny(forceSelectColumns, forceRemoveColumns);
                 if(columnColumn != null) {
-                    result.addCause("Column - " + columnColumn
-                            + " exists both in force select conf and force remove conf.");
+                    result.addCause(
+                            "Column - " + columnColumn + " exists both in force select conf and force remove conf.");
                 }
             }
         }
@@ -270,21 +264,18 @@ public class ModelInspector {
     private ValidateResult checkStatsConf(ModelConfig modelConfig) throws IOException {
         ValidateResult result = new ValidateResult(true);
 
-        if(modelConfig.isClassification()
-                && (modelConfig.getBinningMethod() == BinningMethod.EqualPositive
-                        || modelConfig.getBinningMethod() == BinningMethod.EqualNegtive
-                        || modelConfig.getBinningMethod() == BinningMethod.WeightEqualPositive || modelConfig
-                        .getBinningMethod() == BinningMethod.WeightEqualNegative)) {
+        if(modelConfig.isClassification() && (modelConfig.getBinningMethod() == BinningMethod.EqualPositive
+                || modelConfig.getBinningMethod() == BinningMethod.EqualNegtive
+                || modelConfig.getBinningMethod() == BinningMethod.WeightEqualPositive
+                || modelConfig.getBinningMethod() == BinningMethod.WeightEqualNegative)) {
             ValidateResult tmpResult = new ValidateResult(false,
                     Arrays.asList("Multiple classification cannot leverage EqualNegtive and EqualPositive binning."));
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
         if(modelConfig.isClassification() && modelConfig.getBinningAlgorithm() != BinningAlgorithm.SPDTI) {
-            result = ValidateResult.mergeResult(
-                    result,
-                    new ValidateResult(false, Arrays
-                            .asList("Only SPDTI binning algorithm are supported with multiple classification.")));
+            result = ValidateResult.mergeResult(result, new ValidateResult(false,
+                    Arrays.asList("Only SPDTI binning algorithm are supported with multiple classification.")));
 
         }
 
@@ -313,23 +304,17 @@ public class ModelInspector {
 
         if(Boolean.TRUE.equals(varSelect.getForceEnable())) {
             if(StringUtils.isNotBlank(varSelect.getCandidateColumnNameFile())) {
-                result = ValidateResult.mergeResult(
-                        result,
-                        checkFile(varSelect.getCandidateColumnNameFile(), SourceType.LOCAL,
-                                "candidate columns configuration "));
+                result = ValidateResult.mergeResult(result, checkFile(varSelect.getCandidateColumnNameFile(),
+                        SourceType.LOCAL, "candidate columns configuration "));
             }
             if(StringUtils.isNotBlank(varSelect.getForceRemoveColumnNameFile())) {
-                result = ValidateResult.mergeResult(
-                        result,
-                        checkFile(varSelect.getForceRemoveColumnNameFile(), SourceType.LOCAL,
-                                "forceRemove columns configuration "));
+                result = ValidateResult.mergeResult(result, checkFile(varSelect.getForceRemoveColumnNameFile(),
+                        SourceType.LOCAL, "forceRemove columns configuration "));
             }
 
             if(StringUtils.isNotBlank(varSelect.getForceSelectColumnNameFile())) {
-                result = ValidateResult.mergeResult(
-                        result,
-                        checkFile(varSelect.getForceSelectColumnNameFile(), SourceType.LOCAL,
-                                "forceSelect columns configuration "));
+                result = ValidateResult.mergeResult(result, checkFile(varSelect.getForceSelectColumnNameFile(),
+                        SourceType.LOCAL, "forceSelect columns configuration "));
             }
         }
 
@@ -337,8 +322,8 @@ public class ModelInspector {
         if(!varSelect.getFilterBy().equals("SE") && corrMetric != null && corrMetric == PostCorrelationMetric.SE) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
-            tmpResult.getCauses().add(
-                    "VarSelect#filterBy and VarSelect#postCorrelationMetric should be both set to SE.");
+            tmpResult.getCauses()
+                    .add("VarSelect#filterBy and VarSelect#postCorrelationMetric should be both set to SE.");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
@@ -416,24 +401,24 @@ public class ModelInspector {
         if(norm.getNormType() == null) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
-            tmpResult
-                    .getCauses()
-                    .add("normType should be one of [ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID] in normalize configuration");
-            result = ValidateResult.mergeResult(result, tmpResult);
-        }
-
-        boolean isZScore = modelConfig.getNormalize().getNormType() == NormType.ZSCALE
-                || modelConfig.getNormalize().getNormType() == NormType.ZSCORE
-                || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCALE
-                || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCORE
-                || modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT);
-
-        if(modelConfig.isClassification() && !isZScore) {
-            ValidateResult tmpResult = new ValidateResult(false);
             tmpResult.getCauses().add(
-                    "NormType 'ZSCALE|ZSCORE|ZSCALE_ONEHOT' is the only norm type for multiple classification.");
+                    "normType should be one of [ZSCALE, WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID] in normalize configuration");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
+
+        // remove norm type checking since in multiple classification, user still wants to leverage woe transform
+        // boolean isZScore = modelConfig.getNormalize().getNormType() == NormType.ZSCALE
+        // || modelConfig.getNormalize().getNormType() == NormType.ZSCORE
+        // || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCALE
+        // || modelConfig.getNormalize().getNormType() == NormType.OLD_ZSCORE
+        // || modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT);
+
+        // if(modelConfig.isClassification() && !isZScore) {
+        // ValidateResult tmpResult = new ValidateResult(false);
+        // tmpResult.getCauses().add(
+        // "NormType 'ZSCALE|ZSCORE|ZSCALE_ONEHOT' are the only norm types for multiple classification.");
+        // result = ValidateResult.mergeResult(result, tmpResult);
+        // }
 
         return result;
     }
@@ -515,8 +500,8 @@ public class ModelInspector {
                 && !train.getAlgorithm().equalsIgnoreCase("nn")) {
             ValidateResult tmpResult = new ValidateResult(true);
             tmpResult.setStatus(false);
-            tmpResult.getCauses().add(
-                    "'one vs all' or 'one vs rest' is only enabled with 'RF' or 'GBT' or 'NN' algorithm");
+            tmpResult.getCauses()
+                    .add("'one vs all' or 'one vs rest' is only enabled with 'RF' or 'GBT' or 'NN' algorithm");
             result = ValidateResult.mergeResult(result, tmpResult);
         }
 
@@ -527,8 +512,8 @@ public class ModelInspector {
                     && !"gini".equalsIgnoreCase(impurity.toString())) {
                 ValidateResult tmpResult = new ValidateResult(true);
                 tmpResult.setStatus(false);
-                tmpResult.getCauses().add(
-                        "Impurity should be in [entropy,gini] if native mutiple classification in RF.");
+                tmpResult.getCauses()
+                        .add("Impurity should be in [entropy,gini] if native mutiple classification in RF.");
                 result = ValidateResult.mergeResult(result, tmpResult);
             }
         }
@@ -563,8 +548,8 @@ public class ModelInspector {
                 if(hiddenNode.size() != activateFucs.size() || layerCnt != activateFucs.size()) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
-                    tmpResult.getCauses().add(
-                            CommonConstants.NUM_HIDDEN_LAYERS + "/SIZE(" + CommonConstants.NUM_HIDDEN_NODES + ")"
+                    tmpResult.getCauses()
+                            .add(CommonConstants.NUM_HIDDEN_LAYERS + "/SIZE(" + CommonConstants.NUM_HIDDEN_NODES + ")"
                                     + "/SIZE(" + CommonConstants.ACTIVATION_FUNC + ")"
                                     + " should be equal in train configuration");
                     result = ValidateResult.mergeResult(result, tmpResult);
@@ -581,9 +566,8 @@ public class ModelInspector {
                 Object learningDecayO = params.get("LearningDecay");
                 if(learningDecayO != null) {
                     Double learningDecay = Double.valueOf(learningDecayO.toString());
-                    if(learningDecay != null
-                            && ((learningDecay.compareTo(Double.valueOf(0)) < 0) || (learningDecay.compareTo(Double
-                                    .valueOf(1)) >= 0))) {
+                    if(learningDecay != null && ((learningDecay.compareTo(Double.valueOf(0)) < 0)
+                            || (learningDecay.compareTo(Double.valueOf(1)) >= 0))) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
                         tmpResult.getCauses().add("Learning decay should be in [0, 1) if set.");
@@ -596,8 +580,8 @@ public class ModelInspector {
                 if(isELM && layerCnt != 1) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
-                    tmpResult.getCauses().add(
-                            "If ELM(extreme learning machine), hidden layer should only be one layer.");
+                    tmpResult.getCauses()
+                            .add("If ELM(extreme learning machine), hidden layer should only be one layer.");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
@@ -656,11 +640,13 @@ public class ModelInspector {
                     }
                 }
             }
+
             if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)
                     || train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)
                     || train.getAlgorithm().equalsIgnoreCase(NNConstants.NN_ALG_NAME)) {
                 Map<String, Object> params = train.getParams();
                 Object fssObj = params.get("FeatureSubsetStrategy");
+
                 if(fssObj == null) {
                     if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)
                             || train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)) {
@@ -679,10 +665,14 @@ public class ModelInspector {
                         isNumber = false;
                     }
 
-                    if(isNumber && (doubleFss <= 0d || doubleFss > 1d)) {
-                        ValidateResult tmpResult = new ValidateResult(true);
-                        tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("FeatureSubsetStrategy if double should be in (0, 1]");
+                    if(isNumber) {
+                        // if not in [0, 1] failed
+                        if(doubleFss <= 0d || doubleFss > 1d) {
+                            ValidateResult tmpResult = new ValidateResult(true);
+                            tmpResult.setStatus(false);
+                            tmpResult.getCauses().add("FeatureSubsetStrategy if double should be in (0, 1]");
+                            result = ValidateResult.mergeResult(result, tmpResult);
+                        }
                     } else {
                         boolean fssInEnum = false;
                         for(FeatureSubsetStrategy fss: FeatureSubsetStrategy.values()) {
@@ -695,9 +685,9 @@ public class ModelInspector {
                         if(!fssInEnum) {
                             ValidateResult tmpResult = new ValidateResult(true);
                             tmpResult.setStatus(false);
-                            tmpResult
-                                    .getCauses()
-                                    .add("FeatureSubsetStrategy if string should be in ['ALL', 'HALF', 'ONETHIRD' , 'TWOTHIRDS' , 'AUTO' , 'SQRT' , 'LOG2']");
+                            tmpResult.getCauses().add(
+                                    "FeatureSubsetStrategy if string should be in ['ALL', 'HALF', 'ONETHIRD' , 'TWOTHIRDS' , 'AUTO' , 'SQRT' , 'LOG2']");
+                            result = ValidateResult.mergeResult(result, tmpResult);
                         }
                     }
                 }
@@ -721,8 +711,8 @@ public class ModelInspector {
                     if(loss == null) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
-                        tmpResult.getCauses().add(
-                                "'Loss' parameter isn't being set in train#parameters in GBT training.");
+                        tmpResult.getCauses()
+                                .add("'Loss' parameter isn't being set in train#parameters in GBT training.");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }
@@ -763,9 +753,8 @@ public class ModelInspector {
                 if(maxDepthObj == null && maxLeavesObj == null) {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
-                    tmpResult
-                            .getCauses()
-                            .add("'MaxDepth' or 'MaxLeaves' parameters at least one of both should be set in train#parameters in GBT training.");
+                    tmpResult.getCauses().add(
+                            "'MaxDepth' or 'MaxLeaves' parameters at least one of both should be set in train#parameters in GBT training.");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
@@ -804,8 +793,8 @@ public class ModelInspector {
                     } else {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
-                        tmpResult.getCauses().add(
-                                "'LearningRate' parameter isn't being set in train#parameters in GBT training.");
+                        tmpResult.getCauses()
+                                .add("'LearningRate' parameter isn't being set in train#parameters in GBT training.");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }
@@ -839,8 +828,8 @@ public class ModelInspector {
                 } else {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
-                    tmpResult.getCauses().add(
-                            "'TreeNum' parameter isn't being set in train#parameters in GBT/RF training.");
+                    tmpResult.getCauses()
+                            .add("'TreeNum' parameter isn't being set in train#parameters in GBT/RF training.");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
@@ -856,8 +845,8 @@ public class ModelInspector {
                 } else {
                     ValidateResult tmpResult = new ValidateResult(true);
                     tmpResult.setStatus(false);
-                    tmpResult.getCauses().add(
-                            "'MinInfoGain' parameter isn't be set in train#parameters in GBT/RF training.");
+                    tmpResult.getCauses()
+                            .add("'MinInfoGain' parameter isn't be set in train#parameters in GBT/RF training.");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
 

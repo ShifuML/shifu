@@ -34,6 +34,7 @@ import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.mr.input.CombineInputFormat;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
+import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -76,11 +77,12 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
      * log object
      */
     private final static Logger log = LoggerFactory.getLogger(InitModelProcessor.class);
-    
+
     /**
      * runner for init the model
      * 
-     * @throws Exception in init step running
+     * @throws Exception
+     *             in init step running
      */
     @Override
     public int run() throws Exception {
@@ -121,10 +123,14 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
             clearUp(ModelStep.INIT);
+        } catch (ShifuException e) {
+            log.error("Error:" + e.getError().toString() + "; msg:" + e.getMessage(), e);
+            return -1;
         } catch (Exception e) {
-            log.error("Error:", e);
+            log.error("Error:" + e.getMessage(), e);
             return -1;
         }
+
         log.info("Step Finished: init with {} ms", (System.currentTimeMillis() - start));
         return 0;
     }
@@ -295,14 +301,10 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_REDUCE_SPECULATIVE, true);
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 5000);
-        conf.set(
-                Constants.SHIFU_MODEL_CONFIG,
-                ShifuFileUtils.getFileSystemBySourceType(source)
-                        .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
-        conf.set(
-                Constants.SHIFU_COLUMN_CONFIG,
-                ShifuFileUtils.getFileSystemBySourceType(source)
-                        .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
+        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
+        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
 
         conf.set("mapred.reduce.slowstart.completed.maps",
@@ -336,10 +338,8 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         job.setMapOutputValueClass(CountAndFrequentItemsWritable.class);
 
         job.setInputFormatClass(CombineInputFormat.class);
-        FileInputFormat.setInputPaths(
-                job,
-                ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(
-                        new Path(super.modelConfig.getDataSetRawPath())));
+        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.modelConfig.getDataSetRawPath())));
 
         job.setReducerClass(AutoTypeDistinctCountReducer.class);
         job.setNumReduceTasks(1);
@@ -386,8 +386,8 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         List<Scanner> scanners = null;
         try {
             // here only works for 1 reducer
-            FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source).globStatus(
-                    new Path(outputFilePattern));
+            FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source)
+                    .globStatus(new Path(outputFilePattern));
             if(globStatus == null || globStatus.length == 0) {
                 throw new RuntimeException("Auto type checking output file not exist.");
             }
@@ -400,10 +400,9 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                     String[] splits1 = str.split(TAB_STR);
                     String[] splits2 = splits1[1].split(":", -1);
 
-                    distinctCountMap.put(
-                            Integer.valueOf(splits1[0]),
-                            new Data(Long.valueOf(splits2[0]), Long.valueOf(splits2[1]), Long.valueOf(splits2[2]), Long
-                                    .valueOf(splits2[3]), splits2[4].split(",")));
+                    distinctCountMap.put(Integer.valueOf(splits1[0]),
+                            new Data(Long.valueOf(splits2[0]), Long.valueOf(splits2[1]), Long.valueOf(splits2[2]),
+                                    Long.valueOf(splits2[3]), splits2[4].split(",")));
                 }
             }
             return distinctCountMap;
@@ -427,19 +426,19 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         String[] fields = null;
         boolean isSchemaProvided = true;
         if(StringUtils.isNotBlank(modelConfig.getHeaderPath())) {
-            fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(), modelConfig
-                    .getDataSet().getSource());
+            fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(),
+                    modelConfig.getDataSet().getSource());
             String[] dataInFirstLine = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(),
                     modelConfig.getDataSetDelimiter(), modelConfig.getDataSet().getSource());
             if(fields.length != dataInFirstLine.length) {
-                throw new IllegalArgumentException(
-                        "Header length and data length are not consistent - head length " + fields.length
-                                + ", while data length " + dataInFirstLine.length
-                                + ", please check you header setting and data set setting.");
+                throw new IllegalArgumentException("Header length and data length are not consistent - head length "
+                        + fields.length + ", while data length " + dataInFirstLine.length
+                        + ", please check you header setting and data set setting.");
             }
         } else {
-            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(), StringUtils.isBlank(modelConfig
-                    .getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter() : modelConfig.getHeaderDelimiter(),
+            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(),
+                    StringUtils.isBlank(modelConfig.getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter()
+                            : modelConfig.getHeaderDelimiter(),
                     modelConfig.getDataSet().getSource());
             if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
                 // if first line contains target column name, we guess it is csv format and first line is header.
@@ -447,7 +446,8 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                 // first line of data meaning second line in data files excluding first header line
                 String[] dataInFirstLine = CommonUtils.takeFirstTwoLines(modelConfig.getDataSetRawPath(),
                         StringUtils.isBlank(modelConfig.getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter()
-                                : modelConfig.getHeaderDelimiter(), modelConfig.getDataSet().getSource())[1];
+                                : modelConfig.getHeaderDelimiter(),
+                        modelConfig.getDataSet().getSource())[1];
 
                 if(dataInFirstLine != null && fields.length != dataInFirstLine.length) {
                     throw new IllegalArgumentException(
@@ -468,6 +468,8 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         for(int i = 0; i < fields.length; i++) {
             ColumnConfig config = new ColumnConfig();
             config.setColumnNum(i);
+            fields[i] = CommonUtils.normColumnName(fields[i]);
+
             if(isSchemaProvided) {
                 // config.setColumnName(CommonUtils.getRelativePigHeaderColumnName(fields[i]));
                 config.setColumnName(fields[i]);

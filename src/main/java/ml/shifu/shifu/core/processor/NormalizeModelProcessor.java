@@ -52,11 +52,12 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
     private boolean isToShuffleData = false;
 
     public NormalizeModelProcessor() {
-        this(false);
+        // default constructor
     }
 
-    public NormalizeModelProcessor(boolean isToShuffleData) {
-        this.isToShuffleData = isToShuffleData;
+    public NormalizeModelProcessor(Map<String, Object> otherConfigs) {
+        super.otherConfigs = otherConfigs;
+        this.isToShuffleData = getIsToShuffleData();
     }
 
     /**
@@ -100,8 +101,11 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
 
             syncDataToHdfs(modelConfig.getDataSet().getSource());
             clearUp(ModelStep.NORMALIZE);
+        } catch (ShifuException e) {
+            log.error("Error:" + e.getError().toString() + "; msg:" + e.getMessage(), e);
+            return -1;
         } catch (Exception e) {
-            log.error("Error:", e);
+            log.error("Error:" + e.getMessage(), e);
             return -1;
         }
         log.info("Step Finished: normalize with {} ms", (System.currentTimeMillis() - start));
@@ -117,11 +121,20 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         // how many part-m-*.gz file in for gzip file, norm depends on how many gzip files
         int filePartCnt = ShifuFileUtils.getFilePartCount(this.pathFinder.getNormalizedDataPath(), SourceType.HDFS);
         // average count is over threshold, try to do shuffle to avoid big worker there
+        // max record is for 1000 variables, for
         if(filePartCnt > 0 && filePartCnt <= CommonConstants.PART_FILE_COUNT_THRESHOLD
-                && totalCount * 1.0d / filePartCnt >= CommonConstants.MAX_RECORDS_PER_WORKER
+                && ((totalCount * 1.0d / filePartCnt)
+                        * (super.columnConfigList.size() / 1000d)) >= CommonConstants.MAX_RECORDS_PER_WORKER
                 && ShifuFileUtils.isPartFileAllGzip(this.pathFinder.getNormalizedDataPath(), SourceType.HDFS)) {
-            long shuffleSize = totalCount / CommonConstants.MAX_RECORDS_PER_WORKER;
-            log.info("New shiffle size is {}.", shuffleSize);
+            long shuffleSize = (long) ((totalCount * 1d / CommonConstants.MAX_RECORDS_PER_WORKER)
+                    * (super.columnConfigList.size() / 1000d));
+            if(shuffleSize <= 0) {
+                shuffleSize = 10;
+            }
+            if(shuffleSize >= 1000) {
+                shuffleSize = 1000;
+            }
+            log.info("New shuffle size is adapted to {}.", shuffleSize);
 
             this.isToShuffleData = true;
             Integer shuffleSizeInteger = Environment.getInt(Constants.SHIFU_NORM_SHUFFLE_SIZE);
@@ -147,13 +160,13 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
             scanners = ShifuFileUtils.getDataScanners(
                     ShifuFileUtils.expandPath(modelConfig.getDataSetRawPath(), sourceType), sourceType);
         } catch (IOException e) {
-            throw new ShifuException(ShifuErrorCode.ERROR_INPUT_NOT_FOUND, e, ", could not get input files "
-                    + modelConfig.getDataSetRawPath());
+            throw new ShifuException(ShifuErrorCode.ERROR_INPUT_NOT_FOUND, e,
+                    ", could not get input files " + modelConfig.getDataSetRawPath());
         }
 
         if(scanners == null || scanners.size() == 0) {
-            throw new ShifuException(ShifuErrorCode.ERROR_INPUT_NOT_FOUND, ", please check the data in "
-                    + modelConfig.getDataSetRawPath() + " in " + sourceType);
+            throw new ShifuException(ShifuErrorCode.ERROR_INPUT_NOT_FOUND,
+                    ", please check the data in " + modelConfig.getDataSetRawPath() + " in " + sourceType);
         }
 
         AkkaSystemExecutor.getExecutor().submitNormalizeJob(modelConfig, columnConfigList, scanners);
@@ -224,7 +237,8 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                             invalidTagCount);
 
                     if(totalValidCount > 0L && invalidTagCount * 1d / totalValidCount >= 0.8d) {
-                        log.error("Too many invalid tags, please check you configuration on positive tags and negative tags.");
+                        log.error(
+                                "Too many invalid tags, please check you configuration on positive tags and negative tags.");
                     }
                 }
                 // only one pig job with such counters, break
@@ -243,6 +257,10 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public boolean getIsToShuffleData() {
+        return getBooleanParam(this.otherConfigs, Constants.IS_TO_SHUFFLE_DATA);
     }
 
 }

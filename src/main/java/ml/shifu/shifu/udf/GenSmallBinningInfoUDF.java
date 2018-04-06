@@ -62,12 +62,17 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> {
             if(tuple != null && tuple.size() >= 3) {
                 if(columnId == null) {
                     columnId = (Integer) tuple.get(0);
-                    columnConfig = super.columnConfigList.get(columnId);
+                    if(columnId >= super.columnConfigList.size()) {
+                        int newColumnId = columnId % super.columnConfigList.size();
+                        columnConfig = super.columnConfigList.get(newColumnId);
+                    } else {
+                        columnConfig = super.columnConfigList.get(columnId);
+                    }
                     binning = getBinningHandler(columnConfig);
                 }
 
-                Boolean isPostive = (Boolean) tuple.get(2);
-                if(isToBinningVal(columnConfig, isPostive)) {
+                Boolean isPositive = (Boolean) tuple.get(2);
+                if(isToBinningVal(columnConfig, isPositive)) {
                     String val = (String) tuple.get(1);
                     binning.addData(val);
                 }

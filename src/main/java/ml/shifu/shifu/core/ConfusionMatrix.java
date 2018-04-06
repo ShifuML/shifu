@@ -39,6 +39,7 @@ import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.ConfusionMatrixObject;
 import ml.shifu.shifu.container.ModelResultObject;
 import ml.shifu.shifu.container.PerformanceObject;
+import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.PerformanceResult;
@@ -73,6 +74,10 @@ public class ConfusionMatrix {
      */
     private ModelConfig modelConfig;
 
+    /**
+     * Column config list
+     */
+    private List<ColumnConfig> columnConfigList;
     /**
      * Current eval config instance.
      */
@@ -135,15 +140,18 @@ public class ConfusionMatrix {
 
     private Object lock;
 
-    public ConfusionMatrix(ModelConfig modelConfig, EvalConfig evalConfig) throws IOException {
-        this(modelConfig, evalConfig, new Object());
+    public ConfusionMatrix(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, EvalConfig evalConfig)
+            throws IOException {
+        this(modelConfig, columnConfigList, evalConfig, new Object());
     }
 
-    public ConfusionMatrix(ModelConfig modelConfig, EvalConfig evalConfig, Object source) throws IOException {
+    public ConfusionMatrix(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, EvalConfig evalConfig,
+            Object source) throws IOException {
         this.modelConfig = modelConfig;
         this.evalConfig = evalConfig;
         this.pathFinder = new PathFinder(modelConfig);
         this.lock = source;
+        this.columnConfigList = columnConfigList;
 
         String[] evalScoreHeader = getEvalScoreHeader();
         if(ArrayUtils.isEmpty(evalScoreHeader)) {
@@ -176,10 +184,23 @@ public class ConfusionMatrix {
         // only works for multi classification
         multiClassScore1Index = targetColumnIndex + 2; // target, weight, score1, score2, this is hard code
         try {
-            multiClassModelCnt = CommonUtils.getBasicModelsCnt(modelConfig, evalConfig, evalConfig.getDataSet()
-                    .getSource());
+            multiClassModelCnt = CommonUtils.getBasicModelsCnt(modelConfig, evalConfig,
+                    evalConfig.getDataSet().getSource());
         } catch (FileNotFoundException e) {
             multiClassModelCnt = 0;
+        }
+
+        if(modelConfig.isClassification()) {
+            if(modelConfig.getTrain().isOneVsAll()) {
+                if(modelConfig.getTags().size() == 2) {
+                    // onevsall, modelcnt is 1
+                    multiClassModelCnt = 1;
+                } else {
+                    multiClassModelCnt = modelConfig.getTags().size();
+                }
+            } else {
+                multiClassModelCnt = 1;
+            }
         }
 
         // Number of meta columns
@@ -188,8 +209,8 @@ public class ConfusionMatrix {
         posTags = new HashSet<String>(modelConfig.getPosTags(evalConfig));
         negTags = new HashSet<String>(modelConfig.getNegTags(evalConfig));
 
-        scoreScale = Double.parseDouble(Environment.getProperty(Constants.SHIFU_SCORE_SCALE,
-                Integer.toString(Scorer.DEFAULT_SCORE_SCALE)));
+        scoreScale = Double.parseDouble(
+                Environment.getProperty(Constants.SHIFU_SCORE_SCALE, Integer.toString(Scorer.DEFAULT_SCORE_SCALE)));
     }
 
     private int getColumnIndex(String[] headerColumns, String column) {
@@ -230,10 +251,9 @@ public class ConfusionMatrix {
 
     private boolean isGBTNeedConvertScore() {
         String gbtStrategy = evalConfig.getGbtScoreConvertStrategy();
-        return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())
-                && gbtStrategy != null
-                && (gbtStrategy.equalsIgnoreCase(Constants.GBT_SCORE_HALF_CUTOFF_CONVETER) || gbtStrategy
-                        .equalsIgnoreCase(Constants.GBT_SCORE_MAXMIN_SCALE_CONVETER));
+        return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm()) && gbtStrategy != null
+                && (gbtStrategy.equalsIgnoreCase(Constants.GBT_SCORE_HALF_CUTOFF_CONVETER)
+                        || gbtStrategy.equalsIgnoreCase(Constants.GBT_SCORE_MAXMIN_SCALE_CONVETER));
     }
 
     private boolean isGBTScoreHalfCutoffStreategy() {
@@ -258,13 +278,18 @@ public class ConfusionMatrix {
 
         if(isGBTNeedConvertScore()) {
             // if need convert to [0, 1], just keep max score to 1 and min score to 0 without doing anything
-        } else if(isUseMaxMinScore) {
-            // TODO some cases maxPScore is already scaled, how to fix that issue
-            maxScore = maxPScore;
-            minScore = minPScore;
         } else {
-            // otherwise, keep [0, 1]
+            if(isUseMaxMinScore) {
+                // TODO some cases maxPScore is already scaled, how to fix that issue
+                maxScore = maxPScore;
+                minScore = minPScore;
+            } else {
+                // otherwise, keep [0, 1]
+            }
         }
+
+        LOG.info("{} Transformed (scale included) max score is {}, transformed min score is {}",
+                evalConfig.getGbtScoreConvertStrategy(), maxScore, minScore);
 
         SourceType sourceType = evalConfig.getDataSet().getSource();
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(scoreDataPath, sourceType);
@@ -282,7 +307,8 @@ public class ConfusionMatrix {
         List<PerformanceObject> catchRateWeightList = new ArrayList<PerformanceObject>(numBucket + 1);
         List<PerformanceObject> gainWeightList = new ArrayList<PerformanceObject>(numBucket + 1);
 
-        double binScore = (maxScore - minScore) * 1d / numBucket, binCapacity = 1.0 / numBucket, scoreBinCount = 0, scoreBinWeigthedCount = 0;
+        double binScore = (maxScore - minScore) * 1d / numBucket, binCapacity = 1.0 / numBucket, scoreBinCount = 0,
+                scoreBinWeigthedCount = 0;
         int fpBin = 1, tpBin = 1, gainBin = 1, fpWeightBin = 1, tpWeightBin = 1, gainWeightBin = 1, modelScoreBin = 1;
         long index = 0, cnt = 0, invalidTargetCnt = 0, invalidWgtCnt = 0;
 
@@ -510,8 +536,8 @@ public class ConfusionMatrix {
     private void generateChartAndJsonPerfFiles(boolean hasWeight, PerformanceResult result) throws IOException {
         GainChart gc = new GainChart();
 
-        String htmlGainChart = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
-                + "_gainchart.html", SourceType.LOCAL);
+        String htmlGainChart = pathFinder.getEvalFilePath(evalConfig.getName(),
+                evalConfig.getName() + "_gainchart.html", SourceType.LOCAL);
         LOG.info("Gain chart is generated in {}.", htmlGainChart);
         gc.generateHtml(evalConfig, modelConfig, htmlGainChart, result);
 
@@ -520,14 +546,14 @@ public class ConfusionMatrix {
         LOG.info("PR&ROC chart is generated in {}.", htmlPrRocChart);
         gc.generateHtml4PrAndRoc(evalConfig, modelConfig, htmlPrRocChart, result);
 
-        String unitGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
-                + "_unit_wise_gainchart.csv", SourceType.LOCAL);
+        String unitGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(),
+                evalConfig.getName() + "_unit_wise_gainchart.csv", SourceType.LOCAL);
         LOG.info("Unit-wise gain chart data is generated in {}.", unitGainChartCsv);
         gc.generateCsv(evalConfig, modelConfig, unitGainChartCsv, result.gains);
 
         if(hasWeight) {
-            String weightedGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
-                    + "_weighted_gainchart.csv", SourceType.LOCAL);
+            String weightedGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(),
+                    evalConfig.getName() + "_weighted_gainchart.csv", SourceType.LOCAL);
             LOG.info("Weighted gain chart data is generated in {}.", weightedGainChartCsv);
             gc.generateCsv(evalConfig, modelConfig, weightedGainChartCsv, result.weightedGains);
         }
@@ -538,26 +564,26 @@ public class ConfusionMatrix {
         gc.generateCsv(evalConfig, modelConfig, prCsvFile, result.pr);
 
         if(hasWeight) {
-            String weightedPrCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
-                    + "_weighted_pr.csv", SourceType.LOCAL);
+            String weightedPrCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(),
+                    evalConfig.getName() + "_weighted_pr.csv", SourceType.LOCAL);
             LOG.info("Weighted pr data is generated in {}.", weightedPrCsvFile);
             gc.generateCsv(evalConfig, modelConfig, weightedPrCsvFile, result.weightedPr);
         }
 
-        String rocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
-                + "_unit_wise_roc.csv", SourceType.LOCAL);
+        String rocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(),
+                evalConfig.getName() + "_unit_wise_roc.csv", SourceType.LOCAL);
         LOG.info("Unit-wise roc data is generated in {}.", rocCsvFile);
         gc.generateCsv(evalConfig, modelConfig, rocCsvFile, result.roc);
 
         if(hasWeight) {
-            String weightedRocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
-                    + "_weighted_roc.csv", SourceType.LOCAL);
+            String weightedRocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(),
+                    evalConfig.getName() + "_weighted_roc.csv", SourceType.LOCAL);
             LOG.info("Weighted roc data is generated in {}.", weightedRocCsvFile);
             gc.generateCsv(evalConfig, modelConfig, weightedRocCsvFile, result.weightedRoc);
         }
 
-        String modelScoreGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
-                + "_modelscore_gainchart.csv", SourceType.LOCAL);
+        String modelScoreGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(),
+                evalConfig.getName() + "_modelscore_gainchart.csv", SourceType.LOCAL);
         LOG.info("Model score gain chart data is generated in {}.", modelScoreGainChartCsv);
         gc.generateCsv(evalConfig, modelConfig, modelScoreGainChartCsv, result.modelScoreList);
     }
@@ -595,13 +621,28 @@ public class ConfusionMatrix {
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getEvalScorePath(evalConfig, sourceType),
                 sourceType);
         boolean isDir = ShifuFileUtils.isDir(pathFinder.getEvalScorePath(evalConfig, sourceType), sourceType);
-        Set<String> tagSet = new HashSet<String>(modelConfig.getFlattenTags(modelConfig.getPosTags(evalConfig),
-                modelConfig.getNegTags(evalConfig)));
+        Set<String> tagSet = new HashSet<String>(
+                modelConfig.getFlattenTags(modelConfig.getPosTags(evalConfig), modelConfig.getNegTags(evalConfig)));
         List<Set<String>> tags = modelConfig.getSetTags(modelConfig.getPosTags(evalConfig),
                 modelConfig.getNegTags(evalConfig));
 
         int classes = tags.size();
         long cnt = 0, invalidTargetCnt = 0;
+
+        ColumnConfig targetColumn = CommonUtils.findTargetColumn(columnConfigList);
+
+        List<Integer> binCountNeg = targetColumn.getBinCountNeg();
+        List<Integer> binCountPos = targetColumn.getBinCountPos();
+        long[] binCount = new long[classes];
+        double[] binRatio = new double[classes];
+        long sumCnt = 0L;
+        for(int i = 0; i < binCount.length; i++) {
+            binCount[i] = binCountNeg.get(i) + binCountPos.get(i);
+            sumCnt += binCount[i];
+        }
+        for(int i = 0; i < binCount.length; i++) {
+            binRatio[i] = (binCount[i] * 1d) / sumCnt;
+        }
 
         long[][] confusionMatrix = new long[classes][classes];
         for(Scanner scanner: scanners) {
@@ -624,8 +665,7 @@ public class ConfusionMatrix {
                 }
 
                 double[] scores = new double[classes];
-
-                int maxIndex = -1;
+                int predictIndex = -1;
                 double maxScore = Double.NEGATIVE_INFINITY;
 
                 if(CommonUtils.isTreeModel(modelConfig.getAlgorithm()) && !modelConfig.getTrain().isOneVsAll()) {
@@ -638,33 +678,89 @@ public class ConfusionMatrix {
                     double maxVotes = -1d;
                     for(int i = 0; i < tagCounts.length; i++) {
                         if(tagCounts[i] > maxVotes) {
-                            maxIndex = i;
+                            predictIndex = i;
                             maxScore = maxVotes = tagCounts[i];
                         }
                     }
-                } else if((CommonUtils.isTreeModel(modelConfig.getAlgorithm()) || NNConstants.NN_ALG_NAME
-                        .equalsIgnoreCase(modelConfig.getAlgorithm())) && modelConfig.getTrain().isOneVsAll()) {
+                } else if((CommonUtils.isTreeModel(modelConfig.getAlgorithm())
+                        || NNConstants.NN_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm()))
+                        && modelConfig.getTrain().isOneVsAll()) {
                     // for RF, GBT & NN OneVsAll classification
-                    for(int i = this.multiClassScore1Index; i < (classes + this.multiClassScore1Index); i++) {
-                        double dd = NumberFormatUtils.getDouble(raw[i], 0d);
-                        if(dd > maxScore) {
-                            maxScore = dd;
-                            maxIndex = i - this.multiClassScore1Index;
+                    if(classes == 2) {
+                        // for binary classification, only one model is needed.
+                        for(int i = this.multiClassScore1Index; i < (1 + this.multiClassScore1Index); i++) {
+                            double dd = NumberFormatUtils.getDouble(raw[i], 0d);
+                            if(dd > ((1d - binRatio[i - this.multiClassScore1Index]) * scoreScale)) {
+                                predictIndex = 0;
+                            } else {
+                                predictIndex = 1;
+                            }
+                        }
+                    } else {
+                        // logic is here, per each onevsrest, it may be im-banlanced. for example, class a, b, c, first
+                        // is a(1) vs b and c(0), ratio is 10:1, then to compare score, if score > 1/11 it is positive,
+                        // check other models to see if still positive in b or c, take the largest one with ratio for
+                        // final prediction
+                        int[] predClasses = new int[classes];
+                        double[] scoress = new double[classes];
+                        double[] threhs = new double[classes];
+
+                        for(int i = this.multiClassScore1Index; i < (classes + this.multiClassScore1Index); i++) {
+                            double dd = NumberFormatUtils.getDouble(raw[i], 0d);
+                            scoress[i - this.multiClassScore1Index] = dd;
+                            threhs[i - this.multiClassScore1Index] = (1d - binRatio[i - this.multiClassScore1Index])
+                                    * scoreScale;
+                            if(dd > ((1d - binRatio[i - this.multiClassScore1Index]) * scoreScale)) {
+                                predClasses[i - this.multiClassScore1Index] = 1;
+                            }
+                        }
+
+                        double maxRatio = -1d;
+                        double maxPositiveRatio = -1d;
+                        int maxRatioIndex = -1;
+                        for(int i = 0; i < binCount.length; i++) {
+                            if(binRatio[i] > maxRatio) {
+                                maxRatio = binRatio[i];
+                                maxRatioIndex = i;
+                            }
+                            // if has positive, choose one with highest ratio
+                            if(predClasses[i] == 1) {
+                                if(binRatio[i] > maxPositiveRatio) {
+                                    maxPositiveRatio = binRatio[i];
+                                    predictIndex = i;
+                                }
+                            }
+                        }
+                        // no any positive, take the largest one
+                        if(maxPositiveRatio < 0d) {
+                            predictIndex = maxRatioIndex;
                         }
                     }
                 } else {
-                    // only for NN & Native Multiple classification
-                    // 1,2,3 4,5,6: 1,2,3 is model 0, 4,5,6 is model 1
-                    for(int i = 0; i < classes; i++) {
-                        for(int j = 0; j < multiClassModelCnt; j++) {
-                            double dd = NumberFormatUtils.getDouble(raw[this.multiClassScore1Index + j * classes + i],
-                                    0d);
-                            scores[i] += dd;
+                    if(classes == 2) {
+                        // for binary classification, only one model is needed.
+                        for(int i = this.multiClassScore1Index; i < (1 + this.multiClassScore1Index); i++) {
+                            double dd = NumberFormatUtils.getDouble(raw[i], 0d);
+                            if(dd > ((1d - binRatio[i - this.multiClassScore1Index]) * scoreScale)) {
+                                predictIndex = 0;
+                            } else {
+                                predictIndex = 1;
+                            }
                         }
-                        scores[i] /= multiClassModelCnt;
-                        if(scores[i] > maxScore) {
-                            maxIndex = i;
-                            maxScore = scores[i];
+                    } else {
+                        // only for NN & Native Multiple classification
+                        // 1,2,3 4,5,6: 1,2,3 is model 0, 4,5,6 is model 1
+                        for(int i = 0; i < classes; i++) {
+                            for(int j = 0; j < multiClassModelCnt; j++) {
+                                double dd = NumberFormatUtils
+                                        .getDouble(raw[this.multiClassScore1Index + j * classes + i], 0d);
+                                scores[i] += dd;
+                            }
+                            scores[i] /= multiClassModelCnt;
+                            if(scores[i] > maxScore) {
+                                predictIndex = i;
+                                maxScore = scores[i];
+                            }
                         }
                     }
                 }
@@ -675,7 +771,7 @@ public class ConfusionMatrix {
                         break;
                     }
                 }
-                confusionMatrix[tagIndex][maxIndex] += 1L;
+                confusionMatrix[tagIndex][predictIndex] += 1L;
             }
             scanner.close();
         }
@@ -716,7 +812,9 @@ public class ConfusionMatrix {
                 writer.write(sb.toString());
             }
         } finally {
-            writer.close();
+            if(writer != null) {
+                writer.close();
+            }
         }
     }
 
@@ -790,8 +888,9 @@ public class ConfusionMatrix {
         ConfusionMatrixCalculator calculator = new ConfusionMatrixCalculator(modelConfig.getPosTags(evalConfig),
                 modelConfig.getNegTags(evalConfig), moList);
 
-        BufferedWriter confMatWriter = ShifuFileUtils.getWriter(pathFinder.getEvalMatrixPath(evalConfig, evalConfig
-                .getDataSet().getSource()), evalConfig.getDataSet().getSource());
+        BufferedWriter confMatWriter = ShifuFileUtils.getWriter(
+                pathFinder.getEvalMatrixPath(evalConfig, evalConfig.getDataSet().getSource()),
+                evalConfig.getDataSet().getSource());
         calculator.calculate(confMatWriter);
 
         confMatWriter.close();

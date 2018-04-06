@@ -74,16 +74,18 @@ public class ColumnProjector extends AbstractTrainerUDF<Tuple> {
 
         // create model runner
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
-            this.headers = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
-                    .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
+            this.headers = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(),
+                    evalConfig.getDataSet().getHeaderDelimiter(), evalConfig.getDataSet().getSource());
         } else {
-            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) ? evalConfig
-                    .getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
-            String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter, evalConfig
-                    .getDataSet().getSource());
+            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter())
+                    ? evalConfig.getDataSet().getDataDelimiter()
+                    : evalConfig.getDataSet().getHeaderDelimiter();
+            String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter,
+                    evalConfig.getDataSet().getSource());
             if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
                 this.headers = new String[fields.length];
                 for(int i = 0; i < fields.length; i++) {
+                    fields[i] = CommonUtils.normColumnName(fields[i]);
                     this.headers[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
                 }
                 log.warn("No header path is provided, we will try to read first line and detect schema.");

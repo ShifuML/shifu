@@ -179,7 +179,11 @@ public class ModelStatsConf {
     }
 
     public String getPsiColumnName() {
-        return psiColumnName;
+        // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
+        // char or / in its name in shifu will be replaced;
+        String newPSIName = psiColumnName.replaceAll(" ", "_");
+        newPSIName = newPSIName.replaceAll("/", "_");
+        return newPSIName;
     }
 
     public void setPsiColumnName(String psiColumnName) {

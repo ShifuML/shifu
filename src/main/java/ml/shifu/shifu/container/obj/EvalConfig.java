@@ -48,6 +48,11 @@ public class EvalConfig {
     private String scoreMetaColumnNameFile;
     private Map<String, String> customPaths;
     private Long scoreScale = 1000L;
+    
+    /**
+     * if eval -norm need norm all columns or final selected columns(finalSelect=true), by default false
+     */
+    private Boolean normAllColumns = false;
 
     /**
      * For typical 0-1 binary regression, this is set to be true, while for other regression, better to set it to false
@@ -64,7 +69,7 @@ public class EvalConfig {
      * GBTScoreConvertStrategy is used to convert raw GBT score to the same distribution in NN, like cut off score to
      * [0, 1].
      */
-    private String gbtScoreConvertStrategy = "SIGMOID";
+    private String gbtScoreConvertStrategy = "OLD_SIGMOID";
 
     /**
      * Cache meta columns to a list to avoid reading this file for several times
@@ -246,6 +251,7 @@ public class EvalConfig {
      * @return the gbtConvertToProb
      */
     @JsonIgnore
+    @Deprecated
     public Boolean getGbtConvertToProb() {
         return gbtConvertToProb;
     }
@@ -255,6 +261,7 @@ public class EvalConfig {
      *            the gbtConvertToProb to set
      */
     @JsonProperty
+    @Deprecated
     public void setGbtConvertToProb(Boolean gbtConvertToProb) {
         this.gbtConvertToProb = gbtConvertToProb;
     }
@@ -306,4 +313,19 @@ public class EvalConfig {
         other.setScoreMetaColumnNameFile(scoreMetaColumnNameFile);
         return other;
     }
+
+    /**
+     * @return the normAllColumns
+     */
+    public Boolean getNormAllColumns() {
+        return normAllColumns;
+    }
+
+    /**
+     * @param normAllColumns the normAllColumns to set
+     */
+    public void setNormAllColumns(Boolean normAllColumns) {
+        this.normAllColumns = normAllColumns;
+    }
+
 }

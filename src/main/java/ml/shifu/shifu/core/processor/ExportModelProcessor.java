@@ -17,16 +17,9 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
+import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ColumnStatsCalculator;
 import ml.shifu.shifu.core.TreeModel;
@@ -42,21 +35,30 @@ import ml.shifu.shifu.core.pmml.PMMLTranslator;
 import ml.shifu.shifu.core.pmml.PMMLUtils;
 import ml.shifu.shifu.core.pmml.builder.PMMLConstructorFactory;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
+import ml.shifu.shifu.core.varselect.ColumnStatistics;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.HDFSUtils;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.dmg.pmml.PMML;
 import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
 
 /**
  * ExportModelProcessor class
@@ -74,6 +76,8 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     public static final String ONE_BAGGING_MODEL = "bagging";
     public static final String ONE_BAGGING_PMML_MODEL = "baggingpmml";
     public static final String WOE_MAPPING = "woemapping";
+    public static final String WOE = "woe";
+    public static final String CORRELATION = "corr";
 
     public static final String IS_CONCISE = "IS_CONCISE";
     public static final String REQUEST_VARS = "REQUEST_VARS";
@@ -83,6 +87,11 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
 
     private String type;
     private Map<String, Object> params;
+
+    /**
+     * SE stats mao for correlation variable selection,if not se, this field will be null.
+     */
+    private Map<Integer, ColumnStatistics> seStatsMap;
 
     public ExportModelProcessor(String type, Map<String, Object> params) {
         this.type = type;
@@ -119,8 +128,8 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 } else {
                     log.info("Convert nn models into one binary bagging model.");
                     Configuration conf = new Configuration();
-                    Path output = new Path(pathFinder.getBaggingModelPath(SourceType.LOCAL), "model.b"
-                            + modelConfig.getAlgorithm());
+                    Path output = new Path(pathFinder.getBaggingModelPath(SourceType.LOCAL),
+                            "model.b" + modelConfig.getAlgorithm());
                     if("nn".equalsIgnoreCase(modelConfig.getAlgorithm())) {
                         BinaryNNSerializer.save(modelConfig, columnConfigList, models, FileSystem.getLocal(conf),
                                 output);
@@ -137,8 +146,9 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                         // numerical + categorical = # of all input
                         int inputCount = inputOutputIndex[0] + inputOutputIndex[1];
 
-                        BinaryDTSerializer.save(modelConfig, columnConfigList, baggingTrees, modelConfig.getParams()
-                                .get("Loss").toString(), inputCount, FileSystem.getLocal(conf), output);
+                        BinaryDTSerializer.save(modelConfig, columnConfigList, baggingTrees,
+                                modelConfig.getParams().get("Loss").toString(), inputCount, FileSystem.getLocal(conf),
+                                output);
                     }
                     log.info("Please find one unified bagging model in local {}.", output);
                 }
@@ -192,6 +202,27 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 }
                 FileUtils.write(new File("woemapping.txt"), StringUtils.join(woeMappings, ",\n"));
             }
+        } else if (type.equalsIgnoreCase(WOE)) {
+            List<String> woeInfos = new ArrayList<String>();
+            for ( ColumnConfig columnConfig : this.columnConfigList ) {
+                if ( columnConfig.getBinLength() > 1 &&
+                        ( (columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinCategory()))
+                        || (columnConfig.isNumerical() && CollectionUtils.isNotEmpty(columnConfig.getBinBoundary()) && columnConfig.getBinBoundary().size() > 1)) ) {
+                    List<String> varWoeInfos = generateWoeInfos(columnConfig);
+                    if ( CollectionUtils.isNotEmpty(varWoeInfos) ) {
+                        woeInfos.addAll(varWoeInfos);
+                        woeInfos.add("");
+                    }
+                }
+                FileUtils.writeLines(new File("varwoe_info.txt"), woeInfos);
+            }
+        } else if(type.equalsIgnoreCase(CORRELATION)) {
+            // export correlation into mapping list
+            if(!ShifuFileUtils.isFileExists(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL)) {
+                log.warn("The correlation file doesn't exist. Please make sure you have ran `shifu stats -c`.");
+                return 2;
+            }
+            return exportVariableCorr();
         } else {
             log.error("Unsupported output format - {}", type);
             status = -1;
@@ -202,6 +233,29 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         log.info("Done.");
 
         return status;
+    }
+
+    private List<String> generateWoeInfos(ColumnConfig columnConfig) {
+        List<String> varWoeInfos = new ArrayList<String>();
+        varWoeInfos.add(columnConfig.getColumnName());
+        if ( columnConfig.isNumerical() ) {
+            for ( int i = 0; i < columnConfig.getBinBoundary().size(); i ++ ) {
+                if ( i == 0 ) {
+                    varWoeInfos.add("(-\u221E," + columnConfig.getBinBoundary().get(i + 1) + "]\t" + columnConfig.getBinCountWoe().get(i));
+                } else if ( i == columnConfig.getBinBoundary().size() - 1 ) {
+                    varWoeInfos.add("(" + columnConfig.getBinBoundary().get(i) + ",+\u221E]\t" + columnConfig.getBinCountWoe().get(i));
+                } else {
+                    varWoeInfos.add("(" + columnConfig.getBinBoundary().get(i) + "," + columnConfig.getBinBoundary().get(i + 1) + "]\t" + columnConfig.getBinCountWoe().get(i));
+                }
+            }
+            varWoeInfos.add("MISSING" + "\t" + columnConfig.getBinCountWoe().get(columnConfig.getBinCountWoe().size() - 1));
+        } else {
+            for ( int i = 0; i < columnConfig.getBinCategory().size(); i ++ ) {
+                varWoeInfos.add(columnConfig.getBinCategory().get(i) + "\t" + columnConfig.getBinCountWoe().get(i));
+            }
+            varWoeInfos.add("MISSING" + "\t" + columnConfig.getBinCountWoe().get(columnConfig.getBinCountWoe().size() - 1));
+        }
+        return varWoeInfos;
     }
 
     private String rebinAndExportWoeMapping(ColumnConfig columnConfig) throws IOException {
@@ -221,10 +275,10 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             binCountNeg[i] = binInfo.getNegativeCnt();
             binCountPos[i] = binInfo.getPositiveCnt();
         }
-        binCountNeg[binCountNeg.length - 1] = columnConfig.getBinCountNeg().get(
-                columnConfig.getBinCountNeg().size() - 1);
-        binCountPos[binCountPos.length - 1] = columnConfig.getBinCountPos().get(
-                columnConfig.getBinCountPos().size() - 1);
+        binCountNeg[binCountNeg.length - 1] = columnConfig.getBinCountNeg()
+                .get(columnConfig.getBinCountNeg().size() - 1);
+        binCountPos[binCountPos.length - 1] = columnConfig.getBinCountPos()
+                .get(columnConfig.getBinCountPos().size() - 1);
         ColumnStatsCalculator.ColumnMetrics columnMetrics = ColumnStatsCalculator.calculateColumnMetrics(binCountNeg,
                 binCountPos);
 
@@ -292,8 +346,8 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                     values.add("'" + subCval + "'");
                 }
             }
-            buffer.append("\twhen " + columnConfig.getColumnName() + " in (" + StringUtils.join(values, ',')
-                    + ") then " + columnMetrics.getBinningWoe().get(i) + "\n");
+            buffer.append("\twhen " + columnConfig.getColumnName() + " in (" + StringUtils.join(values, ',') + ") then "
+                    + columnMetrics.getBinningWoe().get(i) + "\n");
         }
         buffer.append("\telse " + columnMetrics.getBinningWoe().get(columnMetrics.getBinningWoe().size() - 1) + "\n");
         buffer.append("  end ) as " + columnConfig.getColumnName() + "_" + categoricalBinInfos.size());
@@ -345,8 +399,118 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 writer.write(builder.toString());
             }
         } finally {
-            writer.close();
+            if(writer != null) {
+                writer.close();
+            }
         }
+    }
+
+    private int exportVariableCorr() throws IOException {
+        Set<VarCorrInfo> varCorrInfoSet = new HashSet<VarCorrInfo>();
+        BufferedReader reader = ShifuFileUtils.getReader(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL);
+        PostCorrelationMetric metric = this.modelConfig.getVarSelect().getPostCorrelationMetric();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
+        try {
+            int lineNum = 0;
+            String line = null;
+            while((line = reader.readLine()) != null) {
+                lineNum += 1;
+                if(lineNum <= 2) {
+                    // skip first 2 lines which are indexes and names
+                    continue;
+                }
+                String[] columns = CommonUtils.split(line, ",");
+                if(columns != null && columns.length == columnConfigList.size() + 2) {
+                    int columnIndex = Integer.parseInt(columns[0].trim());
+                    ColumnConfig fromConfig = this.columnConfigList.get(columnIndex);
+                    if(fromConfig.isTarget() || CommonUtils.isGoodCandidate(fromConfig, hasCandidates)) {
+                        double[] corrArray = getCorrArray(columns);
+                        for(int i = 0; i < corrArray.length; i++) {
+                            ColumnConfig toConfig = this.columnConfigList.get(i);
+                            if(i != columnIndex && !toConfig.isTarget() && !toConfig.isMeta()) {
+                                varCorrInfoSet.add(new VarCorrInfo(fromConfig.getColumnName(), toConfig.getColumnName(),
+                                        corrArray[i], getColumnMetric(fromConfig, metric),
+                                        getColumnMetric(toConfig, metric)));
+                            }
+                        }
+                    }
+                }
+            }
+        } finally {
+            IOUtils.closeQuietly(reader);
+        }
+
+        List<VarCorrInfo> varCorrInfoList = new ArrayList<VarCorrInfo>(varCorrInfoSet);
+        Collections.sort(varCorrInfoList);
+
+        String corrExportPath = this.pathFinder.getCorrExportPath();
+        ShifuFileUtils.writeLines(varCorrInfoList, corrExportPath, SourceType.LOCAL);
+        log.info("Done. The correlations are exported to {}", corrExportPath);
+
+        return 0;
+    }
+
+    private double getColumnMetric(ColumnConfig config, PostCorrelationMetric metric) throws IOException {
+        if(metric == null || metric.equals(PostCorrelationMetric.IV)) {
+            // default is iv, if no PostCorrelationMetric specified
+            return (config.getIv() == null ? Double.NaN : config.getIv());
+        } else if(metric.equals(PostCorrelationMetric.KS)) {
+            return (config.getKs() == null ? Double.NaN : config.getKs());
+        } else if(metric.equals(PostCorrelationMetric.SE)) {
+            if(this.seStatsMap == null) {
+                SourceType source = this.modelConfig.getDataSet().getSource();
+                String varSelectMSEOutputPath = pathFinder.getVarSelectMSEOutputPath(source);
+                this.seStatsMap = readSEValuesToMap(
+                        varSelectMSEOutputPath + Path.SEPARATOR + Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME + "-*",
+                        source);
+            }
+
+            return this.seStatsMap.get(config.getColumnNum()).getRms();
+        }
+        return -1.0d;
+    }
+
+    // TODO duplicate code with VarSelectModelProcessor. Needs do code refactor
+    private Map<Integer, ColumnStatistics> readSEValuesToMap(String seOutputFiles, SourceType source)
+            throws IOException {
+        // here only works for 1 reducer
+        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source).globStatus(new Path(seOutputFiles));
+        if(globStatus == null || globStatus.length == 0) {
+            throw new RuntimeException("Var select MSE stats output file not exist.");
+        }
+        Map<Integer, ColumnStatistics> map = new HashMap<Integer, ColumnStatistics>();
+        List<Scanner> scanners = null;
+        try {
+            scanners = ShifuFileUtils.getDataScanners(globStatus[0].getPath().toString(), source);
+            for(Scanner scanner: scanners) {
+                String str = null;
+                while(scanner.hasNext()) {
+                    str = scanner.nextLine().trim();
+                    String[] splits = CommonUtils.split(str, "\t");
+                    if(splits.length == 5) {
+                        map.put(Integer.parseInt(splits[0].trim()), new ColumnStatistics(Double.parseDouble(splits[2]),
+                                Double.parseDouble(splits[3]), Double.parseDouble(splits[4])));
+                    }
+                }
+            }
+        } finally {
+            if(scanners != null) {
+                for(Scanner scanner: scanners) {
+                    if(scanner != null) {
+                        scanner.close();
+                    }
+                }
+            }
+        }
+        return map;
+    }
+
+    private double[] getCorrArray(String[] columns) {
+        double[] corr = new double[columns.length - 2];
+        for(int i = 2; i < corr.length; i++) {
+            corr[i - 2] = Double.parseDouble(columns[i].trim());
+        }
+        return corr;
     }
 
     private boolean isConcise() {
@@ -400,5 +564,60 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             }
         }
         return 0;
+    }
+
+    public static class VarCorrInfo implements Comparable<VarCorrInfo> {
+        private String leftVarName;
+        private String rightVarName;
+        private double corrVal;
+        private double leftMetricVal;
+        private double rightMetricVal;
+
+        public VarCorrInfo(String fromVarName, String toVarName, double corrVal, double fromMetricVal,
+                double toMetricVal) {
+            if(fromVarName.compareTo(toVarName) < 0) {
+                this.leftVarName = fromVarName;
+                this.rightVarName = toVarName;
+                this.leftMetricVal = fromMetricVal;
+                this.rightMetricVal = toMetricVal;
+            } else {
+                this.leftVarName = toVarName;
+                this.rightVarName = fromVarName;
+                this.leftMetricVal = toMetricVal;
+                this.rightMetricVal = fromMetricVal;
+            }
+            this.corrVal = corrVal;
+        }
+
+        @Override
+        public String toString() {
+            return leftVarName + "," + rightVarName + "," + corrVal + "," + leftMetricVal + "," + rightMetricVal;
+        }
+
+        @Override
+        public int hashCode() {
+            return this.leftVarName.hashCode() * this.rightVarName.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if(obj == this) {
+                return true;
+            }
+
+            if(!(obj instanceof VarCorrInfo)) {
+                return false;
+            }
+
+            VarCorrInfo other = (VarCorrInfo) obj;
+            return this.leftVarName.equalsIgnoreCase(other.leftVarName)
+                    && this.rightVarName.equalsIgnoreCase(other.rightVarName);
+        }
+
+        @Override
+        public int compareTo(VarCorrInfo other) {
+            // order by corrVal desc
+            return Double.compare(other.corrVal, this.corrVal);
+        }
     }
 }
