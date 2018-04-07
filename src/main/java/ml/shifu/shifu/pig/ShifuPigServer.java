@@ -19,9 +19,12 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Properties;
 
+import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.pig.ExecType;
 import org.apache.pig.PigServer;
 import org.apache.pig.backend.executionengine.ExecException;
@@ -63,7 +66,12 @@ public class ShifuPigServer extends PigServer {
         // script
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
             if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                super.pigContext.getProperties().put(entry.getKey(), entry.getValue());
+                if ( StringUtils.equalsIgnoreCase(entry.getKey().toString(), Constants.SHIFU_OUTPUT_DATA_DELIMITER) ) {
+                    super.pigContext.getProperties().put(entry.getKey(),
+                            Base64Utils.base64Encode(entry.getValue().toString()));
+                } else {
+                    super.pigContext.getProperties().put(entry.getKey(), entry.getValue());
+                }
             }
         }
 

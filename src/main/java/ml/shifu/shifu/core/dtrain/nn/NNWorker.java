@@ -18,6 +18,7 @@ package ml.shifu.shifu.core.dtrain.nn;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.collect.Lists;
 import ml.shifu.guagua.ComputableMonitor;
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
@@ -72,7 +73,8 @@ public class NNWorker extends AbstractNNWorker<Text> {
         // use NNConstants.NN_DEFAULT_COLUMN_SEPARATOR to replace getModelConfig().getDataSetDelimiter(), super follows
         // the function in akka mode.
         int index = 0, inputsIndex = 0, outputIndex = 0;
-        String[] fields = currentValue.getWritable().toString().split("\\|", -1);
+        String[] fields = Lists.newArrayList(this.splitter.split(currentValue.getWritable().toString()))
+                .toArray(new String[0]);
         for(int pos = 0; pos < fields.length;) {
             String input = fields[pos];
             // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)

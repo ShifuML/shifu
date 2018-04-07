@@ -38,4 +38,4 @@ evalScore = FILTER evalScore BY $0 IS NOT NULL;
 -- leverage Hadoop sorting
 evalScore = ORDER evalScore BY shifu::$columnIndex DESC;
 
-STORE evalScore INTO '$pathEvalScore' USING PigStorage('|', '-schema');
+STORE evalScore INTO '$pathEvalScore' USING PigStorage('$output_delimiter', '-schema');

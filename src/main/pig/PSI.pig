@@ -45,6 +45,6 @@ population_info = FOREACH population_info GENERATE FLATTEN(counters);
 psi = foreach (group population_info by $0) generate FLATTEN(PSI(*));
 
 rmf $path_psi
-store psi INTO '$path_psi' USING PigStorage('|', '-schema');
+store psi INTO '$path_psi' USING PigStorage('$output_delimiter', '-schema');
 
 

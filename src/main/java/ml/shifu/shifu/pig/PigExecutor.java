@@ -24,7 +24,9 @@ import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 
 import org.apache.commons.lang.StringUtils;
@@ -32,6 +34,7 @@ import org.apache.pig.ExecType;
 import org.apache.pig.PigServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.misc.BASE64Encoder;
 
 /**
  * PigExecutor class
@@ -120,7 +123,12 @@ public class PigExecutor {
 
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
             if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                pigServer.getPigContext().getProperties().put(entry.getKey(), entry.getValue());
+                if ( StringUtils.equalsIgnoreCase(entry.getKey().toString(), Constants.SHIFU_OUTPUT_DATA_DELIMITER) ) {
+                    pigServer.getPigContext().getProperties().put(entry.getKey(),
+                            Base64Utils.base64Encode(entry.getValue().toString()));
+                } else {
+                    pigServer.getPigContext().getProperties().put(entry.getKey(), entry.getValue());
+                }
             }
         }
 

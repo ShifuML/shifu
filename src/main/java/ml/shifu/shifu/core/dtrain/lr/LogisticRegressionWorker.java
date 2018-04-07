@@ -40,8 +40,10 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
 
+import ml.shifu.shifu.util.Constants;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.io.LongWritable;
@@ -136,7 +138,7 @@ public class LogisticRegressionWorker
     /**
      * A splitter to split data with specified delimiter.
      */
-    private Splitter splitter = Splitter.on("|").trimResults();
+    private Splitter splitter;
 
     /**
      * PoissonDistribution which is used for poisson sampling for bagging with replacement.
@@ -274,6 +276,18 @@ public class LogisticRegressionWorker
                     * memoryFraction * crossValidationRate), tmpFolder + File.separator + "test-"
                     + System.currentTimeMillis(), Data.class.getName());
         }
+
+        // create Splitter
+        String delimiter = context.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
+        try {
+            delimiter = (StringUtils.isNotBlank(delimiter)
+                    ? Base64Utils.base64Decode(delimiter) : Constants.DEFAULT_DELIMITER);
+        } catch (Exception e) {
+            delimiter = Constants.DEFAULT_DELIMITER;
+        }
+        this.splitter = Splitter.on(delimiter).trimResults();
+        LOG.info("The delimiter of normalization data is - {}", delimiter);
+
         // cannot find a good place to close these two data set, using Shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
