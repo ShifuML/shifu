@@ -24,10 +24,7 @@ import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.PathFinder;
-import ml.shifu.shifu.util.Base64Utils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.*;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.ExecType;
@@ -119,18 +116,14 @@ public class PigExecutor {
     public void submitJob(ModelConfig modelConfig, String pigScriptPath, Map<String, String> paramsMap,
             SourceType sourceType, Map<String, String> confMap, PathFinder pathFinder) throws IOException {
         // Run Pig Scripts
-        PigServer pigServer = createPigServer(sourceType);
+        final PigServer pigServer = createPigServer(sourceType);
 
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                if ( StringUtils.equalsIgnoreCase(entry.getKey().toString(), Constants.SHIFU_OUTPUT_DATA_DELIMITER) ) {
-                    pigServer.getPigContext().getProperties().put(entry.getKey(),
-                            Base64Utils.base64Encode(entry.getValue().toString()));
-                } else {
-                    pigServer.getPigContext().getProperties().put(entry.getKey(), entry.getValue());
-                }
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                pigServer.getPigContext().getProperties().put(key, value);
             }
-        }
+        });
 
         if(confMap != null) {
             for(Map.Entry<String, String> entry: confMap.entrySet()) {

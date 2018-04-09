@@ -49,6 +49,7 @@ import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
 
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.MapReduceUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
@@ -496,14 +497,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
         // create Splitter
         String delimiter = context.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
-        try {
-            delimiter = (StringUtils.isNotBlank(delimiter)
-                    ? Base64Utils.base64Decode(delimiter) : Constants.DEFAULT_DELIMITER);
-        } catch (Exception e) {
-            delimiter = Constants.DEFAULT_DELIMITER;
-        }
-        this.splitter = Splitter.on(delimiter).trimResults();
-        LOG.info("The delimiter of normalization data is - {}", delimiter);
+        this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
     }
 
     private boolean isOnDisk() {

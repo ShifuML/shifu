@@ -65,10 +65,7 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.fs.SourceFile;
-import ml.shifu.shifu.util.Base64Utils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.*;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.CollectionUtils;
@@ -300,7 +297,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     private void runCorrMapReduceJob() throws IOException, InterruptedException, ClassNotFoundException {
         SourceType source = this.modelConfig.getDataSet().getSource();
-        Configuration conf = new Configuration();
+        final Configuration conf = new Configuration();
 
         String modelConfigPath = ShifuFileUtils.getFileSystemBySourceType(source)
                 .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString();
@@ -346,15 +343,12 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         conf.setInt("mapreduce.map.cpu.vcores", threads);
 
         // one can set guagua conf in shifuconfig
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                if ( StringUtils.equalsIgnoreCase(entry.getKey().toString(), Constants.SHIFU_OUTPUT_DATA_DELIMITER) ) {
-                    conf.set(entry.getKey().toString(), Base64Utils.base64Encode(entry.getValue().toString()));
-                } else {
-                    conf.set(entry.getKey().toString(), entry.getValue().toString());
-                }
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                conf.set(key.toString(), value.toString());
             }
-        }
+        });
 
         // if one of two memory settings is null, automatically set mapper memory by column size, if not set it from
         // system properties which is set from command line like 'shifu stats -c -Dmapreduce.map.memory.mb=3072

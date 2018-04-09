@@ -24,6 +24,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import ml.shifu.shifu.util.Base64Utils;
+import ml.shifu.shifu.util.MapReduceUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -272,14 +273,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
 
         // create Splitter
         String delimiter = context.getConfiguration().get(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
-        try {
-            delimiter = (StringUtils.isNotBlank(delimiter)
-                    ? Base64Utils.base64Decode(delimiter) : Constants.DEFAULT_DELIMITER);
-        } catch (Exception e) {
-            delimiter = Constants.DEFAULT_DELIMITER;
-        }
-        this.splitter = Splitter.on(delimiter).trimResults();
-        LOG.info("The delimiter of normalization data is - {}", delimiter);
+        this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
     }
 
     @Override

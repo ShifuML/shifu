@@ -59,11 +59,8 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.Base64Utils;
-import ml.shifu.shifu.util.ClassUtils;
-import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.*;
 
-import ml.shifu.shifu.util.Constants;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -380,14 +377,7 @@ public class DTWorker
 
         // create Splitter
         String delimiter = context.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
-        try {
-            delimiter = (StringUtils.isNotBlank(delimiter)
-                    ? Base64Utils.base64Decode(delimiter) : Constants.DEFAULT_DELIMITER);
-        } catch (Exception e) {
-            delimiter = Constants.DEFAULT_DELIMITER;
-        }
-        this.splitter = Splitter.on(delimiter).trimResults();
-        LOG.info("The delimiter of normalization data is - {}", delimiter);
+        this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
 
         Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
         if(kCrossValidation != null && kCrossValidation > 0) {
