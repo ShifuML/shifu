@@ -35,6 +35,7 @@ public class ShifuPigStorage extends PigStorage {
     private PigStorage shifuStorage;
 
     public ShifuPigStorage(String isCSV) {
+        super("\t");
         if("true".equals(isCSV.toLowerCase()) && isCSV != null) {
            shifuStorage = new CSVExcelStorage("\t", "NO_MULTILINE", "UNIX", "WRITE_OUTPUT_HEADER");
         } else {
@@ -66,6 +67,7 @@ public class ShifuPigStorage extends PigStorage {
         shifuStorage.setLocation(location, job);
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public InputFormat getInputFormat() {
         return shifuStorage.getInputFormat();
@@ -97,7 +99,7 @@ public class ShifuPigStorage extends PigStorage {
     }
     
     @Override
-    public void prepareToWrite(RecordWriter writer) {
+    public void prepareToWrite(@SuppressWarnings("rawtypes") RecordWriter writer) {
         shifuStorage.prepareToWrite(writer);
     }
 

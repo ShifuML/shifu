@@ -427,7 +427,7 @@ public final class CommonUtils {
     }
 
     /**
-     * Some column name has illegal chars which are all be normed in shifu. This is a hook to norm column name but 
+     * Some column name has illegal chars which are all be normed in shifu. This is a hook to norm column name but
      * actually so far it is just return;
      * 
      * @param columnName
@@ -435,9 +435,10 @@ public final class CommonUtils {
      * @return normed column name
      */
     public static String normColumnName(String columnName) {
-        return columnName;
+        String newColumnName = columnName.replaceAll("\\.", "_");
+        return newColumnName;
     }
-
+    
     /**
      * Return final selected column collection.
      * 
