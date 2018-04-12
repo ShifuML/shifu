@@ -435,10 +435,14 @@ public final class CommonUtils {
      * @return normed column name
      */
     public static String normColumnName(String columnName) {
+        if(columnName == null) {
+            // NPE protection
+            return columnName;
+        }
         String newColumnName = columnName.replaceAll("\\.", "_");
         return newColumnName;
     }
-    
+
     /**
      * Return final selected column collection.
      * 
