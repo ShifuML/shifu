@@ -15,12 +15,7 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -145,6 +140,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      * If for variable selection, only using bagging number 1 to train only one model.
      */
     private boolean isForVarSelect;
+
+    /**
+     * Will be used as the train log file prefix, when run variable selection
+     */
+    private String trainLogFile;
 
     private boolean isToShuffle = false;
 
@@ -997,7 +997,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             Thread.currentThread().interrupt();
         }
         // delete progress file at last
-        thread.deleteProgressFiles();
+        thread.deleteProgressFiles(trainLogFile);
     }
 
     private TailThread startTailThread(final String[] progressLog) {
@@ -1540,6 +1540,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
+     * set the train log file prefix
+     * @param trainLogFile
+     */
+    public void setTrainLogFile(String trainLogFile) {
+        this.trainLogFile = trainLogFile;
+    }
+
+    /**
      * A thread used to tail progress log from hdfs log file.
      */
     private static class TailThread extends Thread {
@@ -1624,7 +1632,23 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             return offset;
         }
 
-        public void deleteProgressFiles() throws IOException {
+        public void deleteProgressFiles(String trainLogFile) throws IOException {
+            if ( StringUtils.isNotBlank(trainLogFile) ) {
+                BufferedWriter writer = null;
+                try {
+                    writer = new BufferedWriter(new FileWriter(trainLogFile));
+                    for (String progressFile : this.progressLogs) {
+                        Reader reader = ShifuFileUtils.getReader(progressFile, SourceType.HDFS);
+                        org.apache.commons.io.IOUtils.copy(reader, writer);
+                        org.apache.commons.io.IOUtils.closeQuietly(reader);
+                    }
+                } catch (IOException e) {
+                    LOG.error("Fail to copy train log - {}", trainLogFile);
+                } finally {
+                    org.apache.commons.io.IOUtils.closeQuietly(writer);
+                }
+            }
+
             for(String progressFile: this.progressLogs) {
                 HDFSUtils.getFS().delete(new Path(progressFile), true);
             }

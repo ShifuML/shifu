@@ -76,6 +76,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.*;
@@ -96,6 +97,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     @SuppressWarnings("unused")
     private static final double BAD_IV_THRESHOLD = 0.02d;
+
+    private static final String TRAIN_LOG_PREFIX = "vs-train";
 
     /**
      * SE stats mao for correlation variable selection,if not se, this field will be null.
@@ -200,7 +203,12 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         ShifuFileUtils.createDirIfNotExists(pathFinder.getVarSelDir(), SourceType.LOCAL);
                         super.saveColumnConfigList(pathFinder.getVarSelColumnConfig(i), this.columnConfigList);
                         while((i++) < recursiveCnt) {
-                            distributedSEWrapper();
+                            String trainLogFile = TRAIN_LOG_PREFIX + "-" + (i - 1) + ".log";
+                            distributedSEWrapper(trainLogFile);
+                            // copy training log to SE train.log
+                            ShifuFileUtils.move(trainLogFile,
+                                    new File(pathFinder.getVarSelDir(), trainLogFile).getPath(), SourceType.LOCAL);
+
                             String varSelectMSEOutputPath = pathFinder
                                     .getVarSelectMSEOutputPath(modelConfig.getDataSet().getSource());
                             // even fail to run SE, still to create an empty se.x file
@@ -604,7 +612,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     /**
      * Wrapper through {@link TrainModelProcessor} and a MapReduce job to analyze biggest sensitivity RMS.
      */
-    private void distributedSEWrapper() throws Exception {
+    private void distributedSEWrapper(String trainLogFile) throws Exception {
         // 1. Train a model using current selected variables, if no variables selected, use all candidate variables.
         boolean reuseCurrentModel = Environment.getBoolean("shifu.varsel.se.reuse", Boolean.FALSE);
         SourceType source = this.modelConfig.getDataSet().getSource();
@@ -612,6 +620,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         if(!reuseCurrentModel) {
             TrainModelProcessor trainModelProcessor = new TrainModelProcessor();
             trainModelProcessor.setForVarSelect(true);
+            trainModelProcessor.setTrainLogFile(trainLogFile);
             trainModelProcessor.run();
         }
 

@@ -128,8 +128,21 @@ public class NNWorker extends AbstractNNWorker<Text> {
                     pos++;
                 } else {
                     if(subFeatureSet.contains(index)) {
-                        if(columnConfig != null && columnConfig.isCategorical()
-                                && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)) {
+                        if ( columnConfig != null && columnConfig.isNumerical()
+                                && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT) ) {
+                            for(int k = 0; k < columnConfig.getBinBoundary().size() + 1; k++) {
+                                String tval = fields[pos];
+                                // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+                                float fval = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
+                                // no idea about why NaN in input data, we should process it as missing value TODO ,
+                                // according to norm type
+                                fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? 0f : fval;
+                                inputs[inputsIndex++] = fval;
+                                pos++;
+                            }
+                        } else if(columnConfig != null && columnConfig.isCategorical()
+                                && (modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
+                                    || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))) {
                             for(int k = 0; k < columnConfig.getBinCategory().size() + 1; k++) {
                                 String tval = fields[pos];
                                 // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
@@ -146,12 +159,18 @@ public class NNWorker extends AbstractNNWorker<Text> {
                         }
                         hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
                     } else {
-                        if(columnConfig.isCategorical()
-                                && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
+                        if ( columnConfig.isNumerical()
+                                && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)
+                                && columnConfig.getBinBoundary() != null
+                                && columnConfig.getBinBoundary().size() > 1) {
+                            pos += (columnConfig.getBinBoundary().size() + 1);
+                        } else if(columnConfig.isCategorical()
+                                && ( modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
+                                    || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT) )
                                 && columnConfig.getBinCategory().size() > 1) {
-                            pos = pos + columnConfig.getBinCategory().size() + 1;
+                            pos += (columnConfig.getBinCategory().size() + 1);
                         } else {
-                            pos++;
+                            pos += 1;
                         }
                     }
                 }
