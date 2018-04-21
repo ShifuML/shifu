@@ -44,5 +44,5 @@ scattered = FOREACH raw_scored GENERATE FLATTEN(Scatter(*));
 grouped = GROUP scattered BY $0;
 binAvgScore = FOREACH grouped GENERATE FLATTEN(CalculateBinAvgScore(*));
 
-STORE fullScore INTO '$pathTrainScore' USING PigStorage('|', '-schema');
-STORE binAvgScore INTO '$pathBinAvgScore' USING PigStorage('|', '-schema');
+STORE fullScore INTO '$pathTrainScore' USING PigStorage('$output_delimiter', '-schema');
+STORE binAvgScore INTO '$pathBinAvgScore' USING PigStorage('$output_delimiter', '-schema');

@@ -39,9 +39,7 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.pig.PigExecutor;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.*;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.Predicate;
@@ -228,7 +226,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
     private void runMRBinAvgScoreJob(SourceType source, String postTrainOutputPath)
             throws IOException, InterruptedException, ClassNotFoundException {
-        Configuration conf = new Configuration();
+        final Configuration conf = new Configuration();
         // add jars to hadoop mapper and reducer
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars() });
 
@@ -262,11 +260,12 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         }
 
         // one can set guagua conf in shifuconfig
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                conf.set(entry.getKey().toString(), entry.getValue().toString());
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                conf.set(key.toString(), value.toString());
             }
-        }
+        });
 
         @SuppressWarnings("deprecation")
         Job job = new Job(conf, "Shifu: Post Train : " + this.modelConfig.getModelSetName());
@@ -301,7 +300,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
     private void runMRFeatureImportanceJob(SourceType source, String output)
             throws IOException, InterruptedException, ClassNotFoundException {
-        Configuration conf = new Configuration();
+        final Configuration conf = new Configuration();
         // add jars to hadoop mapper and reducer
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars() });
 
@@ -335,11 +334,12 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         }
 
         // one can set guagua conf in shifuconfig
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                conf.set(entry.getKey().toString(), entry.getValue().toString());
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                conf.set(key.toString(), value.toString());
             }
-        }
+        });
 
         @SuppressWarnings("deprecation")
         Job job = new Job(conf, "Shifu: Post Train FeatureImportance : " + this.modelConfig.getModelSetName());

@@ -1616,6 +1616,10 @@ public final class CommonUtils {
         pigParamMap.put(Constants.JOB_QUEUE,
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE));
         pigParamMap.put(Constants.DATASET_NAME, modelConfig.getBasic().getName());
+
+        pigParamMap.put(Constants.SHIFU_OUTPUT_DELIMITER, CommonUtils.escapePigString(
+                Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER)));
+
         return pigParamMap;
     }
 
@@ -2093,12 +2097,6 @@ public final class CommonUtils {
 
     public static boolean isGBDTAlgorithm(String alg) {
         return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
-    }
-
-    public static boolean isHadoopConfigurationInjected(String key) {
-        return key.startsWith("nn") || key.startsWith("guagua") || key.startsWith("shifu") || key.startsWith("mapred")
-                || key.startsWith("io") || key.startsWith("hadoop") || key.startsWith("yarn") || key.startsWith("pig")
-                || key.startsWith("hive") || key.startsWith("job");
     }
 
     /**
@@ -3007,4 +3005,32 @@ public final class CommonUtils {
         return categories.toArray(new String[0]);
     }
 
+    /**
+     * Inject Shifu or Hadoop parameters into MapReduce / Pig jobs, by using visitor.
+     * @param visitor - provider to do injection
+     */
+    public static void injectHadoopShifuEnvironments(ValueVisitor visitor) {
+        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
+            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
+                if ( StringUtils.equalsIgnoreCase(entry.getKey().toString(), Constants.SHIFU_OUTPUT_DATA_DELIMITER) ) {
+                    visitor.inject(entry.getKey(), Base64Utils.base64Encode(entry.getValue().toString()));
+                } else {
+                    visitor.inject(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+    }
+
+    /**
+     * Check whether the prefix of key is Shifu or Hadoop-related.
+     * @param key - key to check
+     * @return
+     *      true - is Shifu or Hadoop related keys
+     *      or false
+     */
+    public static boolean isHadoopConfigurationInjected(String key) {
+        return key.startsWith("nn") || key.startsWith("guagua") || key.startsWith("shifu") || key.startsWith("mapred")
+                || key.startsWith("io") || key.startsWith("hadoop") || key.startsWith("yarn") || key.startsWith("pig")
+                || key.startsWith("hive") || key.startsWith("job");
+    }
 }

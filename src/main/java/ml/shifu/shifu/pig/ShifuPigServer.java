@@ -19,9 +19,9 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Properties;
 
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.*;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.pig.ExecType;
 import org.apache.pig.PigServer;
 import org.apache.pig.backend.executionengine.ExecException;
@@ -59,13 +59,14 @@ public class ShifuPigServer extends PigServer {
     }
 
     protected PigStats launchPlan(LogicalPlan lp, String jobName) throws ExecException, FrontendException {
-        // add logic to update properties and make config in Environment.getProperties() override properties in pig
-        // script
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                super.pigContext.getProperties().put(entry.getKey(), entry.getValue());
+        // add logic to update properties and make config in Environment.getProperties()
+        // to override properties in pig script
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                pigContext.getProperties().put(key, value.toString());
             }
-        }
+        });
 
         return super.launchPlan(lp, jobName);
     }

@@ -59,8 +59,7 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.ClassUtils;
-import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.*;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
@@ -216,10 +215,9 @@ public class DTWorker
     private Map<Integer, Random> validationRandomMap = new HashMap<Integer, Random>();
 
     /**
-     * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
+     * A splitter to split data with specified delimiter.
      */
-    protected static final Splitter DEFAULT_SPLITTER = Splitter.on(CommonConstants.DEFAULT_COLUMN_SEPARATOR)
-            .trimResults();
+    private Splitter splitter;
 
     /**
      * Index map in which column index and data input array index for fast location.
@@ -376,6 +374,10 @@ public class DTWorker
                 }
             }
         }
+
+        // create Splitter
+        String delimiter = context.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
+        this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
 
         Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
         if(kCrossValidation != null && kCrossValidation > 0) {
@@ -1109,7 +1111,7 @@ public class DTWorker
         // the function in akka mode.
         int index = 0, inputIndex = 0;
         boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
-        for(String input: DEFAULT_SPLITTER.split(currentValue.getWritable().toString())) {
+        for(String input: this.splitter.split(currentValue.getWritable().toString())) {
             if(index == this.columnConfigList.size()) {
                 // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
                 // weight, how to process???

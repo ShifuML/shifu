@@ -50,10 +50,7 @@ import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.udf.CalculateStatsUDF;
-import ml.shifu.shifu.util.Base64Utils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.*;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.Predicate;
@@ -290,7 +287,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         FileUtils.deleteQuietly(new File(filePath));
     }
 
-    private void prepareJobConf(RawSourceData.SourceType source, Configuration conf, String filePath)
+    private void prepareJobConf(RawSourceData.SourceType source, final Configuration conf, String filePath)
             throws IOException {
         // add jars to hadoop mapper and reducer
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars(), "-files", filePath });
@@ -335,11 +332,12 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         }
 
         // one can set guagua conf in shifuconfig
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                conf.set(entry.getKey().toString(), entry.getValue().toString());
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                conf.set(key.toString(), value.toString());
             }
-        }
+        });
     }
 
     // GuaguaOptionsParser doesn't to support *.jar currently.

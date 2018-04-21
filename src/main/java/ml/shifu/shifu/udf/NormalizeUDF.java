@@ -528,10 +528,18 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 for(ColumnConfig config: columnConfigList) {
                     if(config.isMeta()) {
                         schemaStr.append(normColumnName(config.getColumnName()) + ":chararray" + ",");
-                    } else if(!config.isMeta() && config.isNumerical()) {
-                        schemaStr.append(normColumnName(config.getColumnName()) + ":float" + ",");
                     } else if(config.isTarget()) {
                         schemaStr.append(normColumnName(config.getColumnName()) + ":int" + ",");
+                    } else if(config.isNumerical()) {
+                        if ( modelConfig.getNormalizeType().equals(NormType.ONEHOT) ) {
+                            for(int i = 0; i < config.getBinBoundary().size(); i++) {
+                                schemaStr.append(
+                                        normColumnName(config.getColumnName()) + "_" + i + ":float" + ",");
+                            }
+                            schemaStr.append(normColumnName(config.getColumnName()) + "_missing" + ":float" + ",");
+                        } else {
+                            schemaStr.append(normColumnName(config.getColumnName()) + ":float" + ",");
+                        }
                     } else {
                         if(config.isCategorical() && this.isForClean) {
                             // clean data for DT algorithms, only store index, short is ok while Pig only have int
@@ -539,7 +547,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                             schemaStr.append(normColumnName(config.getColumnName()) + ":chararray" + ",");
                         } else {
                             // for others, set to float, no matter LR/NN categorical or filter out feature with null
-                            if(modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT)) {
+                            if ( modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT)
+                                    || modelConfig.getNormalizeType().equals(NormType.ONEHOT) ) {
                                 if(CommonUtils.isGoodCandidate(config, super.hasCandidates)) {
                                     for(int i = 0; i < config.getBinCategory().size(); i++) {
                                         schemaStr.append(
