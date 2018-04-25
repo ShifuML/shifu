@@ -204,6 +204,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
     @SuppressWarnings("deprecation")
     public Tuple exec(Tuple input) throws IOException {
+        long start = System.currentTimeMillis();
         if(this.modelRunner == null) {
             // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.
             // UDF in pig client will be initialized to get some metadata issues
@@ -250,6 +251,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                         evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex);
             }
             this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
+            log.info("model cnt " + this.modelCnt + " sub models cnt " + modelRunner.getSubModelsCnt());
         }
 
         Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.headers, this.segFilterSize);
@@ -341,6 +343,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
+        log.info("running time is " + (System.currentTimeMillis() - start) + " ms.");
         return tuple;
     }
 
@@ -509,9 +512,9 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + weightName, DataType.CHARARRAY));
 
             if(modelConfig.isRegression()) {
-                if (this.modelCnt > 0) {
+                if(this.modelCnt > 0) {
                     addModelSchema(tupleSchema, this.modelCnt, "");
-                } else if (MapUtils.isEmpty(this.subModelsCnt)) {
+                } else if(MapUtils.isEmpty(this.subModelsCnt)) {
                     throw new IllegalStateException("No any model found!");
                 }
 
@@ -540,7 +543,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             } else {
                 if(this.modelCnt > 0) {
                     addModelTagSchema(tupleSchema, modelCnt, "");
-                } else if (MapUtils.isEmpty(this.subModelsCnt)) {
+                } else if(MapUtils.isEmpty(this.subModelsCnt)) {
                     throw new IllegalStateException("No any model found!");
                 }
 

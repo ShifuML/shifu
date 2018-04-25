@@ -176,7 +176,7 @@ public class Scorer {
                  * continue;
                  * }
                  */
-                log.info("Network input count = {}, while input size = {}", network.getInputCount(), networkPair
+                log.debug("Network input count = {}, while input size = {}", network.getInputCount(), networkPair
                         .getInput().size());
 
                 final int fnlOutputHiddenLayerIndex = outputHiddenLayerIndex;
