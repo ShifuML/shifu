@@ -75,7 +75,8 @@ public class Scorer {
      */
     private int outputHiddenLayerIndex = 0;
 
-    public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig) {
+    public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm,
+            ModelConfig modelConfig) {
         this(models, columnConfigList, algorithm, modelConfig, 4.0d);
     }
 
@@ -176,8 +177,8 @@ public class Scorer {
                  * continue;
                  * }
                  */
-                log.debug("Network input count = {}, while input size = {}", network.getInputCount(), networkPair
-                        .getInput().size());
+                log.debug("Network input count = {}, while input size = {}", network.getInputCount(),
+                        networkPair.getInput().size());
 
                 final int fnlOutputHiddenLayerIndex = outputHiddenLayerIndex;
                 modelResults.add(new Callable<MLData>() {
@@ -343,7 +344,9 @@ public class Scorer {
         Integer tag = Constants.DEFAULT_IDEAL_VALUE;
 
         if(scores.size() == 0) {
-            log.warn("No Scores Calculated...");
+            if(System.currentTimeMillis() % 10 == 0) {
+                log.warn("No Scores Calculated...");
+            }
         }
 
         return new ScoreObject(scores, tag, rfTreeSizeList, hiddenOutputs);
