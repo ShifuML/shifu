@@ -204,7 +204,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
     @SuppressWarnings("deprecation")
     public Tuple exec(Tuple input) throws IOException {
-//        long start = System.currentTimeMillis();
+        long start = System.currentTimeMillis();
         if(this.modelRunner == null) {
             // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.
             // UDF in pig client will be initialized to get some metadata issues
@@ -251,7 +251,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                         evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex);
             }
             this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
-            log.info("model cnt " + this.modelCnt + " sub models cnt " + modelRunner.getSubModelsCnt());
+            log.info("DEBUG: model cnt " + this.modelCnt + " sub models cnt " + modelRunner.getSubModelsCnt());
         }
 
         Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.headers, this.segFilterSize);
@@ -343,7 +343,9 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
-//        log.info("running time is " + (System.currentTimeMillis() - start) + " ms.");
+        if(System.currentTimeMillis() % 50 == 0L) {
+            log.info("running time is " + (System.currentTimeMillis() - start) + " ms.");
+        }
         return tuple;
     }
 
@@ -443,7 +445,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
     @SuppressWarnings("deprecation")
     private void incrementTagCounters(String tag, String weight, long runModelInterval) {
         if(tag == null || weight == null) {
-            if(System.currentTimeMillis() % 10 == 0) {
+            if(System.currentTimeMillis() % 50 == 0) {
                 log.warn("tag is empty " + tag + " or weight is empty " + weight);
             }
             return;

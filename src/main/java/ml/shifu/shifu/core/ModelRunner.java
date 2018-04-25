@@ -70,7 +70,7 @@ public class ModelRunner {
         this.header = header;
         this.dataDelimiter = dataDelimiter;
         this.scorer = new Scorer(models, columnConfigList, modelConfig.getAlgorithm(), modelConfig,
-                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex);
+                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex, false);
     }
 
     /**
@@ -199,9 +199,9 @@ public class ModelRunner {
             this.subScorers = new TreeMap<String, Scorer>();
         }
 
-        this.subScorers.put(modelSpec.getModelName(), new Scorer(modelSpec.getModels(),
-                modelSpec.getColumnConfigList(), modelSpec.getAlgorithm().name(), modelSpec.getModelConfig(), modelSpec
-                        .getModelConfig().getNormalizeStdDevCutOff()));
+        this.subScorers.put(modelSpec.getModelName(),
+                new Scorer(modelSpec.getModels(), modelSpec.getColumnConfigList(), modelSpec.getAlgorithm().name(),
+                        modelSpec.getModelConfig(), modelSpec.getModelConfig().getNormalizeStdDevCutOff(), false));
     }
 
     /**
@@ -240,6 +240,7 @@ public class ModelRunner {
      * Cleaning the thread pool resources, must be called at last.
      */
     public void close() {
+        this.scorer.close();
     }
 
 }
