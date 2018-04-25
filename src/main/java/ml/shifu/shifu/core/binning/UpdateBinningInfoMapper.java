@@ -28,15 +28,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.Lists;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper.CountAndFrequentItems;
 import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
+import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
+import ml.shifu.shifu.util.MapReduceUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -132,6 +135,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     private int weightExceptions = 0;
     private boolean isThrowforWeightException;
 
+    private Splitter splitter;
+
     /**
      * Data purifiers for column expansion
      */
@@ -182,6 +187,10 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         this.columnBinningInfo = new HashMap<Integer, BinningInfoWritable>(this.columnConfigList.size(), 1f);
         this.categoricalBinMap = new HashMap<Integer, Map<String, Integer>>(this.columnConfigList.size(), 1f);
 
+        // create Splitter
+        String delimiter = context.getConfiguration().get(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
+        this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
+
         loadColumnBinningInfo();
 
         this.outputKey = new IntWritable();
@@ -212,7 +221,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             while(line != null && line.length() != 0) {
                 LOG.debug("line is {}", line);
                 // here just use String.split for just two columns
-                String[] cols = CommonUtils.split(line.trim(), Constants.DEFAULT_DELIMITER);
+                String[] cols = Lists.newArrayList(this.splitter.split(line.trim())).toArray(new String[0]);
                 if(cols != null && cols.length >= 2) {
                     Integer rawColumnNum = Integer.parseInt(cols[0]);
                     BinningInfoWritable binningInfo = new BinningInfoWritable();

@@ -62,4 +62,4 @@ STORE binning_info_small INTO '$path_stats_small_bins' USING PigStorage('\u0007'
 EXEC;
 
 binning_info = FOREACH data_binning_grp GENERATE FLATTEN(DynamicBinning(data_cols));
-STORE binning_info INTO '$path_stats_binning_info' USING PigStorage('|', '-schema');
+STORE binning_info INTO '$path_stats_binning_info' USING PigStorage('$output_delimiter', '-schema');

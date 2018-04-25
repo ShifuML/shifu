@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -140,6 +142,11 @@ public class ConfusionMatrix {
 
     private Object lock;
 
+    /**
+     * Score data delimiter
+     */
+    private String delimiter;
+
     public ConfusionMatrix(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, EvalConfig evalConfig)
             throws IOException {
         this(modelConfig, columnConfigList, evalConfig, new Object());
@@ -152,6 +159,8 @@ public class ConfusionMatrix {
         this.pathFinder = new PathFinder(modelConfig);
         this.lock = source;
         this.columnConfigList = columnConfigList;
+
+        this.delimiter = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER);
 
         String[] evalScoreHeader = getEvalScoreHeader();
         if(ArrayUtils.isEmpty(evalScoreHeader)) {
@@ -237,7 +246,7 @@ public class ConfusionMatrix {
             // evaluation data file
             pathHeader = pathFinder.getEvalScorePath(evalConfig, sourceType);
         }
-        return CommonUtils.getHeaders(pathHeader, "|", sourceType, false);
+        return CommonUtils.getHeaders(pathHeader, this.delimiter, sourceType, false);
     }
 
     public PerformanceResult bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags,
@@ -327,6 +336,8 @@ public class ConfusionMatrix {
         boolean isGBTScoreHalfCutoffStreategy = isGBTScoreHalfCutoffStreategy();
         boolean isGBTScoreMaxMinScaleStreategy = isGBTScoreMaxMinScaleStreategy();
 
+        Splitter splitter = Splitter.on(delimiter).trimResults();
+
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
                 if((++cnt) % 100000L == 0L) {
@@ -338,7 +349,7 @@ public class ConfusionMatrix {
                 }
 
                 // score is separated by default delimiter in our pig output format
-                String[] raw = scanner.nextLine().split(Constants.DEFAULT_ESCAPE_DELIMITER);
+                String[] raw = Lists.newArrayList(splitter.split(scanner.nextLine())).toArray(new String[0]);
 
                 // tag check
                 String tag = raw[targetColumnIndex];

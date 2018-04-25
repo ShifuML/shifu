@@ -13,9 +13,7 @@ import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.*;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.Predicate;
@@ -58,7 +56,7 @@ public class MapReduceShuffle {
 
     public void run(String rawNormPath) throws IOException, ClassNotFoundException, InterruptedException {
         RawSourceData.SourceType source = this.modelConfig.getDataSet().getSource();
-        Configuration conf = new Configuration();
+        final Configuration conf = new Configuration();
 
         // add jars to hadoop mapper and reducer
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars() });
@@ -81,11 +79,12 @@ public class MapReduceShuffle {
         }
 
         // one can set guagua conf in shifuconfig
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                conf.set(entry.getKey().toString(), entry.getValue().toString());
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                conf.set(key.toString(), value.toString());
             }
-        }
+        });
 
         int shuffleSize = getDataShuffleSize(rawNormPath, source);
         log.info("Try to shuffle data into - {} parts.", shuffleSize);

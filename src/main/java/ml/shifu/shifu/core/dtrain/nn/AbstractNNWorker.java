@@ -45,8 +45,11 @@ import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataPair;
 import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataSet;
 import ml.shifu.shifu.core.dtrain.dataset.MemoryDiskFloatMLDataSet;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
+import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
 
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.MapReduceUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
@@ -69,12 +72,6 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         AbstractWorkerComputable<NNParams, NNParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<VALUE>> {
 
     protected static final Logger LOG = LoggerFactory.getLogger(AbstractNNWorker.class);
-
-    /**
-     * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
-     */
-    protected static final Splitter DEFAULT_SPLITTER = Splitter.on(CommonConstants.DEFAULT_COLUMN_SEPARATOR)
-            .trimResults();
 
     /**
      * Training data set
@@ -257,6 +254,9 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      */
     protected Set<Integer> subFeatureSet;
 
+    /**
+     * Count of feature inputs
+     */
     protected int featureInputsCnt;
 
     /**
@@ -278,6 +278,11 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      * If miniBatchRate set to 0.1d, {@link #batchs} is 10. It will run 10x iterations for one epochs.
      */
     private int batchs = 1;
+
+    /**
+     * The splitter for normalization data set
+     */
+    protected Splitter splitter;
 
     protected boolean isUpSampleEnabled() {
         // only enabled in regression
@@ -489,6 +494,10 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 throw new GuaguaRuntimeException(e);
             }
         }
+
+        // create Splitter
+        String delimiter = context.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
+        this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
     }
 
     private boolean isOnDisk() {

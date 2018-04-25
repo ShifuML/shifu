@@ -71,6 +71,8 @@ public interface Constants {
     public static final String NUM_PARALLEL = "num_parallel";
     public static final String DATASET_NAME = "data_set";
 
+    public static final String SHIFU_OUTPUT_DELIMITER = "output_delimiter";
+
     public static final String DERIVED = "derived_";
 
     public static final int DEFAULT_IDEAL_VALUE = -1;
@@ -329,4 +331,6 @@ public interface Constants {
     public static final String SHIFU_EVAL_NORM_APPEND_SCORE = "shifu.eval.norm.appendscore";
     public static final String SHIFU_EVAL_NORM_OUTPUTRAW = "shifu.eval.norm.outputraw";
     public static final String SHIFU_NORM_ONLY_SELECTED = "shifu.norm.only.selected";
+
+    public static final String SHIFU_OUTPUT_DATA_DELIMITER = "shifu.output.data.delimiter";
 }

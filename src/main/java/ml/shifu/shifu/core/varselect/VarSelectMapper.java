@@ -23,6 +23,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import ml.shifu.shifu.util.Base64Utils;
+import ml.shifu.shifu.util.MapReduceUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -148,6 +151,11 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     private CacheBasicFloatNetwork cacheNetwork;
 
     /**
+     * The splitter for normalization data set
+     */
+    private Splitter splitter;
+
+    /**
      * Load all configurations for modelConfig and columnConfigList from source type.
      */
     private synchronized static void loadConfigFiles(final Context context) {
@@ -262,13 +270,17 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         this.inputsMLData = new BasicMLData(this.inputs.length);
         this.outputKey = new LongWritable();
         LOG.info("Filter by is {}", filterBy);
+
+        // create Splitter
+        String delimiter = context.getConfiguration().get(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
+        this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
     }
 
     @Override
     protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
         recordCount += 1L;
         int index = 0, inputsIndex = 0, outputsIndex = 0;
-        for(String input: DEFAULT_SPLITTER.split(value.toString())) {
+        for(String input: this.splitter.split(value.toString())) {
             double doubleValue = NumberFormatUtils.getDouble(input.trim(), 0.0d);
             if(index == columnConfigList.size()) {
                 break;

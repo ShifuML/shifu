@@ -239,8 +239,10 @@ public class Normalizer {
             case WEIGHT_WOE_ZSCORE:
             case WEIGHT_WOE_ZSCALE:
                 return woeZScoreNormalize(config, raw, cutoff, true);
+            case ONEHOT:
+                return OneHotNormalize(config, raw);
             case ZSCALE_ONEHOT:
-                return woeOneHotNormalize(config, raw, cutoff, categoryMissingNormType);
+                return zscaleOneHotNormalize(config, raw, cutoff, categoryMissingNormType);
             case DISCRETE_ZSCORE:
             case DISCRETE_ZSCALE:
                 return discreteZScoreNormalize(config, raw, cutoff, categoryMissingNormType);
@@ -273,20 +275,32 @@ public class Normalizer {
         }
     }
 
-    private static List<Double> woeOneHotNormalize(ColumnConfig config, String raw, Double cutoff,
+    private static List<Double> OneHotNormalize(ColumnConfig config, String raw) {
+        Double[] normData = (config.isNumerical() ?
+                new Double[config.getBinBoundary().size() + 1] : new Double[config.getBinCategory().size() + 1]);
+        Arrays.fill(normData, 0.0d);
+        int binNum = CommonUtils.getBinNum(config, raw);
+        if ( binNum < 0 ) {
+            binNum = normData.length - 1;
+        }
+        normData[binNum] = 1.0d;
+        return Arrays.asList(normData);
+    }
+
+    private static List<Double> zscaleOneHotNormalize(ColumnConfig config, String raw, Double cutoff,
             CategoryMissingNormType categoryMissingNormType) {
         if(config.isNumerical()) {
             return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, false);
         } else {
-            Double[] normVals = new Double[config.getBinCategory().size() + 1];
-            Arrays.fill(normVals, 0.0d);
+            Double[] normData = new Double[config.getBinCategory().size() + 1];
+            Arrays.fill(normData, 0.0d);
 
             int binNum = CommonUtils.getBinNum(config, raw);
             if(binNum < 0) {
                 binNum = config.getBinCategory().size();
             }
-            normVals[binNum] = 1.0d;
-            return Arrays.asList(normVals);
+            normData[binNum] = 1.0d;
+            return Arrays.asList(normData);
         }
     }
 
