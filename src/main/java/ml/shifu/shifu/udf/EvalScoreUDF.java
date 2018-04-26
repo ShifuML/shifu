@@ -440,7 +440,10 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
     @SuppressWarnings("deprecation")
     private void incrementTagCounters(String tag, String weight, long runModelInterval) {
         if(tag == null || weight == null) {
-            log.warn("tag is empty " + tag + " or weight is empty " + weight);
+            if ( System.currentTimeMillis() % 10 == 0 ) {
+                log.warn("tag is empty " + tag + " or weight is empty " + weight
+                        + ". And execution time - " + runModelInterval);
+            }
             return;
         }
         double dWeight = 1.0;
@@ -508,7 +511,9 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                     : evalConfig.getDataSet().getWeightColumnName();
             tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + weightName, DataType.CHARARRAY));
 
-            if(modelConfig.isRegression()) {
+            boolean isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
+
+            if(isLinearTarget || modelConfig.isRegression()) {
                 if (this.modelCnt > 0) {
                     addModelSchema(tupleSchema, this.modelCnt, "");
                 } else if (MapUtils.isEmpty(this.subModelsCnt)) {

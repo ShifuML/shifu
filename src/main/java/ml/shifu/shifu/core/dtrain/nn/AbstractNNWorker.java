@@ -284,6 +284,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      */
     protected Splitter splitter;
 
+    protected boolean isLinearTarget = false;
+
     protected boolean isUpSampleEnabled() {
         // only enabled in regression
         return this.upSampleRng != null && (modelConfig.isRegression()
@@ -303,6 +305,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             LOG.info("Parameter isCrossOver:{}", this.isCrossOver);
             this.columnConfigList = CommonUtils
                     .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -408,7 +411,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         // if is one vs all classification, outputNodeCount is set to 1, if classes=2, outputNodeCount is also 1
         int classes = modelConfig.getTags().size();
-        this.outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1]
+        this.outputNodeCount = (isLinearTarget || modelConfig.isRegression()) ? inputOutputIndex[1]
                 : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : (classes == 2 ? 1 : classes));
         this.candidateCount = inputOutputIndex[2];
         boolean isAfterVarSelect = inputOutputIndex[0] != 0;
@@ -580,7 +583,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         List<Integer> hiddenNodeList = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
         BasicNetwork network = DTrainUtils.generateNetwork(this.featureInputsCnt, this.outputNodeCount, numLayers,
-                actFunc, hiddenNodeList, false, this.dropoutRate, this.wgtInit);
+                actFunc, hiddenNodeList, false, this.dropoutRate, this.wgtInit,
+                CommonUtils.isLinearTarget(modelConfig, columnConfigList));
         // use the weights from master
         network.getFlat().setWeights(weights);
 

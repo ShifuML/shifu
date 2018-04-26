@@ -337,6 +337,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
     @SuppressWarnings({ "unchecked" })
     private NNParams initWeights() {
         NNParams params = new NNParams();
+        boolean isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
 
         int[] inputAndOutput = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
                 this.columnConfigList);
@@ -346,14 +347,15 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         int inputNodeCount = inputAndOutput[0] == 0 ? inputAndOutput[2] : inputAndOutput[0];
         // if is one vs all classification, outputNodeCount is set to 1, if classes=2, outputNodeCount is also 1
         int classes = modelConfig.getTags().size();
-        int outputNodeCount = modelConfig.isRegression() ? inputAndOutput[1]
+        int outputNodeCount = (isLinearTarget || modelConfig.isRegression()) ? inputAndOutput[1]
                 : (modelConfig.getTrain().isOneVsAll() ? inputAndOutput[1] : (classes == 2 ? 1 : classes));
         int numLayers = (Integer) validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
         BasicNetwork network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers, actFunc,
-                hiddenNodeList, true, this.dropoutRate, this.wgtInit);
+                hiddenNodeList, true, this.dropoutRate, this.wgtInit,
+                CommonUtils.isLinearTarget(modelConfig, columnConfigList));
 
         params.setTrainError(0);
         params.setTestError(0);

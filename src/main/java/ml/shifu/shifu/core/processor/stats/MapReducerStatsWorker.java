@@ -118,6 +118,11 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             columnParallel = columnConfigList.size() / 10;
         }
         // limit max reducer to 999
+        int parallelNumbByVolume = getParallelNumByDataVolume();
+        if ( columnParallel < parallelNumbByVolume ) {
+            columnParallel = parallelNumbByVolume;
+            log.info("Adjust parallel number to {} according data volume", columnParallel);
+        }
         columnParallel = columnParallel > 999 ? 999 : columnParallel;
         paramsMap.put("column_parallel", Integer.toString(columnParallel));
 
@@ -156,6 +161,18 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         }
 
         return true;
+    }
+
+    private int getParallelNumByDataVolume() throws IOException {
+        long fileSize = ShifuFileUtils.getFileOrDirectorySize(modelConfig.getDataSet().getDataPath(),
+                modelConfig.getDataSet().getSource());
+        log.info("File Size is - {}, for {}", fileSize, modelConfig.getDataSet().getDataPath());
+        if (ShifuFileUtils.isCompressedFileOrDirectory(modelConfig.getDataSet().getDataPath(),
+                modelConfig.getDataSet().getSource())) {
+            log.info("File is compressed, for {}", modelConfig.getDataSet().getDataPath());
+            fileSize = fileSize * 3; // multi 3 times, if the file is compressed
+        }
+        return (int)(fileSize  / (256 * 1024 * 1024l)); // each reducer handle 256MB data
     }
 
     /**

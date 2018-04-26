@@ -1316,7 +1316,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // number should be 400m
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
                 this.columnConfigList);
-        int candidateCount = inputOutputIndex[2];
+        int candidateCount = (inputOutputIndex[2] == 0 ? inputOutputIndex[0] : inputOutputIndex[2]);
         // 1. set benchmark
         long maxCombineSize = CommonUtils.isTreeModel(modelConfig.getAlgorithm()) ? 209715200L : 168435456L;
         if(modelConfig.isClassification()) {
@@ -1541,7 +1541,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * set the train log file prefix
-     * @param trainLogFile
+     * @param trainLogFile - file to save train log
      */
     public void setTrainLogFile(String trainLogFile) {
         this.trainLogFile = trainLogFile;

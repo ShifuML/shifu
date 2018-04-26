@@ -40,6 +40,7 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
 import ml.shifu.shifu.util.MapReduceUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -134,6 +135,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
     private int weightExceptions = 0;
     private boolean isThrowforWeightException;
+    private boolean isLinearTarget = false;
 
     private Splitter splitter;
 
@@ -207,6 +209,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 .equalsIgnoreCase(context.getConfiguration().get("shifu.weight.exception", "false"));
 
         LOG.debug("Column binning info: {}", this.columnBinningInfo);
+        this.isLinearTarget = (CollectionUtils.isEmpty(modelConfig.getTags())
+                && CommonUtils.getTargetColumnConfig(columnConfigList).isNumerical());
     }
 
     /**
@@ -371,7 +375,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 return;
             }
         } else {
-            if(tag == null || (!tags.contains(tag))) {
+            if(tag == null || (!isLinearTarget && !tags.contains(tag))) {
                 context.getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1L);
                 return;
             }
@@ -446,12 +450,12 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             String str = StringUtils.trim(units[columnIndex]);
             double douVal = CommonUtils.parseNumber(str);
 
-            Double hybridThreshould = columnConfig.getHybridThreshold();
-            if(hybridThreshould == null) {
-                hybridThreshould = Double.NEGATIVE_INFINITY;
+            Double hybridThreshold = columnConfig.getHybridThreshold();
+            if(hybridThreshold == null) {
+                hybridThreshold = Double.NEGATIVE_INFINITY;
             }
             // douVal < hybridThreshould which will also be set to category
-            boolean isCategory = Double.isNaN(douVal) || douVal < hybridThreshould;
+            boolean isCategory = Double.isNaN(douVal) || douVal < hybridThreshold;
             boolean isNumber = !Double.isNaN(douVal);
 
             if(isMissingValue) {

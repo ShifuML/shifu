@@ -68,9 +68,8 @@ public class TrainUpdater extends BasicUpdater {
             // set to false is OK as if no column are selected, set to false still no one selected
             columnConfig.setFinalSelect(false);
         } else if(this.setForceSelect.contains(new NSColumn(varName))) {
-            if(CollectionUtils.isEmpty(this.setCandidates) || (CollectionUtils.isNotEmpty(this.setCandidates) // candidates
-                                                                                                              // is not
-                                                                                                              // empty
+            if(CollectionUtils.isEmpty(this.setCandidates) || (CollectionUtils.isNotEmpty(this.setCandidates)
+               // candidates is not empty
                     && this.setCandidates.contains(new NSColumn(varName)))) {
                 columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
                 // WARN: should not set final select here, imagine user take varsel by SE, the first time is to call

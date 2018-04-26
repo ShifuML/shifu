@@ -15,13 +15,7 @@
  */
 package ml.shifu.shifu.core;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.Callable;
 
 import ml.shifu.shifu.column.NSColumn;
@@ -35,6 +29,7 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.SetUtils;
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLData;
 import org.encog.ml.data.MLDataPair;
@@ -74,6 +69,9 @@ public class Scorer {
      * For neural network, if output the hidden neurons
      */
     private int outputHiddenLayerIndex = 0;
+
+    
+    private Map<String, MLDataPair> cachedNormDataPair;
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig) {
         this(models, columnConfigList, algorithm, modelConfig, 4.0d);
@@ -131,6 +129,8 @@ public class Scorer {
         }
 
         this.outputHiddenLayerIndex = outputHiddenLayerIndex;
+
+        cachedNormDataPair = new HashMap<String, MLDataPair>(models.size());
     }
 
     public ScoreObject score(Map<String, String> rawDataMap) {
@@ -158,6 +158,9 @@ public class Scorer {
                     rawNsDataMap, cutoff, alg);
         }
 
+        // clear cache
+        this.cachedNormDataPair.clear();
+
         final MLDataPair pair = inputPair;
         List<MLData> modelResults = new ArrayList<MLData>();
         for(final BasicML model: models) {
@@ -166,8 +169,14 @@ public class Scorer {
                 final BasicFloatNetwork network = (model instanceof BasicFloatNetwork) ? (BasicFloatNetwork) model
                         : ((NNModel) model).getIndependentNNModel().getBasicNetworks().get(0);
 
-                final MLDataPair networkPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
-                        columnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet());
+                String cacheKey = featureSetToString(network.getFeatureSet());
+                MLDataPair dataPair = cachedNormDataPair.get(cacheKey);
+                if ( dataPair == null ) {
+                    dataPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
+                            columnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet());
+                    cachedNormDataPair.put(cacheKey, dataPair);
+                }
+                final MLDataPair networkPair = dataPair;
 
                 /*
                  * if(network.getFeatureSet().size() != networkPair.getInput().size()) {
@@ -176,7 +185,7 @@ public class Scorer {
                  * continue;
                  * }
                  */
-                log.info("Network input count = {}, while input size = {}", network.getInputCount(), networkPair
+                log.debug("Network input count = {}, while input size = {}", network.getInputCount(), networkPair
                         .getInput().size());
 
                 final int fnlOutputHiddenLayerIndex = outputHiddenLayerIndex;
@@ -342,7 +351,7 @@ public class Scorer {
 
         Integer tag = Constants.DEFAULT_IDEAL_VALUE;
 
-        if(scores.size() == 0) {
+        if(scores.size() == 0 && System.currentTimeMillis() % 10 == 0) {
             log.warn("No Scores Calculated...");
         }
 
@@ -364,6 +373,14 @@ public class Scorer {
     public void setScale(int scale) {
         if(scale > 0) {
             this.scale = scale;
+        }
+    }
+
+    private String featureSetToString(Set<Integer> featureSet) {
+        if ( CollectionUtils.isEmpty(featureSet) ) {
+            return "EMPTY";
+        } else {
+            return featureSet.toString();
         }
     }
 }

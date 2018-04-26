@@ -252,7 +252,7 @@ public class BasicModelProcessor {
     /**
      * Backup current {@link #columnConfigList} to a local folder tmp cc.json with timestamp in 'YYYY-MM-dd-HH:mm:SS'
      * 
-     * @param timestamp
+     * @param timestamp - timestamp to back ColumnConfig
      * @throws IOException
      *             any IO exception
      * @throws IllegalArgumentException

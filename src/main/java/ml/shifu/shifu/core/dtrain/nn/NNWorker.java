@@ -104,7 +104,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
             } else {
                 ColumnConfig columnConfig = super.columnConfigList.get(index);
                 if(columnConfig != null && columnConfig.isTarget()) {
-                    if(modelConfig.isRegression()) {
+                    if(isLinearTarget || modelConfig.isRegression()) {
                         ideal[outputIndex++] = floatValue;
                     } else {
                         if(modelConfig.getTrain().isOneVsAll()) {

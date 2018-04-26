@@ -109,6 +109,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
      */
     private int cntOfTargetAndMetaColumns;
 
+    private boolean isLinearTarget = false;
+
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         this(source, pathModelConfig, pathColumnConfig, "false");
         setCategoryMissingNormType();
@@ -193,8 +195,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     Environment.getProperty(Constants.SHIFU_NORM_ONLY_SELECTED, Boolean.FALSE.toString()));
         }
 
-        // check if has final-select column, then enable real compact norm if user set, isCompact now only works in non
-        // tree model norm output
+        // check if has final-select column, then enable real compact norm if user set,
+        // isCompact now only works in non-tree model norm output
         if(isColumnSelected && isCompactNorm) {
             isCompactNorm = true;
         }
@@ -208,7 +210,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     outputCompactColumns.add(normColumnName(config.getColumnName()));
                 }
             }
-            // set cnt for outputschema reference
+            // set cnt for output schema reference
             cntOfTargetAndMetaColumns = outputCompactColumns.size();
             for(ColumnConfig config: columnConfigList) {
                 if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
@@ -216,6 +218,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 }
             }
         }
+
+        this.isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
     }
 
     @SuppressWarnings("deprecation")
@@ -235,7 +239,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         final String rawTag = CommonUtils.trimTag(tag.toString());
 
         // make sure all invalid tag record are filter out
-        if(!super.tagSet.contains(rawTag)) {
+        if(!isLinearTarget && !super.tagSet.contains(rawTag)) {
             if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
                 PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1);
             }
@@ -243,7 +247,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         // data sampling only for normalization, for data cleaning, shouldn't do data sampling
-        if(!this.isForClean) {
+        if(!isLinearTarget && !this.isForClean) {
             // do data sampling. Unselected data or data with invalid tag will be filtered out.
             boolean isNotSampled = DataSampler.isNotSampled(modelConfig.isRegression(), super.tagSet, super.posTagSet,
                     super.negTagSet, modelConfig.getNormalizeSampleRate(), modelConfig.isNormalizeSampleNegOnly(),
@@ -289,6 +293,20 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                             compactVarMap.put(normColumnName(config.getColumnName()), type);
                         } else {
                             tuple.append(type);
+                        }
+                    } else if(this.isLinearTarget) {
+                        double tagValue = 0.0;
+                        try {
+                            tagValue = Double.parseDouble(rawTag);
+                        } catch (Exception e) {
+                            log.error("Tag - " + rawTag + " is invalid(not numerical). Skip record.");
+                            // skip this line
+                            return null;
+                        }
+                        if(this.isCompactNorm) {
+                            compactVarMap.put(normColumnName(config.getColumnName()), tagValue);
+                        } else {
+                            tuple.append(tagValue);
                         }
                     } else {
                         int index = -1;
@@ -515,7 +533,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     String normName = normColumnName(outputCompactColumns.get(i));
                     if(i == 0) {
                         // target column
-                        tupleSchema.add(new Schema.FieldSchema(normName, DataType.INTEGER));
+                        tupleSchema.add(new Schema.FieldSchema(normName, DataType.DOUBLE));
                     } else if(i < cntOfTargetAndMetaColumns) {
                         // meta column
                         tupleSchema.add(new Schema.FieldSchema(normName, DataType.CHARARRAY));
@@ -529,7 +547,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     if(config.isMeta()) {
                         schemaStr.append(normColumnName(config.getColumnName()) + ":chararray" + ",");
                     } else if(config.isTarget()) {
-                        schemaStr.append(normColumnName(config.getColumnName()) + ":int" + ",");
+                        schemaStr.append(normColumnName(config.getColumnName()) + ":double" + ",");
                     } else if(config.isNumerical()) {
                         if ( modelConfig.getNormalizeType().equals(NormType.ONEHOT) ) {
                             for(int i = 0; i < config.getBinBoundary().size(); i++) {
@@ -549,7 +567,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                             // for others, set to float, no matter LR/NN categorical or filter out feature with null
                             if ( modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT)
                                     || modelConfig.getNormalizeType().equals(NormType.ONEHOT) ) {
-                                if(CommonUtils.isGoodCandidate(config, super.hasCandidates)) {
+                                if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
                                     for(int i = 0; i < config.getBinCategory().size(); i++) {
                                         schemaStr.append(
                                                 normColumnName(config.getColumnName()) + "_" + i + ":float" + ",");
