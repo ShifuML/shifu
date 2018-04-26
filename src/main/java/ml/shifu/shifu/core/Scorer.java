@@ -451,7 +451,7 @@ public class Scorer {
         Integer tag = Constants.DEFAULT_IDEAL_VALUE;
 
         if(scores.size() == 0) {
-            if(System.currentTimeMillis() % 50 == 0) {
+            if(System.currentTimeMillis() % 100 == 0) {
                 log.warn("No Scores Calculated...");
             }
         }

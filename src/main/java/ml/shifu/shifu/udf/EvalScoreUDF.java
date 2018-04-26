@@ -24,20 +24,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.SortedMap;
 
-import ml.shifu.shifu.column.NSColumn;
-import ml.shifu.shifu.container.CaseScoreResult;
-import ml.shifu.shifu.container.obj.EvalConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.ModelRunner;
-import ml.shifu.shifu.core.Scorer;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.gs.GridSearch;
-import ml.shifu.shifu.core.model.ModelSpec;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
@@ -53,10 +39,26 @@ import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
 import org.encog.ml.BasicML;
 
+import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.container.CaseScoreResult;
+import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.ModelRunner;
+import ml.shifu.shifu.core.Scorer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
+import ml.shifu.shifu.core.model.ModelSpec;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+
 /**
  * Calculate the score for each evaluation data
  */
 public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
+
+    private static final String SHIFU_EVAL_SCORE_MULTITHREAD = "shifu.eval.score.multithread";
 
     private static final String SHIFU_NN_OUTPUT_FIRST_HIDDENLAYER = "shifu.nn.output.first.hiddenlayer";
 
@@ -99,6 +101,11 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
      * Splits for filter expressions
      */
     private int segFilterSize = 0;
+
+    /**
+     * If multi threading scoring for multiple models
+     */
+    private boolean isMultiThreadScoring = false;
 
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
@@ -200,6 +207,13 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                 log.debug("DEBUG: outputHiddenLayerIndex is " + outputHiddenLayerIndex);
             }
         }
+
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            this.isMultiThreadScoring = UDFContext.getUDFContext().getJobConf().getBoolean(SHIFU_EVAL_SCORE_MULTITHREAD,
+                    false);
+        } else {
+            this.isMultiThreadScoring = Environment.getBoolean(SHIFU_EVAL_SCORE_MULTITHREAD, false);
+        }
     }
 
     @SuppressWarnings("deprecation")
@@ -212,14 +226,14 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                     evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb(),
                     evalConfig.getGbtScoreConvertStrategy());
             this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,
-                    evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex);
+                    evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,this.isMultiThreadScoring);
 
             List<ModelSpec> subModels = CommonUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
                     evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb(),
                     evalConfig.getGbtScoreConvertStrategy());
             if(CollectionUtils.isNotEmpty(subModels)) {
                 for(ModelSpec modelSpec: subModels) {
-                    this.modelRunner.addSubModels(modelSpec);
+                    this.modelRunner.addSubModels(modelSpec, this.isMultiThreadScoring);
                     this.subModelsCnt.put(modelSpec.getModelName(), modelSpec.getModels().size());
                 }
             }
@@ -248,7 +262,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                 // reset models to
                 models = models.subList(0, this.modelCnt);
                 this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,
-                        evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex);
+                        evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,
+                        this.isMultiThreadScoring);
             }
             this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
             log.info("DEBUG: model cnt " + this.modelCnt + " sub models cnt " + modelRunner.getSubModelsCnt());
@@ -282,7 +297,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         long runInterval = (System.nanoTime() - startTime) / 1000L;
 
         if(cs == null) {
-            if(System.currentTimeMillis() % 50 == 0) {
+            if(System.currentTimeMillis() % 100 == 0) {
                 log.warn("Get null result, for input: " + input.toDelimitedString("|"));
             }
             return null;
@@ -343,7 +358,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
-        if(System.currentTimeMillis() % 50 == 0L) {
+        if(System.currentTimeMillis() % 100 == 0L) {
             log.info("running time is " + (System.currentTimeMillis() - start) + " ms.");
         }
         return tuple;

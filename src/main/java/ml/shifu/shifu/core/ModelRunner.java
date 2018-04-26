@@ -65,12 +65,17 @@ public class ModelRunner {
 
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
             String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex) {
+        this(modelConfig, columnConfigList, header, dataDelimiter, models, outputHiddenLayerIndex, false);
+    }
+
+    public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
+            String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex, boolean isMultiThread) {
         this.modelConfig = modelConfig;
         this.columnConfigList = columnConfigList;
         this.header = header;
         this.dataDelimiter = dataDelimiter;
         this.scorer = new Scorer(models, columnConfigList, modelConfig.getAlgorithm(), modelConfig,
-                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex, false);
+                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex, isMultiThread);
     }
 
     /**
@@ -194,14 +199,25 @@ public class ModelRunner {
      * @param modelSpec
      *            - model spec for sub model
      */
-    public void addSubModels(ModelSpec modelSpec) {
+    public void addSubModels(ModelSpec modelSpec, boolean isMultiThread) {
         if(this.subScorers == null) {
             this.subScorers = new TreeMap<String, Scorer>();
         }
 
         this.subScorers.put(modelSpec.getModelName(),
                 new Scorer(modelSpec.getModels(), modelSpec.getColumnConfigList(), modelSpec.getAlgorithm().name(),
-                        modelSpec.getModelConfig(), modelSpec.getModelConfig().getNormalizeStdDevCutOff(), false));
+                        modelSpec.getModelConfig(), modelSpec.getModelConfig().getNormalizeStdDevCutOff(),
+                        isMultiThread));
+    }
+
+    /**
+     * add @ModelSpec as sub-model. Create scorer for sub-model
+     * 
+     * @param modelSpec
+     *            - model spec for sub model
+     */
+    public void addSubModels(ModelSpec modelSpec) {
+        this.addSubModels(modelSpec, false);
     }
 
     /**
