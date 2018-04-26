@@ -19,8 +19,6 @@ package ml.shifu.shifu.util;
 
 import java.io.IOException;
 
-import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.commons.lang.StringUtils;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 

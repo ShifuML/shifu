@@ -16,12 +16,8 @@
 package ml.shifu.shifu.pig;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.Properties;
 
-import ml.shifu.shifu.util.*;
-
-import org.apache.commons.lang.StringUtils;
 import org.apache.pig.ExecType;
 import org.apache.pig.PigServer;
 import org.apache.pig.backend.executionengine.ExecException;
@@ -29,6 +25,9 @@ import org.apache.pig.impl.PigContext;
 import org.apache.pig.impl.logicalLayer.FrontendException;
 import org.apache.pig.newplan.logical.relational.LogicalPlan;
 import org.apache.pig.tools.pigstats.PigStats;
+
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.ValueVisitor;
 
 /**
  * {@link ShifuPigServer} is add an entry point to inject properties set in shifuconfig or command to make sure user

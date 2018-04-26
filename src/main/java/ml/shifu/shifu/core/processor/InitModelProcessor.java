@@ -23,23 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-import ml.shifu.guagua.hadoop.util.HDPUtils;
-import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ColumnType;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper;
-import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountReducer;
-import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
-import ml.shifu.shifu.core.mr.input.CombineInputFormat;
-import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
-import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.*;
-import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
-
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -65,6 +48,25 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
+
+import ml.shifu.guagua.hadoop.util.HDPUtils;
+import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ColumnType;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper;
+import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountReducer;
+import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.core.mr.input.CombineInputFormat;
+import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
+import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.ValueVisitor;
+import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
 
 /**
  * Initialize processor, the purpose of this processor is create columnConfig based on modelConfig instance

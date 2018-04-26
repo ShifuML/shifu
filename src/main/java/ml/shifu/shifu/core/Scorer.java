@@ -18,16 +18,6 @@ package ml.shifu.shifu.core;
 import java.util.*;
 import java.util.concurrent.Callable;
 
-import ml.shifu.shifu.column.NSColumn;
-import ml.shifu.shifu.container.ScoreObject;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.SetUtils;
 import org.encog.ml.BasicML;
@@ -38,6 +28,17 @@ import org.encog.ml.svm.SVM;
 import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.container.ScoreObject;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.executor.ExecutorManager;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 
 /**
  * Scorer, calculate the score for a specify input
@@ -51,6 +52,8 @@ public class Scorer {
 
     private List<BasicML> models;
     private List<ColumnConfig> columnConfigList;
+    private List<ColumnConfig> selectedColumnConfigList;
+
     private double cutoff = 4.0d;
     private ModelConfig modelConfig;
     private int scale = DEFAULT_SCORE_SCALE;
@@ -70,24 +73,45 @@ public class Scorer {
      */
     private int outputHiddenLayerIndex = 0;
 
-    
+    /**
+     * Is in multi-thread mode?
+     */
+    private boolean multiThread;
+
     private Map<String, MLDataPair> cachedNormDataPair;
 
-    public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig) {
+    /**
+     * Run model in parallel. Size is # of models.
+     */
+    private ExecutorManager<MLData> executorManager;
+
+    public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm,
+            ModelConfig modelConfig) {
         this(models, columnConfigList, algorithm, modelConfig, 4.0d);
     }
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
-            Double cutoff) {
-        this(models, columnConfigList, algorithm, modelConfig, cutoff, 0);
+            boolean multiThread) {
+        this(models, columnConfigList, algorithm, modelConfig, 4.0d, 0, multiThread);
     }
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
-            Double cutoff, int outputHiddenLayerIndex) {
+            Double cutoff, boolean multiThread) {
+        this(models, columnConfigList, algorithm, modelConfig, cutoff, 0, multiThread);
+    }
+
+    public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
+            Double cutoff) {
+        this(models, columnConfigList, algorithm, modelConfig, cutoff, 0, false);
+    }
+
+    public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
+            Double cutoff, int outputHiddenLayerIndex, boolean multiThread) {
         if(modelConfig == null) {
             throw new IllegalArgumentException("modelConfig should not be null");
         }
 
+        this.multiThread = multiThread;
         this.models = models;
 
         this.columnConfigList = columnConfigList;
@@ -131,6 +155,36 @@ public class Scorer {
         this.outputHiddenLayerIndex = outputHiddenLayerIndex;
 
         cachedNormDataPair = new HashMap<String, MLDataPair>(models.size());
+
+        if(this.multiThread) {
+            int threadPoolSize = Math.min(Runtime.getRuntime().availableProcessors(),
+                    (models.size() == 0 ? 5 : models.size()));
+            this.executorManager = new ExecutorManager<MLData>(threadPoolSize);
+            // add a shutdown hook as a safe guard if some one not call close
+            Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    Scorer.this.executorManager.forceShutDown();
+                }
+            }));
+            log.info("MultiThread is enabled in Scorer, threadPoolSize = " + threadPoolSize);
+        }
+
+        selectedColumnConfigList = new ArrayList<ColumnConfig>();
+        for(ColumnConfig columnConfig : this.columnConfigList) {
+            if (columnConfig.isFinalSelect()) {
+                selectedColumnConfigList.add(columnConfig);
+            }
+        }
+    }
+
+    /**
+     * Cleaning the thread pool resources, must be called at last.
+     */
+    public void close() {
+        if(this.executorManager != null) {
+            this.executorManager.forceShutDown();
+        }
     }
 
     public ScoreObject score(Map<String, String> rawDataMap) {
@@ -154,8 +208,8 @@ public class Scorer {
 
     public ScoreObject scoreNsData(MLDataPair inputPair, Map<NSColumn, String> rawNsDataMap) {
         if(inputPair == null && !this.alg.equalsIgnoreCase(NNConstants.NN_ALG_NAME)) {
-            inputPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig, columnConfigList,
-                    rawNsDataMap, cutoff, alg);
+            inputPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
+                    selectedColumnConfigList, rawNsDataMap, cutoff, alg);
         }
 
         // clear cache
@@ -163,6 +217,12 @@ public class Scorer {
 
         final MLDataPair pair = inputPair;
         List<MLData> modelResults = new ArrayList<MLData>();
+
+        List<Callable<MLData>> tasks = null;
+        if(this.multiThread) {
+            tasks = new ArrayList<Callable<MLData>>();
+        }
+
         for(final BasicML model: models) {
             // TODO, check if no need 'if' condition and refactor two if for loops please
             if(model instanceof BasicFloatNetwork || model instanceof NNModel) {
@@ -173,7 +233,7 @@ public class Scorer {
                 MLDataPair dataPair = cachedNormDataPair.get(cacheKey);
                 if ( dataPair == null ) {
                     dataPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
-                            columnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet());
+                            selectedColumnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet());
                     cachedNormDataPair.put(cacheKey, dataPair);
                 }
                 final MLDataPair networkPair = dataPair;
@@ -185,11 +245,12 @@ public class Scorer {
                  * continue;
                  * }
                  */
-                log.debug("Network input count = {}, while input size = {}", network.getInputCount(), networkPair
-                        .getInput().size());
+                log.debug("Network input count = {}, while input size = {}", network.getInputCount(),
+                        networkPair.getInput().size());
 
                 final int fnlOutputHiddenLayerIndex = outputHiddenLayerIndex;
-                modelResults.add(new Callable<MLData>() {
+
+                Callable<MLData> callable = new Callable<MLData>() {
                     @Override
                     public MLData call() {
                         MLData finalOutput = network.compute(networkPair.getInput());
@@ -206,18 +267,37 @@ public class Scorer {
                         System.arraycopy(hiddenOutputs, 0, outputs, finalOutput.getData().length, hiddenOutputs.length);
                         return new BasicMLData(outputs);
                     }
-                }.call());
+                };
+
+                if(multiThread) {
+                    tasks.add(callable);
+                } else {
+                    try {
+                        modelResults.add(callable.call());
+                    } catch (Exception e) {
+                        log.error("error in model evaluation", e);
+                    }
+                }
             } else if(model instanceof BasicNetwork) {
                 final BasicNetwork network = (BasicNetwork) model;
-
                 final MLDataPair networkPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
                         columnConfigList, rawNsDataMap, cutoff, alg, null);
-                modelResults.add(new Callable<MLData>() {
+
+                Callable<MLData> callable = new Callable<MLData>() {
                     @Override
                     public MLData call() {
                         return network.compute(networkPair.getInput());
                     }
-                }.call());
+                };
+                if(multiThread) {
+                    tasks.add(callable);
+                } else {
+                    try {
+                        modelResults.add(callable.call());
+                    } catch (Exception e) {
+                        log.error("error in model evaluation", e);
+                    }
+                }
             } else if(model instanceof SVM) {
                 final SVM svm = (SVM) model;
                 if(svm.getInputCount() != pair.getInput().size()) {
@@ -225,12 +305,22 @@ public class Scorer {
                             + pair.getInput().size());
                     continue;
                 }
-                modelResults.add(new Callable<MLData>() {
+
+                Callable<MLData> callable = new Callable<MLData>() {
                     @Override
                     public MLData call() {
                         return svm.compute(pair.getInput());
                     }
-                }.call());
+                };
+                if(multiThread) {
+                    tasks.add(callable);
+                } else {
+                    try {
+                        modelResults.add(callable.call());
+                    } catch (Exception e) {
+                        log.error("error in model evaluation", e);
+                    }
+                }
             } else if(model instanceof LR) {
                 final LR lr = (LR) model;
                 if(lr.getInputCount() != pair.getInput().size()) {
@@ -238,25 +328,45 @@ public class Scorer {
                             + pair.getInput().size());
                     continue;
                 }
-                modelResults.add(new Callable<MLData>() {
+
+                Callable<MLData> callable = new Callable<MLData>() {
                     @Override
                     public MLData call() {
                         return lr.compute(pair.getInput());
                     }
-                }.call());
+                };
+                if(multiThread) {
+                    tasks.add(callable);
+                } else {
+                    try {
+                        modelResults.add(callable.call());
+                    } catch (Exception e) {
+                        log.error("error in model evaluation", e);
+                    }
+                }
             } else if(model instanceof TreeModel) {
                 final TreeModel tm = (TreeModel) model;
                 if(tm.getInputCount() != pair.getInput().size()) {
                     throw new RuntimeException("GBDT and input size mismatch: tm input Size = " + tm.getInputCount()
                             + "; data input Size = " + pair.getInput().size());
                 }
-                modelResults.add(new Callable<MLData>() {
+
+                Callable<MLData> callable = new Callable<MLData>() {
                     @Override
                     public MLData call() {
                         MLData result = tm.compute(pair.getInput());
                         return result;
                     }
-                }.call());
+                };
+                if(multiThread) {
+                    tasks.add(callable);
+                } else {
+                    try {
+                        modelResults.add(callable.call());
+                    } catch (Exception e) {
+                        log.error("error in model evaluation", e);
+                    }
+                }
             } else {
                 throw new RuntimeException("unsupport models");
             }
@@ -266,10 +376,17 @@ public class Scorer {
         List<Integer> rfTreeSizeList = new ArrayList<Integer>();
         SortedMap<String, Double> hiddenOutputs = null;
 
-        if(CollectionUtils.isNotEmpty(modelResults)) {
-            if(modelResults.size() != this.models.size()) {
+        if(CollectionUtils.isNotEmpty(modelResults) || CollectionUtils.isNotEmpty(tasks)) {
+            int modelSize = modelResults.size() > 0 ? modelResults.size() : tasks.size();
+            if(modelSize != this.models.size()) {
                 log.error("Get model results size doesn't match with models size.");
                 return null;
+            }
+
+            if(multiThread) {
+                modelResults = this.executorManager.submitTasksAndWaitResults(tasks);
+            } else {
+                // not multi-thread, modelResults is directly being populated in callable.call
             }
 
             if(this.outputHiddenLayerIndex != 0) {
@@ -351,7 +468,7 @@ public class Scorer {
 
         Integer tag = Constants.DEFAULT_IDEAL_VALUE;
 
-        if(scores.size() == 0 && System.currentTimeMillis() % 10 == 0) {
+        if(scores.size() == 0 && System.currentTimeMillis() % 100 == 0) {
             log.warn("No Scores Calculated...");
         }
 
@@ -377,10 +494,18 @@ public class Scorer {
     }
 
     private String featureSetToString(Set<Integer> featureSet) {
-        if ( CollectionUtils.isEmpty(featureSet) ) {
+        if (CollectionUtils.isEmpty(featureSet)) {
             return "EMPTY";
         } else {
             return featureSet.toString();
         }
+    }
+
+    public boolean isMultiThread() {
+        return multiThread;
+    }
+
+    public void setMultiThread(boolean multiThread) {
+        this.multiThread = multiThread;
     }
 }
