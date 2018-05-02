@@ -107,6 +107,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
      */
     private boolean isMultiThreadScoring = false;
 
+    private boolean isLinearTarget = false;
+
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
         this(source, pathModelConfig, pathColumnConfig, evalSetName, Integer.toString(Scorer.DEFAULT_SCORE_SCALE));
@@ -214,6 +216,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         } else {
             this.isMultiThreadScoring = Environment.getBoolean(SHIFU_EVAL_SCORE_MULTITHREAD, false);
         }
+
+        this.isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
     }
 
     @SuppressWarnings("deprecation")
@@ -319,7 +323,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
         tuple.append(weight);
 
-        if(modelConfig.isRegression()) {
+        if(this.isLinearTarget || modelConfig.isRegression()) {
             if(CollectionUtils.isNotEmpty(cs.getScores())) {
                 appendModelScore(tuple, cs, true);
                 if(this.outputHiddenLayerIndex != 0) {
@@ -460,8 +464,9 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
     @SuppressWarnings("deprecation")
     private void incrementTagCounters(String tag, String weight, long runModelInterval) {
         if(tag == null || weight == null) {
-            if(System.currentTimeMillis() % 50 == 0) {
-                log.warn("tag is empty " + tag + " or weight is empty " + weight);
+            if ( System.currentTimeMillis() % 50 == 0 ) {
+                log.warn("tag is empty " + tag + " or weight is empty " + weight
+                        + ". And execution time - " + runModelInterval);
             }
             return;
         }
@@ -530,8 +535,10 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                     : evalConfig.getDataSet().getWeightColumnName();
             tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + weightName, DataType.CHARARRAY));
 
-            if(modelConfig.isRegression()) {
-                if(this.modelCnt > 0) {
+            boolean isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
+
+            if(isLinearTarget || modelConfig.isRegression()) {
+                if (this.modelCnt > 0) {
                     addModelSchema(tupleSchema, this.modelCnt, "");
                 } else if(MapUtils.isEmpty(this.subModelsCnt)) {
                     throw new IllegalStateException("No any model found!");

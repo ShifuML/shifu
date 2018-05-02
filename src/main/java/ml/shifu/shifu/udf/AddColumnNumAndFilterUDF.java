@@ -29,7 +29,9 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.BagFactory;
 import org.apache.pig.data.DataBag;
@@ -61,6 +63,7 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
     private List<DataPurifier> dataPurifiers;
 
     private boolean isForExpressions = false;
+    private boolean isLinearTarget = false;
     private int mismatchCnt = 0;
 
     public AddColumnNumAndFilterUDF(String source, String pathModelConfig, String pathColumnConfig, String withScoreStr)
@@ -92,6 +95,8 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
                 this.dataPurifiers.add(new DataPurifier(modelConfig, split, false));
             }
         }
+
+        this.isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
     }
 
     @SuppressWarnings("deprecation")
@@ -129,17 +134,24 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
         }
 
         String tag = CommonUtils.trimTag(input.get(tagColumnNum).toString());
-
-        // filter out tag not in setting tagging list
-        if(!super.tagSet.contains(tag)) {
+        if(this.isLinearTarget) {
+            if (!NumberUtils.isNumber(tag)) {
+                if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
+                    PigStatusReporter.getInstance().
+                            getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1);
+                }
+                return null;
+            }
+        }else if(!super.tagSet.contains(tag)) {
             if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
-                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1);
+                PigStatusReporter.getInstance().
+                        getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1);
             }
             return null;
         }
 
         Double rate = modelConfig.getBinningSampleRate();
-        if(modelConfig.isBinningSampleNegOnly()) {
+        if(!this.isLinearTarget && !modelConfig.isClassification() && modelConfig.isBinningSampleNegOnly()) {
             if(super.negTagSet.contains(tag) && random.nextDouble() > rate) {
                 return null;
             }
@@ -158,21 +170,10 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
             }
         }
 
+        boolean isPositiveInst = (modelConfig.isRegression() && super.posTagSet.contains(tag));
         for(int i = 0; i < size; i++) {
             ColumnConfig config = columnConfigList.get(i);
-            // all columns can be stats
-            boolean isPositive = false;
-            if(modelConfig.isRegression()) {
-                if(super.posTagSet.contains(tag)) {
-                    isPositive = true;
-                } else if(super.negTagSet.contains(tag)) {
-                    isPositive = false;
-                } else {
-                    // not valid tag, just skip current record
-                    continue;
-                }
-            }
-            if(!isValidRecord(modelConfig.isRegression(), isPositive, config)) {
+            if(!isValidRecord(modelConfig.isRegression(), isPositiveInst, config)) {
                 continue;
             }
 
@@ -206,7 +207,7 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
                 tuple.set(COLUMN_TAG_INDX, false);
             }
         } else {
-            // a mock for multiple classification
+            // a mock for multiple classification and linear target
             tuple.set(COLUMN_TAG_INDX, true);
         }
 
@@ -231,8 +232,8 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
                 tupleSchema.add(new FieldSchema("rand", DataType.INTEGER));
             }
             tupleSchema.add(new FieldSchema("weight", DataType.DOUBLE));
-            return new Schema(new Schema.FieldSchema("columnInfos", new Schema(new Schema.FieldSchema("columnInfo",
-                    tupleSchema, DataType.TUPLE)), DataType.BAG));
+            return new Schema(new Schema.FieldSchema("columnInfos",
+                    new Schema(new Schema.FieldSchema("columnInfo", tupleSchema, DataType.TUPLE)), DataType.BAG));
         } catch (IOException e) {
             log.error("Error in outputSchema", e);
             return null;

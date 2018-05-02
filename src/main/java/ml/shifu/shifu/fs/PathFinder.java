@@ -1012,7 +1012,7 @@ public class PathFinder {
 
     /**
      * Get the backup ColumnConfig
-     * 
+     * @param postTimeStamp - timestamp to back ColumnConfig file name
      * @return - the ColumnConfig.json path for backup
      */
     public String getBackupColumnConfig(String postTimeStamp) {

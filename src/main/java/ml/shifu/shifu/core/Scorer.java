@@ -15,16 +15,11 @@
  */
 package ml.shifu.shifu.core;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.Callable;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.SetUtils;
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLData;
 import org.encog.ml.data.MLDataPair;
@@ -57,6 +52,8 @@ public class Scorer {
 
     private List<BasicML> models;
     private List<ColumnConfig> columnConfigList;
+    private List<ColumnConfig> selectedColumnConfigList;
+
     private double cutoff = 4.0d;
     private ModelConfig modelConfig;
     private int scale = DEFAULT_SCORE_SCALE;
@@ -80,6 +77,8 @@ public class Scorer {
      * Is in multi-thread mode?
      */
     private boolean multiThread;
+
+    private Map<String, MLDataPair> cachedNormDataPair;
 
     /**
      * Run model in parallel. Size is # of models.
@@ -155,6 +154,8 @@ public class Scorer {
 
         this.outputHiddenLayerIndex = outputHiddenLayerIndex;
 
+        cachedNormDataPair = new HashMap<String, MLDataPair>(models.size());
+
         if(this.multiThread) {
             int threadPoolSize = Math.min(Runtime.getRuntime().availableProcessors(),
                     (models.size() == 0 ? 5 : models.size()));
@@ -166,6 +167,14 @@ public class Scorer {
                     Scorer.this.executorManager.forceShutDown();
                 }
             }));
+            log.info("MultiThread is enabled in Scorer, threadPoolSize = " + threadPoolSize);
+        }
+
+        selectedColumnConfigList = new ArrayList<ColumnConfig>();
+        for(ColumnConfig columnConfig : this.columnConfigList) {
+            if (columnConfig.isFinalSelect()) {
+                selectedColumnConfigList.add(columnConfig);
+            }
         }
     }
 
@@ -199,9 +208,12 @@ public class Scorer {
 
     public ScoreObject scoreNsData(MLDataPair inputPair, Map<NSColumn, String> rawNsDataMap) {
         if(inputPair == null && !this.alg.equalsIgnoreCase(NNConstants.NN_ALG_NAME)) {
-            inputPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig, columnConfigList,
-                    rawNsDataMap, cutoff, alg);
+            inputPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
+                    selectedColumnConfigList, rawNsDataMap, cutoff, alg);
         }
+
+        // clear cache
+        this.cachedNormDataPair.clear();
 
         final MLDataPair pair = inputPair;
         List<MLData> modelResults = new ArrayList<MLData>();
@@ -217,8 +229,14 @@ public class Scorer {
                 final BasicFloatNetwork network = (model instanceof BasicFloatNetwork) ? (BasicFloatNetwork) model
                         : ((NNModel) model).getIndependentNNModel().getBasicNetworks().get(0);
 
-                final MLDataPair networkPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
-                        columnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet());
+                String cacheKey = featureSetToString(network.getFeatureSet());
+                MLDataPair dataPair = cachedNormDataPair.get(cacheKey);
+                if ( dataPair == null ) {
+                    dataPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
+                            selectedColumnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet());
+                    cachedNormDataPair.put(cacheKey, dataPair);
+                }
+                final MLDataPair networkPair = dataPair;
 
                 /*
                  * if(network.getFeatureSet().size() != networkPair.getInput().size()) {
@@ -450,10 +468,8 @@ public class Scorer {
 
         Integer tag = Constants.DEFAULT_IDEAL_VALUE;
 
-        if(scores.size() == 0) {
-            if(System.currentTimeMillis() % 100 == 0) {
-                log.warn("No Scores Calculated...");
-            }
+        if(scores.size() == 0 && System.currentTimeMillis() % 100 == 0) {
+            log.warn("No Scores Calculated...");
         }
 
         return new ScoreObject(scores, tag, rfTreeSizeList, hiddenOutputs);
@@ -474,6 +490,14 @@ public class Scorer {
     public void setScale(int scale) {
         if(scale > 0) {
             this.scale = scale;
+        }
+    }
+
+    private String featureSetToString(Set<Integer> featureSet) {
+        if (CollectionUtils.isEmpty(featureSet)) {
+            return "EMPTY";
+        } else {
+            return featureSet.toString();
         }
     }
 

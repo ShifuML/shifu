@@ -38,6 +38,7 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -337,11 +338,12 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     private void initNetwork(MasterContext<NNParams, NNParams> context) {
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
                 this.columnConfigList);
+        boolean isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
         @SuppressWarnings("unused")
         int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         // if is one vs all classification, outputNodeCount is set to 1, if classes=2, outputNodeCount is also 1
         int classes = modelConfig.getTags().size();
-        int outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1]
+        int outputNodeCount = (isLinearTarget || modelConfig.isRegression()) ? inputOutputIndex[1]
                 : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : (classes == 2 ? 1 : classes));
         int numLayers = (Integer) validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
@@ -364,7 +366,8 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         int featureInputsCnt = DTrainUtils.getFeatureInputsCnt(modelConfig, columnConfigList, this.subFeatures);
 
         this.network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers, actFunc,
-                hiddenNodeList, false, this.dropoutRate, this.wgtInit);
+                hiddenNodeList, false, this.dropoutRate, this.wgtInit,
+                CommonUtils.isLinearTarget(modelConfig, columnConfigList));
         ((BasicFloatNetwork) this.network).setFeatureSet(this.subFeatures);
 
         // register here to save models
