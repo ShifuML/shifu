@@ -107,6 +107,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
      */
     private boolean isMultiThreadScoring = false;
 
+    private boolean isLinearTarget = false;
+
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
         this(source, pathModelConfig, pathColumnConfig, evalSetName, Integer.toString(Scorer.DEFAULT_SCORE_SCALE));
@@ -214,6 +216,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         } else {
             this.isMultiThreadScoring = Environment.getBoolean(SHIFU_EVAL_SCORE_MULTITHREAD, false);
         }
+
+        this.isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
     }
 
     @SuppressWarnings("deprecation")
@@ -319,7 +323,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
         tuple.append(weight);
 
-        if(modelConfig.isRegression()) {
+        if(this.isLinearTarget || modelConfig.isRegression()) {
             if(CollectionUtils.isNotEmpty(cs.getScores())) {
                 appendModelScore(tuple, cs, true);
                 if(this.outputHiddenLayerIndex != 0) {
