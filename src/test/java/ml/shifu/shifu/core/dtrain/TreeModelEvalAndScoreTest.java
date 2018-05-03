@@ -26,8 +26,6 @@ import java.util.Map;
 import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
 
 import ml.shifu.guagua.util.FileUtils;
 import ml.shifu.guagua.util.MemoryUtils;
@@ -48,7 +46,7 @@ public class TreeModelEvalAndScoreTest {
 
     private IndependentTreeModel iTreeModel;
 
-    @BeforeClass
+//    @BeforeClass
     public void setUp() throws IOException {
         String modelPath = "src/test/resources/dttest/model/cam4.gbt";
         FileInputStream fi = null;
@@ -87,7 +85,7 @@ public class TreeModelEvalAndScoreTest {
         // System.out.println(MemoryUtils.getRuntimeMemoryStats());
     }
 
-    @Test
+//    @Test
     public void testEvalScore() throws IOException {
         List<BasicML> models = new ArrayList<BasicML>();
         models.add(model);
@@ -119,7 +117,7 @@ public class TreeModelEvalAndScoreTest {
                 System.out.println("One invalid input data");
                 break;
             }
-            LOG.info("index {}, data size {}", i, data.length);
+//            LOG.info("index {}, data size {}", i, data.length);
             for(int j = 0; j < headers.length; j++) {
                 map.put(headers[j], data[j]);
                 mapObj.put(headers[j], data[j]);
