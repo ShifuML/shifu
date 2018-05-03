@@ -23,6 +23,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.encog.ml.BasicML;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Test;
+
 import ml.shifu.guagua.util.FileUtils;
 import ml.shifu.guagua.util.MemoryUtils;
 import ml.shifu.shifu.container.ScoreObject;
@@ -33,10 +37,6 @@ import ml.shifu.shifu.core.Scorer;
 import ml.shifu.shifu.core.TreeModel;
 import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
 import ml.shifu.shifu.util.CommonUtils;
-
-import org.encog.ml.BasicML;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
 
 public class TreeModelEvalAndScoreTest {
 
@@ -90,8 +90,8 @@ public class TreeModelEvalAndScoreTest {
 
         ModelConfig modelConfig = CommonUtils.loadModelConfig("src/test/resources/dttest/newconfig/ModelConfig.json",
                 SourceType.LOCAL);
-        List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList(
-                "src/test/resources/dttest/newconfig/ColumnConfig.json", SourceType.LOCAL);
+        List<ColumnConfig> columnConfigList = CommonUtils
+                .loadColumnConfigList("src/test/resources/dttest/newconfig/ColumnConfig.json", SourceType.LOCAL);
 
         Scorer scorer = new Scorer(models, columnConfigList, "GBT", modelConfig);
 
@@ -102,7 +102,10 @@ public class TreeModelEvalAndScoreTest {
         }
         String[] headers = CommonUtils.split(lines.get(0), "|");
         // score with format <String, String>
-        for(int i = 1; i < lines.size(); i++) {
+        if(lines.size() <= 1) {
+            return;
+        }
+        for(int i = 1; i < lines.size() - 1; i++) {
             Map<String, String> map = new HashMap<String, String>();
             Map<String, Object> mapObj = new HashMap<String, Object>();
 
