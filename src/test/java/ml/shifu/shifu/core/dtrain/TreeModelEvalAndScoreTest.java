@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.encog.ml.BasicML;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -39,6 +41,8 @@ import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
 import ml.shifu.shifu.util.CommonUtils;
 
 public class TreeModelEvalAndScoreTest {
+
+    public static Logger LOG = LoggerFactory.getLogger(TreeModelEvalAndScoreTest.class);
 
     private TreeModel model;
 
@@ -115,6 +119,7 @@ public class TreeModelEvalAndScoreTest {
                 System.out.println("One invalid input data");
                 break;
             }
+            LOG.info("index {}, data size {}", i, data.length);
             for(int j = 0; j < headers.length; j++) {
                 map.put(headers[j], data[j]);
                 mapObj.put(headers[j], data[j]);

@@ -15,8 +15,18 @@
  */
 package ml.shifu.shifu.core;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.Callable;
+
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.encog.ml.BasicML;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
@@ -27,14 +37,6 @@ import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.executor.ExecutorManager;
 import ml.shifu.shifu.util.CommonUtils;
-
-import org.apache.commons.collections.MapUtils;
-import org.apache.commons.lang3.tuple.Pair;
-import org.encog.ml.BasicML;
-import org.encog.ml.data.MLData;
-import org.encog.ml.data.basic.BasicMLData;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * ModelRunner class is to load the model and run the model for input data
@@ -50,7 +52,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ModelRunner {
 
-    public static Logger log = LoggerFactory.getLogger(Scorer.class);
+    public static Logger log = LoggerFactory.getLogger(ModelRunner.class);
 
     protected ModelConfig modelConfig;
     protected List<ColumnConfig> columnConfigList;
