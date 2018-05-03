@@ -283,8 +283,23 @@ public class ModelInspector {
         if(modelConfig.getStats().getMaxNumBin() > Short.MAX_VALUE || modelConfig.getStats().getMaxNumBin() < 0) {
             result = ValidateResult.mergeResult(result,
                     new ValidateResult(false, Arrays.asList("stats#maxNumBin should be in [0, 32767].")));
-
         }
+
+        if(CollectionUtils.isEmpty(modelConfig.getTags())) {
+            if(!(BinningMethod.EqualInterval.equals(modelConfig.getStats().getBinningMethod())
+                    || BinningMethod.EqualTotal.equals(modelConfig.getStats().getBinningMethod()))) {
+                result = ValidateResult.mergeResult(result,
+                        new ValidateResult(false,
+                                Arrays.asList("For numerical target, only EqualInterval and EqualTotal are allowed")));
+            }
+
+            if(BinningAlgorithm.DynamicBinning.equals(modelConfig.getBinningAlgorithm())) {
+                result = ValidateResult.mergeResult(result,
+                        new ValidateResult(false,
+                                Arrays.asList("For numerical target, DynamicBinning is not allowed")));
+            }
+        }
+
         return result;
     }
 

@@ -23,6 +23,8 @@ import org.apache.commons.collections.CollectionUtils;
  */
 public class BasicUpdater {
 
+    protected ModelConfig modelConfig;
+
     protected String targetColumnName;
     protected String weightColumnName;
 
@@ -36,6 +38,7 @@ public class BasicUpdater {
     protected Map<String, Double> hybridColumnNames;
 
     public BasicUpdater(ModelConfig modelConfig) throws IOException {
+        this.modelConfig = modelConfig;
         this.targetColumnName = modelConfig.getTargetColumnName();
         this.weightColumnName = modelConfig.getWeightColumnName();
 
@@ -119,8 +122,14 @@ public class BasicUpdater {
             // weight column is numerical
             columnConfig.setColumnType(ColumnType.N);
         } else if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
-            // target column is set to categorical column
-            columnConfig.setColumnType(ColumnType.C);
+            if ( CollectionUtils.isEmpty(this.modelConfig.getTags()) ) {
+                // allow tags are empty to support linear target
+                // set columnType to N
+                columnConfig.setColumnType(ColumnType.N);
+            } else {
+                // target column is set to categorical column
+                columnConfig.setColumnType(ColumnType.C);
+            }
         } else if(setHybridColumns.contains(new NSColumn(varName))) {
             columnConfig.setColumnType(ColumnType.H);
             String newVarName = null;

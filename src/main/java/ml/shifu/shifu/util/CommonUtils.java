@@ -815,10 +815,26 @@ public final class CommonUtils {
      *             if no target column can be found.
      */
     public static Integer getTargetColumnNum(List<ColumnConfig> columnConfigList) {
+        return getTargetColumnConfig(columnConfigList).getColumnNum();
+    }
+
+    /**
+     * Get target ColumnConfig.
+     *
+     * @param columnConfigList
+     *            column config list
+     * @return target ColumnConfig
+     * @throws IllegalArgumentException
+     *             if columnConfigList is null or empty.
+     *
+     * @throws IllegalStateException
+     *             if no target column can be found.
+     */
+    public static ColumnConfig getTargetColumnConfig(List<ColumnConfig> columnConfigList) {
         if(CollectionUtils.isEmpty(columnConfigList)) {
             throw new IllegalArgumentException("columnConfigList should not be null or empty.");
         }
-        // I need cast operation because of common-collections dosen't support generic.
+        // I need cast operation because of common-collections doesn't support generic.
         ColumnConfig cc = (ColumnConfig) CollectionUtils.find(columnConfigList, new Predicate() {
             @Override
             public boolean evaluate(Object object) {
@@ -828,7 +844,7 @@ public final class CommonUtils {
         if(cc == null) {
             throw new IllegalStateException("No target column can be found, please check your column configurations");
         }
-        return cc.getColumnNum();
+        return cc;
     }
 
     /**
@@ -1133,6 +1149,14 @@ public final class CommonUtils {
             }
         }
         return null;
+    }
+
+    public static boolean isLinearTarget(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
+        ColumnConfig columnConfig = getTargetColumnConfig(columnConfigList);
+        if ( columnConfig == null ) {
+            throw new ShifuException(ShifuErrorCode.ERROR_NO_TARGET_COLUMN, "Target column is not detected.");
+        }
+        return (CollectionUtils.isEmpty(modelConfig.getTags()) && columnConfig.isNumerical());
     }
 
     public static class GzipStreamPair {
@@ -2619,11 +2643,10 @@ public final class CommonUtils {
         } else {
             // multiple classification
             return columnConfig.isCandidate(hasCandidate)
-                    && (columnConfig.getMean() != null && columnConfig.getStdDev() != null
-                            && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
-                                    && columnConfig.getBinCategory().size() > 1)
-                                    || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
-                                            && columnConfig.getBinBoundary().size() > 1)));
+                    && (columnConfig.getMean() != null
+                        && columnConfig.getStdDev() != null
+                        && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null&& columnConfig.getBinCategory().size() > 1)
+                            || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
         }
     }
 
