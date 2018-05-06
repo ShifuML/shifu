@@ -37,6 +37,14 @@
             </excludes>
         </fileSet>
         <fileSet>
+            <directory>${project.basedir}/src/main/resources/web</directory>
+            <outputDirectory>/web</outputDirectory>
+            <includes>
+                <include>*.css</include>
+                <include>*.js</include>
+            </includes>
+        </fileSet>
+        <fileSet>
             <directory>${project.basedir}/src/main/resources/conf</directory>
             <!-- cannot set it to conf, as in conf mapred-site will override system configurations -->
             <outputDirectory>/log4jconf</outputDirectory>

@@ -1223,4 +1223,7 @@ public class GainChart {
         }
     }
 
+    public void copyWebResourceFiles(String webResourceFolder, String evalFolder) throws IOException {
+        ShifuFileUtils.copy(webResourceFolder, evalFolder, SourceType.LOCAL);
+    }
 }
