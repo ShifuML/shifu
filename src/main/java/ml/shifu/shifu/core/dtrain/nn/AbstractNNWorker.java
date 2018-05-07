@@ -240,7 +240,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     /**
      * If enabled by extreme learning machine: https://en.wikipedia.org/wiki/Extreme_learning_machine
      */
-    private boolean isELM;
+    //private boolean isELM;
 
     /**
      * Cache all features with feature index for searching
@@ -372,9 +372,9 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         this.epochsPerIteration = epochsPerIterationInteger == null ? 1 : epochsPerIterationInteger.intValue();
         LOG.info("epochsPerIteration in worker is :{}", epochsPerIteration);
 
-        Object elmObject = validParams.get(DTrainUtils.IS_ELM);
-        isELM = elmObject == null ? false : "true".equalsIgnoreCase(elmObject.toString());
-        LOG.info("Check isELM: {}", isELM);
+//        Object elmObject = validParams.get(DTrainUtils.IS_ELM);
+//        isELM = elmObject == null ? false : "true".equalsIgnoreCase(elmObject.toString());
+//        LOG.info("Check isELM: {}", isELM);
 
         Object dropoutRateObj = validParams.get(CommonConstants.DROPOUT_RATE);
         if(dropoutRateObj != null) {
@@ -532,10 +532,12 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
         this.gradient.getNetwork().setWeights(weights);
 
+        Set<Integer> dropoutNodes = context.getLastMasterResult().getDropoutNodes();
+        
         // using the weights from master to train model in current iteration
         double[] gradients = null;
         for(int i = 0; i < epochsPerIteration; i++) {
-            gradients = this.gradient.computeGradients(context.getCurrentIteration());
+            gradients = this.gradient.computeGradients(context.getCurrentIteration(), dropoutNodes);
             if(this.epochsPerIteration > 1) {
                 this.gradient.resetNetworkWeights();
             }
@@ -585,7 +587,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         LOG.info("Gradient computing thread count is {}.", modelConfig.getTrain().getWorkerThreadCount());
 
         this.gradient = new ParallelGradient((FloatFlatNetwork) flat, training, testing, flatSpot,
-                new LinearErrorFunction(), isCrossOver, modelConfig.getTrain().getWorkerThreadCount(), this.isELM,
+                new LinearErrorFunction(), isCrossOver, modelConfig.getTrain().getWorkerThreadCount(),
                 this.lossStr, this.batchs);
     }
 

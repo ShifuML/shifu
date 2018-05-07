@@ -57,8 +57,6 @@ public final class DTrainUtils {
     public static final String QUICK_PROPAGATION = "Q";
     public static final String BACK_PROPAGATION = "B";
 
-    public static final String IS_ELM = "IsELM";
-
     public static final String WGT_INIT_GAUSSIAN = "gaussian";
 
     public static final String WGT_INIT_DEFAULT = "default";
@@ -256,7 +254,8 @@ public final class DTrainUtils {
             List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate, String wgtInit) {
         final BasicFloatNetwork network = new BasicFloatNetwork();
 
-        network.addLayer(new BasicLayer(new ActivationLinear(), true, in));
+        // we need to guarantee that input layer dropout rate is 40% of hiddenlayer dropout rate
+        network.addLayer(new BasicDropoutLayer(new ActivationLinear(), true, in, dropoutRate * 0.4d));
 
         // int hiddenNodes = 0;
         for(int i = 0; i < numLayers; i++) {
