@@ -28,7 +28,8 @@ mapreduce.job.max.split.locations=5000
 # It will control the max combined split size for each mapper.
 # Sometimes mapper will timeout for loading data, if there are too much data for mapper
 # This option can limit the records for each mapper
-# guagua.split.maxCombinedSplitSize=256000000
+# change default to 200m to disable auto split in TrainModelProcessor
+guagua.split.maxCombinedSplitSize=209715200
 
 # set to 30mins (default 10mins)
 mapreduce.task.timeout=1800000
@@ -91,3 +92,9 @@ guagua.worker.getresult.timeout=600000
 # ModelConfig#trains#workerThreadCount
 mapreduce.map.cpu.vcores=1
 
+# the HDFS directory that used to store all user's usage info. This is for summary shifu usage
+# the directory should have 777 permission so that other user have permission to write it
+# shifu.usage.statistics.dir=
+
+# the delimiter for Shifu output data
+# shifu.output.data.delimiter=|

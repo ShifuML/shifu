@@ -26,6 +26,16 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.math3.distribution.PoissonDistribution;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.encog.mathutil.BoundMath;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Splitter;
+
 import ml.shifu.guagua.ComputableMonitor;
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
@@ -41,16 +51,8 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.util.CommonUtils;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.math3.distribution.PoissonDistribution;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.encog.mathutil.BoundMath;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Splitter;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.MapReduceUtils;
 
 /**
  * {@link LogisticRegressionWorker} defines logic to accumulate local <a
@@ -70,7 +72,7 @@ import com.google.common.base.Splitter;
  * <p>
  * L1 and l2 regulations are supported by configuration: RegularizedConstant in model params of ModelConfig.json.
  */
-@ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 300)
+@ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 3600)
 public class LogisticRegressionWorker
         extends
         AbstractWorkerComputable<LogisticRegressionParams, LogisticRegressionParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
@@ -136,7 +138,7 @@ public class LogisticRegressionWorker
     /**
      * A splitter to split data with specified delimiter.
      */
-    private Splitter splitter = Splitter.on("|").trimResults();
+    private Splitter splitter;
 
     /**
      * PoissonDistribution which is used for poisson sampling for bagging with replacement.
@@ -274,6 +276,11 @@ public class LogisticRegressionWorker
                     * memoryFraction * crossValidationRate), tmpFolder + File.separator + "test-"
                     + System.currentTimeMillis(), Data.class.getName());
         }
+
+        // create Splitter
+        String delimiter = context.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
+        this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
+
         // cannot find a good place to close these two data set, using Shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override

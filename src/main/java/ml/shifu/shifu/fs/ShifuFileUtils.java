@@ -645,8 +645,8 @@ public class ShifuFileUtils {
         }
 
         if(fileStatsArr == null || fileStatsArr.length == 0) {
-            // protected by reading glob status agaion
-            fileStatsArr = fs.globStatus(new Path(filePath), filter);
+            // protected by reading glob status again
+            fileStatsArr = fs.globStatus(new Path(filePath));
         }
 
         return fileStatsArr;
@@ -662,7 +662,7 @@ public class ShifuFileUtils {
 
         boolean isGzip = true;
         for(FileStatus fileStatus: fileStatsArr) {
-            if(!fileStatus.getPath().toString().endsWith("gz") && !fileStatus.getPath().toString().endsWith("gz")) {
+            if(!fileStatus.getPath().toString().endsWith("gz")) {
                 isGzip = false;
             }
         }
@@ -677,6 +677,19 @@ public class ShifuFileUtils {
             size += fileStats.getLen();
         }
         return size;
+    }
+
+    public static boolean isCompressedFileOrDirectory(String filePath, SourceType sourceType) throws IOException {
+        boolean isCompressedFile = false;
+
+        FileStatus[] fileStatsArr = getFilePartStatus(filePath, sourceType);
+        for(FileStatus fileStatus: fileStatsArr) {
+            if(fileStatus.getPath().toString().endsWith("gz") || fileStatus.getPath().toString().endsWith("bz2")) {
+                isCompressedFile = true;
+                break;
+            }
+        }
+        return isCompressedFile;
     }
 
     public static void writeLines(@SuppressWarnings("rawtypes") Collection collection, String filePath,

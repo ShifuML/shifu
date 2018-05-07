@@ -18,6 +18,13 @@
 # 
 # Shifu will check if current hadoop is installed well, if not installed well, please check and configure your HADOOP_HOME
 # or HADOOP_ROOT well.
+#
+# SHIFU_OPTS
+# Shifu option is also avaliable for advanced user.
+#
+# Shifu will check if apache spark is installed corrcetly, if not please check and configure your SPARK_HOME, SAPRK_CONF
+# To enable shifu spark feature, please set environment var SHIFU_SPARK_EVAL=TURE
+
 
 function sanity_check() {
     if [ ! -f ModelConfig.json ]; then
@@ -95,6 +102,12 @@ function find_ld_library_path() {
     echo ${_ld_library_path}
 }
 
+function record_shifu_usage() {
+    if [ ${HADOOP_ROOT} != "" ]; then
+        nohup ${SHIFU_HOME}/bin/shifu_statistics.sh "$@" >& /dev/null &
+    fi
+}
+
 if [ "${SHIFU_HOME}" == "" ]; then
     COMMAND=`which $0`
     if [ -L ${COMMAND} ]; then
@@ -107,6 +120,7 @@ if [ "${SHIFU_HOME}" == "" ]; then
 fi
 
 SHIFU_OPTS=${JAVA_OPTS:=${SHIFU_OPTS}}
+
 
 #check SPARK_HOME for shifu spark eval, only when SHIFU_SPARK_EVAL is enabled
 if [ "${SHIFU_SPARK_EVAL}" == "TRUE" ]; then
@@ -198,34 +212,42 @@ JAVA_OPTIONS="-server -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:CMSInitiating
 
 case ${COMMAND} in
     "modelset")
+        record_shifu_usage "$@"
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     "varselect"|"varsel")
         sanity_check
+        record_shifu_usage "$@"
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     "init"|"stats"|"normalize"|"norm"|"posttrain")
         sanity_check
+        record_shifu_usage "$@"
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     "train")
         sanity_check
+        record_shifu_usage "$@"
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     "combo")
         sanity_check
+        record_shifu_usage "$@"
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     "syncUp")
         sanity_check
+        record_shifu_usage "$@"
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     "syncHDFS")
         sanity_check
+        record_shifu_usage "$@"
         sync_model_to_hdfs
         ;;
     "eval")
         sanity_check
+        record_shifu_usage "$@"
         #TODO : to change spark executor instance automaticaly adapted
         if [ "${SPARK_SUBMIT}" != "" -a "${SHIFU_SPARK_EVAL}" == "TRUE" ]; then
                 ${SPARK_SUBMIT} --class ml.shifu.shifu.spark.eval.ShifuEval --conf spark.executor.instances=200 --conf spark.executor.memory=4g  --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --jars ${SPARK_CLASSPATH} ${SHIFU_HOME}/lib/${SPARK_EVAL_JAR}
@@ -237,6 +259,7 @@ case ${COMMAND} in
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     *)
+        record_shifu_usage "$@"
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
 esac

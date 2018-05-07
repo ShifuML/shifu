@@ -176,8 +176,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
     private double adamBeta2 = 0.999d;
 
     /**
-     * NN network structure. we use it us pick dropout node index only.
-     */
+    * NN network structure. we use it us pick dropout node index only.
+    */
     private FloatFlatNetwork flatNetwork = null;
     
     @Override
@@ -282,8 +282,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.bestValidationError = currentTestError;
         }
 
-        LOG.info("NNMaster compute iteration {} ( avg train error {}, avg validation error {} )", new Object[] {
-                context.getCurrentIteration(), currentTrainError, currentTestError });
+        LOG.info("NNMaster compute iteration {} ( avg train error {}, avg validation error {} )",
+                new Object[] { context.getCurrentIteration(), currentTrainError, currentTestError });
 
         NNParams params = new NNParams();
         params.setTrainError(currentTrainError);
@@ -292,9 +292,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         params.setGradients(new double[0]);
         params.setWeights(weights);
         if (this.dropoutRate > 0d) {
-            params.setDropoutNodes(dropoutNodes());
+        	 params.setDropoutNodes(dropoutNodes());
         }
-        
         LOG.debug("master result {} in iteration {}", params, context.getCurrentIteration());
 
         // Convergence judging part
@@ -313,34 +312,6 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         return params;
     }
 
-	private HashSet<Integer> dropoutNodes() {
-		Random random = new Random(System.currentTimeMillis());
-
-		HashSet<Integer> droppedNodeIndices = new HashSet<Integer>();
-
-		// from input to last hidden layer. (exclude output layer)
-		for (int i = this.flatNetwork.getLayerIndex().length - 1; i > 0; i--) {
-			int beginNeuronIndex = this.flatNetwork.getLayerIndex()[i];
-			// exclude constant neuron
-			int neuronCount = this.flatNetwork.getLayerFeedCounts()[i];
-
-			// from first neuron to last neuron in current layer
-			for (int j = 0; j < neuronCount; j++) {
-				if (random.nextDouble() < this.flatNetwork.getLayerDropoutRates()[i]) {
-					// drop this node by adding it into list and will passing
-					// this list to workers
-					droppedNodeIndices.add(beginNeuronIndex + j);
-				}
-			}
-		}
-
-		LOG.info("layerIndex:{}; layerCounts:{}; dropoutNodes:{}", 
-				Arrays.toString(this.flatNetwork.getLayerIndex()),
-				Arrays.toString(this.flatNetwork.getLayerCounts()),
-				Arrays.toString(droppedNodeIndices.toArray(new Integer[droppedNodeIndices.size()])));
-		return droppedNodeIndices;
-	}
-    
     private NNParams initOrRecoverParams(MasterContext<NNParams, NNParams> context) {
         // read existing model weights
         NNParams params = null;
@@ -356,8 +327,9 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             	LOG.info("Starting to train model from existing model {}.", modelPath);
             	params.setWeights(existingModel.getFlat().getWeights());
             } else {
-                LOG.info("Starting to train model from scratch.");
+            	LOG.info("Starting to train model from scratch.");
             }
+
         } catch (IOException e) {
             throw new GuaguaRuntimeException(e);
         }
@@ -367,6 +339,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
     @SuppressWarnings({ "unchecked" })
     private NNParams initWeights() {
         NNParams params = new NNParams();
+        boolean isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
 
         int[] inputAndOutput = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
                 this.columnConfigList);
@@ -374,15 +347,17 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
                 new HashSet<Integer>(this.subFeatures));
         @SuppressWarnings("unused")
         int inputNodeCount = inputAndOutput[0] == 0 ? inputAndOutput[2] : inputAndOutput[0];
-        // if is one vs all classification, outputNodeCount is set to 1
-        int outputNodeCount = modelConfig.isRegression() ? inputAndOutput[1]
-                : (modelConfig.getTrain().isOneVsAll() ? inputAndOutput[1] : modelConfig.getTags().size());
+        // if is one vs all classification, outputNodeCount is set to 1, if classes=2, outputNodeCount is also 1
+        int classes = modelConfig.getTags().size();
+        int outputNodeCount = (isLinearTarget || modelConfig.isRegression()) ? inputAndOutput[1]
+                : (modelConfig.getTrain().isOneVsAll() ? inputAndOutput[1] : (classes == 2 ? 1 : classes));
         int numLayers = (Integer) validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
         BasicNetwork network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers, actFunc,
-                hiddenNodeList, true, this.dropoutRate, this.wgtInit);
+                hiddenNodeList, true, this.dropoutRate, this.wgtInit,
+                CommonUtils.isLinearTarget(modelConfig, columnConfigList));
 
         this.flatNetwork = (FloatFlatNetwork) network.getFlat();
         
@@ -398,21 +373,21 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
     public void init(MasterContext<NNParams, NNParams> context) {
         Properties props = context.getProps();
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
-                    SourceType.HDFS.toString()));
+            SourceType sourceType = SourceType
+                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
 
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
 
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
         int trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
-                .getGridConfigFileContent());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(),
+                modelConfig.getTrain().getGridConfigFileContent());
         validParams = this.modelConfig.getTrain().getParams();
         if(gs.hasHyperParam()) {
             validParams = gs.getParams(trainerId);
@@ -477,8 +452,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.wgtInit = wgtInitObj.toString();
         }
 
-        this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
-                context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
+        this.isContinuousEnabled = Boolean.TRUE.toString()
+                .equalsIgnoreCase(context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
         Object rconstant = validParams.get(CommonConstants.LR_REGULARIZED_CONSTANT);
         this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
 
@@ -512,4 +487,30 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         }
     }
 
+	private HashSet<Integer> dropoutNodes() {
+		Random random = new Random(System.currentTimeMillis());
+
+		HashSet<Integer> droppedNodeIndices = new HashSet<Integer>();
+
+		// from input to last hidden layer. (exclude output layer)
+		for (int i = this.flatNetwork.getLayerIndex().length - 1; i > 0; i--) {
+			int beginNeuronIndex = this.flatNetwork.getLayerIndex()[i];
+			// exclude constant neuron
+			int neuronCount = this.flatNetwork.getLayerFeedCounts()[i];
+
+			// from first neuron to last neuron in current layer
+			for (int j = 0; j < neuronCount; j++) {
+				if (random.nextDouble() < this.flatNetwork.getLayerDropoutRates()[i]) {
+					// drop this node by adding it into list and will passing
+					// this list to workers
+					droppedNodeIndices.add(beginNeuronIndex + j);
+				}
+			}
+		}
+
+		LOG.info("layerIndex:{}; layerCounts:{}; dropoutNodes:{}", Arrays.toString(this.flatNetwork.getLayerIndex()),
+				Arrays.toString(this.flatNetwork.getLayerCounts()),
+				Arrays.toString(droppedNodeIndices.toArray(new Integer[droppedNodeIndices.size()])));
+		return droppedNodeIndices;
+	}
 }

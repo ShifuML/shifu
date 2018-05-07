@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -39,6 +41,7 @@ import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.ConfusionMatrixObject;
 import ml.shifu.shifu.container.ModelResultObject;
 import ml.shifu.shifu.container.PerformanceObject;
+import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.PerformanceResult;
@@ -73,6 +76,10 @@ public class ConfusionMatrix {
      */
     private ModelConfig modelConfig;
 
+    /**
+     * Column config list
+     */
+    private List<ColumnConfig> columnConfigList;
     /**
      * Current eval config instance.
      */
@@ -135,15 +142,25 @@ public class ConfusionMatrix {
 
     private Object lock;
 
-    public ConfusionMatrix(ModelConfig modelConfig, EvalConfig evalConfig) throws IOException {
-        this(modelConfig, evalConfig, new Object());
+    /**
+     * Score data delimiter
+     */
+    private String delimiter;
+
+    public ConfusionMatrix(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, EvalConfig evalConfig)
+            throws IOException {
+        this(modelConfig, columnConfigList, evalConfig, new Object());
     }
 
-    public ConfusionMatrix(ModelConfig modelConfig, EvalConfig evalConfig, Object source) throws IOException {
+    public ConfusionMatrix(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, EvalConfig evalConfig,
+            Object source) throws IOException {
         this.modelConfig = modelConfig;
         this.evalConfig = evalConfig;
         this.pathFinder = new PathFinder(modelConfig);
         this.lock = source;
+        this.columnConfigList = columnConfigList;
+
+        this.delimiter = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER);
 
         String[] evalScoreHeader = getEvalScoreHeader();
         if(ArrayUtils.isEmpty(evalScoreHeader)) {
@@ -182,6 +199,19 @@ public class ConfusionMatrix {
             multiClassModelCnt = 0;
         }
 
+        if(modelConfig.isClassification()) {
+            if(modelConfig.getTrain().isOneVsAll()) {
+                if(modelConfig.getTags().size() == 2) {
+                    // onevsall, modelcnt is 1
+                    multiClassModelCnt = 1;
+                } else {
+                    multiClassModelCnt = modelConfig.getTags().size();
+                }
+            } else {
+                multiClassModelCnt = 1;
+            }
+        }
+
         // Number of meta columns
         metaColumns = evalConfig.getAllMetaColumns(modelConfig).size();
 
@@ -216,7 +246,7 @@ public class ConfusionMatrix {
             // evaluation data file
             pathHeader = pathFinder.getEvalScorePath(evalConfig, sourceType);
         }
-        return CommonUtils.getHeaders(pathHeader, "|", sourceType, false);
+        return CommonUtils.getHeaders(pathHeader, this.delimiter, sourceType, false);
     }
 
     public PerformanceResult bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags,
@@ -306,6 +336,8 @@ public class ConfusionMatrix {
         boolean isGBTScoreHalfCutoffStreategy = isGBTScoreHalfCutoffStreategy();
         boolean isGBTScoreMaxMinScaleStreategy = isGBTScoreMaxMinScaleStreategy();
 
+        Splitter splitter = Splitter.on(delimiter).trimResults();
+
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
                 if((++cnt) % 100000L == 0L) {
@@ -317,7 +349,7 @@ public class ConfusionMatrix {
                 }
 
                 // score is separated by default delimiter in our pig output format
-                String[] raw = scanner.nextLine().split(Constants.DEFAULT_ESCAPE_DELIMITER);
+                String[] raw = Lists.newArrayList(splitter.split(scanner.nextLine())).toArray(new String[0]);
 
                 // tag check
                 String tag = raw[targetColumnIndex];
@@ -608,6 +640,21 @@ public class ConfusionMatrix {
         int classes = tags.size();
         long cnt = 0, invalidTargetCnt = 0;
 
+        ColumnConfig targetColumn = CommonUtils.findTargetColumn(columnConfigList);
+
+        List<Integer> binCountNeg = targetColumn.getBinCountNeg();
+        List<Integer> binCountPos = targetColumn.getBinCountPos();
+        long[] binCount = new long[classes];
+        double[] binRatio = new double[classes];
+        long sumCnt = 0L;
+        for(int i = 0; i < binCount.length; i++) {
+            binCount[i] = binCountNeg.get(i) + binCountPos.get(i);
+            sumCnt += binCount[i];
+        }
+        for(int i = 0; i < binCount.length; i++) {
+            binRatio[i] = (binCount[i] * 1d) / sumCnt;
+        }
+
         long[][] confusionMatrix = new long[classes][classes];
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
@@ -629,8 +676,7 @@ public class ConfusionMatrix {
                 }
 
                 double[] scores = new double[classes];
-
-                int maxIndex = -1;
+                int predictIndex = -1;
                 double maxScore = Double.NEGATIVE_INFINITY;
 
                 if(CommonUtils.isTreeModel(modelConfig.getAlgorithm()) && !modelConfig.getTrain().isOneVsAll()) {
@@ -643,7 +689,7 @@ public class ConfusionMatrix {
                     double maxVotes = -1d;
                     for(int i = 0; i < tagCounts.length; i++) {
                         if(tagCounts[i] > maxVotes) {
-                            maxIndex = i;
+                            predictIndex = i;
                             maxScore = maxVotes = tagCounts[i];
                         }
                     }
@@ -651,26 +697,81 @@ public class ConfusionMatrix {
                         || NNConstants.NN_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm()))
                         && modelConfig.getTrain().isOneVsAll()) {
                     // for RF, GBT & NN OneVsAll classification
-                    for(int i = this.multiClassScore1Index; i < (classes + this.multiClassScore1Index); i++) {
-                        double dd = NumberFormatUtils.getDouble(raw[i], 0d);
-                        if(dd > maxScore) {
-                            maxScore = dd;
-                            maxIndex = i - this.multiClassScore1Index;
+                    if(classes == 2) {
+                        // for binary classification, only one model is needed.
+                        for(int i = this.multiClassScore1Index; i < (1 + this.multiClassScore1Index); i++) {
+                            double dd = NumberFormatUtils.getDouble(raw[i], 0d);
+                            if(dd > ((1d - binRatio[i - this.multiClassScore1Index]) * scoreScale)) {
+                                predictIndex = 0;
+                            } else {
+                                predictIndex = 1;
+                            }
+                        }
+                    } else {
+                        // logic is here, per each onevsrest, it may be im-banlanced. for example, class a, b, c, first
+                        // is a(1) vs b and c(0), ratio is 10:1, then to compare score, if score > 1/11 it is positive,
+                        // check other models to see if still positive in b or c, take the largest one with ratio for
+                        // final prediction
+                        int[] predClasses = new int[classes];
+                        double[] scoress = new double[classes];
+                        double[] threhs = new double[classes];
+
+                        for(int i = this.multiClassScore1Index; i < (classes + this.multiClassScore1Index); i++) {
+                            double dd = NumberFormatUtils.getDouble(raw[i], 0d);
+                            scoress[i - this.multiClassScore1Index] = dd;
+                            threhs[i - this.multiClassScore1Index] = (1d - binRatio[i - this.multiClassScore1Index])
+                                    * scoreScale;
+                            if(dd > ((1d - binRatio[i - this.multiClassScore1Index]) * scoreScale)) {
+                                predClasses[i - this.multiClassScore1Index] = 1;
+                            }
+                        }
+
+                        double maxRatio = -1d;
+                        double maxPositiveRatio = -1d;
+                        int maxRatioIndex = -1;
+                        for(int i = 0; i < binCount.length; i++) {
+                            if(binRatio[i] > maxRatio) {
+                                maxRatio = binRatio[i];
+                                maxRatioIndex = i;
+                            }
+                            // if has positive, choose one with highest ratio
+                            if(predClasses[i] == 1) {
+                                if(binRatio[i] > maxPositiveRatio) {
+                                    maxPositiveRatio = binRatio[i];
+                                    predictIndex = i;
+                                }
+                            }
+                        }
+                        // no any positive, take the largest one
+                        if(maxPositiveRatio < 0d) {
+                            predictIndex = maxRatioIndex;
                         }
                     }
                 } else {
-                    // only for NN & Native Multiple classification
-                    // 1,2,3 4,5,6: 1,2,3 is model 0, 4,5,6 is model 1
-                    for(int i = 0; i < classes; i++) {
-                        for(int j = 0; j < multiClassModelCnt; j++) {
-                            double dd = NumberFormatUtils.getDouble(raw[this.multiClassScore1Index + j * classes + i],
-                                    0d);
-                            scores[i] += dd;
+                    if(classes == 2) {
+                        // for binary classification, only one model is needed.
+                        for(int i = this.multiClassScore1Index; i < (1 + this.multiClassScore1Index); i++) {
+                            double dd = NumberFormatUtils.getDouble(raw[i], 0d);
+                            if(dd > ((1d - binRatio[i - this.multiClassScore1Index]) * scoreScale)) {
+                                predictIndex = 0;
+                            } else {
+                                predictIndex = 1;
+                            }
                         }
-                        scores[i] /= multiClassModelCnt;
-                        if(scores[i] > maxScore) {
-                            maxIndex = i;
-                            maxScore = scores[i];
+                    } else {
+                        // only for NN & Native Multiple classification
+                        // 1,2,3 4,5,6: 1,2,3 is model 0, 4,5,6 is model 1
+                        for(int i = 0; i < classes; i++) {
+                            for(int j = 0; j < multiClassModelCnt; j++) {
+                                double dd = NumberFormatUtils
+                                        .getDouble(raw[this.multiClassScore1Index + j * classes + i], 0d);
+                                scores[i] += dd;
+                            }
+                            scores[i] /= multiClassModelCnt;
+                            if(scores[i] > maxScore) {
+                                predictIndex = i;
+                                maxScore = scores[i];
+                            }
                         }
                     }
                 }
@@ -681,7 +782,7 @@ public class ConfusionMatrix {
                         break;
                     }
                 }
-                confusionMatrix[tagIndex][maxIndex] += 1L;
+                confusionMatrix[tagIndex][predictIndex] += 1L;
             }
             scanner.close();
         }

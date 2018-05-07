@@ -732,6 +732,17 @@
 					<classifier>h2</classifier>
 				</dependency>
 				<dependency>
+					<groupId>org.apache.pig</groupId>
+					<artifactId>piggybank</artifactId>
+					<version>0.14.0</version>
+					<exclusions>
+						<exclusion>
+							<groupId>*</groupId>
+							<artifactId>*</artifactId>
+						</exclusion>
+					</exclusions>
+				</dependency>
+				<dependency>
 					<groupId>dk.brics.automaton</groupId>
 					<artifactId>automaton</artifactId>
 					<version>1.11-8</version>

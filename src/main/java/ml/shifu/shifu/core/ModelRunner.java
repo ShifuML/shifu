@@ -15,10 +15,18 @@
  */
 package ml.shifu.shifu.core;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.Callable;
+
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.encog.ml.BasicML;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
@@ -27,12 +35,8 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.core.model.ModelSpec;
+import ml.shifu.shifu.executor.ExecutorManager;
 import ml.shifu.shifu.util.CommonUtils;
-
-import org.apache.commons.collections.MapUtils;
-import org.encog.ml.BasicML;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * ModelRunner class is to load the model and run the model for input data
@@ -48,7 +52,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ModelRunner {
 
-    public static Logger log = LoggerFactory.getLogger(Scorer.class);
+    public static Logger log = LoggerFactory.getLogger(ModelRunner.class);
 
     protected ModelConfig modelConfig;
     protected List<ColumnConfig> columnConfigList;
@@ -58,6 +62,13 @@ public class ModelRunner {
     private Scorer scorer;
     private Map<String, Scorer> subScorers;
 
+    private boolean isMultiThread;
+    /**
+     * Run model in parallel. Size is # of sub-models.
+     */
+    private ExecutorManager<Pair<String, ScoreObject>> executorManager;
+
+
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
             String dataDelimiter, List<BasicML> models) {
         this(modelConfig, columnConfigList, header, dataDelimiter, models, 0);
@@ -65,12 +76,18 @@ public class ModelRunner {
 
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
             String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex) {
+        this(modelConfig, columnConfigList, header, dataDelimiter, models, outputHiddenLayerIndex, false);
+    }
+
+    public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
+            String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex, boolean isMultiThread) {
         this.modelConfig = modelConfig;
         this.columnConfigList = columnConfigList;
         this.header = header;
         this.dataDelimiter = dataDelimiter;
+        this.isMultiThread = isMultiThread;
         this.scorer = new Scorer(models, columnConfigList, modelConfig.getAlgorithm(), modelConfig,
-                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex);
+                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex, isMultiThread);
     }
 
     /**
@@ -151,7 +168,7 @@ public class ModelRunner {
      *            - the original input, but key is wrapped by NSColumn
      * @return CaseScoreResult - model score
      */
-    public CaseScoreResult computeNsData(Map<NSColumn, String> rawDataNsMap) {
+    public CaseScoreResult computeNsData(final Map<NSColumn, String> rawDataNsMap) {
         if(MapUtils.isEmpty(rawDataNsMap)) {
             return null;
         }
@@ -173,14 +190,61 @@ public class ModelRunner {
         }
 
         if(MapUtils.isNotEmpty(this.subScorers)) {
+            if(this.isMultiThread && this.subScorers.size() > 1 && this.executorManager == null) {
+                int threadPoolSize = Math.min(Runtime.getRuntime().availableProcessors(), this.subScorers.size());
+                this.executorManager = new ExecutorManager<Pair<String, ScoreObject>>(threadPoolSize);
+                // add a shutdown hook as a safe guard if some one not call close
+                Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        ModelRunner.this.executorManager.forceShutDown();
+                    }
+                }));
+                log.info("MultiThread is enabled in ModelRunner, threadPoolSize = " + threadPoolSize);
+            }
+
+            List<Callable<Pair<String, ScoreObject>>> tasks
+                    = new ArrayList<Callable<Pair<String, ScoreObject>>>(this.subScorers.size());
+
             Iterator<Map.Entry<String, Scorer>> iterator = this.subScorers.entrySet().iterator();
             while(iterator.hasNext()) {
-                Map.Entry<String, Scorer> entry = iterator.next();
-                String modelName = entry.getKey();
-                Scorer subScorer = entry.getValue();
-                ScoreObject so = subScorer.scoreNsData(rawDataNsMap);
-                if(so != null) {
-                    scoreResult.addSubModelScore(modelName, so);
+                final Map.Entry<String, Scorer> entry = iterator.next();
+
+                Callable<Pair<String, ScoreObject>> callable = new Callable<Pair<String, ScoreObject>>() {
+                    @Override
+                    public Pair<String, ScoreObject> call() {
+                        String modelName = entry.getKey();
+                        Scorer subScorer = entry.getValue();
+                        ScoreObject so = subScorer.scoreNsData(rawDataNsMap);
+                        if(so != null) {
+                            return Pair.of(modelName, so);
+                        }else {
+                            return null;
+                        }
+                    }
+                };
+
+                tasks.add(callable);
+            }
+
+            if ( this.isMultiThread && this.subScorers.size() > 1) {
+               List<Pair<String, ScoreObject>> results = this.executorManager.submitTasksAndWaitResults(tasks);
+               for ( Pair<String, ScoreObject> result : results ) {
+                   if (result != null) {
+                       scoreResult.addSubModelScore(result.getLeft(), result.getRight());
+                   }
+               }
+            } else {
+                for ( Callable<Pair<String, ScoreObject>> task : tasks ) {
+                    Pair<String, ScoreObject> result = null;
+                    try {
+                        result = task.call();
+                    } catch (Exception e) {
+                        // do nothing
+                    }
+                    if (result != null) {
+                        scoreResult.addSubModelScore(result.getLeft(), result.getRight());
+                    }
                 }
             }
         }
@@ -194,14 +258,25 @@ public class ModelRunner {
      * @param modelSpec
      *            - model spec for sub model
      */
-    public void addSubModels(ModelSpec modelSpec) {
+    public void addSubModels(ModelSpec modelSpec, boolean isMultiThread) {
         if(this.subScorers == null) {
             this.subScorers = new TreeMap<String, Scorer>();
         }
 
-        this.subScorers.put(modelSpec.getModelName(), new Scorer(modelSpec.getModels(),
-                modelSpec.getColumnConfigList(), modelSpec.getAlgorithm().name(), modelSpec.getModelConfig(), modelSpec
-                        .getModelConfig().getNormalizeStdDevCutOff()));
+        this.subScorers.put(modelSpec.getModelName(),
+                new Scorer(modelSpec.getModels(), modelSpec.getColumnConfigList(), modelSpec.getAlgorithm().name(),
+                        modelSpec.getModelConfig(), modelSpec.getModelConfig().getNormalizeStdDevCutOff(),
+                        isMultiThread));
+    }
+
+    /**
+     * add @ModelSpec as sub-model. Create scorer for sub-model
+     * 
+     * @param modelSpec
+     *            - model spec for sub model
+     */
+    public void addSubModels(ModelSpec modelSpec) {
+        this.addSubModels(modelSpec, false);
     }
 
     /**
@@ -240,6 +315,10 @@ public class ModelRunner {
      * Cleaning the thread pool resources, must be called at last.
      */
     public void close() {
+        if(this.executorManager != null) {
+            this.executorManager.forceShutDown();
+        }
+        this.scorer.close();
     }
 
 }

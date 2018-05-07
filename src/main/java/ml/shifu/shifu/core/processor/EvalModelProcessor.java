@@ -850,7 +850,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             return;
         }
 
-        // 1. Get challendge model performance
+        // 1. Get challenge model performance
         PerformanceResult challendgeModelPerformance = runConfusionMatrix(evalConfig, ss,
                 pathFinder.getEvalScorePath(evalConfig), pathFinder.getEvalPerformancePath(evalConfig), false, false,
                 isGBTNotConvertToProb(evalConfig));
@@ -1108,7 +1108,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     private PerformanceResult runConfusionMatrix(EvalConfig config, ScoreStatus ss, String scoreDataPath,
             String evalPerformancePath, boolean isPrint, boolean isGenerateChart, boolean isUseMaxMinScore)
             throws IOException {
-        ConfusionMatrix worker = new ConfusionMatrix(modelConfig, config, this);
+        ConfusionMatrix worker = new ConfusionMatrix(modelConfig, columnConfigList, config, this);
         switch(modelConfig.getBasic().getRunMode()) {
             case DIST:
             case MAPRED:
@@ -1129,7 +1129,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     private PerformanceResult runConfusionMatrix(EvalConfig config, ScoreStatus ss, String scoreDataPath,
             String evalPerformancePath, boolean isPrint, boolean isGenerateChart, int targetColumnIndex,
             int scoreColumnIndex, int weightColumnIndex) throws IOException {
-        ConfusionMatrix worker = new ConfusionMatrix(modelConfig, config, this);
+        ConfusionMatrix worker = new ConfusionMatrix(modelConfig, columnConfigList, config, this);
         switch(modelConfig.getBasic().getRunMode()) {
             case DIST:
             case MAPRED:

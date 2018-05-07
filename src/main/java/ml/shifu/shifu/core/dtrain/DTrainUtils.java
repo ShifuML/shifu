@@ -170,7 +170,13 @@ public final class DTrainUtils {
                 }
             }
             if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
-                if(normType.equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT) && config.isCategorical()) {
+                if ( normType.equals(ModelNormalizeConf.NormType.ONEHOT) ) {
+                    if ( config.isCategorical() ) {
+                        input += config.getBinCategory().size() + 1;
+                    } else {
+                        input += config.getBinBoundary().size() + 1;
+                    }
+                } else if(normType.equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT) && config.isCategorical()) {
                     input += config.getBinCategory().size() + 1;
                 } else {
                     input += 1;
@@ -251,7 +257,7 @@ public final class DTrainUtils {
 //    }
 
     public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
-            List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate, String wgtInit) {
+            List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate, String wgtInit, boolean isLinearTarget) {
         final BasicFloatNetwork network = new BasicFloatNetwork();
 
         // we need to guarantee that input layer dropout rate is 40% of hiddenlayer dropout rate
@@ -279,7 +285,11 @@ public final class DTrainUtils {
             }
         }
 
-        network.addLayer(new BasicLayer(new ActivationSigmoid(), false, out));
+        if ( isLinearTarget ) {
+            network.addLayer(new BasicLayer(new ActivationLinear(), true, out));
+        } else {
+            network.addLayer(new BasicLayer(new ActivationSigmoid(), false, out));
+        }
 
         NeuralStructure structure = network.getStructure();
         if(network.getStructure() instanceof FloatNeuralStructure) {
@@ -353,7 +363,19 @@ public final class DTrainUtils {
 
     public static int getFeatureInputsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Set<Integer> featureSet) {
-        if(modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)) {
+        if(modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)) {
+            int inputCount = 0;
+            for(ColumnConfig columnConfig: columnConfigList) {
+                if(columnConfig.isFinalSelect() && featureSet.contains(columnConfig.getColumnNum())) {
+                    if(columnConfig.isNumerical()) {
+                        inputCount += (columnConfig.getBinBoundary().size() + 1);
+                    } else {
+                        inputCount += (columnConfig.getBinCategory().size() + 1);
+                    }
+                }
+            }
+            return inputCount;
+        } else if(modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)) {
             int inputCount = 0;
             for(ColumnConfig columnConfig: columnConfigList) {
                 if(columnConfig.isFinalSelect() && featureSet.contains(columnConfig.getColumnNum())) {

@@ -427,7 +427,7 @@ public final class CommonUtils {
     }
 
     /**
-     * Some column name has illegal chars which are all be normed in shifu. This is a hook to norm column name but 
+     * Some column name has illegal chars which are all be normed in shifu. This is a hook to norm column name but
      * actually so far it is just return;
      * 
      * @param columnName
@@ -435,7 +435,12 @@ public final class CommonUtils {
      * @return normed column name
      */
     public static String normColumnName(String columnName) {
-        return columnName;
+        if(columnName == null) {
+            // NPE protection
+            return columnName;
+        }
+        String newColumnName = columnName.replaceAll("\\.", "_");
+        return newColumnName;
     }
 
     /**
@@ -810,10 +815,26 @@ public final class CommonUtils {
      *             if no target column can be found.
      */
     public static Integer getTargetColumnNum(List<ColumnConfig> columnConfigList) {
+        return getTargetColumnConfig(columnConfigList).getColumnNum();
+    }
+
+    /**
+     * Get target ColumnConfig.
+     *
+     * @param columnConfigList
+     *            column config list
+     * @return target ColumnConfig
+     * @throws IllegalArgumentException
+     *             if columnConfigList is null or empty.
+     *
+     * @throws IllegalStateException
+     *             if no target column can be found.
+     */
+    public static ColumnConfig getTargetColumnConfig(List<ColumnConfig> columnConfigList) {
         if(CollectionUtils.isEmpty(columnConfigList)) {
             throw new IllegalArgumentException("columnConfigList should not be null or empty.");
         }
-        // I need cast operation because of common-collections dosen't support generic.
+        // I need cast operation because of common-collections doesn't support generic.
         ColumnConfig cc = (ColumnConfig) CollectionUtils.find(columnConfigList, new Predicate() {
             @Override
             public boolean evaluate(Object object) {
@@ -823,7 +844,7 @@ public final class CommonUtils {
         if(cc == null) {
             throw new IllegalStateException("No target column can be found, please check your column configurations");
         }
-        return cc.getColumnNum();
+        return cc;
     }
 
     /**
@@ -1128,6 +1149,14 @@ public final class CommonUtils {
             }
         }
         return null;
+    }
+
+    public static boolean isLinearTarget(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
+        ColumnConfig columnConfig = getTargetColumnConfig(columnConfigList);
+        if ( columnConfig == null ) {
+            throw new ShifuException(ShifuErrorCode.ERROR_NO_TARGET_COLUMN, "Target column is not detected.");
+        }
+        return (CollectionUtils.isEmpty(modelConfig.getTags()) && columnConfig.isNumerical());
     }
 
     public static class GzipStreamPair {
@@ -1611,6 +1640,10 @@ public final class CommonUtils {
         pigParamMap.put(Constants.JOB_QUEUE,
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE));
         pigParamMap.put(Constants.DATASET_NAME, modelConfig.getBasic().getName());
+
+        pigParamMap.put(Constants.SHIFU_OUTPUT_DELIMITER, CommonUtils.escapePigString(
+                Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER)));
+
         return pigParamMap;
     }
 
@@ -2088,12 +2121,6 @@ public final class CommonUtils {
 
     public static boolean isGBDTAlgorithm(String alg) {
         return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
-    }
-
-    public static boolean isHadoopConfigurationInjected(String key) {
-        return key.startsWith("nn") || key.startsWith("guagua") || key.startsWith("shifu") || key.startsWith("mapred")
-                || key.startsWith("io") || key.startsWith("hadoop") || key.startsWith("yarn") || key.startsWith("pig")
-                || key.startsWith("hive") || key.startsWith("job");
     }
 
     /**
@@ -2616,11 +2643,10 @@ public final class CommonUtils {
         } else {
             // multiple classification
             return columnConfig.isCandidate(hasCandidate)
-                    && (columnConfig.getMean() != null && columnConfig.getStdDev() != null
-                            && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
-                                    && columnConfig.getBinCategory().size() > 1)
-                                    || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
-                                            && columnConfig.getBinBoundary().size() > 1)));
+                    && (columnConfig.getMean() != null
+                        && columnConfig.getStdDev() != null
+                        && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null&& columnConfig.getBinCategory().size() > 1)
+                            || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
         }
     }
 
@@ -3015,5 +3041,34 @@ public final class CommonUtils {
         
         return output;
     }
-    
+
+    /**
+     * Inject Shifu or Hadoop parameters into MapReduce / Pig jobs, by using visitor.
+     * @param visitor - provider to do injection
+     */
+    public static void injectHadoopShifuEnvironments(ValueVisitor visitor) {
+        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
+            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
+                if ( StringUtils.equalsIgnoreCase(entry.getKey().toString(), Constants.SHIFU_OUTPUT_DATA_DELIMITER) ) {
+                    visitor.inject(entry.getKey(), Base64Utils.base64Encode(entry.getValue().toString()));
+                } else {
+                    visitor.inject(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+    }
+
+    /**
+     * Check whether the prefix of key is Shifu or Hadoop-related.
+     * @param key - key to check
+     * @return
+     *      true - is Shifu or Hadoop related keys
+     *      or false
+     */
+    public static boolean isHadoopConfigurationInjected(String key) {
+        return key.startsWith("nn") || key.startsWith("guagua") || key.startsWith("shifu") || key.startsWith("mapred")
+                || key.startsWith("io") || key.startsWith("hadoop") || key.startsWith("yarn") || key.startsWith("pig")
+                || key.startsWith("hive") || key.startsWith("job");
+    }
 }
+

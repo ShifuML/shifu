@@ -15,41 +15,18 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Splitter;
-import ml.shifu.guagua.GuaguaConstants;
-import ml.shifu.guagua.hadoop.util.HDPUtils;
-import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
-import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
-import ml.shifu.shifu.column.NSColumn;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
-import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.VariableSelector;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
-import ml.shifu.shifu.core.dvarsel.*;
-import ml.shifu.shifu.core.dvarsel.wrapper.CandidateGenerator;
-import ml.shifu.shifu.core.dvarsel.wrapper.WrapperMasterConductor;
-import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
-import ml.shifu.shifu.core.history.VarSelDesc;
-import ml.shifu.shifu.core.history.VarSelReason;
-import ml.shifu.shifu.core.mr.input.CombineInputFormat;
-import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
-import ml.shifu.shifu.core.varselect.ColumnInfo;
-import ml.shifu.shifu.core.varselect.ColumnStatistics;
-import ml.shifu.shifu.core.varselect.VarSelectMapper;
-import ml.shifu.shifu.core.varselect.VarSelectReducer;
-import ml.shifu.shifu.exception.ShifuErrorCode;
-import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.fs.PathFinder;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.Reader;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.Set;
+
+import ml.shifu.shifu.util.ValueVisitor;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -77,10 +54,47 @@ import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.Reader;
-import java.util.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Splitter;
+
+import ml.shifu.guagua.GuaguaConstants;
+import ml.shifu.guagua.hadoop.util.HDPUtils;
+import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
+import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
+import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
+import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.VariableSelector;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.core.dvarsel.VarSelMaster;
+import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
+import ml.shifu.shifu.core.dvarsel.VarSelOutput;
+import ml.shifu.shifu.core.dvarsel.VarSelWorker;
+import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
+import ml.shifu.shifu.core.dvarsel.wrapper.CandidateGenerator;
+import ml.shifu.shifu.core.dvarsel.wrapper.WrapperMasterConductor;
+import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
+import ml.shifu.shifu.core.history.VarSelDesc;
+import ml.shifu.shifu.core.history.VarSelReason;
+import ml.shifu.shifu.core.mr.input.CombineInputFormat;
+import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
+import ml.shifu.shifu.core.varselect.ColumnInfo;
+import ml.shifu.shifu.core.varselect.ColumnStatistics;
+import ml.shifu.shifu.core.varselect.VarSelectMapper;
+import ml.shifu.shifu.core.varselect.VarSelectReducer;
+import ml.shifu.shifu.exception.ShifuErrorCode;
+import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 
 /**
  * Variable selection processor, select the variable based on KS/IV value, or
@@ -98,6 +112,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     @SuppressWarnings("unused")
     private static final double BAD_IV_THRESHOLD = 0.02d;
+
+    private static final String TRAIN_LOG_PREFIX = "vs-train";
 
     /**
      * SE stats mao for correlation variable selection,if not se, this field will be null.
@@ -202,7 +218,12 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         ShifuFileUtils.createDirIfNotExists(pathFinder.getVarSelDir(), SourceType.LOCAL);
                         super.saveColumnConfigList(pathFinder.getVarSelColumnConfig(i), this.columnConfigList);
                         while((i++) < recursiveCnt) {
-                            distributedSEWrapper();
+                            String trainLogFile = TRAIN_LOG_PREFIX + "-" + (i - 1) + ".log";
+                            distributedSEWrapper(trainLogFile);
+                            // copy training log to SE train.log
+                            ShifuFileUtils.move(trainLogFile,
+                                    new File(pathFinder.getVarSelDir(), trainLogFile).getPath(), SourceType.LOCAL);
+
                             String varSelectMSEOutputPath = pathFinder
                                     .getVarSelectMSEOutputPath(modelConfig.getDataSet().getSource());
                             // even fail to run SE, still to create an empty se.x file
@@ -549,12 +570,12 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         setHeapSizeAndSplitSize(args);
 
         // one can set guagua conf in shifuconfig
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(),
-                        entry.getValue().toString()));
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, key.toString(), value.toString()));
             }
-        }
+        });
     }
 
     // GuaguaOptionsParser doesn't to support *.jar currently.
@@ -606,7 +627,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     /**
      * Wrapper through {@link TrainModelProcessor} and a MapReduce job to analyze biggest sensitivity RMS.
      */
-    private void distributedSEWrapper() throws Exception {
+    private void distributedSEWrapper(String trainLogFile) throws Exception {
         // 1. Train a model using current selected variables, if no variables selected, use all candidate variables.
         boolean reuseCurrentModel = Environment.getBoolean("shifu.varsel.se.reuse", Boolean.FALSE);
         SourceType source = this.modelConfig.getDataSet().getSource();
@@ -614,6 +635,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         if(!reuseCurrentModel) {
             TrainModelProcessor trainModelProcessor = new TrainModelProcessor();
             trainModelProcessor.setForVarSelect(true);
+            trainModelProcessor.setTrainLogFile(trainLogFile);
             trainModelProcessor.run();
         }
 
@@ -691,7 +713,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         return job;
     }
 
-    private void prepareSEJobConf(SourceType source, Configuration conf) throws IOException {
+    private void prepareSEJobConf(SourceType source, final Configuration conf) throws IOException {
         String modelConfigPath = ShifuFileUtils.getFileSystemBySourceType(source)
                 .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString();
         String columnConfigPath = ShifuFileUtils.getFileSystemBySourceType(source)
@@ -748,11 +770,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
         }
         // one can set guagua conf in shifuconfig
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                conf.set(entry.getKey().toString(), entry.getValue().toString());
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                conf.set(key.toString(), value.toString());
             }
-        }
+        });
+
         // no matter how the mapreduce.task.io.sort.mb is set for sensitivity job, only 1 reducer and each mapper only
         // output column stats, 150MB is enough.
         conf.setInt("mapreduce.task.io.sort.mb", 150);
@@ -919,7 +943,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
         return map; // should be a bug, if it always return null
     }
-
+    
     @Override
     protected void clearUp(ModelStep step) throws IOException {
         try {

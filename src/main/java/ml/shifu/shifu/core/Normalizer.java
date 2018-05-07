@@ -15,16 +15,15 @@
  */
 package ml.shifu.shifu.core;
 
-import java.util.Arrays;
-import java.util.List;
-
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.udf.NormalizeUDF.CategoryMissingNormType;
 import ml.shifu.shifu.util.CommonUtils;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Util normalization class which is used for any kind of transformation.
@@ -222,6 +221,10 @@ public class Normalizer {
     public static List<Double> normalize(ColumnConfig config, String raw, Double cutoff,
             ModelNormalizeConf.NormType type, CategoryMissingNormType categoryMissingNormType) {
         switch(type) {
+            case ASIS_WOE:
+                return asIsNormalize(config, raw, true);
+            case ASIS_PR:
+                return asIsNormalize(config, raw, false);
             case WOE:
                 return woeNormalize(config, raw, false);
             case WEIGHT_WOE:
@@ -236,8 +239,10 @@ public class Normalizer {
             case WEIGHT_WOE_ZSCORE:
             case WEIGHT_WOE_ZSCALE:
                 return woeZScoreNormalize(config, raw, cutoff, true);
+            case ONEHOT:
+                return OneHotNormalize(config, raw);
             case ZSCALE_ONEHOT:
-                return woeOneHotNormalize(config, raw, cutoff, categoryMissingNormType);
+                return zscaleOneHotNormalize(config, raw, cutoff, categoryMissingNormType);
             case DISCRETE_ZSCORE:
             case DISCRETE_ZSCALE:
                 return discreteZScoreNormalize(config, raw, cutoff, categoryMissingNormType);
@@ -251,20 +256,51 @@ public class Normalizer {
         }
     }
 
-    private static List<Double> woeOneHotNormalize(ColumnConfig config, String raw, Double cutoff,
+    private static List<Double> asIsNormalize(ColumnConfig config, String raw, boolean toUseWoe) {
+        if ( config.isNumerical() ) {
+            Double values[] = new Double[1];
+            try {
+                values[0] = Double.parseDouble(raw);
+            } catch ( Exception e ) {
+                log.warn("Illegal numerical value - {}, use mean instead.", raw);
+                values[0] = config.getMean();
+            }
+            return Arrays.asList(values);
+        } else {
+            // categorical variables
+            List<Double> normVals = (toUseWoe ? config.getBinCountWoe() : config.getBinPosRate());
+            int binIndex = CommonUtils.getBinNum(config, raw);
+            return ((binIndex == -1) ? Arrays.asList(new Double[] { normVals.get(normVals.size() - 1) })
+                    : Arrays.asList(new Double[] { normVals.get(binIndex) }));
+        }
+    }
+
+    private static List<Double> OneHotNormalize(ColumnConfig config, String raw) {
+        Double[] normData = (config.isNumerical() ?
+                new Double[config.getBinBoundary().size() + 1] : new Double[config.getBinCategory().size() + 1]);
+        Arrays.fill(normData, 0.0d);
+        int binNum = CommonUtils.getBinNum(config, raw);
+        if ( binNum < 0 ) {
+            binNum = normData.length - 1;
+        }
+        normData[binNum] = 1.0d;
+        return Arrays.asList(normData);
+    }
+
+    private static List<Double> zscaleOneHotNormalize(ColumnConfig config, String raw, Double cutoff,
             CategoryMissingNormType categoryMissingNormType) {
         if(config.isNumerical()) {
             return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, false);
         } else {
-            Double[] normVals = new Double[config.getBinCategory().size() + 1];
-            Arrays.fill(normVals, 0.0d);
+            Double[] normData = new Double[config.getBinCategory().size() + 1];
+            Arrays.fill(normData, 0.0d);
 
             int binNum = CommonUtils.getBinNum(config, raw);
             if(binNum < 0) {
                 binNum = config.getBinCategory().size();
             }
-            normVals[binNum] = 1.0d;
-            return Arrays.asList(normVals);
+            normData[binNum] = 1.0d;
+            return Arrays.asList(normData);
         }
     }
 

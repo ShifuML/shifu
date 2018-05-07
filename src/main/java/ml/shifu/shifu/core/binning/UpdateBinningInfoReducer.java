@@ -57,8 +57,6 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
 
     private final static Logger LOG = LoggerFactory.getLogger(UpdateBinningInfoReducer.class);
 
-    private static final int MAX_CATEGORICAL_BINC_COUNT = 5000;
-
     private static final double EPS = 1e-6;
 
     /**
@@ -82,6 +80,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
     private DecimalFormat df = new DecimalFormat("##.######");
 
     private boolean statsExcludeMissingValue;
+
+    private int maxCateSize;
 
     /**
      * Model Config read from HDFS
@@ -109,6 +109,9 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
      */
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
+        this.maxCateSize = context.getConfiguration().getInt(Constants.SHIFU_MAX_CATEGORY_SIZE,
+                Constants.MAX_CATEGORICAL_BINC_COUNT);
+
         loadConfigFiles(context);
 
         this.statsExcludeMissingValue = context.getConfiguration().getBoolean(Constants.SHIFU_STATS_EXLCUDE_MISSING,
@@ -231,29 +234,22 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             p75th = min;
             int currentCount = 0;
             for(int i = 0; i < binBoundaryList.size(); i++) {
-                if(p25th == min && p25Count >= currentCount && p25Count < currentCount + binCountTotal[i]) {
-                    if(i == binBoundaryList.size() - 1) {
-                        p25th = binBoundaryList.get(i);
-                    } else {
-                        p25th = ((p25Count - currentCount) / (double) binCountTotal[i])
-                                * (binBoundaryList.get(i + 1) - binBoundaryList.get(i)) + binBoundaryList.get(i);
-                    }
+                double left = getCutoffBoundary(binBoundaryList.get(i), max, min);
+                double right = ((i == binBoundaryList.size() - 1) ?
+                        max : getCutoffBoundary(binBoundaryList.get(i + 1), max, min));
+                if (p25Count >= currentCount && p25Count < currentCount + binCountTotal[i]) {
+                    p25th = ((p25Count - currentCount) / (double) binCountTotal[i])
+                            * ( right - left) + left;
                 }
-                if(median == min && medianCount >= currentCount && medianCount < currentCount + binCountTotal[i]) {
-                    if(i == binBoundaryList.size() - 1) {
-                        median = binBoundaryList.get(i);
-                    } else {
-                        median = ((medianCount - currentCount) / (double) binCountTotal[i])
-                                * (binBoundaryList.get(i + 1) - binBoundaryList.get(i)) + binBoundaryList.get(i);
-                    }
+
+                if (medianCount >= currentCount && medianCount < currentCount + binCountTotal[i]) {
+                    median = ((medianCount - currentCount) / (double) binCountTotal[i])
+                            * ( right - left) + left;
                 }
-                if(p75th == min && p75Count >= currentCount && p75Count < currentCount + binCountTotal[i]) {
-                    if(i == binBoundaryList.size() - 1) {
-                        p75th = binBoundaryList.get(i);
-                    } else {
-                        p75th = ((p75Count - currentCount) / (double) binCountTotal[i])
-                                * (binBoundaryList.get(i + 1) - binBoundaryList.get(i)) + binBoundaryList.get(i);
-                    }
+
+                if (p75Count >= currentCount && p75Count < currentCount + binCountTotal[i]) {
+                    p75th = ((p75Count - currentCount) / (double) binCountTotal[i])
+                            * ( right - left) + left;
                     // when get 75 percentile stop it
                     break;
                 }
@@ -288,7 +284,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         String binBounString = null;
 
         if(columnConfig.isHybrid()) {
-            if(binCategories.size() > MAX_CATEGORICAL_BINC_COUNT) {
+            if(binCategories.size() > this.maxCateSize) {
                 LOG.warn("Column {} {} with invalid bin category size.", key.get(), columnConfig.getColumnName(),
                         binCategories.size());
                 return;
@@ -297,7 +293,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             binBounString += Constants.HYBRID_BIN_STR_DILIMETER + Base64Utils.base64Encode(
                     "[" + StringUtils.join(binCategories, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR) + "]");
         } else if(columnConfig.isCategorical()) {
-            if(binCategories.size() > MAX_CATEGORICAL_BINC_COUNT) {
+            if(binCategories.size() > this.maxCateSize) {
                 LOG.warn("Column {} {} with invalid bin category size.", key.get(), columnConfig.getColumnName(),
                         binCategories.size());
                 return;
@@ -442,6 +438,16 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             i += 1;
         }
         return sb.toString();
+    }
+
+    public double getCutoffBoundary(double val, double max, double min) {
+        if ( val == Double.POSITIVE_INFINITY ) {
+            return max;
+        } else if ( val == Double.NEGATIVE_INFINITY ) {
+            return min;
+        } else {
+            return val;
+        }
     }
 
     private double[] computePosRate(long[] binCountPos, long[] binCountNeg) {

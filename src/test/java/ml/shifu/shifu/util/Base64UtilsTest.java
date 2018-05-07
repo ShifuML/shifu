@@ -43,5 +43,20 @@ public class Base64UtilsTest {
         
         Assert.assertEquals(testStr, decodeStr);
     }
+
+    @Test
+    public void testBase64Delimiter() throws IOException {
+        String testStr = "\u0007";
+
+        String encodeStr = Base64Utils.base64Encode(testStr);
+        System.out.println(encodeStr);
+        String decodeStr = Base64Utils.base64Decode(encodeStr);
+
+        Assert.assertEquals(testStr, decodeStr);
+        System.out.println("\\u0007");
+        System.out.println("\\\\t");
+
+        System.out.println(Base64Utils.base64Decode("|"));
+    }
     
 }

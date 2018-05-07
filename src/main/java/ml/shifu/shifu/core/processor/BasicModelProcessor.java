@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -29,6 +30,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
@@ -46,20 +55,13 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.fs.SourceFile;
 import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.JSONUtils;
 import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
-
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.MapUtils;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.Path;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Model Basic Processor, it helps to do basic manipulate in model, including load/save configuration, copy
@@ -82,6 +84,11 @@ public class BasicModelProcessor {
      * Params for sub steps
      */
     protected Map<String, Object> params;
+
+    /**
+     * Date format to get a valid timestamp folder/file name like
+     */
+    protected static final SimpleDateFormat SDF = new SimpleDateFormat("YYYYMMddHHmmss");
 
     public BasicModelProcessor() {
     }
@@ -240,6 +247,23 @@ public class BasicModelProcessor {
     public void saveColumnConfigList() throws IOException {
         LOG.info("Saving ColumnConfig...");
         JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), columnConfigList);
+    }
+
+    /**
+     * Backup current {@link #columnConfigList} to a local folder tmp cc.json with timestamp in 'YYYY-MM-dd-HH:mm:SS'
+     * 
+     * @param timestamp - timestamp to back ColumnConfig
+     * @throws IOException
+     *             any IO exception
+     * @throws IllegalArgumentException
+     *             bad input in backupColumnConfigPath
+     */
+    public void backupCurrentColumnConfigToLocal(String timestamp) throws IllegalArgumentException, IOException {
+        String backupColumnConfigPath = this.pathFinder.getBackupColumnConfig(timestamp);
+        if(!ShifuFileUtils.isFileExists(new Path(backupColumnConfigPath), SourceType.LOCAL)) {
+            ShifuFileUtils.createDirIfNotExists(new SourceFile(Constants.TMP, SourceType.LOCAL));
+            saveColumnConfigList(backupColumnConfigPath, this.columnConfigList);
+        }
     }
 
     /**
@@ -565,6 +589,9 @@ public class BasicModelProcessor {
         paramsMap.put("sampleRate", modelConfig.getNormalizeSampleRate().toString());
         paramsMap.put("sampleNegOnly", ((Boolean) modelConfig.isNormalizeSampleNegOnly()).toString());
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
+        paramsMap.put("is_csv", String.valueOf(Boolean.TRUE.toString().equalsIgnoreCase(
+
+                Environment.getProperty(Constants.SHIFU_NORM_ONLY_SELECTED, Boolean.FALSE.toString()))));
 
         try {
             String normPigPath = pathFinder.getScriptPath("scripts/Normalize.pig");
