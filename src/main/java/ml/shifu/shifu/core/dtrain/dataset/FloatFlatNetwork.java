@@ -253,10 +253,7 @@ public class FloatFlatNetwork extends FlatNetwork implements Cloneable {
     }
 
     public boolean isDropoutEnable(int layer) {
-        if(this.getLayerDropoutRates().length > layer) {
-        	return (Double.compare(this.getLayerDropoutRates()[layer], 0d) > 0);
-        }
-        
-        return false;
+    	return (this.getLayerDropoutRates().length > layer) && 
+    			(Double.compare(this.getLayerDropoutRates()[layer], 0d) > 0);
     }
 }
