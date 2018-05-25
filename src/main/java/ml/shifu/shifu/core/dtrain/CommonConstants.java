@@ -59,6 +59,8 @@ public interface CommonConstants {
 
     public static final String SHIFU_DT_MASTER_CHECKPOINT_FOLDER = "shifu.dt.master.checkpoint.folder";
 
+    public static final String SHIFU_TRAIN_NN_INPUTLAYERDROPOUT_ENABLE = "shifu.train.nn.inputlayerdropout.enable";
+    
     /**
      * Version 2: support final selected columns
      * Version 3: in Node to change wgtCnt float to double

@@ -31,6 +31,7 @@ import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.dtrain.random.XaiverRandomizer;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
 
 import org.apache.hadoop.fs.Path;
@@ -260,8 +261,13 @@ public final class DTrainUtils {
             List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate, String wgtInit, boolean isLinearTarget) {
         final BasicFloatNetwork network = new BasicFloatNetwork();
 
-        // we need to guarantee that input layer dropout rate is 40% of hiddenlayer dropout rate
-        network.addLayer(new BasicDropoutLayer(new ActivationLinear(), true, in, dropoutRate * 0.4d));
+        // in shifuconfig, we have a switch to control enable input layer dropout
+        if (Boolean.valueOf(Environment.getProperty(CommonConstants.SHIFU_TRAIN_NN_INPUTLAYERDROPOUT_ENABLE, "true"))) { 
+            // we need to guarantee that input layer dropout rate is 40% of hiddenlayer dropout rate
+            network.addLayer(new BasicDropoutLayer(new ActivationLinear(), true, in, dropoutRate * 0.4d));
+        } else {
+            network.addLayer(new BasicDropoutLayer(new ActivationLinear(), true, in, 0d));
+        }
 
         // int hiddenNodes = 0;
         for(int i = 0; i < numLayers; i++) {

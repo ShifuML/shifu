@@ -91,13 +91,14 @@ public class FloatFlatNetwork extends FlatNetwork implements Cloneable {
     public void compute(float[] input, double[] output, Set<Integer> dropoutNodes) {
     	
         final int sourceIndex = getLayerOutput().length - getLayerCounts()[getLayerCounts().length - 1];
-        boolean inputLayerDropoutEnable = isDropoutEnable(getLayerCounts().length - 1);
+        boolean inputLayerDropoutEnable = isDropoutEnable(getLayerCounts().length - 1, dropoutNodes);
         double nonDropoutRate = (1d - this.getLayerDropoutRates()[getLayerCounts().length - 1]);
         for(int i = 0; i < getInputCount(); i++) {
         	if (inputLayerDropoutEnable) {
         		if (dropoutNodes.contains(i + sourceIndex)) {
         			getLayerOutput()[i + sourceIndex] = 0d;
         		} else {
+        		    //To rescale output of each node. Since the total input of next layer reduce when using drop out, we need to make it up.
         			getLayerOutput()[i + sourceIndex] = input[i] / nonDropoutRate;
         		}
         	} else {
@@ -176,13 +177,7 @@ public class FloatFlatNetwork extends FlatNetwork implements Cloneable {
         }
     }
 
-    protected void computeLayer(final int currentLayer, Set<Integer> dropoutNodes) {
-        // if current output layer does not enable dropout, we use normal computelayer method
-        if (!isDropoutEnable(currentLayer - 1)) {
-        	computeLayer(currentLayer);
-        	return;
-        }
-    	
+    protected void computeLayer(final int currentLayer, Set<Integer> dropoutNodes) {   	
         final int inputIndex = super.getLayerIndex()[currentLayer];
         final int outputIndex = super.getLayerIndex()[currentLayer - 1];
         final int inputSize = super.getLayerCounts()[currentLayer];
@@ -207,16 +202,19 @@ public class FloatFlatNetwork extends FlatNetwork implements Cloneable {
         super.getActivationFunctions()[currentLayer - 1].activationFunction(super.getLayerOutput(), outputIndex,
                 outputSize);
 
-		// dropout nodes' output and rescale remain nodes' output
-        final double nonDropoutRate = 1d - this.getLayerDropoutRates()[currentLayer - 1];
-		for (int x = outputIndex; x < limitX; x++) {
-			if (dropoutNodes.contains(x)) {
-				super.getLayerOutput()[x] = 0d;
-			} else {
-				super.getLayerOutput()[x] /= nonDropoutRate;
-			}
-		}
-        
+        // if current output layer does not enable dropout, we use normal computelayer method
+        if (isDropoutEnable(currentLayer - 1, dropoutNodes)) {
+            // dropout nodes' output and rescale remain nodes' output
+            final double nonDropoutRate = 1d - this.getLayerDropoutRates()[currentLayer - 1];
+            for (int x = outputIndex; x < limitX; x++) {
+                if (dropoutNodes.contains(x)) {
+                    super.getLayerOutput()[x] = 0d;
+                } else {
+                    super.getLayerOutput()[x] /= nonDropoutRate;
+                }
+            }
+        }
+
         // update context values
         final int offset = super.getContextTargetOffset()[currentLayer];
 
@@ -252,8 +250,9 @@ public class FloatFlatNetwork extends FlatNetwork implements Cloneable {
         this.layerDropoutRates = layerDropoutRates;
     }
 
-    public boolean isDropoutEnable(int layer) {
-    	return (this.getLayerDropoutRates().length > layer) && 
+    public boolean isDropoutEnable(int layer, Set<Integer> dropoutNodes) {
+    	return dropoutNodes != null &&
+    	        (this.getLayerDropoutRates().length > layer) && 
     			(Double.compare(this.getLayerDropoutRates()[layer], 0d) > 0);
     }
 }

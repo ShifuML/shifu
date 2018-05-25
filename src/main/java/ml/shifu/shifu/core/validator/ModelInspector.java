@@ -589,16 +589,6 @@ public class ModelInspector {
                     }
                 }
 
-//                Object elmObject = params.get(DTrainUtils.IS_ELM);
-//                boolean isELM = elmObject == null ? false : "true".equalsIgnoreCase(elmObject.toString());
-//                if(isELM && layerCnt != 1) {
-//                    ValidateResult tmpResult = new ValidateResult(true);
-//                    tmpResult.setStatus(false);
-//                    tmpResult.getCauses().add(
-//                            "If ELM(extreme learning machine), hidden layer should only be one layer.");
-//                    result = ValidateResult.mergeResult(result, tmpResult);
-//                }
-
                 Object dropoutObj = params.get(CommonConstants.DROPOUT_RATE);
                 if(dropoutObj != null) {
                     Double dropoutRate = Double.valueOf(dropoutObj.toString());
