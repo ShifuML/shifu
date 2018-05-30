@@ -82,14 +82,18 @@ public class NumBinInfo {
         List<Double> thresholds = new ArrayList<Double>();
         thresholds.add(Double.NEGATIVE_INFINITY);
 
-        String[] fields = StringUtils.split(binsData, fieldSeparator);
-        for ( String field : fields ) {
-            Double val = null;
-            try {
-                val = Double.valueOf(field);
-                thresholds.add(val);
-            } catch (Exception e) {
-                // skip illegal double
+        if ( StringUtils.isNotBlank(binsData) ) {
+            String[] fields = StringUtils.split(binsData, fieldSeparator);
+            if ( fields != null ) {
+                for (String field : fields) {
+                    Double val = null;
+                    try {
+                        val = Double.valueOf(field);
+                        thresholds.add(val);
+                    } catch (Exception e) {
+                        // skip illegal double
+                    }
+                }
             }
         }
 

@@ -101,15 +101,19 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         Map<String, String> paramsMap = new HashMap<String, String>();
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
         int columnParallel = 0;
-        if(columnConfigList.size() <= 1000) {
+        if(columnConfigList.size() <= 100) {
+            columnParallel = columnConfigList.size() * 2;
+        }  else if ( columnConfigList.size() <= 500 ) {
+            columnParallel = columnConfigList.size();
+        } else if(columnConfigList.size() <= 1000) {
             // 1000 => 200 reducers
-            columnParallel = columnConfigList.size() / 5;
+            columnParallel = columnConfigList.size() / 2;
         } else if(columnConfigList.size() > 1000 && columnConfigList.size() <= 2000) {
             // 2000 => 320 reducers
-            columnParallel = columnConfigList.size() / 6;
+            columnParallel = columnConfigList.size() / 4;
         } else if(columnConfigList.size() > 2000 && columnConfigList.size() <= 3000) {
             // 3000 => 420 reducers
-            columnParallel = columnConfigList.size() / 7;
+            columnParallel = columnConfigList.size() / 6;
         } else if(columnConfigList.size() > 3000 && columnConfigList.size() <= 4000) {
             // 4000 => 500
             columnParallel = columnConfigList.size() / 8;

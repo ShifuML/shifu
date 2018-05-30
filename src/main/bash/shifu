@@ -103,7 +103,7 @@ function find_ld_library_path() {
 }
 
 function record_shifu_usage() {
-    if [ ${HADOOP_ROOT} != "" ]; then
+    if [ "${HADOOP_ROOT}" != "" ]; then
         nohup ${SHIFU_HOME}/bin/shifu_statistics.sh "$@" >& /dev/null &
     fi
 }
