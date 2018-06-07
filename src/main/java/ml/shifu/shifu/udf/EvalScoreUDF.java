@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.SortedMap;
 
+import ml.shifu.shifu.util.MultiClsTagPredictor;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
@@ -109,6 +110,8 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
     private boolean isLinearTarget = false;
 
+    private MultiClsTagPredictor mcPredictor;
+
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
         this(source, pathModelConfig, pathColumnConfig, evalSetName, Integer.toString(Scorer.DEFAULT_SCORE_SCALE));
@@ -160,10 +163,11 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
                     this.modelCnt = 1;
                 } else {
                     // native multiple classification model cnt is bagging num
-                    this.modelCnt = (this.modelCnt >= modelConfig.getBaggingNum() ? modelConfig.getBaggingNum()
-                            : this.modelCnt);
+                    this.modelCnt = (this.modelCnt >= modelConfig.getBaggingNum()
+                            ? modelConfig.getBaggingNum() : this.modelCnt);
                 }
             }
+            this.mcPredictor = new MultiClsTagPredictor(this.modelConfig);
         }
 
         this.scale = scale;
@@ -342,6 +346,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
         } else {
             if(CollectionUtils.isNotEmpty(cs.getScores())) {
                 appendSimpleScore(tuple, cs);
+                tuple.append(this.mcPredictor.predictTag(cs).getTag());
             }
 
             if(MapUtils.isNotEmpty(subModelScores)) {
@@ -569,6 +574,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
             } else {
                 if(this.modelCnt > 0) {
                     addModelTagSchema(tupleSchema, modelCnt, "");
+                    tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "predict_tag", DataType.CHARARRAY));
                 } else if(MapUtils.isEmpty(this.subModelsCnt)) {
                     throw new IllegalStateException("No any model found!");
                 }
