@@ -524,12 +524,13 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 case FLOAT16:
                     return "" + toFloat(fromFloat((float) value));
                 case DOUBLE64:
+                    return value + "";
                 case FLOAT32:
                 default:
-                    return value + "";
+                    return ((float) value) + "";
             }
         } else {
-            return value + "";
+            return ((float) value) + "";
         }
     }
 
@@ -546,13 +547,15 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     tuple.append(toFloat(fromFloat((float) value)));
                     break;
                 case DOUBLE64:
+                    tuple.append(value);
+                    break;
                 case FLOAT32:
                 default:
-                    tuple.append(value);;
+                    tuple.append((float) value);
                     break;
             }
         } else {
-            tuple.append(value);
+            tuple.append((float) value);
         }
     }
 
@@ -746,13 +749,10 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 }
                 // TODO, Even set null schema alias, final pig_header output still has null::weight or ::weight, we
                 // would like to have weight only.
-
-                Schema schema =  new Schema(new Schema.FieldSchema("Normalized", tupleSchema, DataType.TUPLE));
-                log.info("Output schema: "+  schema);
+                Schema schema = new Schema(new Schema.FieldSchema("Normalized", tupleSchema, DataType.TUPLE));
                 return schema;
             } else {
                 schemaStr.append("weight:").append(getOutputPrecisionType()).append(")");
-                log.info("Output schema: "+  schemaStr.toString());
                 return Utils.getSchemaFromString(schemaStr.toString());
             }
         } catch (Exception e) {
