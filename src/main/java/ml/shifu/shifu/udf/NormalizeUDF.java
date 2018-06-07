@@ -549,13 +549,19 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     } else if(config.isTarget()) {
                         schemaStr.append(normColumnName(config.getColumnName()) + ":double" + ",");
                     } else if(config.isNumerical()) {
-                        if ( modelConfig.getNormalizeType().equals(NormType.ONEHOT) ) {
-                            for(int i = 0; i < config.getBinBoundary().size(); i++) {
-                                schemaStr.append(
-                                        normColumnName(config.getColumnName()) + "_" + i + ":float" + ",");
+                        if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
+                            if(modelConfig.getNormalizeType().equals(NormType.ONEHOT)) {
+                                // one hot logic
+                                for(int i = 0; i < config.getBinBoundary().size(); i++) {
+                                    schemaStr.append(normColumnName(config.getColumnName()) + "_" + i + ":float" + ",");
+                                }
+                                schemaStr.append(normColumnName(config.getColumnName()) + "_missing" + ":float" + ",");
+                            } else {
+                                // non one hot
+                                schemaStr.append(normColumnName(config.getColumnName()) + ":float" + ",");
                             }
-                            schemaStr.append(normColumnName(config.getColumnName()) + "_missing" + ":float" + ",");
                         } else {
+                            // other not good candidate
                             schemaStr.append(normColumnName(config.getColumnName()) + ":float" + ",");
                         }
                     } else {
@@ -565,16 +571,22 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                             schemaStr.append(normColumnName(config.getColumnName()) + ":chararray" + ",");
                         } else {
                             // for others, set to float, no matter LR/NN categorical or filter out feature with null
-                            if ( modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT)
-                                    || modelConfig.getNormalizeType().equals(NormType.ONEHOT) ) {
-                                if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
+                            if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
+                                if(modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT)
+                                        || modelConfig.getNormalizeType().equals(NormType.ONEHOT)) {
+                                    // one hot logic
                                     for(int i = 0; i < config.getBinCategory().size(); i++) {
                                         schemaStr.append(
                                                 normColumnName(config.getColumnName()) + "_" + i + ":float" + ",");
                                     }
+                                    schemaStr.append(
+                                            normColumnName(config.getColumnName()) + "_missing" + ":float" + ",");
+                                } else {
+                                    // non one hot
+                                    schemaStr.append(normColumnName(config.getColumnName()) + ":float" + ",");
                                 }
-                                schemaStr.append(normColumnName(config.getColumnName()) + "_missing" + ":float" + ",");
                             } else {
+                                // other not good candidate
                                 schemaStr.append(normColumnName(config.getColumnName()) + ":float" + ",");
                             }
                         }
