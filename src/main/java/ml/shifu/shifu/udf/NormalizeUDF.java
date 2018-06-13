@@ -61,7 +61,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private NormType normType;
     private Expression weightExpr;
     private JexlContext weightContext;
-    private DecimalFormat df = new DecimalFormat("#.######");
+    public static DecimalFormat DECIMAL_FORMAT = new DecimalFormat("#.######");
     private PrecisionType precisionType;
 
     private List<DataPurifier> dataPurifiers;
@@ -520,7 +520,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         if(enablePrecision) {
             switch(this.precisionType) {
                 case FLOAT7:
-                    return df.format(value);
+                    return DECIMAL_FORMAT.format(value);
                 case FLOAT16:
                     return "" + toFloat(fromFloat((float) value));
                 case DOUBLE64:
@@ -541,7 +541,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         if(enablePrecision) {
             switch(this.precisionType) {
                 case FLOAT7:
-                    tuple.append(df.format(value));
+                    tuple.append(DECIMAL_FORMAT.format(value));
                     break;
                 case FLOAT16:
                     tuple.append(toFloat(fromFloat((float) value)));
