@@ -2632,6 +2632,14 @@ public final class CommonUtils {
         return rawDataNsMap;
     }
 
+    public static boolean isToNormVariable(ColumnConfig columnConfig, boolean hasCandidate,
+                                          boolean isBinaryClassification) {
+        if(columnConfig == null) {
+            return false;
+        }
+        return columnConfig.isFinalSelect() || isGoodCandidate(columnConfig, hasCandidate, isBinaryClassification);
+    }
+
     public static boolean isGoodCandidate(ColumnConfig columnConfig, boolean hasCandidate,
             boolean isBinaryClassification) {
         if(columnConfig == null) {
