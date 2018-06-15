@@ -333,4 +333,7 @@ public interface Constants {
     public static final String SHIFU_NORM_ONLY_SELECTED = "shifu.norm.only.selected";
 
     public static final String SHIFU_OUTPUT_DATA_DELIMITER = "shifu.output.data.delimiter";
+    
+    public static final String SHIFU_NORM_PRECISION_TYPE = "shifu.norm.precision.type";
+
 }
