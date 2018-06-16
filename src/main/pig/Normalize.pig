@@ -43,4 +43,4 @@ normalized = FOREACH filtered GENERATE Normalize(*);
 normalized = FILTER normalized BY $0 IS NOT NULL;
 normalized = FOREACH normalized GENERATE FLATTEN($0);
 
-STORE normalized INTO '$pathNormalizedData' USING PigStorage('|', '-schema');
+STORE normalized INTO '$pathNormalizedData' USING PigStorage('$output_delimiter', '-schema');
