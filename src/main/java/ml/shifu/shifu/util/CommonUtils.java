@@ -2632,6 +2632,14 @@ public final class CommonUtils {
         return rawDataNsMap;
     }
 
+    public static boolean isToNormVariable(ColumnConfig columnConfig, boolean hasCandidate,
+                                          boolean isBinaryClassification) {
+        if(columnConfig == null) {
+            return false;
+        }
+        return columnConfig.isFinalSelect() || isGoodCandidate(columnConfig, hasCandidate, isBinaryClassification);
+    }
+
     public static boolean isGoodCandidate(ColumnConfig columnConfig, boolean hasCandidate,
             boolean isBinaryClassification) {
         if(columnConfig == null) {
@@ -2669,9 +2677,10 @@ public final class CommonUtils {
             return false;
         }
 
-        return columnConfig.isCandidate(hasCandidate) && (columnConfig.getKs() != null && columnConfig.getKs() > 0
-                && columnConfig.getIv() != null && columnConfig.getIv() > 0 && columnConfig.getMean() != null
-                && columnConfig.getStdDev() != null
+        return columnConfig.isCandidate(hasCandidate) && (
+                columnConfig.getKs() != null && columnConfig.getKs() > 0
+                && columnConfig.getIv() != null && columnConfig.getIv() > 0
+                && columnConfig.getMean() != null && columnConfig.getStdDev() != null
                 && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
                         && columnConfig.getBinCategory().size() > 1)
                         || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null

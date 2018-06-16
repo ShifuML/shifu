@@ -400,7 +400,9 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     } else {
                         // append normalize data. exclude data clean, for data cleaning, no need check good or bad
                         // candidate
-                        if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
+                        // By zhanhu: fix bug - if the ForceSelect variables exists in candidates list,
+                        //      it will cause variable fail to normalize
+                        if(CommonUtils.isToNormVariable(config, super.hasCandidates, modelConfig.isRegression())) {
                             // for multiple classification, binPosRate means rate of such category over all counts,
                             // reuse binPosRate for normalize
                             List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
@@ -485,7 +487,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     }
                 } else {
                     // for others
-                    if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
+                    if(CommonUtils.isToNormVariable(config, super.hasCandidates, modelConfig.isRegression())) {
                         List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
                                 this.categoryMissingNormType);
                         for(Double normVal: normVals) {
@@ -685,7 +687,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     } else if(config.isTarget()) {
                         schemaStr.append(normColumnName(config.getColumnName()) + ":double" + ",");
                     } else if(config.isNumerical()) {
-                        if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
+                        if(CommonUtils.isToNormVariable(config, super.hasCandidates, modelConfig.isRegression())) {
                             if(modelConfig.getNormalizeType().equals(NormType.ONEHOT)) {
                                 // one hot logic
                                 for(int i = 0; i < config.getBinBoundary().size(); i++) {
@@ -711,7 +713,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                             schemaStr.append(normColumnName(config.getColumnName()) + ":chararray" + ",");
                         } else {
                             // for others, set to float, no matter LR/NN categorical or filter out feature with null
-                            if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
+                            if(CommonUtils.isToNormVariable(config, super.hasCandidates, modelConfig.isRegression())) {
                                 if(modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT)
                                         || modelConfig.getNormalizeType().equals(NormType.ONEHOT)) {
                                     // one hot logic

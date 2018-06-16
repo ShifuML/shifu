@@ -556,7 +556,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 }
                 if(!isContinous && !isOneJobNotContinuous) {
                     isOneJobNotContinuous = true;
-                    // delete all old models if not continous
+                    // delete all old models if not continuous
                     String srcModelPath = super.getPathFinder().getModelsPath(sourceType);
                     String mvModelPath = srcModelPath + "_" + System.currentTimeMillis();
                     LOG.info("Old model path has been moved to {}", mvModelPath);

@@ -42,7 +42,7 @@ DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_
 --DEFINE IsToBinningData  ml.shifu.shifu.udf.FilterBinningDataUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE GenBinningData   ml.shifu.shifu.udf.BinningPartialDataUDF('$source_type', '$path_model_config', '$path_column_config', '$histo_scale_factor');
 DEFINE MergeBinningData ml.shifu.shifu.udf.BinningDataMergeUDF('$source_type', '$path_model_config', '$path_column_config');
-DEFINE AddColumnNum     ml.shifu.shifu.udf.AddColumnNumAndFilterUDF('$source_type', '$path_model_config', '$path_column_config', 'false');
+DEFINE AddColumnNum     ml.shifu.shifu.udf.AddColumnNumAndFilterUDF('$source_type', '$path_model_config', '$path_column_config', 'true');
 
 -- load and purify data
 data = LOAD '$path_raw_data' USING PigStorage('$delimiter', '-noschema');

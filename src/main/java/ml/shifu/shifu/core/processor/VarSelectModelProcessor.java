@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
+import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.util.ValueVisitor;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
@@ -240,11 +241,27 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         votedVariablesSelection();
                     }
                 } else {
-                    // multiple classification, select all candidate at first, TODO add SE for multi-classification
                     boolean hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
-                    for(ColumnConfig config: this.columnConfigList) {
-                        if(CommonUtils.isGoodCandidate(config, hasCandidates, modelConfig.isRegression())) {
-                            config.setFinalSelect(true);
+                    if ( this.modelConfig.getVarSelect().getForceEnable()
+                            && CollectionUtils.isNotEmpty(this.modelConfig.getListForceSelect()) ) {
+                        log.info("Force Selection is enabled ... " +
+                                    "for multi-classification, currently only use it to selected variables.");
+                        for (ColumnConfig config : this.columnConfigList) {
+                            if ( config.isForceSelect() ) {
+                                if (!CommonUtils.isGoodCandidate(config, hasCandidates, modelConfig.isRegression())) {
+                                    log.warn("!! Variable - {} is not a good candidate. But it is in forceselect list",
+                                            config.getColumnName());
+                                }
+                                config.setFinalSelect(true);
+                            }
+                        }
+                        log.info("{} variables are selected by force.", this.modelConfig.getListForceSelect().size());
+                    } else {
+                        // multiple classification, select all candidate at first, TODO add SE for multi-classification
+                        for (ColumnConfig config : this.columnConfigList) {
+                            if (CommonUtils.isGoodCandidate(config, hasCandidates, modelConfig.isRegression())) {
+                                config.setFinalSelect(true);
+                            }
                         }
                     }
                 }

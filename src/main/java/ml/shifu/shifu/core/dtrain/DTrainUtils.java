@@ -232,7 +232,7 @@ public final class DTrainUtils {
         }
 
         // check if it is after varselect, if not, no variable is set to finalSelect which means, all good variable
-        // should be set as finalSelect TODO, bad practice, refact me
+        // should be set as finalSelect TODO, bad practice, refactor me
         int isVarSelect = 1;
         if(numericInput == 0 && categoricalInput == 0) {
             numericInput = numericCandidateInput;

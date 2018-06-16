@@ -15,14 +15,7 @@
  */
 package ml.shifu.shifu.fs;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -51,6 +44,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
+import org.apache.hadoop.io.compress.SnappyCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xerial.snappy.SnappyInputStream;
@@ -203,7 +197,10 @@ public class ShifuFileUtils {
         } else if(name.toLowerCase().endsWith(".bz2")) {
             return new BZip2CompressorInputStream(fdis);
         } else if(name.toLowerCase().endsWith(".snappy")) {
-            return new SnappyInputStream(fdis);
+            Configuration conf = new Configuration();
+            CompressionCodecFactory ccf = new CompressionCodecFactory(conf);
+            CompressionCodec codec = ccf.getCodecByClassName(SnappyCodec.class.getName());
+            return codec.createInputStream(fdis);
         } else {
             return fdis;
         }

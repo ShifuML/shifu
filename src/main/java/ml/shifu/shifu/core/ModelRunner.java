@@ -256,7 +256,9 @@ public class ModelRunner {
      * add @ModelSpec as sub-model. Create scorer for sub-model
      * 
      * @param modelSpec
-     *            - model spec for sub model
+     *     - model spec for sub model
+     * @param isMultiThread
+     *     - use multi-thread to run scoring or not
      */
     public void addSubModels(ModelSpec modelSpec, boolean isMultiThread) {
         if(this.subScorers == null) {
