@@ -68,6 +68,18 @@ public abstract class AbstractBinning<T> {
 
     /**
      * Constructor with expected bin number
+     *
+     * @param binningNum
+     *      - the binningNum
+     * @param missingValList
+     *      - the missing value list
+     */
+    public AbstractBinning(int binningNum, List<String> missingValList) {
+        this(binningNum, missingValList, Constants.MAX_CATEGORICAL_BINC_COUNT);
+    }
+
+    /**
+     * Constructor with expected bin number
      * 
      * @param binningNum
      *            the binningNum
