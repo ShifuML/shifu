@@ -26,8 +26,6 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.util.ValueVisitor;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -92,10 +90,10 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.ValueVisitor;
 
 /**
  * Variable selection processor, select the variable based on KS/IV value, or
