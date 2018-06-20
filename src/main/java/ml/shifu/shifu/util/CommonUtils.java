@@ -3037,6 +3037,20 @@ public final class CommonUtils {
         return categories.toArray(new String[0]);
     }
 
+    public static double[] floatToDouble(float[] src) {
+        if (src == null) {
+        	return null;
+        }
+    	
+        double[] output = new double[src.length];
+
+        for(int i = 0; i < src.length; i++) {
+        	output[i] = src[i];
+        }
+        
+        return output;
+    }
+
     /**
      * Inject Shifu or Hadoop parameters into MapReduce / Pig jobs, by using visitor.
      * @param visitor - provider to do injection
@@ -3066,3 +3080,4 @@ public final class CommonUtils {
                 || key.startsWith("hive") || key.startsWith("job");
     }
 }
+

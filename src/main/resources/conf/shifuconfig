@@ -98,3 +98,6 @@ mapreduce.map.cpu.vcores=1
 
 # the delimiter for Shifu output data
 # shifu.output.data.delimiter=|
+
+## switch of input layer dropout
+shifu.train.nn.inputlayerdropout.enable=true
