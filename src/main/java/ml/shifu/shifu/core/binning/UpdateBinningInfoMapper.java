@@ -537,7 +537,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         } else if(columnConfig.isNumerical()) {
             int lastBinIndex = binningInfoWritable.getBinBoundaries().size();
             double douVal = 0.0;
-            if(units[columnIndex] == null || units[columnIndex].length() == 0) {
+            if(units[columnIndex] == null || units[columnIndex].length() == 0
+                    || missingOrInvalidValues.contains(units[columnIndex].toLowerCase())) {
                 isMissingValue = true;
             } else {
                 try {
