@@ -58,6 +58,9 @@ public abstract class AbstractBinning<T> {
      */
     protected int expectedBinningNum;
 
+    /**
+     * The maximum distinct value count for categorical variable
+     */
     protected int maxCategorySize = Constants.MAX_CATEGORICAL_BINC_COUNT;
 
     /**

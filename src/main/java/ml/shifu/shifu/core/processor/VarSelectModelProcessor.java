@@ -27,6 +27,7 @@ import java.util.Scanner;
 import java.util.Set;
 
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.fs.SourceFile;
 import ml.shifu.shifu.util.ValueVisitor;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
@@ -230,8 +231,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                             // even fail to run SE, still to create an empty se.x file
                             String varSelMSEHistPath = pathFinder.getVarSelMSEHistPath(i - 1);
                             ShifuFileUtils.createFileIfNotExists(varSelMSEHistPath, SourceType.LOCAL);
-                            ShifuFileUtils.copyToLocal(varSelectMSEOutputPath, Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME,
-                                    varSelMSEHistPath);
+                            ShifuFileUtils.copyToLocal(new SourceFile(varSelectMSEOutputPath,
+                                            modelConfig.getDataSet().getSource()),
+                                    Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME, varSelMSEHistPath);
                             // save as backup
                             super.saveColumnConfigList(pathFinder.getVarSelColumnConfig(i), this.columnConfigList);
                             // save as current copy

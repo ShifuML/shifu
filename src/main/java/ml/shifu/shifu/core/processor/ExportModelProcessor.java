@@ -37,6 +37,7 @@ import ml.shifu.shifu.core.pmml.builder.PMMLConstructorFactory;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.core.varselect.ColumnStatistics;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.udf.CalculateStatsUDF;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.HDFSUtils;
@@ -55,10 +56,7 @@ import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
 /**
@@ -366,12 +364,15 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         try {
             writer = ShifuFileUtils.getWriter(localColumnStatsPath.toString(), SourceType.LOCAL);
 
-            List<String> unitStats = getColumnUnitStats(columnConfigList);
-            if ( CollectionUtils.isNotEmpty(unitStats) ) {
+            Map<Integer, List<String>> ccUnitStatsMap = loadColumnConfigUnitStats();
+            List<String> firstUnitStats = null;
+
+            if ( MapUtils.isNotEmpty(ccUnitStatsMap) ) {
+                firstUnitStats = ccUnitStatsMap.entrySet().iterator().next().getValue();
                 writer.write("dataSet,columnFlag,columnName,columnNum,iv,ks,max,mean,median,min,missingCount,"
                         + "missingPercentage,stdDev,totalCount,distinctCount,weightedIv,weightedKs,weightedWoe,woe,"
                         + "skewness,kurtosis,columnType,finalSelect,psi,unitstats,version,"
-                        +  unitsToHeader(unitStats)
+                        +  unitsToHeader(firstUnitStats)
                         + "\n");
             } else {
                 writer.write("dataSet,columnFlag,columnName,columnNum,iv,ks,max,mean,median,min,missingCount,"
@@ -407,9 +408,10 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 builder.append(columnConfig.isFinalSelect()).append(',');
                 builder.append(columnConfig.getPSI()).append(',');
                 builder.append(StringUtils.join(columnConfig.getUnitStats(), '|')).append(',');
-                if ( CollectionUtils.isNotEmpty(unitStats) ) {
+                if ( CollectionUtils.isNotEmpty(firstUnitStats)) {
                     builder.append(modelConfig.getBasic().getVersion()).append(",");
-                    builder.append(splitUnitStatsToColumn(columnConfig.getUnitStats(), unitStats.size())).append("\n");
+                    builder.append(splitUnitStatsToColumn(
+                            ccUnitStatsMap.get(columnConfig.getColumnNum()), firstUnitStats.size())).append("\n");
                 } else {
                     builder.append(modelConfig.getBasic().getVersion()).append("\n");
                 }
@@ -422,6 +424,24 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         }
     }
 
+    private Map<Integer,List<String>> loadColumnConfigUnitStats() throws IOException {
+        Map<Integer,List<String>> columnConfigUnitStats = new HashMap<Integer, List<String>>();
+
+        String unitStatsFilePath = this.pathFinder.getColumnConfigUnitStatsPath();
+        if ( ShifuFileUtils.isFileExists(unitStatsFilePath, SourceType.LOCAL) ) {
+            List<String> unitStatsLines = FileUtils.readLines(new File(unitStatsFilePath));
+            if ( CollectionUtils.isNotEmpty(unitStatsLines) ) {
+                for ( String line : unitStatsLines ) {
+                    String[] fields = line.trim().split("\\|");
+                    columnConfigUnitStats.put(Integer.parseInt(fields[0]),
+                            Arrays.asList(StringUtils.split(fields[1], CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
+                }
+            }
+        }
+
+        return columnConfigUnitStats;
+    }
+
     private String splitUnitStatsToColumn(List<String> unitStats, int size) {
         List<String> unitHeaders = new ArrayList<String>(size * 3);
         if ( CollectionUtils.isEmpty(unitStats) || unitStats.size() != size ) {
@@ -432,17 +452,6 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             unitHeaders.addAll(unitStatsFields(unitStats, 3, ""));
         }
         return StringUtils.join(unitHeaders, ",");
-    }
-
-    private List<String> getColumnUnitStats(List<ColumnConfig> columnConfigList) {
-        List<String> unitStats = null;
-        for ( ColumnConfig columnConfig : columnConfigList ) {
-            if ( CollectionUtils.isNotEmpty(columnConfig.getUnitStats()) ) {
-                unitStats = columnConfig.getUnitStats();
-                break;
-            }
-        }
-        return unitStats;
     }
 
     private String unitsToHeader(List<String> unitStats) {

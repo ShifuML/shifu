@@ -704,13 +704,13 @@ public class ShifuFileUtils {
         }
     }
 
-    public static void copyToLocal(String hdfsFilePath, String localOutputPath) throws IOException {
-        copyToLocal(hdfsFilePath, Constants.HADOOP_PART_PREFIX, localOutputPath);
+    public static void copyToLocal(SourceFile sourceFile, String localOutputPath) throws IOException {
+        copyToLocal(sourceFile, Constants.HADOOP_PART_PREFIX, localOutputPath);
     }
 
-    public static void copyToLocal(String hdfsFilePath, String partFilePrefix, String localOutputPath)
+    public static void copyToLocal(SourceFile sourceFile, String partFilePrefix, String localOutputPath)
             throws IOException {
-        HdfsPartFile hdfsPartFile = new HdfsPartFile(hdfsFilePath, SourceType.HDFS, partFilePrefix);
+        HdfsPartFile hdfsPartFile = new HdfsPartFile(sourceFile.getPath(), sourceFile.getSourceType(), partFilePrefix);
         BufferedWriter writer = new BufferedWriter(new FileWriter(localOutputPath));
         String line = null;
         try {
