@@ -597,6 +597,11 @@ public class ConfusionMatrix {
                 evalConfig.getName() + "_modelscore_gainchart.csv", SourceType.LOCAL);
         LOG.info("Model score gain chart data is generated in {}.", modelScoreGainChartCsv);
         gc.generateCsv(evalConfig, modelConfig, modelScoreGainChartCsv, result.modelScoreList);
+
+        String webResourcePath = pathFinder.getWebResourcePath();
+        String evalFolder = new Path(pathFinder.getEvalSetPath(evalConfig.getName(), SourceType.LOCAL), "web").toString();
+        ShifuFileUtils.createDirIfNotExists(evalFolder, SourceType.LOCAL);
+        gc.copyWebResourceFiles(webResourcePath, evalFolder);
     }
 
     private PerformanceObject buildFirstPO(ConfusionMatrixObject prevCmo) {

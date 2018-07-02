@@ -109,6 +109,29 @@ public class PathFinder {
         }
     }
 
+    /**
+     * Get the web resource folder path
+     * @return web resource path
+     */
+    public String getWebResourcePath() {
+        String webResourcePath = "web";
+        String shifuHome = Environment.getProperty(Environment.SHIFU_HOME);
+        if(shifuHome == null || shifuHome.length() == 0) {
+            // return relative path which is in shifu-*.jar
+            return webResourcePath;
+        } else {
+            String pathStr = (new Path(webResourcePath)).isAbsolute() ? webResourcePath
+                    : new Path(Environment.getProperty(Environment.SHIFU_HOME), webResourcePath).toString();
+            File file = new File(pathStr);
+            if(file.exists()) {
+                return pathStr;
+            } else {
+                // return arguly path which is in shifu-*.jar
+                return webResourcePath;
+            }
+        }
+    }
+
     public String getAbsolutePath(String path) {
         String shifuHome = Environment.getProperty(Environment.SHIFU_HOME);
         if(shifuHome == null || shifuHome.length() == 0) {
