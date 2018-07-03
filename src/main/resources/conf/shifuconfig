@@ -96,7 +96,6 @@ mapreduce.map.cpu.vcores=1
 # the directory should have 777 permission so that other user have permission to write it
 # shifu.usage.statistics.dir=
 
-<<<<<<< HEAD
 ## the delimiter for Shifu output data
 # shifu.output.data.delimiter=|
 
@@ -106,10 +105,6 @@ shifu.eval.score.multithread=true
 ## define the max distinct value for categorical variable
 ## if a categorical variable has mor than ${shifu.max.category.size} variables, it will be ignored
 # shifu.max.category.size=10000
-=======
-# the delimiter for Shifu output data
-# shifu.output.data.delimiter=|
 
 ## switch of input layer dropout
 shifu.train.nn.inputlayerdropout.enable=true
->>>>>>> 68adabd4fb44830b17c2b690dc533e4383979308
