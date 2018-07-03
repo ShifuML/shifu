@@ -23,6 +23,8 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import ml.shifu.shifu.udf.NormalizeUDF.PrecisionType;
+
 import java.io.IOException;
 
 /**
@@ -38,6 +40,7 @@ public class NormalizeUDFTest {
         instance = new NormalizeUDF("LOCAL",
                 "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
                 "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
+        instance.setPrecisionType(PrecisionType.FLOAT7);
     }
 
     @Test
@@ -58,8 +61,9 @@ public class NormalizeUDFTest {
         input.set(1, "2.1");
 
         Assert.assertEquals(32, instance.exec(input).size());
-        Assert.assertEquals(instance.exec(input).toString(),
-            "(1,-3.3745382,-4.0,-3.697376,-1.8706726,4.0,4.0,4.0,4.0,4.0,4.0,2.473354,-0.3504254,-1.0068849,-1.0734632,4.0,4.0,4.0,4.0,4.0,4.0,-3.1432278,-4.0,-3.127431,-1.5752382,4.0,4.0,3.485806,4.0,4.0,4.0,2.1)");
+        Assert.assertEquals(
+                "(1,-3.374538,-4,-3.697376,-1.870673,4,4,4,4,4,4,2.473354,-0.350425,-1.006885,-1.073463,4,4,4,4,4,4,-3.143228,-4,-3.127431,-1.575238,4,4,3.485806,4,4,4,2.1)",
+                instance.exec(input).toString());
     }
 
     @Test
@@ -74,8 +78,8 @@ public class NormalizeUDFTest {
 
         Assert.assertEquals(32, instance.exec(input).size());
         Assert.assertEquals(
-                instance.exec(input).toDelimitedString("|"),
-                "0|-0.66922235|-0.36015487|-0.65554094|-0.6652448|0.76039577|-0.13163291|-0.42296025|-0.106827006|-0.77677613|0.6052514|0.18077102|1.3659062|0.18749943|-0.22420046|-0.113538824|-0.40528342|-0.49631938|0.24349733|-0.26379234|-0.64114404|-0.57022554|0.43512848|-0.5549224|-0.5863008|0.11923738|-0.44027883|-0.62061524|-0.2076809|-0.70519555|-0.3397934|11.75");
+                "0|-0.669222|-0.360155|-0.655541|-0.665245|0.760396|-0.131633|-0.42296|-0.106827|-0.776776|0.605251|0.180771|1.365906|0.187499|-0.2242|-0.113539|-0.405283|-0.496319|0.243497|-0.263792|-0.641144|-0.570226|0.435128|-0.554922|-0.586301|0.119237|-0.440279|-0.620615|-0.207681|-0.705196|-0.339793|11.75",
+                instance.exec(input).toDelimitedString("|"));
     }
 
     // @Test

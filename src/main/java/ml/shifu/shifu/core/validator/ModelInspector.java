@@ -40,7 +40,6 @@ import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
 import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.FeatureSubsetStrategy;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
@@ -588,16 +587,6 @@ public class ModelInspector {
                         tmpResult.getCauses().add("Learning decay should be in [0, 1) if set.");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
-                }
-
-                Object elmObject = params.get(DTrainUtils.IS_ELM);
-                boolean isELM = elmObject == null ? false : "true".equalsIgnoreCase(elmObject.toString());
-                if(isELM && layerCnt != 1) {
-                    ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult.setStatus(false);
-                    tmpResult.getCauses()
-                            .add("If ELM(extreme learning machine), hidden layer should only be one layer.");
-                    result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
                 Object dropoutObj = params.get(CommonConstants.DROPOUT_RATE);

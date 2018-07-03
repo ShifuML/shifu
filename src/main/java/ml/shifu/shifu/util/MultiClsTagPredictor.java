@@ -9,6 +9,7 @@ import java.util.List;
 
 public class MultiClsTagPredictor {
 
+    @SuppressWarnings("unused")
     private ModelConfig modelConfig;
     private boolean isOneVsAll;
     private List<String> tags;

@@ -532,7 +532,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
      */
     private String getOutputValue(double value, boolean enablePrecision) {
         if(enablePrecision) {
-            switch(this.precisionType) {
+            switch(this.getPrecisionType()) {
                 case FLOAT7:
                     return DECIMAL_FORMAT.format(value);
                 case FLOAT16:
@@ -553,7 +553,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
      */
     private void appendOutputValue(Tuple tuple, double value, boolean enablePrecision) {
         if(enablePrecision) {
-            switch(this.precisionType) {
+            switch(this.getPrecisionType()) {
                 case FLOAT7:
                     tuple.append(DECIMAL_FORMAT.format(value));
                     break;
@@ -680,7 +680,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         tupleSchema.add(new Schema.FieldSchema(normName, DataType.CHARARRAY));
                     } else {
                         // feature column
-                        switch(this.precisionType) {
+                        switch(this.getPrecisionType()) {
                             case DOUBLE64:
                                 tupleSchema.add(new Schema.FieldSchema(normName, DataType.DOUBLE));
                             case FLOAT7:
@@ -751,7 +751,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             }
 
             if(this.isCompactNorm) {
-                switch(this.precisionType) {
+                switch(this.getPrecisionType()) {
                     case DOUBLE64:
                         tupleSchema.add(new Schema.FieldSchema("weight", DataType.DOUBLE));
                     case FLOAT7:
@@ -822,7 +822,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     }
 
     private String getOutputPrecisionType() {
-        switch(this.precisionType) {
+        switch(this.getPrecisionType()) {
             case DOUBLE64:
                 return "double";
             case FLOAT7:
@@ -832,5 +832,13 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             default:
                 return "float";
         }
+    }
+
+    public PrecisionType getPrecisionType() {
+        return precisionType;
+    }
+
+    public void setPrecisionType(PrecisionType precisionType) {
+        this.precisionType = precisionType;
     }
 }

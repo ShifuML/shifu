@@ -16,7 +16,7 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.util.Arrays;
-import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
@@ -98,7 +98,7 @@ public class ParallelGradient {
     /**
      * If enabled by extreme learning machine: https://en.wikipedia.org/wiki/Extreme_learning_machine
      */
-    private boolean isELM;
+    //private boolean isELM;
 
     /**
      * Loss string definition: log, squared, absolute
@@ -112,8 +112,7 @@ public class ParallelGradient {
 
     public ParallelGradient(final FloatFlatNetwork theNetwork, final FloatMLDataSet theTraining,
             final FloatMLDataSet theTesting, final double[] flatSpot, ErrorFunction ef, boolean isCrossOver,
-            int threadCount, boolean isELM, String lossStr, int batchs) {
-        this.isELM = isELM;
+            int threadCount, String lossStr, int batchs) {
         assert threadCount > 0 && threadCount < 33;
         this.threadCount = threadCount;
         this.training = theTraining;
@@ -171,17 +170,17 @@ public class ParallelGradient {
         this.batchs = batchs;
     }
 
-    public double[] computeGradients(int currentIteration) {
+    public double[] computeGradients(int currentIteration, Set<Integer> dropoutNodes) {
         CompletionService<double[]> completionService = new ExecutorCompletionService<double[]>(this.threadPool);
         this.subGradients = new SubGradient[this.threadCount];
-        Random dropoutRandom = new Random();
         for(int i = 0; i < this.threadCount; i++) {
             if(this.subGradients[i] == null) {
                 this.subGradients[i] = new SubGradient(this.network.clone(), this.training, this.trainLows[i],
                         this.trainHighs[i], this.testing, this.testLows[i], this.testHighs[i], this.flatSpot,
-                        this.isCrossOver, this, dropoutRandom, this.batchs, currentIteration);
+                        this.isCrossOver, this, this.batchs, currentIteration, dropoutNodes);
             } else {
                 this.subGradients[i].setNetwork(this.network.clone());
+                this.subGradients[i].setDropoutNodes(dropoutNodes);
             }
             this.subGradients[i].setSeed(this.getSeed());
             completionService.submit(this.subGradients[i]);
@@ -341,13 +340,6 @@ public class ParallelGradient {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-    }
-
-    /**
-     * @return the isELM
-     */
-    public boolean isELM() {
-        return isELM;
     }
 
 }
