@@ -19,26 +19,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import org.dmg.pmml.DataDictionary;
-import org.dmg.pmml.DataField;
-import org.dmg.pmml.DataType;
-import org.dmg.pmml.DerivedField;
-import org.dmg.pmml.Expression;
-import org.dmg.pmml.FieldName;
-import org.dmg.pmml.FieldRef;
-import org.dmg.pmml.FieldUsageType;
-import org.dmg.pmml.MiningField;
-import org.dmg.pmml.MiningFunctionType;
-import org.dmg.pmml.MiningSchema;
-import org.dmg.pmml.NeuralOutput;
-import org.dmg.pmml.NeuralOutputs;
-import org.dmg.pmml.NormContinuous;
-import org.dmg.pmml.NumericPredictor;
-import org.dmg.pmml.OpType;
-import org.dmg.pmml.PMML;
-import org.dmg.pmml.RegressionModel;
-import org.dmg.pmml.RegressionNormalizationMethodType;
-import org.dmg.pmml.RegressionTable;
+import org.dmg.pmml.*;
 
 import com.google.common.primitives.Ints;
 
@@ -116,11 +97,21 @@ public class PMMLAdapterCommonUtil {
         NeuralOutputs outputs = new NeuralOutputs();
         int outputFieldsNum = outputID.size();
         outputs.setNumberOfOutputs(outputFieldsNum);
-        for(int i = 0; i < outputFieldsNum; i++) {
-            DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE);
-            field.withExpression(new FieldRef(new FieldName(outputID.get(i))));
-            outputs.withNeuralOutputs(new NeuralOutput(field, String.valueOf(layerID + "," + i)));
-        }
+/*        if ( outputFieldsNum > 0 ) {
+            for (int i = 0; i < outputFieldsNum; i++) {
+                DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE);
+                field.withExpression(new NormDiscrete()
+                        .withField(new FieldName(outputID.get(i)))
+                        .withValue(outputID.get(i)));
+                outputs.withNeuralOutputs(new NeuralOutput(field, String.valueOf(layerID + "," + i)));
+            }
+        } else {*/
+            for (int i = 0; i < outputFieldsNum; i++) {
+                DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE);
+                field.withExpression(new FieldRef(new FieldName(outputID.get(i))));
+                outputs.withNeuralOutputs(new NeuralOutput(field, String.valueOf(layerID + "," + i)));
+            }
+/*        }*/
         return outputs;
     }
 
