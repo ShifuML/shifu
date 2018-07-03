@@ -15,17 +15,43 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.Reader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.Set;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Splitter;
+import ml.shifu.guagua.GuaguaConstants;
+import ml.shifu.guagua.hadoop.util.HDPUtils;
+import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
+import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
+import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
+import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.VariableSelector;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.core.dvarsel.*;
+import ml.shifu.shifu.core.dvarsel.wrapper.CandidateGenerator;
+import ml.shifu.shifu.core.dvarsel.wrapper.WrapperMasterConductor;
+import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
+import ml.shifu.shifu.core.history.VarSelDesc;
+import ml.shifu.shifu.core.history.VarSelReason;
+import ml.shifu.shifu.core.mr.input.CombineInputFormat;
+import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
+import ml.shifu.shifu.core.varselect.ColumnInfo;
+import ml.shifu.shifu.core.varselect.ColumnStatistics;
+import ml.shifu.shifu.core.varselect.VarSelectMapper;
+import ml.shifu.shifu.core.varselect.VarSelectReducer;
+import ml.shifu.shifu.exception.ShifuErrorCode;
+import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.fs.SourceFile;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.ValueVisitor;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -53,54 +79,18 @@ import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Splitter;
-
-import ml.shifu.guagua.GuaguaConstants;
-import ml.shifu.guagua.hadoop.util.HDPUtils;
-import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
-import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
-import ml.shifu.shifu.column.NSColumn;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
-import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.VariableSelector;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
-import ml.shifu.shifu.core.dvarsel.VarSelMaster;
-import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
-import ml.shifu.shifu.core.dvarsel.VarSelOutput;
-import ml.shifu.shifu.core.dvarsel.VarSelWorker;
-import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
-import ml.shifu.shifu.core.dvarsel.wrapper.CandidateGenerator;
-import ml.shifu.shifu.core.dvarsel.wrapper.WrapperMasterConductor;
-import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
-import ml.shifu.shifu.core.history.VarSelDesc;
-import ml.shifu.shifu.core.history.VarSelReason;
-import ml.shifu.shifu.core.mr.input.CombineInputFormat;
-import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
-import ml.shifu.shifu.core.varselect.ColumnInfo;
-import ml.shifu.shifu.core.varselect.ColumnStatistics;
-import ml.shifu.shifu.core.varselect.VarSelectMapper;
-import ml.shifu.shifu.core.varselect.VarSelectReducer;
-import ml.shifu.shifu.exception.ShifuErrorCode;
-import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.fs.PathFinder;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-import ml.shifu.shifu.util.ValueVisitor;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.Reader;
+import java.util.*;
 
 /**
  * Variable selection processor, select the variable based on KS/IV value, or
- * 
+ *
  * <p>
  * Selection variable based on the wrapper training processor.
- * 
+ *
  * <p>
  * For sensitive variable selection, each time wrapperRatio percent of variables will be removed. If continue do
  * variable selection, continue to run varselect command. Current design will do variable selection continuously.
@@ -139,24 +129,24 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             validateParameters();
 
             // reset all selections if user specify or select by absolute number
-            if(getIsToReset()) {
+            if (getIsToReset()) {
                 log.info("Reset all selections data including type final select etc!");
                 resetAllFinalSelect();
-            } else if(getIsToList()) {
+            } else if (getIsToList()) {
                 log.info("Below variables are selected - ");
-                for(ColumnConfig columnConfig: this.columnConfigList) {
-                    if(columnConfig.isFinalSelect()) {
+                for (ColumnConfig columnConfig : this.columnConfigList) {
+                    if (columnConfig.isFinalSelect()) {
                         log.info(columnConfig.getColumnName());
                     }
                 }
                 log.info("-----  Done -----");
-            } else if(getIsToAutoFilter()) {
+            } else if (getIsToAutoFilter()) {
                 log.info("Start to run variable auto filter.");
                 runAutoVarFilter();
                 log.info("-----  Done -----");
-            } else if(getIsRecoverAuto()) {
+            } else if (getIsRecoverAuto()) {
                 String varselHistory = pathFinder.getVarSelHistory();
-                if(ShifuFileUtils.isFileExists(varselHistory, SourceType.LOCAL)) {
+                if (ShifuFileUtils.isFileExists(varselHistory, SourceType.LOCAL)) {
                     log.info("!!! Auto filtered variables will be recovered from history.");
                     recoverVarselStatusFromHist(varselHistory);
                     log.info("-----  Done -----");
@@ -169,14 +159,14 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
                 String filterExpressions = super.modelConfig.getSegmentFilterExpressionsAsString();
                 Environment.getProperties().put("shifu.segment.expressions", filterExpressions);
-                if(StringUtils.isNotBlank(filterExpressions)) {
+                if (StringUtils.isNotBlank(filterExpressions)) {
                     String[] splits = CommonUtils.split(filterExpressions,
                             Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
-                    for(int i = 0; i < super.columnConfigList.size(); i++) {
+                    for (int i = 0; i < super.columnConfigList.size(); i++) {
                         ColumnConfig config = super.columnConfigList.get(i);
                         int rawSize = super.columnConfigList.size() / (1 + splits.length);
-                        if(config.isTarget()) {
-                            for(int j = 0; j < splits.length; j++) {
+                        if (config.isTarget()) {
+                            for (int j = 0; j < splits.length; j++) {
                                 ColumnConfig otherConfig = super.columnConfigList.get((j + 1) * rawSize + i);
                                 otherConfig.setColumnFlag(ColumnFlag.ForceRemove);
                                 otherConfig.setFinalSelect(false);
@@ -190,23 +180,23 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     syncDataToHdfs(super.modelConfig.getDataSet().getSource());
                 }
 
-                if(modelConfig.isRegression()) {
+                if (modelConfig.isRegression()) {
                     VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
                     String filterBy = this.modelConfig.getVarSelectFilterBy();
-                    if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_KS)
+                    if (filterBy.equalsIgnoreCase(Constants.FILTER_BY_KS)
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_IV)
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_PARETO)
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_MIX)) {
                         this.columnConfigList = selector.selectByFilter();
-                    } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_FI)) {
-                        if(!CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
+                    } else if (filterBy.equalsIgnoreCase(Constants.FILTER_BY_FI)) {
+                        if (!CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
                             throw new IllegalArgumentException(
                                     "Filter by FI only works well in GBT/RF. Please check your modelconfig::train.");
                         }
                         selectByFeatureImportance();
-                    } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_SE)
+                    } else if (filterBy.equalsIgnoreCase(Constants.FILTER_BY_SE)
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_ST)) {
-                        if(!Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())
+                        if (!Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())
                                 && !Constants.LR.equalsIgnoreCase(modelConfig.getAlgorithm())) {
                             throw new IllegalArgumentException(
                                     "Filter by SE/ST only works well in NN/LR. Please check your modelconfig::train.");
@@ -216,7 +206,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         // create varsel directory and write original copy of ColumnConfig.json
                         ShifuFileUtils.createDirIfNotExists(pathFinder.getVarSelDir(), SourceType.LOCAL);
                         super.saveColumnConfigList(pathFinder.getVarSelColumnConfig(i), this.columnConfigList);
-                        while((i++) < recursiveCnt) {
+                        while ((i++) < recursiveCnt) {
                             String trainLogFile = TRAIN_LOG_PREFIX + "-" + (i - 1) + ".log";
                             distributedSEWrapper(trainLogFile);
                             // copy training log to SE train.log
@@ -228,24 +218,25 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                             // even fail to run SE, still to create an empty se.x file
                             String varSelMSEHistPath = pathFinder.getVarSelMSEHistPath(i - 1);
                             ShifuFileUtils.createFileIfNotExists(varSelMSEHistPath, SourceType.LOCAL);
-                            ShifuFileUtils.copyToLocal(varSelectMSEOutputPath, Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME,
-                                    varSelMSEHistPath);
+                            ShifuFileUtils.copyToLocal(new SourceFile(varSelectMSEOutputPath,
+                                            modelConfig.getDataSet().getSource()),
+                                    Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME, varSelMSEHistPath);
                             // save as backup
                             super.saveColumnConfigList(pathFinder.getVarSelColumnConfig(i), this.columnConfigList);
                             // save as current copy
                             super.saveColumnConfigList();
                         }
-                    } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_VOTED)) {
+                    } else if (filterBy.equalsIgnoreCase(Constants.FILTER_BY_VOTED)) {
                         votedVariablesSelection();
                     }
                 } else {
                     boolean hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
-                    if ( this.modelConfig.getVarSelect().getForceEnable()
-                            && CollectionUtils.isNotEmpty(this.modelConfig.getListForceSelect()) ) {
+                    if (this.modelConfig.getVarSelect().getForceEnable()
+                            && CollectionUtils.isNotEmpty(this.modelConfig.getListForceSelect())) {
                         log.info("Force Selection is enabled ... " +
-                                    "for multi-classification, currently only use it to selected variables.");
+                                "for multi-classification, currently only use it to selected variables.");
                         for (ColumnConfig config : this.columnConfigList) {
-                            if ( config.isForceSelect() ) {
+                            if (config.isForceSelect()) {
                                 if (!CommonUtils.isGoodCandidate(config, hasCandidates, modelConfig.isRegression())) {
                                     log.warn("!! Variable - {} is not a good candidate. But it is in forceselect list",
                                             config.getColumnName());
@@ -267,7 +258,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 // clean shadow targets for multi-segments
                 cleanShadowTargetsForSegments();
 
-                if(modelConfig.getVarSelect().getAutoFilterEnable()) {
+                if (modelConfig.getVarSelect().getAutoFilterEnable()) {
                     runAutoVarFilter();
                 }
             }
@@ -287,16 +278,15 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     /**
      * Recover auto-filtered variable status from varsel history file
-     * 
-     * @param varselHistory
-     *            - variable selection history file
+     *
+     * @param varselHistory - variable selection history file
      * @throws IOException
      */
     private void recoverVarselStatusFromHist(String varselHistory) throws IOException {
         List<VarSelDesc> varSelDescList = loadVarSelDescList(varselHistory);
-        for(VarSelDesc varSelDesc: varSelDescList) {
+        for (VarSelDesc varSelDesc : varSelDescList) {
             ColumnConfig columnConfig = this.columnConfigList.get(varSelDesc.getColumnId());
-            if(columnConfig.isFinalSelect() == varSelDesc.getNewSelStatus()) {
+            if (columnConfig.isFinalSelect() == varSelDesc.getNewSelStatus()) {
                 log.info("Recover column - {} from {} to {}", varSelDesc.getColumnName(), varSelDesc.getNewSelStatus(),
                         varSelDesc.getOldSelStatus());
                 columnConfig.setFinalSelect(varSelDesc.getOldSelStatus());
@@ -306,21 +296,21 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     /**
      * Load variable selection history file into VarSelDesc
-     * 
-     * @param varselHistory
-     *            - variable selection history file file
+     *
+     * @param varselHistory - variable selection history file file
      * @return
      * @throws IOException
      */
     private List<VarSelDesc> loadVarSelDescList(String varselHistory) throws IOException {
         Reader reader = ShifuFileUtils.getReader(varselHistory, SourceType.LOCAL);
         List<String> autoFilterList = IOUtils.readLines(reader);
-        IOUtils.closeQuietly(reader);;
+        IOUtils.closeQuietly(reader);
+        ;
 
         List<VarSelDesc> varSelDescList = new ArrayList<VarSelDesc>();
-        for(String filterDesc: autoFilterList) {
+        for (String filterDesc : autoFilterList) {
             VarSelDesc varSelDesc = VarSelDesc.fromString(filterDesc);
-            if(varSelDesc != null) {
+            if (varSelDesc != null) {
                 varSelDescList.add(varSelDesc);
             }
         }
@@ -330,10 +320,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     private void selectByFeatureImportance() throws Exception {
         List<BasicML> models = null;
-        if(!super.modelConfig.getVarSelect().getFilterEnable()) {
+        if (!super.modelConfig.getVarSelect().getFilterEnable()) {
             models = CommonUtils.loadBasicModels(this.modelConfig, this.columnConfigList, null);
         }
-        if(models == null || models.size() < 1) {
+        if (models == null || models.size() < 1) {
             TrainModelProcessor trainModelProcessor = new TrainModelProcessor();
             trainModelProcessor.setForVarSelect(true);
             trainModelProcessor.run();
@@ -343,7 +333,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // compute feature importance and write to local file
         Map<Integer, MutablePair<String, Double>> featureImportances = CommonUtils
                 .computeTreeModelFeatureImportance(models);
-        if(super.modelConfig.getVarSelect().getFilterEnable()) {
+        if (super.modelConfig.getVarSelect().getFilterEnable()) {
             this.postProcessFIVarSelect(featureImportances);
         }
     }
@@ -371,7 +361,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private void validateParameters() throws Exception {
         // String alg = super.getModelConfig().getTrain().getAlgorithm();
         String filterBy = this.modelConfig.getVarSelectFilterBy();
-        if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_SE) || filterBy.equalsIgnoreCase(Constants.FILTER_BY_ST)) {
+        if (filterBy.equalsIgnoreCase(Constants.FILTER_BY_SE) || filterBy.equalsIgnoreCase(Constants.FILTER_BY_ST)) {
             validateSEParameters();
             validateNormalize();
         }
@@ -379,7 +369,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     public void resetAllFinalSelect() throws IOException {
         log.info("!!! Reset all variables finalSelect = false");
-        for(ColumnConfig columnConfig: this.columnConfigList) {
+        for (ColumnConfig columnConfig : this.columnConfigList) {
             columnConfig.setFinalSelect(false);
             columnConfig.setColumnFlag(null);
         }
@@ -387,7 +377,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     private void validateNormalize() throws IOException {
-        if(!ShifuFileUtils.isFileExists(
+        if (!ShifuFileUtils.isFileExists(
                 new PathFinder(modelConfig).getNormalizedDataPath(this.modelConfig.getDataSet().getSource()),
                 this.modelConfig.getDataSet().getSource())) {
             throw new IllegalStateException("Cannot find normalized data, please do 'Shifu normalize' firstly.");
@@ -395,18 +385,18 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     private void validateSEParameters() {
-        if(!NNConstants.NN_ALG_NAME.equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())
+        if (!NNConstants.NN_ALG_NAME.equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())
                 && !"LR".equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())) {
             throw new IllegalArgumentException(
                     "Currently we only support NN and LR distributed training to do wrapper by analyzing variable selection.");
         }
 
-        if(super.getModelConfig().getDataSet().getSource() != SourceType.HDFS) {
+        if (super.getModelConfig().getDataSet().getSource() != SourceType.HDFS) {
             throw new IllegalArgumentException(
                     "Currently we only support distributed wrapper by analyzing on HDFS source type.");
         }
 
-        if(!super.getModelConfig().isMapReduceRunMode()) {
+        if (!super.getModelConfig().isMapReduceRunMode()) {
             throw new IllegalArgumentException(
                     "Currently we only support distributed wrapper by on MAPRED or DIST mode.");
         }
@@ -433,7 +423,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         GuaguaMapReduceClient guaguaClient = new GuaguaMapReduceClient();
 
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
-        if(StringUtils.isNotBlank(hdpVersion)) {
+        if (StringUtils.isNotBlank(hdpVersion)) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
             conf.set("hdp.version", hdpVersion);
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
@@ -455,8 +445,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     modelConfig.getDataSet().getSource());
 
             List<Integer> ids = null;
-            for(Scanner scanner: scanners) {
-                while(scanner.hasNextLine()) {
+            for (Scanner scanner : scanners) {
+                while (scanner.hasNextLine()) {
                     String[] raw = scanner.nextLine().trim().split("\\|");
 
                     @SuppressWarnings("unused")
@@ -468,13 +458,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             }
 
             // prevent multiply running setting
-            for(ColumnConfig config: columnConfigList) {
-                if(!config.isForceSelect()) {
+            for (ColumnConfig config : columnConfigList) {
+                if (!config.isForceSelect()) {
                     config.setFinalSelect(Boolean.FALSE);
                 }
             }
 
-            for(Integer id: ids) {
+            for (Integer id : ids) {
                 this.columnConfigList.get(id).setFinalSelect(Boolean.TRUE);
             }
 
@@ -507,7 +497,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 .makeQualified(new Path(modelConfig.getDataSetRawPath())).toString());
 
         String zkServers = Environment.getProperty(Environment.ZOO_KEEPER_SERVERS);
-        if(StringUtils.isEmpty(zkServers)) {
+        if (StringUtils.isEmpty(zkServers)) {
             log.warn(
                     "No specified zookeeper settings from zookeeperServers in shifuConfig file, Guagua will set embeded zookeeper server in client process. For big data applications, specified zookeeper servers are strongly recommended.");
         } else {
@@ -528,11 +518,11 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         int forceSelectCount = 0;
         int candidateCount = 0;
         boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
-        for(ColumnConfig columnConfig: columnConfigList) {
-            if(columnConfig.isForceSelect()) {
+        for (ColumnConfig columnConfig : columnConfigList) {
+            if (columnConfig.isForceSelect()) {
                 forceSelectCount++;
             }
-            if(CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
+            if (CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
                 candidateCount++;
             }
         }
@@ -628,7 +618,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         jars.add(JarManager.findContainingJar(JexlException.class));
 
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
-        if(StringUtils.isNotBlank(hdpVersion)) {
+        if (StringUtils.isNotBlank(hdpVersion)) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
             jars.add(HDPUtils.findContainingFile("hdfs-site.xml"));
             jars.add(HDPUtils.findContainingFile("core-site.xml"));
@@ -647,7 +637,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         boolean reuseCurrentModel = Environment.getBoolean("shifu.varsel.se.reuse", Boolean.FALSE);
         SourceType source = this.modelConfig.getDataSet().getSource();
 
-        if(!reuseCurrentModel) {
+        if (!reuseCurrentModel) {
             TrainModelProcessor trainModelProcessor = new TrainModelProcessor();
             trainModelProcessor.setForVarSelect(true);
             trainModelProcessor.setTrainLogFile(trainLogFile);
@@ -670,9 +660,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         ShifuFileUtils.deleteFile(varSelectMSEOutputPath, source);
 
         // 2.5 submit job
-        if(job.waitForCompletion(true)) {
+        if (job.waitForCompletion(true)) {
             // 2.6 post process 4 var select
-            if(super.modelConfig.getVarSelect().getFilterEnable()) {
+            if (super.modelConfig.getVarSelect().getFilterEnable()) {
                 postProcess4SEVarSelect(source, varSelectMSEOutputPath);
             } else {
                 log.info("Only print sensitivity analysis report.");
@@ -692,7 +682,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         job.setJarByClass(getClass());
         boolean isSEVarSelMulti = Boolean.TRUE.toString().equalsIgnoreCase(
                 Environment.getProperty(Constants.SHIFU_VARSEL_SE_MULTI, Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI));
-        if(isSEVarSelMulti) {
+        if (isSEVarSelMulti) {
             job.setMapperClass(MultithreadedMapper.class);
             MultithreadedMapper.setMapperClass(job, VarSelectMapper.class);
             int threads;
@@ -740,7 +730,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         String filePath = modelConfigPath + "," + columnConfigPath + "," + seModelPath;
 
         // add jars and files to hadoop mapper and reducer
-        new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars(), "-files", filePath });
+        new GenericOptionsParser(conf, new String[]{"-libjars", addRuntimeJars(), "-files", filePath});
 
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
@@ -765,18 +755,18 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         conf.set(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE, modelConfig.getVarSelectFilterBy());
 
         Float filterOutRatio = this.modelConfig.getVarSelect().getFilterOutRatio();
-        if(filterOutRatio == null) {
+        if (filterOutRatio == null) {
             log.warn("filterOutRatio in var select is not set. Using default value 0.05.");
             filterOutRatio = 0.05f;
         }
 
-        if(filterOutRatio.compareTo(Float.valueOf(1.0f)) >= 0) {
+        if (filterOutRatio.compareTo(Float.valueOf(1.0f)) >= 0) {
             throw new IllegalArgumentException("WrapperRatio should be in (0, 1).");
         }
         conf.setFloat(Constants.SHIFU_VARSELECT_FILTEROUT_RATIO, filterOutRatio);
         conf.setInt(Constants.SHIFU_VARSELECT_FILTER_NUM, this.modelConfig.getVarSelectFilterNum());
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
-        if(StringUtils.isNotBlank(hdpVersion)) {
+        if (StringUtils.isNotBlank(hdpVersion)) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
             conf.set("hdp.version", hdpVersion);
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
@@ -799,9 +789,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     private void postProcessFIVarSelect(Map<Integer, MutablePair<String, Double>> importances) throws IOException {
         int selectCnt = 0;
-        for(ColumnConfig config: super.columnConfigList) {
+        for (ColumnConfig config : super.columnConfigList) {
             // enable ForceSelect
-            if(config.isForceSelect()) {
+            if (config.isForceSelect()) {
                 config.setFinalSelect(true);
                 selectCnt++;
                 log.info("Variable {} is selected, since it is in ForceSelect list.", config.getColumnName());
@@ -815,26 +805,26 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         int candidateCount = candidateColumnIdList.size();
         // try to select another (targetCnt - selectCnt) variables, but we need to exclude those
         // force-selected variables
-        for(ColumnConfig columnConfig: this.columnConfigList) {
-            if(columnConfig.isFinalSelect()) {
+        for (ColumnConfig columnConfig : this.columnConfigList) {
+            if (columnConfig.isFinalSelect()) {
                 columnConfig.setFinalSelect(false);
             }
         }
 
         Set<NSColumn> userCandidateColumns = CommonUtils.loadCandidateColumns(modelConfig);
 
-        while(selectCnt < targetCnt && i < targetCnt) {
-            if(i >= candidateCount) {
+        while (selectCnt < targetCnt && i < targetCnt) {
+            if (i >= candidateCount) {
                 log.warn("Var select finish due to feature importance count {} is less than target var count {}",
                         candidateCount, targetCnt);
                 break;
             }
             Integer columnId = candidateColumnIdList.get(i++);
             ColumnConfig columnConfig = this.columnConfigList.get(columnId);
-            if(CollectionUtils.isNotEmpty(userCandidateColumns)
+            if (CollectionUtils.isNotEmpty(userCandidateColumns)
                     && !userCandidateColumns.contains(new NSColumn(columnConfig.getColumnName()))) {
                 log.info("Variable {} is not in user's candidate list. Skip it.", columnConfig.getColumnName());
-            } else if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
+            } else if (!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
                 columnConfig.setFinalSelect(true);
                 selectCnt++;
                 log.info("Variable {} is selected.", columnConfig.getColumnName());
@@ -845,18 +835,18 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     private void postProcess4SEVarSelect(SourceType source, String varSelectMSEOutputPath) throws IOException {
         String outputFilePattern = varSelectMSEOutputPath + Path.SEPARATOR + "part-r-*";
-        if(!ShifuFileUtils.isFileExists(outputFilePattern, source)) {
+        if (!ShifuFileUtils.isFileExists(outputFilePattern, source)) {
             throw new RuntimeException("Var select MSE stats output file not exist.");
         }
 
         int selectCnt = 0;
-        for(ColumnConfig config: super.columnConfigList) {
-            if(config.isFinalSelect()) {
+        for (ColumnConfig config : super.columnConfigList) {
+            if (config.isFinalSelect()) {
                 config.setFinalSelect(false);
             }
 
             // enable ForceSelect
-            if(config.isForceSelect()) {
+            if (config.isForceSelect()) {
                 config.setFinalSelect(true);
                 selectCnt++;
                 log.info("Variable {} is selected, since it is in ForceSelect list.", config.getColumnName());
@@ -870,7 +860,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             // here only works for 1 reducer
             FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source)
                     .globStatus(new Path(outputFilePattern));
-            if(globStatus == null || globStatus.length == 0) {
+            if (globStatus == null || globStatus.length == 0) {
                 throw new RuntimeException("Var select MSE stats output file not exist.");
             }
             scanners = ShifuFileUtils.getDataScanners(globStatus[0].getPath().toString(), source);
@@ -878,7 +868,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             int targetCnt = 0; // total variable count that user want to select
             List<Integer> candidateColumnIdList = new ArrayList<Integer>();
             Scanner scanner = scanners.get(0);
-            while(scanner.hasNext()) {
+            while (scanner.hasNext()) {
                 ++targetCnt;
                 str = scanner.nextLine().trim();
                 candidateColumnIdList.add(Integer.parseInt(str));
@@ -888,8 +878,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             int candidateCount = candidateColumnIdList.size();
             // try to select another (targetCnt - selectCnt) variables, but we need to exclude those
             // force-selected variables
-            while(selectCnt < targetCnt && i < targetCnt) {
-                if(i >= candidateCount) {
+            while (selectCnt < targetCnt && i < targetCnt) {
+                if (i >= candidateCount) {
                     log.warn("Var select finish due candidate column {} is less than target var count {}",
                             candidateCount, targetCnt);
                     break;
@@ -898,10 +888,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 // after supporting segments, the columns will expansion. the columnId may not the position
                 // in columnConfigList. It's safe to columnId to search (make sure columnNum == columnId)
                 ColumnConfig columnConfig = CommonUtils.getColumnConfig(this.columnConfigList, columnId);
-                if(CollectionUtils.isNotEmpty(userCandidateColumns)
+                if (CollectionUtils.isNotEmpty(userCandidateColumns)
                         && !userCandidateColumns.contains(new NSColumn(columnConfig.getColumnName()))) {
                     log.info("Variable {} is not in user's candidate list. Skip it.", columnConfig.getColumnName());
-                } else if(!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
+                } else if (!columnConfig.isForceSelect() && !columnConfig.isForceRemove()) {
                     columnConfig.setFinalSelect(true);
                     selectCnt++;
                     log.info("Variable {} is selected.", columnConfig.getColumnName());
@@ -915,9 +905,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             this.seStatsMap = readSEValuesToMap(
                     varSelectMSEOutputPath + Path.SEPARATOR + Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME + "-*", source);
         } finally {
-            if(scanners != null) {
-                for(Scanner scanner: scanners) {
-                    if(scanner != null) {
+            if (scanners != null) {
+                for (Scanner scanner : scanners) {
+                    if (scanner != null) {
                         scanner.close();
                     }
                 }
@@ -929,28 +919,28 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             throws IOException {
         // here only works for 1 reducer
         FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source).globStatus(new Path(seOutputFiles));
-        if(globStatus == null || globStatus.length == 0) {
+        if (globStatus == null || globStatus.length == 0) {
             throw new RuntimeException("Var select MSE stats output file not exist.");
         }
         Map<Integer, ColumnStatistics> map = new HashMap<Integer, ColumnStatistics>();
         List<Scanner> scanners = null;
         try {
             scanners = ShifuFileUtils.getDataScanners(globStatus[0].getPath().toString(), source);
-            for(Scanner scanner: scanners) {
+            for (Scanner scanner : scanners) {
                 String str = null;
-                while(scanner.hasNext()) {
+                while (scanner.hasNext()) {
                     str = scanner.nextLine().trim();
                     String[] splits = CommonUtils.split(str, "\t");
-                    if(splits.length == 5) {
+                    if (splits.length == 5) {
                         map.put(Integer.parseInt(splits[0].trim()), new ColumnStatistics(Double.parseDouble(splits[2]),
                                 Double.parseDouble(splits[3]), Double.parseDouble(splits[4])));
                     }
                 }
             }
         } finally {
-            if(scanners != null) {
-                for(Scanner scanner: scanners) {
-                    if(scanner != null) {
+            if (scanners != null) {
+                for (Scanner scanner : scanners) {
+                    if (scanner != null) {
                         scanner.close();
                     }
                 }
@@ -958,7 +948,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
         return map; // should be a bug, if it always return null
     }
-    
+
     @Override
     protected void clearUp(ModelStep step) throws IOException {
         try {
@@ -972,14 +962,14 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private void cleanShadowTargetsForSegments() throws IOException {
         String filterExpressions = super.modelConfig.getSegmentFilterExpressionsAsString();
         Environment.getProperties().put("shifu.segment.expressions", filterExpressions);
-        if(StringUtils.isNotBlank(filterExpressions)) {
+        if (StringUtils.isNotBlank(filterExpressions)) {
             log.info("There are segments. Set all target shadow columns to ForceRemove and final select false");
             String[] splits = CommonUtils.split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
-            for(int i = 0; i < super.columnConfigList.size(); i++) {
+            for (int i = 0; i < super.columnConfigList.size(); i++) {
                 ColumnConfig config = super.columnConfigList.get(i);
                 int rawSize = super.columnConfigList.size() / (1 + splits.length);
-                if(config.isTarget()) {
-                    for(int j = 0; j < splits.length; j++) {
+                if (config.isTarget()) {
+                    for (int j = 0; j < splits.length; j++) {
                         ColumnConfig otherConfig = super.columnConfigList.get((j + 1) * rawSize + i);
                         otherConfig.setColumnFlag(ColumnFlag.ForceRemove);
                         otherConfig.setFinalSelect(false);
@@ -991,11 +981,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     /**
-     *
      * @throws IOException
      */
     private void runAutoVarFilter() throws IOException {
-        if(this.modelConfig.getVarSelect().getPostCorrelationMetric().equals(PostCorrelationMetric.SE)
+        if (this.modelConfig.getVarSelect().getPostCorrelationMetric().equals(PostCorrelationMetric.SE)
                 && this.seStatsMap == null) {
             SourceType source = this.modelConfig.getDataSet().getSource();
             String varSelectMSEOutputPath = super.getPathFinder().getVarSelectMSEOutputPath(source);
@@ -1005,7 +994,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         List<VarSelDesc> varSelDescList = new ArrayList<VarSelDesc>();
         autoVarSelCondition(varSelDescList);
-        if(CollectionUtils.isNotEmpty(varSelDescList)) {
+        if (CollectionUtils.isNotEmpty(varSelDescList)) {
             String varselHistory = this.pathFinder.getVarSelHistory();
             ShifuFileUtils.writeLines(varSelDescList, varselHistory, SourceType.LOCAL);
         }
@@ -1013,15 +1002,14 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     /**
      * To do some auto variable selection like remove ID-like variables, remove variable with high missing rate.
-     * 
-     * @throws IOException
-     *             any IO exception
+     *
+     * @throws IOException any IO exception
      */
     private void autoVarSelCondition(List<VarSelDesc> varSelDescList) throws IOException {
         // here we do loop again as it is not bad for variables less than 100,000
         // 1. check missing rate
-        for(ColumnConfig config: columnConfigList) {
-            if(!config.isTarget() && !config.isMeta() && !config.isForceSelect() // column needs check
+        for (ColumnConfig config : columnConfigList) {
+            if (!config.isTarget() && !config.isMeta() && !config.isForceSelect() // column needs check
                     && config.isFinalSelect() && isHighMissingRateColumn(config)) {
                 log.warn("Column {} is with very high missing rate, set final select to false. "
                         + "If not, you can check it manually in ColumnConfig.json", config.getColumnName());
@@ -1031,11 +1019,11 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
 
         // 2. check KS and IV min threshold value
-        for(ColumnConfig config: columnConfigList) {
-            if(!config.isTarget() && !config.isMeta() && !config.isForceSelect() && config.isFinalSelect()) {
+        for (ColumnConfig config : columnConfigList) {
+            if (!config.isTarget() && !config.isMeta() && !config.isForceSelect() && config.isFinalSelect()) {
                 float minIvThreshold = (super.modelConfig.getVarSelect().getMinIvThreshold() == null ? 0f
                         : super.modelConfig.getVarSelect().getMinIvThreshold());
-                if(config.getIv() != null && config.getIv() < minIvThreshold) {
+                if (config.getIv() != null && config.getIv() < minIvThreshold) {
                     log.warn("IV of column {} is less than minimal IV threshold, set final select to false. "
                             + "If not, you can check it manually in ColumnConfig.json", config.getColumnName());
                     config.setFinalSelect(false);
@@ -1044,7 +1032,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
                 float minKsThreshold = (super.modelConfig.getVarSelect().getMinKsThreshold() == null ? 0f
                         : super.modelConfig.getVarSelect().getMinKsThreshold());
-                if(config.getKs() != null && config.getKs() < minKsThreshold) {
+                if (config.getKs() != null && config.getKs() < minKsThreshold) {
                     log.warn("KS of column {} is less than minimal KS threshold, set final select to false. "
                             + "If not, you can check it manually in ColumnConfig.json", config.getColumnName());
                     config.setFinalSelect(false);
@@ -1054,7 +1042,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
 
         // 3. check correlation value:
-        if(!ShifuFileUtils.isFileExists(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL)) {
+        if (!ShifuFileUtils.isFileExists(pathFinder.getLocalCorrelationCsvPath(), SourceType.LOCAL)) {
             return;
         }
         varSelectByCorrelation(varSelDescList);
@@ -1066,33 +1054,33 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         int lineNum = 0;
         try {
             String line = null;
-            while((line = reader.readLine()) != null) {
+            while ((line = reader.readLine()) != null) {
                 lineNum += 1;
-                if(lineNum <= 2) {
+                if (lineNum <= 2) {
                     // skip first 2 lines which are indexes and names
                     continue;
                 }
 
                 String[] columns = CommonUtils.split(line, ",");
-                if(columns != null && columns.length == columnConfigList.size() + 2) {
+                if (columns != null && columns.length == columnConfigList.size() + 2) {
                     int columnIndex = Integer.parseInt(columns[0].trim());
                     ColumnConfig config = this.columnConfigList.get(columnIndex);
 
                     // only check final-selected non-meta columns
-                    if(config.isFinalSelect() || config.isTarget()) {
+                    if (config.isFinalSelect() || config.isTarget()) {
                         double[] corrArray = getCorrArray(columns);
-                        for(int i = 0; i < corrArray.length; i++) {
+                        for (int i = 0; i < corrArray.length; i++) {
                             // only check column larger than current column index and already final selected
-                            if(config.getColumnNum() < i && (columnConfigList.get(i).isTarget()
+                            if (config.getColumnNum() < i && (columnConfigList.get(i).isTarget()
                                     || columnConfigList.get(i).isFinalSelect())) {
                                 // * 1.000005d is to avoid some value like 1.0000000002 in correlation value
-                                if(Math.abs(corrArray[i]) > (modelConfig.getVarSelect().getCorrelationThreshold()
+                                if (Math.abs(corrArray[i]) > (modelConfig.getVarSelect().getCorrelationThreshold()
                                         * 1.000005d)) {
-                                    if(config.isForceSelect() && columnConfigList.get(i).isForceSelect()) {
+                                    if (config.isForceSelect() && columnConfigList.get(i).isForceSelect()) {
                                         log.warn(
                                                 "{} and {} has high correlated value but both not to be removed because both are force-selected",
                                                 columnIndex, i);
-                                    } else if(config.isForceSelect() && !columnConfigList.get(i).isForceSelect()) {
+                                    } else if (config.isForceSelect() && !columnConfigList.get(i).isForceSelect()) {
                                         log.warn(
                                                 "Absolute correlation value {} in column pair ({}, {}) ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} name {} is not force-selected will not be selected, set finalSelect to false.",
                                                 config.getColumnName(), columnConfigList.get(i).getColumnName(),
@@ -1102,7 +1090,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                                         columnConfigList.get(i).setFinalSelect(false);
                                         varSelDescList.add(
                                                 new VarSelDesc(columnConfigList.get(i), VarSelReason.HIGH_CORRELATED));
-                                    } else if(!config.isForceSelect() && columnConfigList.get(i).isForceSelect()) {
+                                    } else if (!config.isForceSelect() && columnConfigList.get(i).isForceSelect()) {
                                         log.warn(
                                                 "Absolute correlation value {} in column pair ({}, {}) ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} name {} is not force-selected will not be selected, set finalSelect to false.",
                                                 config.getColumnName(), columnConfigList.get(i).getColumnName(),
@@ -1110,12 +1098,12 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                                                 config.getColumnNum(), config.getColumnName());
                                         config.setFinalSelect(false);
                                         varSelDescList.add(new VarSelDesc(config, VarSelReason.HIGH_CORRELATED));
-                                    } else if(config.isTarget() && columnConfigList.get(i).isFinalSelect()) {
+                                    } else if (config.isTarget() && columnConfigList.get(i).isFinalSelect()) {
                                         log.warn(
                                                 "{} and {} has high correlated value while {} is target, {} is set to NOT final-selected no matter it is force-selected or not.",
                                                 columnIndex, i, i);
                                         columnConfigList.get(i).setFinalSelect(false);
-                                    } else if(config.isFinalSelect() && columnConfigList.get(i).isTarget()) {
+                                    } else if (config.isFinalSelect() && columnConfigList.get(i).isTarget()) {
                                         log.warn(
                                                 "{} and {} has high correlated value while {} is target, {} is set to NOT final-selected no matter it is force-selected or not.",
                                                 columnIndex, i, columnIndex);
@@ -1126,7 +1114,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                                         ColumnConfig dropConfig = null;
                                         PostCorrelationMetric corrMetric = modelConfig.getVarSelect()
                                                 .getPostCorrelationMetric();
-                                        if(checkCorrelationMetric(config, columnConfigList.get(i), corrMetric)) {
+                                        if (checkCorrelationMetric(config, columnConfigList.get(i), corrMetric)) {
                                             dropConfig = columnConfigList.get(i);
                                         } else {
                                             dropConfig = config;
@@ -1134,13 +1122,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
                                         // if SE filterBy and SE postcorrelationMetric, seStatsMap has stats, do
                                         // correlation comparison by SE RMS value
-                                        if((this.modelConfig.getVarSelectFilterBy()
+                                        if ((this.modelConfig.getVarSelectFilterBy()
                                                 .equalsIgnoreCase(Constants.FILTER_BY_SE)
                                                 || this.modelConfig.getVarSelectFilterBy()
-                                                        .equalsIgnoreCase(Constants.FILTER_BY_ST))
+                                                .equalsIgnoreCase(Constants.FILTER_BY_ST))
                                                 && corrMetric == PostCorrelationMetric.SE && this.seStatsMap != null
                                                 && this.seStatsMap.get(config.getColumnNum()) != null && this.seStatsMap
-                                                        .get(columnConfigList.get(i).getColumnNum()) != null) {
+                                                .get(columnConfigList.get(i).getColumnNum()) != null) {
                                             log.warn(
                                                     "Absolute correlation value {} in column pair ({}, {}) ({}, {}) are larger than correlationThreshold value {} set in VarSelect#correlationThreshold, column {} name {} with smaller SE RMS value will not be selected, set finalSelect to false.",
                                                     Math.abs(corrArray[i]), config.getColumnNum(), i,
@@ -1171,14 +1159,14 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     private boolean checkCorrelationMetric(ColumnConfig config1, ColumnConfig config2, PostCorrelationMetric metric) {
-        if(metric == null) {
+        if (metric == null) {
             return config1.getIv() > config2.getIv();
         }
-        switch(metric) {
+        switch (metric) {
             case KS:
                 return config1.getKs() > config2.getKs();
             case SE:
-                if((this.modelConfig.getVarSelectFilterBy().equalsIgnoreCase(Constants.FILTER_BY_SE)
+                if ((this.modelConfig.getVarSelectFilterBy().equalsIgnoreCase(Constants.FILTER_BY_SE)
                         || this.modelConfig.getVarSelectFilterBy().equalsIgnoreCase(Constants.FILTER_BY_ST))
                         && this.seStatsMap != null && this.seStatsMap.get(config1.getColumnNum()) != null
                         && this.seStatsMap.get(config2.getColumnNum()) != null) {
@@ -1197,7 +1185,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     private double[] getCorrArray(String[] columns) {
         double[] corr = new double[columns.length - 2];
-        for(int i = 2; i < corr.length; i++) {
+        for (int i = 2; i < corr.length; i++) {
             corr[i - 2] = Double.parseDouble(columns[i].trim());
         }
         return corr;
@@ -1218,7 +1206,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private boolean isIDLikeVariable(ColumnConfig config) {
         Long distinctCount = config.getColumnStats().getDistinctCount();
         Long totalCount = config.getColumnStats().getTotalCount();
-        if(totalCount != null && distinctCount != null && totalCount >= 10000
+        if (totalCount != null && distinctCount != null && totalCount >= 10000
                 && distinctCount * 1.0 / totalCount >= 0.97d) {
             return true;
         }

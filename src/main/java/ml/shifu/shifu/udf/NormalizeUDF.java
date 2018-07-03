@@ -15,14 +15,18 @@
  */
 package ml.shifu.shifu.udf;
 
-import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
+import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.container.WeightAmplifier;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
+import ml.shifu.shifu.core.DataPurifier;
+import ml.shifu.shifu.core.DataSampler;
+import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.exception.ShifuErrorCode;
+import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.jexl2.Expression;
 import org.apache.commons.jexl2.JexlContext;
@@ -37,16 +41,9 @@ import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.impl.util.Utils;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
 
-import ml.shifu.shifu.column.NSColumn;
-import ml.shifu.shifu.container.WeightAmplifier;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
-import ml.shifu.shifu.core.DataPurifier;
-import ml.shifu.shifu.core.DataSampler;
-import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.*;
 
 /**
  * NormalizeUDF class normalize the training data for parquet format.
@@ -54,6 +51,7 @@ import ml.shifu.shifu.util.Environment;
 public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
     private static final String POSRATE = "posrate";
+    private static final int MAX_MISMATCH_CNT = 500;
 
     private List<Set<String>> tags;
 
@@ -68,6 +66,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
     private boolean isForExpressions = false;
     private boolean isCompactNorm = false;
+
+    private int mismatchCnt = 0;
 
     public static enum CategoryMissingNormType {
         MEAN, POSRATE;
@@ -296,6 +296,18 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         if(!this.isForExpressions) {
+            if ( input.size() != this.columnConfigList.size() ) {
+                this.mismatchCnt++;
+                log.error("the input size - " + input.size() + ", while column size - " + columnConfigList.size());
+                this.mismatchCnt++;
+                // Throw exceptions if the mismatch count is greater than MAX_MISMATCH_CNT,
+                // this could make Shifu could skip some malformed data
+                if(this.mismatchCnt > MAX_MISMATCH_CNT) {
+                    throw new ShifuException(ShifuErrorCode.ERROR_NO_EQUAL_COLCONFIG);
+                }
+                return null;
+            }
+
             for(int i = 0; i < input.size(); i++) {
                 ColumnConfig config = columnConfigList.get(i);
                 String val = (input.get(i) == null) ? "" : input.get(i).toString().trim();

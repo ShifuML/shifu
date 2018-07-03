@@ -97,12 +97,12 @@ public class ModelInspector {
         }
 
         if(modelConfig.isClassification()) {
-            if(modelConfig.getBasic().getRunMode() == RunMode.LOCAL
+            /*if(modelConfig.getBasic().getRunMode() == RunMode.LOCAL
                     || modelConfig.getDataSet().getSource() == SourceType.LOCAL) {
                 ValidateResult tmpResult = new ValidateResult(true);
                 tmpResult.addCause("Multiple classification is only effective in MAPRED runmode and HDFS source type.");
                 result = ValidateResult.mergeResult(result, tmpResult);
-            }
+            }*/
         }
 
         if(modelConfig.getDataSet().getSource() == SourceType.LOCAL && modelConfig.isMapReduceRunMode()) {

@@ -204,7 +204,7 @@ export LD_LIBRARY_PATH
 # ---------------- Detection End -------------------------------------------------
 
 # Signal Catchup
-trap "nohup ${SHIFU_HOME}/bin/cleanup.sh >& /dev/null &" SIGHUP SIGINT SIGQUIT SIGABRT SIGKILL SIGALRM SIGTERM
+trap "nohup ${SHIFU_HOME}/bin/cleanup.sh >& /dev/null &" SIGINT SIGQUIT SIGABRT SIGKILL SIGTERM
 
 CLASS=ml.shifu.shifu.ShifuCLI
 

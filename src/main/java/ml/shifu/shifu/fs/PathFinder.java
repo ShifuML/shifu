@@ -1072,4 +1072,12 @@ public class PathFinder {
                 new Path(Constants.VAR_SELECT, Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME + "." + index),
                 SourceType.LOCAL);
     }
+
+    /**
+     * Get the columnconfig.psi path
+     * @return - columnconfig.psi path for storing unit stats
+     */
+    public String getColumnConfigUnitStatsPath() {
+        return getPathBySourceType(new Path(Constants.TMP, Constants.CC_UNIT_STATS_PATH), SourceType.LOCAL);
+    }
 }
