@@ -196,10 +196,6 @@ public class Weight {
             return weights;
         } else {
             for(int i = 0; i < gradients.length; i++) {
-                if(this.dropoutRate > 0 && this.random.nextDouble() < this.dropoutRate) {
-                    // drop out, no need to update weight, just continue next weight
-                    continue;
-                }
                 switch(this.rl) {
                     case NONE:
                         weights[i] += updateWeight(i, weights, gradients);

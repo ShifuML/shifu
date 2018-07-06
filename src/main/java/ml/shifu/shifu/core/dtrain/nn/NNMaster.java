@@ -508,9 +508,6 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
 			}
 		}
 
-		LOG.info("layerIndex:{}; layerCounts:{}; dropoutNodes:{}", Arrays.toString(this.flatNetwork.getLayerIndex()),
-				Arrays.toString(this.flatNetwork.getLayerCounts()),
-				Arrays.toString(droppedNodeIndices.toArray(new Integer[droppedNodeIndices.size()])));
 		return droppedNodeIndices;
 	}
 }
