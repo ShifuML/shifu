@@ -39,7 +39,7 @@ SET mapreduce.map.sort.spill.percent 0.95
 SET mapreduce.job.reduce.slowstart.completedmaps 0.9
 
 DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
-DEFINE AddColumnNum     ml.shifu.shifu.udf.AddColumnNumAndFilterUDF('$source_type', '$path_model_config', '$path_column_config', 'false');
+DEFINE AddColumnNum     ml.shifu.shifu.udf.AddColumnNumAndFilterUDF('$source_type', '$path_model_config', '$path_column_config', 'true');
 
 DEFINE GenSmallBinningInfo	ml.shifu.shifu.udf.GenSmallBinningInfoUDF('$source_type', '$path_model_config', '$path_column_config', '$histo_scale_factor');
 DEFINE DynamicBinning 		ml.shifu.shifu.udf.DynamicBinningUDF('$source_type', '$path_model_config', '$path_column_config', '$path_stats_small_bins');

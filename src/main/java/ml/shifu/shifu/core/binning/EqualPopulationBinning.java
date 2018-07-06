@@ -111,7 +111,7 @@ public class EqualPopulationBinning extends AbstractBinning<Double> {
      *            the missingValList
      */
     public EqualPopulationBinning(int binningNum, List<String> missingValList) {
-        super(binningNum);
+        super(binningNum, missingValList);
         this.maxHistogramUnitCnt = super.expectedBinningNum * HIST_SCALE;
         this.maxHistogramUnitCnt = (this.maxHistogramUnitCnt > 10000) ? 10000 : this.maxHistogramUnitCnt;
         this.currentHistogramUnitCnt = 0;

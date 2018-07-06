@@ -400,7 +400,7 @@ public class SubGradient implements Callable<double[]> {
                 }
             }
             ((FloatFlatNetwork) this.getNetwork()).compute(pair.getInputArray(), actual);
-            // copy float idea array to double for api compatiability
+            // copy float idea array to double for api compatibility
             if(doubleIdeal == null) {
                 doubleIdeal = new double[pair.getIdealArray().length];
             }

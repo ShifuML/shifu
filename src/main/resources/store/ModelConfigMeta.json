@@ -324,7 +324,7 @@
                 "type": "text",
                 "directive": "select",
                 "options": [
-                    {"label": "SE", "value":"KS"},
+                    {"label": "KS", "value":"KS"},
                     {"label": "IV", "value":"IV"},
                     {"label": "Sensitivity Analysis", "value":"SE"}
                 ]

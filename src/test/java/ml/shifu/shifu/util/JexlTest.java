@@ -246,5 +246,8 @@ public class JexlTest {
 
         Assert.assertEquals("NaN", a.toString());
         Assert.assertFalse(df.format(a).equals("NaN"));
+
+        System.out.println(Base64Utils.base64Encode("|"));
+        System.out.println(Base64Utils.base64Encode("\u0007"));
     }
 }

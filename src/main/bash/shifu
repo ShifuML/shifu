@@ -103,7 +103,7 @@ function find_ld_library_path() {
 }
 
 function record_shifu_usage() {
-    if [ ${HADOOP_ROOT} != "" ]; then
+    if [ "${HADOOP_ROOT}" != "" ]; then
         nohup ${SHIFU_HOME}/bin/shifu_statistics.sh "$@" >& /dev/null &
     fi
 }
@@ -202,6 +202,9 @@ fi
 
 export LD_LIBRARY_PATH
 # ---------------- Detection End -------------------------------------------------
+
+# Signal Catchup
+trap "nohup ${SHIFU_HOME}/bin/cleanup.sh >& /dev/null &" SIGINT SIGQUIT SIGABRT SIGKILL SIGTERM
 
 CLASS=ml.shifu.shifu.ShifuCLI
 

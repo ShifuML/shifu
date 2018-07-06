@@ -15,14 +15,18 @@
  */
 package ml.shifu.shifu.udf;
 
-import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
+import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.container.WeightAmplifier;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
+import ml.shifu.shifu.core.DataPurifier;
+import ml.shifu.shifu.core.DataSampler;
+import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.exception.ShifuErrorCode;
+import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.jexl2.Expression;
 import org.apache.commons.jexl2.JexlContext;
@@ -37,16 +41,9 @@ import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.impl.util.Utils;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
 
-import ml.shifu.shifu.column.NSColumn;
-import ml.shifu.shifu.container.WeightAmplifier;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
-import ml.shifu.shifu.core.DataPurifier;
-import ml.shifu.shifu.core.DataSampler;
-import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.*;
 
 /**
  * NormalizeUDF class normalize the training data for parquet format.
@@ -54,6 +51,7 @@ import ml.shifu.shifu.util.Environment;
 public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
     private static final String POSRATE = "posrate";
+    private static final int MAX_MISMATCH_CNT = 500;
 
     private List<Set<String>> tags;
 
@@ -61,12 +59,15 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private NormType normType;
     private Expression weightExpr;
     private JexlContext weightContext;
-    private DecimalFormat df = new DecimalFormat("#.######");
+    public static DecimalFormat DECIMAL_FORMAT = new DecimalFormat("#.######");
+    private PrecisionType precisionType;
 
     private List<DataPurifier> dataPurifiers;
 
     private boolean isForExpressions = false;
     private boolean isCompactNorm = false;
+
+    private int mismatchCnt = 0;
 
     public static enum CategoryMissingNormType {
         MEAN, POSRATE;
@@ -78,6 +79,19 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 }
             }
             return POSRATE;
+        }
+    }
+
+    public static enum PrecisionType {
+        FLOAT7, FLOAT16, FLOAT32, DOUBLE64;
+
+        public static PrecisionType of(String precisionType) {
+            for(PrecisionType pt: PrecisionType.values()) {
+                if(pt.toString().equalsIgnoreCase(precisionType)) {
+                    return pt;
+                }
+            }
+            return FLOAT32;
         }
     }
 
@@ -113,21 +127,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         this(source, pathModelConfig, pathColumnConfig, "false");
-        setCategoryMissingNormType();
-    }
-
-    private void setCategoryMissingNormType() {
-        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
-            this.categoryMissingNormType = CategoryMissingNormType.of(
-                    UDFContext.getUDFContext().getJobConf().get(Constants.SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
-        } else {
-            this.categoryMissingNormType = CategoryMissingNormType
-                    .of(Environment.getProperty(Constants.SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
-        }
-        if(this.categoryMissingNormType == null) {
-            this.categoryMissingNormType = CategoryMissingNormType.POSRATE;
-        }
-        log.info("'categoryMissingNormType' is set to: " + this.categoryMissingNormType);
     }
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig, String isForClean)
@@ -220,6 +219,36 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         this.isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
+
+        setPrecisionType();
+    }
+
+    private void setPrecisionType() {
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            this.precisionType = PrecisionType.of(UDFContext.getUDFContext().getJobConf()
+                    .get(Constants.SHIFU_NORM_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
+        } else {
+            this.precisionType = PrecisionType
+                    .of(Environment.getProperty(Constants.SHIFU_NORM_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
+        }
+        if(this.precisionType == null) {
+            this.precisionType = PrecisionType.FLOAT32;
+        }
+        log.info("Precision type is set to: " + this.precisionType);
+    }
+
+    private void setCategoryMissingNormType() {
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            this.categoryMissingNormType = CategoryMissingNormType.of(
+                    UDFContext.getUDFContext().getJobConf().get(Constants.SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
+        } else {
+            this.categoryMissingNormType = CategoryMissingNormType
+                    .of(Environment.getProperty(Constants.SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
+        }
+        if(this.categoryMissingNormType == null) {
+            this.categoryMissingNormType = CategoryMissingNormType.POSRATE;
+        }
+        log.info("'categoryMissingNormType' is set to: " + this.categoryMissingNormType);
     }
 
     @SuppressWarnings("deprecation")
@@ -267,6 +296,18 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         if(!this.isForExpressions) {
+            if ( input.size() != this.columnConfigList.size() ) {
+                this.mismatchCnt++;
+                log.error("the input size - " + input.size() + ", while column size - " + columnConfigList.size());
+                this.mismatchCnt++;
+                // Throw exceptions if the mismatch count is greater than MAX_MISMATCH_CNT,
+                // this could make Shifu could skip some malformed data
+                if(this.mismatchCnt > MAX_MISMATCH_CNT) {
+                    throw new ShifuException(ShifuErrorCode.ERROR_NO_EQUAL_COLCONFIG);
+                }
+                return null;
+            }
+
             for(int i = 0; i < input.size(); i++) {
                 ColumnConfig config = columnConfigList.get(i);
                 String val = (input.get(i) == null) ? "" : input.get(i).toString().trim();
@@ -346,7 +387,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                             log.debug("Not decimal format " + val + ", using default!");
                             normVal = Normalizer.defaultMissingValue(config);
                         }
-                        tuple.append(df.format(normVal));
+
+                        appendOutputValue(tuple, normVal, true);
                     }
                 } else {
                     if(this.isCompactNorm) {
@@ -357,7 +399,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                             List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
                                     this.categoryMissingNormType);
                             for(Double normVal: normVals) {
-                                String formatVal = df.format(normVal);
+                                String formatVal = getOutputValue(normVal, true);
                                 compactVarMap.put(normColumnName(config.getColumnName()), formatVal);
                             }
                         } else if(config.isMeta()) {
@@ -370,13 +412,15 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     } else {
                         // append normalize data. exclude data clean, for data cleaning, no need check good or bad
                         // candidate
-                        if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
+                        // By zhanhu: fix bug - if the ForceSelect variables exists in candidates list,
+                        //      it will cause variable fail to normalize
+                        if(CommonUtils.isToNormVariable(config, super.hasCandidates, modelConfig.isRegression())) {
                             // for multiple classification, binPosRate means rate of such category over all counts,
                             // reuse binPosRate for normalize
                             List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
                                     this.categoryMissingNormType);
                             for(Double normVal: normVals) {
-                                tuple.append(df.format(normVal));
+                                appendOutputValue(tuple, normVal, true);
                             }
                         } else {
                             tuple.append(config.isMeta() ? val : null);
@@ -443,7 +487,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
                                 this.categoryMissingNormType);
                         for(Double normVal: normVals) {
-                            String formatVal = df.format(normVal);
+                            String formatVal = getOutputValue(normVal, true);
                             compactVarMap.put(normColumnName(config.getColumnName()), formatVal);
                         }
                     } else if(config.isMeta()) {
@@ -455,11 +499,11 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     }
                 } else {
                     // for others
-                    if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
+                    if(CommonUtils.isToNormVariable(config, super.hasCandidates, modelConfig.isRegression())) {
                         List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
                                 this.categoryMissingNormType);
                         for(Double normVal: normVals) {
-                            tuple.append(df.format(normVal));
+                            appendOutputValue(tuple, normVal, true);
                         }
                     } else {
                         tuple.append(config.isMeta() ? val : null);
@@ -481,6 +525,103 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         tuple.append(weight);
 
         return tuple;
+    }
+
+    /**
+     * FLOAT7 is old with DecimalFormat, new one with FLOAT16, FLOAT32, DOUBLE64
+     */
+    private String getOutputValue(double value, boolean enablePrecision) {
+        if(enablePrecision) {
+            switch(this.getPrecisionType()) {
+                case FLOAT7:
+                    return DECIMAL_FORMAT.format(value);
+                case FLOAT16:
+                    return "" + toFloat(fromFloat((float) value));
+                case DOUBLE64:
+                    return value + "";
+                case FLOAT32:
+                default:
+                    return ((float) value) + "";
+            }
+        } else {
+            return ((float) value) + "";
+        }
+    }
+
+    /**
+     * FLOAT7 is old with DecimalFormat, new one with FLOAT16, FLOAT32, DOUBLE64
+     */
+    private void appendOutputValue(Tuple tuple, double value, boolean enablePrecision) {
+        if(enablePrecision) {
+            switch(this.getPrecisionType()) {
+                case FLOAT7:
+                    tuple.append(DECIMAL_FORMAT.format(value));
+                    break;
+                case FLOAT16:
+                    tuple.append(toFloat(fromFloat((float) value)));
+                    break;
+                case DOUBLE64:
+                    tuple.append(value);
+                    break;
+                case FLOAT32:
+                default:
+                    tuple.append((float) value);
+                    break;
+            }
+        } else {
+            tuple.append((float) value);
+        }
+    }
+
+    // returns all higher 16 bits as 0 for all results
+    public static int fromFloat(float fval) {
+        int fbits = Float.floatToIntBits(fval);
+        int sign = fbits >>> 16 & 0x8000; // sign only
+        int val = (fbits & 0x7fffffff) + 0x1000; // rounded value
+
+        if(val >= 0x47800000) // might be or become NaN/Inf
+        { // avoid Inf due to rounding
+            if((fbits & 0x7fffffff) >= 0x47800000) { // is or must become NaN/Inf
+                if(val < 0x7f800000) // was value but too large
+                    return sign | 0x7c00; // make it +/-Inf
+                return sign | 0x7c00 | // remains +/-Inf or NaN
+                        (fbits & 0x007fffff) >>> 13; // keep NaN (and Inf) bits
+            }
+            return sign | 0x7bff; // unrounded not quite Inf
+        }
+        if(val >= 0x38800000) // remains normalized value
+            return sign | val - 0x38000000 >>> 13; // exp - 127 + 15
+        if(val < 0x33000000) // too small for subnormal
+            return sign; // becomes +/-0
+        val = (fbits & 0x7fffffff) >>> 23; // tmp exp for subnormal calc
+        return sign | ((fbits & 0x7fffff | 0x800000) // add subnormal bit
+                + (0x800000 >>> val - 102) // round depending on cut off
+        >>> 126 - val); // div by 2^(1-(exp-127+15)) and >> 13 | exp=0
+    }
+
+    // ignores the higher 16 bits
+    public static float toFloat(int hbits) {
+        int mant = hbits & 0x03ff; // 10 bits mantissa
+        int exp = hbits & 0x7c00; // 5 bits exponent
+        if(exp == 0x7c00) // NaN/Inf
+            exp = 0x3fc00; // -> NaN/Inf
+        else if(exp != 0) // normalized value
+        {
+            exp += 0x1c000; // exp - 15 + 127
+            if(mant == 0 && exp > 0x1c400) // smooth transition
+                return Float.intBitsToFloat((hbits & 0x8000) << 16 | exp << 13 | 0x3ff);
+        } else if(mant != 0) // && exp==0 -> subnormal
+        {
+            exp = 0x1c400; // make it normal
+            do {
+                mant <<= 1; // mantissa * 2
+                exp -= 0x400; // decrease exp by 1
+            } while((mant & 0x400) == 0); // while not normal
+            mant &= 0x3ff; // discard subnormal bit
+        } // else +/-0 -> +/-0
+        return Float.intBitsToFloat( // combine all parts
+                (hbits & 0x8000) << 16 // sign << ( 31 - 15 )
+                        | (exp | mant) << 13); // value << ( 23 - 10 )
     }
 
     /**
@@ -539,7 +680,16 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         tupleSchema.add(new Schema.FieldSchema(normName, DataType.CHARARRAY));
                     } else {
                         // feature column
-                        tupleSchema.add(new Schema.FieldSchema(normName, DataType.FLOAT));
+                        switch(this.getPrecisionType()) {
+                            case DOUBLE64:
+                                tupleSchema.add(new Schema.FieldSchema(normName, DataType.DOUBLE));
+                            case FLOAT7:
+                            case FLOAT16:
+                            case FLOAT32:
+                            default:
+                                // all these types are actually float in Java/Pig
+                                tupleSchema.add(new Schema.FieldSchema(normName, DataType.FLOAT));
+                        }
                     }
                 }
             } else {
@@ -549,14 +699,24 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     } else if(config.isTarget()) {
                         schemaStr.append(normColumnName(config.getColumnName()) + ":double" + ",");
                     } else if(config.isNumerical()) {
-                        if ( modelConfig.getNormalizeType().equals(NormType.ONEHOT) ) {
-                            for(int i = 0; i < config.getBinBoundary().size(); i++) {
+                        if(CommonUtils.isToNormVariable(config, super.hasCandidates, modelConfig.isRegression())) {
+                            if(modelConfig.getNormalizeType().equals(NormType.ONEHOT)) {
+                                // one hot logic
+                                for(int i = 0; i < config.getBinBoundary().size(); i++) {
+                                    schemaStr.append(normColumnName(config.getColumnName()) + "_" + i + ":"
+                                            + getOutputPrecisionType() + ",");
+                                }
+                                schemaStr.append(normColumnName(config.getColumnName()) + "_missing" + ":"
+                                        + getOutputPrecisionType() + ",");
+                            } else {
+                                // non one hot
                                 schemaStr.append(
-                                        normColumnName(config.getColumnName()) + "_" + i + ":float" + ",");
+                                        normColumnName(config.getColumnName()) + ":" + getOutputPrecisionType() + ",");
                             }
-                            schemaStr.append(normColumnName(config.getColumnName()) + "_missing" + ":float" + ",");
                         } else {
-                            schemaStr.append(normColumnName(config.getColumnName()) + ":float" + ",");
+                            // other not good candidate
+                            schemaStr.append(
+                                    normColumnName(config.getColumnName()) + ":" + getOutputPrecisionType() + ",");
                         }
                     } else {
                         if(config.isCategorical() && this.isForClean) {
@@ -565,17 +725,25 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                             schemaStr.append(normColumnName(config.getColumnName()) + ":chararray" + ",");
                         } else {
                             // for others, set to float, no matter LR/NN categorical or filter out feature with null
-                            if ( modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT)
-                                    || modelConfig.getNormalizeType().equals(NormType.ONEHOT) ) {
-                                if(CommonUtils.isGoodCandidate(config, super.hasCandidates, modelConfig.isRegression())) {
+                            if(CommonUtils.isToNormVariable(config, super.hasCandidates, modelConfig.isRegression())) {
+                                if(modelConfig.getNormalizeType().equals(NormType.ZSCALE_ONEHOT)
+                                        || modelConfig.getNormalizeType().equals(NormType.ONEHOT)) {
+                                    // one hot logic
                                     for(int i = 0; i < config.getBinCategory().size(); i++) {
-                                        schemaStr.append(
-                                                normColumnName(config.getColumnName()) + "_" + i + ":float" + ",");
+                                        schemaStr.append(normColumnName(config.getColumnName()) + "_" + i + ":"
+                                                + getOutputPrecisionType() + ",");
                                     }
+                                    schemaStr.append(normColumnName(config.getColumnName()) + "_missing" + ":"
+                                            + getOutputPrecisionType() + ",");
+                                } else {
+                                    // non one hot
+                                    schemaStr.append(normColumnName(config.getColumnName()) + ":"
+                                            + getOutputPrecisionType() + ",");
                                 }
-                                schemaStr.append(normColumnName(config.getColumnName()) + "_missing" + ":float" + ",");
                             } else {
-                                schemaStr.append(normColumnName(config.getColumnName()) + ":float" + ",");
+                                // other not good candidate
+                                schemaStr.append(
+                                        normColumnName(config.getColumnName()) + ":" + getOutputPrecisionType() + ",");
                             }
                         }
                     }
@@ -583,12 +751,22 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             }
 
             if(this.isCompactNorm) {
-                tupleSchema.add(new Schema.FieldSchema("weight", DataType.FLOAT));
-                // TODO, Even set nul schema alias, final pig_header output still has null::weight or ::weight, we would
-                // like to have weight only.
-                return new Schema(new Schema.FieldSchema("Normalized", tupleSchema, DataType.TUPLE));
+                switch(this.getPrecisionType()) {
+                    case DOUBLE64:
+                        tupleSchema.add(new Schema.FieldSchema("weight", DataType.DOUBLE));
+                    case FLOAT7:
+                    case FLOAT16:
+                    case FLOAT32:
+                    default:
+                        // all these types are actually float in Java/Pig
+                        tupleSchema.add(new Schema.FieldSchema("weight", DataType.FLOAT));
+                }
+                // TODO, Even set null schema alias, final pig_header output still has null::weight or ::weight, we
+                // would like to have weight only.
+                Schema schema = new Schema(new Schema.FieldSchema("Normalized", tupleSchema, DataType.TUPLE));
+                return schema;
             } else {
-                schemaStr.append("weight:float)");
+                schemaStr.append("weight:").append(getOutputPrecisionType()).append(")");
                 return Utils.getSchemaFromString(schemaStr.toString());
             }
         } catch (Exception e) {
@@ -641,5 +819,26 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             return jexl.createExpression(weightAmplifier);
         }
         return null;
+    }
+
+    private String getOutputPrecisionType() {
+        switch(this.getPrecisionType()) {
+            case DOUBLE64:
+                return "double";
+            case FLOAT7:
+            case FLOAT16:
+            case FLOAT32:
+                // all these types are actually
+            default:
+                return "float";
+        }
+    }
+
+    public PrecisionType getPrecisionType() {
+        return precisionType;
+    }
+
+    public void setPrecisionType(PrecisionType precisionType) {
+        this.precisionType = precisionType;
     }
 }

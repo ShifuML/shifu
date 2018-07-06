@@ -142,6 +142,7 @@ public interface Constants {
 
     public static final String VAR_SEL_HISTORY = "varsel.history";
     public static final String CORR_EXPORT_PATH = "vars_corr.csv";
+    public static final String CC_UNIT_STATS_PATH = "columnconfig.unitstats";
     public static final String TRAIN_SCORES = "TrainScores";
     public static final String BIN_AVG_SCORE = "BinAvgScore";
     public static final String CORRELATION_PATH = "CorrelationPath";
@@ -333,4 +334,7 @@ public interface Constants {
     public static final String SHIFU_NORM_ONLY_SELECTED = "shifu.norm.only.selected";
 
     public static final String SHIFU_OUTPUT_DATA_DELIMITER = "shifu.output.data.delimiter";
+    
+    public static final String SHIFU_NORM_PRECISION_TYPE = "shifu.norm.precision.type";
+
 }
