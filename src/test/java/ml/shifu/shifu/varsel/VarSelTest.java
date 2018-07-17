@@ -16,36 +16,11 @@
 package ml.shifu.shifu.varsel;
 
 import java.io.IOException;
-import java.util.List;
-
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.VariableSelector;
-import ml.shifu.shifu.core.VariableSelector.Tuple;
-import ml.shifu.shifu.util.CommonUtils;
-
-import org.testng.annotations.Test;
 
 public class VarSelTest {
 
-    @Test
+    // @Test
     public void testParento() throws IOException {
-        ModelConfig modelConfig = CommonUtils.loadModelConfig(
-                getClass().getResource("/camdttest/config/ModelConfig.json").toString(), SourceType.LOCAL);
-        List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList(
-                getClass().getResource("/camdttest/config/ColumnConfig.json").toString(), SourceType.LOCAL);
-        VariableSelector vs = new VariableSelector(modelConfig, columnConfigList);
-        // for(ColumnConfig columnConfig: columnConfigList) {
-        // Double ks = columnConfig.getKs();
-        // Double iv = columnConfig.getIv();
-        // System.out.println(columnConfig.getColumnNum() + "\t" + (ks == null ? 0d : ks) + "\t"
-        // + (iv == null ? 0d : iv));
-        // }
-        List<Tuple> sortByParetoCC = vs.sortByParetoCC(columnConfigList);
-        for(Tuple tuple: sortByParetoCC) {
-            System.out.println(tuple.columnNum);
-        }
     }
 
 }

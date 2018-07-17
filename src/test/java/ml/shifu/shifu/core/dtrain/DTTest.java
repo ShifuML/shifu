@@ -44,12 +44,12 @@ public class DTTest {
         props.setProperty(GuaguaConstants.GUAGUA_MASTER_RESULT_CLASS, DTMasterParams.class.getName());
         props.setProperty(GuaguaConstants.GUAGUA_WORKER_RESULT_CLASS, DTWorkerParams.class.getName());
         props.setProperty(CommonConstants.MODELSET_SOURCE_TYPE, "LOCAL");
-        props.setProperty(CommonConstants.SHIFU_MODEL_CONFIG, getClass().getResource("/dttest/config/ModelConfig.json")
-                .toString());
+        props.setProperty(CommonConstants.SHIFU_MODEL_CONFIG,
+                getClass().getResource("/test/config/ModelConfig.json").toString());
         props.setProperty(CommonConstants.SHIFU_COLUMN_CONFIG,
-                getClass().getResource("/dttest/config/ColumnConfig.json").toString());
+                getClass().getResource("/test/config/ColumnConfig.json").toString());
 
-        props.setProperty(GuaguaConstants.GUAGUA_INPUT_DIR, getClass().getResource("/dttest/data/").toString());
+        props.setProperty(GuaguaConstants.GUAGUA_INPUT_DIR, getClass().getResource("/test/data/").toString());
 
         GuaguaUnitDriver<DTMasterParams, DTWorkerParams> driver = new GuaguaMRUnitDriver<DTMasterParams, DTWorkerParams>(
                 props);
@@ -67,11 +67,11 @@ public class DTTest {
         props.setProperty(GuaguaConstants.GUAGUA_WORKER_RESULT_CLASS, DTWorkerParams.class.getName());
         props.setProperty(CommonConstants.MODELSET_SOURCE_TYPE, "LOCAL");
         props.setProperty(CommonConstants.SHIFU_MODEL_CONFIG,
-                getClass().getResource("/camdttest/config/ModelConfig.json").toString());
+                getClass().getResource("/test/config/ModelConfig.json").toString());
         props.setProperty(CommonConstants.SHIFU_COLUMN_CONFIG,
-                getClass().getResource("/camdttest/config/ColumnConfig.json").toString());
+                getClass().getResource("/test/config/ColumnConfig.json").toString());
 
-        props.setProperty(GuaguaConstants.GUAGUA_INPUT_DIR, getClass().getResource("/camdttest/data/").toString());
+        props.setProperty(GuaguaConstants.GUAGUA_INPUT_DIR, getClass().getResource("/test/data/").toString());
 
         GuaguaUnitDriver<DTMasterParams, DTWorkerParams> driver = new GuaguaMRUnitDriver<DTMasterParams, DTWorkerParams>(
                 props);
