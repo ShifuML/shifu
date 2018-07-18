@@ -78,7 +78,8 @@ public class NNWorker extends AbstractNNWorker<Text> {
             // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
             float floatValue = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(input, 0f);
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
-            floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
+            floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue) || Float.isInfinite(floatValue)
+                    || Double.isInfinite(floatValue)) ? 0f : floatValue;
 
             if(pos == fields.length - 1) {
                 // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
@@ -134,7 +135,8 @@ public class NNWorker extends AbstractNNWorker<Text> {
                                 float fval = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
                                 // no idea about why NaN in input data, we should process it as missing value TODO ,
                                 // according to norm type
-                                fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? 0f : fval;
+                                fval = (Float.isNaN(fval) || Double.isNaN(fval) || Float.isInfinite(fval)
+                                        || Double.isInfinite(fval)) ? 0f : fval;
                                 inputs[inputsIndex++] = fval;
                                 pos++;
                             }

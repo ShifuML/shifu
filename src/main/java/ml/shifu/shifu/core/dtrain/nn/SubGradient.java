@@ -173,7 +173,8 @@ public class SubGradient implements Callable<double[]> {
 
     public SubGradient(final FloatFlatNetwork theNetwork, final FloatMLDataSet theTraining, long trainLow,
             long trainHigh, final FloatMLDataSet theTesting, long testLow, long testHigh, final double[] flatSpot,
-            boolean isCrossOver, ParallelGradient owner, Random dropoutRandomSource, int batchs, int currentInteration) {
+            boolean isCrossOver, ParallelGradient owner, Random dropoutRandomSource, int batchs,
+            int currentInteration) {
         this.network = theNetwork;
         this.training = theTraining;
         this.trainLow = trainLow;
@@ -230,6 +231,12 @@ public class SubGradient implements Callable<double[]> {
             doubleIdeal[i] = ideal[i];
         }
 
+        if(Double.isNaN(this.actual[0]) || Double.isNaN(this.doubleIdeal[0]) || Double.isNaN(s)) {
+            // any NaN here will cause NaN error and which is bad for model training, throw exception to fail fast
+            throw new RuntimeException(" actual:" + this.actual[0] + " ideal:" + this.doubleIdeal[0] + " significanse:"
+                    + s + " inputs:" + Arrays.toString(input) + " ideals: " + Arrays.toString(ideal));
+        }
+
         this.errorCalculation.updateError(this.actual, doubleIdeal, s);
         this.errorFunction.calculateError(doubleIdeal, actual, this.getLayerDelta());
 
@@ -240,8 +247,9 @@ public class SubGradient implements Callable<double[]> {
             }
         } else {
             for(int i = 0; i < this.actual.length; i++) {
-                this.getLayerDelta()[i] = ((this.getNetwork().getActivationFunctions()[0].derivativeFunction(
-                        this.layerSums[i], this.layerOutput[i]) + this.flatSpot[0])) * (this.getLayerDelta()[i] * s);
+                this.getLayerDelta()[i] = ((this.getNetwork().getActivationFunctions()[0]
+                        .derivativeFunction(this.layerSums[i], this.layerOutput[i]) + this.flatSpot[0]))
+                        * (this.getLayerDelta()[i] * s);
             }
         }
 

@@ -273,6 +273,16 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
             if(index == columnConfigList.size()) {
                 break;
             } else {
+                if(Double.isNaN(doubleValue)) {
+                    doubleValue = 0d;
+                    context.getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_NAN_VALUE").increment(1L);
+                }
+
+                if(Double.isInfinite(doubleValue)) {
+                    doubleValue = 0d;
+                    context.getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_INFINITE_VALUE").increment(1L);
+                }
+
                 ColumnConfig columnConfig = columnConfigList.get(index);
                 if(columnConfig != null && columnConfig.isTarget()) {
                     this.outputs[outputsIndex++] = doubleValue;

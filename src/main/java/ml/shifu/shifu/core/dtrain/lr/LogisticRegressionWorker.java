@@ -71,8 +71,7 @@ import com.google.common.base.Splitter;
  * L1 and l2 regulations are supported by configuration: RegularizedConstant in model params of ModelConfig.json.
  */
 @ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 3600)
-public class LogisticRegressionWorker
-        extends
+public class LogisticRegressionWorker extends
         AbstractWorkerComputable<LogisticRegressionParams, LogisticRegressionParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
 
     private static final Logger LOG = LoggerFactory.getLogger(LogisticRegressionWorker.class);
@@ -230,12 +229,13 @@ public class LogisticRegressionWorker
     @Override
     public void init(WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         loadConfigFiles(context.getProps());
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                this.columnConfigList);
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         this.outputNum = inputOutputIndex[1];
         this.candidateNum = inputOutputIndex[2];
-        this.isSpecificValidation = (modelConfig.getValidationDataSetRawPath() != null && !"".equals(modelConfig
-                .getValidationDataSetRawPath()));
+        this.isSpecificValidation = (modelConfig.getValidationDataSetRawPath() != null
+                && !"".equals(modelConfig.getValidationDataSetRawPath()));
         this.isStratifiedSampling = this.modelConfig.getTrain().getStratifiedSample();
         this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
         Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
@@ -260,19 +260,19 @@ public class LogisticRegressionWorker
 
         if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
             // fixed 0.6 and 0.4 of max memory for trainingData and validationData
-            this.trainingData = new BytableMemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory()
-                    * memoryFraction * 0.6), tmpFolder + File.separator + "train-" + System.currentTimeMillis(),
-                    Data.class.getName());
-            this.validationData = new BytableMemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory()
-                    * memoryFraction * 0.4), tmpFolder + File.separator + "test-" + System.currentTimeMillis(),
-                    Data.class.getName());
+            this.trainingData = new BytableMemoryDiskList<Data>(
+                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * 0.6),
+                    tmpFolder + File.separator + "train-" + System.currentTimeMillis(), Data.class.getName());
+            this.validationData = new BytableMemoryDiskList<Data>(
+                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * 0.4),
+                    tmpFolder + File.separator + "test-" + System.currentTimeMillis(), Data.class.getName());
         } else {
-            this.trainingData = new BytableMemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory()
-                    * memoryFraction * (1 - crossValidationRate)), tmpFolder + File.separator + "train-"
-                    + System.currentTimeMillis(), Data.class.getName());
-            this.validationData = new BytableMemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory()
-                    * memoryFraction * crossValidationRate), tmpFolder + File.separator + "test-"
-                    + System.currentTimeMillis(), Data.class.getName());
+            this.trainingData = new BytableMemoryDiskList<Data>(
+                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - crossValidationRate)),
+                    tmpFolder + File.separator + "train-" + System.currentTimeMillis(), Data.class.getName());
+            this.validationData = new BytableMemoryDiskList<Data>(
+                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * crossValidationRate),
+                    tmpFolder + File.separator + "test-" + System.currentTimeMillis(), Data.class.getName());
         }
         // cannot find a good place to close these two data set, using Shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
@@ -285,7 +285,8 @@ public class LogisticRegressionWorker
     }
 
     @Override
-    public LogisticRegressionParams doCompute(WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+    public LogisticRegressionParams doCompute(
+            WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         if(context.isFirstIteration()) {
             return new LogisticRegressionParams();
         } else {
@@ -324,10 +325,10 @@ public class LogisticRegressionWorker
                 double error = result - data.outputs[0];
                 testingFinalError += caculateMSEError(error);
             }
-            LOG.info("Iteration {} training data with error {}", context.getCurrentIteration(), trainingFinalError
-                    / trainingSize);
-            LOG.info("Iteration {} testing data with error {}", context.getCurrentIteration(), testingFinalError
-                    / testingSize);
+            LOG.info("Iteration {} training data with error {}", context.getCurrentIteration(),
+                    trainingFinalError / trainingSize);
+            LOG.info("Iteration {} testing data with error {}", context.getCurrentIteration(),
+                    testingFinalError / testingSize);
             return new LogisticRegressionParams(gradients, trainingFinalError, testingFinalError, trainingSize,
                     testingSize);
         }
@@ -421,7 +422,8 @@ public class LogisticRegressionWorker
             // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
             float floatValue = unit.length() == 0 ? 0f : NumberFormatUtils.getFloat(unit, 0f);
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
-            floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
+            floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue) || Float.isInfinite(floatValue)
+                    || Double.isInfinite(floatValue)) ? 0f : floatValue;
 
             if(index == this.columnConfigList.size()) {
                 // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
@@ -478,8 +480,9 @@ public class LogisticRegressionWorker
                 // should take 1-0.8 to check endHashCode
                 int endHashCode = startHashCode
                         + Double.valueOf((1d - this.modelConfig.getBaggingSampleRate()) * 100).intValue();
-                if((modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
-                        .isOneVsAll())) // regression or onevsall
+                if((modelConfig.isRegression()
+                        || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll())) // regression or
+                                                                                                    // onevsall
                         && (int) (outputData[0] + 0.01d) == 0 // negative record
                         && isInRange(hashcode, startHashCode, endHashCode)) {
                     return;
@@ -487,8 +490,9 @@ public class LogisticRegressionWorker
             } else {
                 // if not fixed initial input, and for regression or onevsall multiple classification (regression also).
                 // if negative record
-                if((modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
-                        .isOneVsAll())) // regression or onevsall
+                if((modelConfig.isRegression()
+                        || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll())) // regression or
+                                                                                                    // onevsall
                         && (int) (outputData[0] + 0.01d) == 0 // negative record
                         && Double.compare(Math.random(), this.modelConfig.getBaggingSampleRate()) >= 0) {
                     return;
@@ -530,8 +534,8 @@ public class LogisticRegressionWorker
     protected float sampleWeights(float label) {
         float sampleWeights = 1f;
         // sample negative or kFoldCV, sample rate is 1d
-        double sampleRate = (modelConfig.getTrain().getSampleNegOnly() || this.isKFoldCV) ? 1d : modelConfig.getTrain()
-                .getBaggingSampleRate();
+        double sampleRate = (modelConfig.getTrain().getSampleNegOnly() || this.isKFoldCV) ? 1d
+                : modelConfig.getTrain().getBaggingSampleRate();
         int classValue = (int) (label + 0.01f);
         if(!modelConfig.isBaggingWithReplacement()) {
             Random random = null;
@@ -579,12 +583,12 @@ public class LogisticRegressionWorker
 
     private void loadConfigFiles(final Properties props) {
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
-                    SourceType.HDFS.toString()));
+            SourceType sourceType = SourceType
+                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

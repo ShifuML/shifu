@@ -102,7 +102,8 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                 }
             }
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
-            floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
+            floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue) || Float.isInfinite(floatValue)
+                    || Double.isInfinite(floatValue)) ? 0f : floatValue;
 
             if(index == (super.inputNodeCount + super.outputNodeCount)) {
                 // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
