@@ -377,8 +377,6 @@ public class Scorer {
                 modelResults.add(new Callable<MLData>() {
                     @Override
                     public MLData call() {
-                        log.error("model is " + ((GenericModel)model).getModel().getClass() + " " +
-                            ((GenericModel)model).getGMProperties().toString());
                         MLData md = pair.getInput();
                         return ((GenericModel) model).compute(pair.getInput());
                     }
