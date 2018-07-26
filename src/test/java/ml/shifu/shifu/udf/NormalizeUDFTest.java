@@ -48,7 +48,6 @@ public class NormalizeUDFTest {
         Assert.assertNull(instance.exec(tuple));
     }
 
-    @Test
     public void testExec() throws IOException {
         Tuple input = TupleFactory.getInstance().newTuple(31);
         for(int i = 0; i < 31; i++) {
@@ -63,7 +62,6 @@ public class NormalizeUDFTest {
                 instance.exec(input).toString());
     }
 
-    @Test
     public void testNegativeScore() throws IOException {
         String data = "B|11.75|17.56|75.89|422.9|0.1073|0.09713|0.05282|0.0444|0.1598|0.06677|0.4384|1.907|3.149|30.66|0.006587|0.01815|0.01737|0.01316|0.01835|0.002318|13.5|27.98|88.52|552.3|0.1349|0.1854|0.1366|0.101|0.2478|0.07757";
         String[] fields = data.split("\\|");
