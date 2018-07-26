@@ -26,6 +26,21 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.math3.distribution.PoissonDistribution;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Writable;
+import org.encog.engine.network.activation.ActivationSigmoid;
+import org.encog.neural.error.LinearErrorFunction;
+import org.encog.neural.flat.FlatNetwork;
+import org.encog.neural.networks.BasicNetwork;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Splitter;
+
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
 import ml.shifu.guagua.worker.AbstractWorkerComputable;
@@ -46,21 +61,8 @@ import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataSet;
 import ml.shifu.shifu.core.dtrain.dataset.MemoryDiskFloatMLDataSet;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.CommonUtils;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.math.RandomUtils;
-import org.apache.commons.math3.distribution.PoissonDistribution;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Writable;
-import org.encog.engine.network.activation.ActivationSigmoid;
-import org.encog.neural.error.LinearErrorFunction;
-import org.encog.neural.flat.FlatNetwork;
-import org.encog.neural.networks.BasicNetwork;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Splitter;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.MapReduceUtils;
 
 /**
  * {@link AbstractNNWorker} is refactored as a common class for different NN input format.
@@ -69,12 +71,6 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         AbstractWorkerComputable<NNParams, NNParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<VALUE>> {
 
     protected static final Logger LOG = LoggerFactory.getLogger(AbstractNNWorker.class);
-
-    /**
-     * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
-     */
-    protected static final Splitter DEFAULT_SPLITTER = Splitter.on(CommonConstants.DEFAULT_COLUMN_SEPARATOR)
-            .trimResults();
 
     /**
      * Training data set
@@ -240,7 +236,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     /**
      * If enabled by extreme learning machine: https://en.wikipedia.org/wiki/Extreme_learning_machine
      */
-    private boolean isELM;
+    //private boolean isELM;
 
     /**
      * Cache all features with feature index for searching
@@ -257,6 +253,9 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      */
     protected Set<Integer> subFeatureSet;
 
+    /**
+     * Count of feature inputs
+     */
     protected int featureInputsCnt;
 
     /**
@@ -279,6 +278,13 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      */
     private int batchs = 1;
 
+    /**
+     * The splitter for normalization data set
+     */
+    protected Splitter splitter;
+
+    protected boolean isLinearTarget = false;
+
     protected boolean isUpSampleEnabled() {
         // only enabled in regression
         return this.upSampleRng != null && (modelConfig.isRegression()
@@ -298,6 +304,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             LOG.info("Parameter isCrossOver:{}", this.isCrossOver);
             this.columnConfigList = CommonUtils
                     .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -370,9 +377,9 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         this.epochsPerIteration = epochsPerIterationInteger == null ? 1 : epochsPerIterationInteger.intValue();
         LOG.info("epochsPerIteration in worker is :{}", epochsPerIteration);
 
-        Object elmObject = validParams.get(DTrainUtils.IS_ELM);
-        isELM = elmObject == null ? false : "true".equalsIgnoreCase(elmObject.toString());
-        LOG.info("Check isELM: {}", isELM);
+//        Object elmObject = validParams.get(DTrainUtils.IS_ELM);
+//        isELM = elmObject == null ? false : "true".equalsIgnoreCase(elmObject.toString());
+//        LOG.info("Check isELM: {}", isELM);
 
         Object dropoutRateObj = validParams.get(CommonConstants.DROPOUT_RATE);
         if(dropoutRateObj != null) {
@@ -403,7 +410,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         // if is one vs all classification, outputNodeCount is set to 1, if classes=2, outputNodeCount is also 1
         int classes = modelConfig.getTags().size();
-        this.outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1]
+        this.outputNodeCount = (isLinearTarget || modelConfig.isRegression()) ? inputOutputIndex[1]
                 : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : (classes == 2 ? 1 : classes));
         this.candidateCount = inputOutputIndex[2];
         boolean isAfterVarSelect = inputOutputIndex[0] != 0;
@@ -489,6 +496,10 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 throw new GuaguaRuntimeException(e);
             }
         }
+
+        // create Splitter
+        String delimiter = context.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
+        this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
     }
 
     private boolean isOnDisk() {
@@ -532,10 +543,12 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
         this.gradient.getNetwork().setWeights(weights);
 
+        Set<Integer> dropoutNodes = context.getLastMasterResult().getDropoutNodes();
+        
         // using the weights from master to train model in current iteration
         double[] gradients = null;
         for(int i = 0; i < epochsPerIteration; i++) {
-            gradients = this.gradient.computeGradients(context.getCurrentIteration());
+            gradients = this.gradient.computeGradients(context.getCurrentIteration(), dropoutNodes);
             if(this.epochsPerIteration > 1) {
                 this.gradient.resetNetworkWeights();
             }
@@ -571,7 +584,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         List<Integer> hiddenNodeList = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
         BasicNetwork network = DTrainUtils.generateNetwork(this.featureInputsCnt, this.outputNodeCount, numLayers,
-                actFunc, hiddenNodeList, false, this.dropoutRate, this.wgtInit);
+                actFunc, hiddenNodeList, false, this.dropoutRate, this.wgtInit,
+                CommonUtils.isLinearTarget(modelConfig, columnConfigList));
         // use the weights from master
         network.getFlat().setWeights(weights);
 
@@ -585,7 +599,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         LOG.info("Gradient computing thread count is {}.", modelConfig.getTrain().getWorkerThreadCount());
 
         this.gradient = new ParallelGradient((FloatFlatNetwork) flat, training, testing, flatSpot,
-                new LinearErrorFunction(), isCrossOver, modelConfig.getTrain().getWorkerThreadCount(), this.isELM,
+                new LinearErrorFunction(), isCrossOver, modelConfig.getTrain().getWorkerThreadCount(),
                 this.lossStr, this.batchs);
     }
 

@@ -192,10 +192,6 @@ public class Normalizer {
             // TODO, doesn't support
         } else {
             Double value = Double.parseDouble(raw);
-            if(value != null && (Double.isNaN(value) || Double.isInfinite(value))) {
-                // NaN, use 0 here
-                value = 0d;
-            }
             return new Double[] { (value - config.getColumnStats().getMin())
                     / (config.getColumnStats().getMax() - config.getColumnStats().getMin()) };
         }
@@ -243,8 +239,10 @@ public class Normalizer {
             case WEIGHT_WOE_ZSCORE:
             case WEIGHT_WOE_ZSCALE:
                 return woeZScoreNormalize(config, raw, cutoff, true);
+            case ONEHOT:
+                return OneHotNormalize(config, raw);
             case ZSCALE_ONEHOT:
-                return woeOneHotNormalize(config, raw, cutoff, categoryMissingNormType);
+                return zscaleOneHotNormalize(config, raw, cutoff, categoryMissingNormType);
             case DISCRETE_ZSCORE:
             case DISCRETE_ZSCALE:
                 return discreteZScoreNormalize(config, raw, cutoff, categoryMissingNormType);
@@ -259,15 +257,12 @@ public class Normalizer {
     }
 
     private static List<Double> asIsNormalize(ColumnConfig config, String raw, boolean toUseWoe) {
-        if(config.isNumerical()) {
+        if ( config.isNumerical() ) {
             Double values[] = new Double[1];
             try {
                 values[0] = Double.parseDouble(raw);
-            } catch (Exception e) {
+            } catch ( Exception e ) {
                 log.warn("Illegal numerical value - {}, use mean instead.", raw);
-                values[0] = config.getMean();
-            }
-            if(values[0] != null && (Double.isNaN(values[0]) || Double.isInfinite(values[0]))) {
                 values[0] = config.getMean();
             }
             return Arrays.asList(values);
@@ -280,20 +275,32 @@ public class Normalizer {
         }
     }
 
-    private static List<Double> woeOneHotNormalize(ColumnConfig config, String raw, Double cutoff,
+    private static List<Double> OneHotNormalize(ColumnConfig config, String raw) {
+        Double[] normData = (config.isNumerical() ?
+                new Double[config.getBinBoundary().size() + 1] : new Double[config.getBinCategory().size() + 1]);
+        Arrays.fill(normData, 0.0d);
+        int binNum = CommonUtils.getBinNum(config, raw);
+        if ( binNum < 0 ) {
+            binNum = normData.length - 1;
+        }
+        normData[binNum] = 1.0d;
+        return Arrays.asList(normData);
+    }
+
+    private static List<Double> zscaleOneHotNormalize(ColumnConfig config, String raw, Double cutoff,
             CategoryMissingNormType categoryMissingNormType) {
         if(config.isNumerical()) {
             return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, false);
         } else {
-            Double[] normVals = new Double[config.getBinCategory().size() + 1];
-            Arrays.fill(normVals, 0.0d);
+            Double[] normData = new Double[config.getBinCategory().size() + 1];
+            Arrays.fill(normData, 0.0d);
 
             int binNum = CommonUtils.getBinNum(config, raw);
             if(binNum < 0) {
                 binNum = config.getBinCategory().size();
             }
-            normVals[binNum] = 1.0d;
-            return Arrays.asList(normVals);
+            normData[binNum] = 1.0d;
+            return Arrays.asList(normData);
         }
     }
 
@@ -340,11 +347,6 @@ public class Normalizer {
         if(isOld && config.isCategorical()) {
             return Arrays.asList(value);
         }
-
-        if(Double.isNaN(value) || Double.isInfinite(value)) {
-            // NaN use mean which is 0 after norm, direct return [0] in zscore computation
-            return Arrays.asList(0d);
-        }
         return Arrays.asList(computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff));
     }
 
@@ -383,11 +385,6 @@ public class Normalizer {
                 }
             }
         }
-        // this is a safeguard to make sure no issue in following training step.
-        if(Double.isNaN(value) || Double.isInfinite(value)) {
-            // NaN use mean which is 0 after norm, direct return [0] in zscore computation
-            return Arrays.asList(0d);
-        }
         return Arrays.asList(computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff));
     }
 
@@ -405,10 +402,6 @@ public class Normalizer {
     private static List<Double> zScoreNormalize(ColumnConfig config, String raw, Double cutoff) {
         double stdDevCutOff = checkCutOff(cutoff);
         double value = parseRawValue(config, raw, CategoryMissingNormType.POSRATE);
-        if(Double.isNaN(value) || Double.isInfinite(value)) {
-            // NaN use mean which is 0 after norm, direct return [0] in zscore computation
-            return Arrays.asList(0d);
-        }
         return Arrays.asList(computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff));
     }
 
@@ -506,7 +499,7 @@ public class Normalizer {
                 binIndex = binIndex + config.getBinBoundary().size(); // append the first numerical bins
             } else {
                 double douVal = CommonUtils.parseNumber(raw);
-                if(Double.isNaN(douVal) || Double.isInfinite(douVal)) {
+                if(Double.isNaN(douVal)) {
                     binIndex = config.getBinBoundary().size() + config.getBinCategory().size();
                 } else {
                     binIndex = CommonUtils.getBinIndex(config.getBinBoundary(), douVal);
@@ -543,12 +536,6 @@ public class Normalizer {
         double woe = woeNormalize(config, raw, isWeightedNorm).get(0);
         // TODO cache such computing to avoid computing each time
         double[] meanAndStdDev = calculateWoeMeanAndStdDev(config, isWeightedNorm);
-
-        // this is just a protection, in Shifu logic, woe should not be NaN
-        if(Double.isNaN(woe) || Double.isInfinite(woe)) {
-            // NaN use mean which is 0 after norm, direct return [0] in zscore computation
-            return Arrays.asList(0d);
-        }
         return Arrays.asList(computeZScore(woe, meanAndStdDev[0], meanAndStdDev[1], stdDevCutOff));
     }
 

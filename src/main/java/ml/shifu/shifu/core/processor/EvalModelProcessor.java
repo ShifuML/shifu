@@ -850,7 +850,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             return;
         }
 
-        // 1. Get challendge model performance
+        // 1. Get challenge model performance
         PerformanceResult challendgeModelPerformance = runConfusionMatrix(evalConfig, ss,
                 pathFinder.getEvalScorePath(evalConfig), pathFinder.getEvalPerformancePath(evalConfig), false, false,
                 isGBTNotConvertToProb(evalConfig));

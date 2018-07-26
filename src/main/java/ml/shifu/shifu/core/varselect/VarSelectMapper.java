@@ -50,6 +50,7 @@ import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.MapReduceUtils;
 
 /**
  * Mapper implementation to accumulate MSE value when remove one column.
@@ -71,6 +72,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     /**
      * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
      */
+    @SuppressWarnings("unused")
     private static final Splitter DEFAULT_SPLITTER = Splitter.on(CommonConstants.DEFAULT_COLUMN_SEPARATOR);
 
     /**
@@ -146,6 +148,11 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
      * Network which will cache first layer outputs and later use minus to replace sum to save CPU time.
      */
     private CacheBasicFloatNetwork cacheNetwork;
+
+    /**
+     * The splitter for normalization data set
+     */
+    private Splitter splitter;
 
     /**
      * Load all configurations for modelConfig and columnConfigList from source type.
@@ -262,27 +269,21 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         this.inputsMLData = new BasicMLData(this.inputs.length);
         this.outputKey = new LongWritable();
         LOG.info("Filter by is {}", filterBy);
+
+        // create Splitter
+        String delimiter = context.getConfiguration().get(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
+        this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
     }
 
     @Override
     protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
         recordCount += 1L;
         int index = 0, inputsIndex = 0, outputsIndex = 0;
-        for(String input: DEFAULT_SPLITTER.split(value.toString())) {
+        for(String input: this.splitter.split(value.toString())) {
             double doubleValue = NumberFormatUtils.getDouble(input.trim(), 0.0d);
             if(index == columnConfigList.size()) {
                 break;
             } else {
-                if(Double.isNaN(doubleValue)) {
-                    doubleValue = 0d;
-                    context.getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_NAN_VALUE").increment(1L);
-                }
-
-                if(Double.isInfinite(doubleValue)) {
-                    doubleValue = 0d;
-                    context.getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_INFINITE_VALUE").increment(1L);
-                }
-
                 ColumnConfig columnConfig = columnConfigList.get(index);
                 if(columnConfig != null && columnConfig.isTarget()) {
                     this.outputs[outputsIndex++] = doubleValue;

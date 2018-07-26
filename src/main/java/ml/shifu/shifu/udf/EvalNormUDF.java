@@ -24,17 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import ml.shifu.shifu.column.NSColumn;
-import ml.shifu.shifu.container.CaseScoreResult;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.EvalConfig;
-import ml.shifu.shifu.core.ModelRunner;
-import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataType;
@@ -44,6 +33,18 @@ import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
 import org.apache.pig.impl.util.UDFContext;
 import org.encog.ml.BasicML;
+
+import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.container.CaseScoreResult;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.core.ModelRunner;
+import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.udf.NormalizeUDF.PrecisionType;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 
 /**
  * Calculate the score for each evaluation data
@@ -88,6 +89,8 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
      * If append model score at last column
      */
     private boolean isAppendScore = false;
+
+    private PrecisionType precisionType;
 
     public EvalNormUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName, String scale)
             throws IOException {
@@ -219,6 +222,22 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             this.isOutputRaw = Boolean.TRUE.toString().equalsIgnoreCase(
                     Environment.getProperty(Constants.SHIFU_EVAL_NORM_OUTPUTRAW, Boolean.FALSE.toString()));
         }
+
+        setPrecisionType();
+    }
+
+    private void setPrecisionType() {
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            this.precisionType = PrecisionType.of(UDFContext.getUDFContext().getJobConf()
+                    .get(Constants.SHIFU_NORM_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
+        } else {
+            this.precisionType = PrecisionType
+                    .of(Environment.getProperty(Constants.SHIFU_NORM_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
+        }
+        if(this.precisionType == null) {
+            this.precisionType = PrecisionType.FLOAT32;
+        }
+        log.info("Precision type is set to: " + this.precisionType);
     }
 
     public Tuple exec(Tuple input) throws IOException {
@@ -258,7 +277,7 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
                     tuple.append(raw);
                 }
                 for(Double normVal: normVals) {
-                    tuple.append(normVal);
+                    tuple.append(getOutputValue(normVal, true));
                 }
             }
         }
@@ -293,12 +312,12 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
                     if(this.isOutputRaw) {
                         ColumnConfig columnConfig = this.columnConfigMap.get(name);
                         if(columnConfig.isNumerical()) {
-                            tupleSchema.add(new FieldSchema(name + ORIG_POSTFIX, DataType.DOUBLE));
+                            tupleSchema.add(new FieldSchema(name + ORIG_POSTFIX, getOutputType()));
                         } else {
                             tupleSchema.add(new FieldSchema(name + ORIG_POSTFIX, DataType.CHARARRAY));
                         }
                     }
-                    tupleSchema.add(new FieldSchema(name, DataType.DOUBLE));
+                    tupleSchema.add(new FieldSchema(name, getOutputType()));
                 }
             }
             if(this.isAppendScore) {
@@ -311,7 +330,40 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
             return null;
         }
     }
-    
+
+    /**
+     * FLOAT7 is old with DecimalFormat, new one with FLOAT16, FLOAT32, DOUBLE64
+     */
+    private String getOutputValue(double value, boolean enablePrecision) {
+        if(enablePrecision) {
+            switch(this.precisionType) {
+                case FLOAT7:
+                    return NormalizeUDF.DECIMAL_FORMAT.format(value);
+                case FLOAT16:
+                    return "" + NormalizeUDF.toFloat(NormalizeUDF.fromFloat((float) value));
+                case DOUBLE64:
+                    return value + "";
+                case FLOAT32:
+                default:
+                    return ((float) value) + "";
+            }
+        } else {
+            return ((float) value) + "";
+        }
+    }
+
+    private byte getOutputType() {
+        switch(this.precisionType) {
+            case FLOAT7:
+            case FLOAT16:
+            case FLOAT32:
+                return DataType.FLOAT;
+            case DOUBLE64:
+            default:
+                return DataType.DOUBLE;
+        }
+    }
+
     /**
      * Some column name has illegal chars which are all be normed in shifu. Such as ' ', '/' ..., are changed to '_'.
      * 

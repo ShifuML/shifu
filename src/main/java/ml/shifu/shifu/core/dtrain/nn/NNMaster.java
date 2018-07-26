@@ -31,6 +31,7 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import ml.shifu.shifu.core.dtrain.Weight;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.FloatFlatNetwork;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -174,6 +175,11 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
      */
     private double adamBeta2 = 0.999d;
 
+    /**
+    * NN network structure. we use it us pick dropout node index only.
+    */
+    private FloatFlatNetwork flatNetwork = null;
+    
     @Override
     public NNParams doCompute(MasterContext<NNParams, NNParams> context) {
         if(context.isFirstIteration()) {
@@ -285,6 +291,9 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         // prevent null point
         params.setGradients(new double[0]);
         params.setWeights(weights);
+        if (this.dropoutRate > 0d) {
+        	 params.setDropoutNodes(dropoutNodes());
+        }
         LOG.debug("master result {} in iteration {}", params, context.getCurrentIteration());
 
         // Convergence judging part
@@ -310,33 +319,27 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             BasicML basicML = CommonUtils.loadModel(modelConfig, modelPath,
                     ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
+            
+            params = initWeights();
+            
             BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils.getBasicNetwork(basicML);
-            if(existingModel == null) {
-                params = initWeights();
-                LOG.info("Starting to train model from scratch.");
+            if (existingModel != null) {
+            	LOG.info("Starting to train model from existing model {}.", modelPath);
+            	params.setWeights(existingModel.getFlat().getWeights());
             } else {
-                params = initModelParams(existingModel);
-                LOG.info("Starting to train model from existing model {}.", modelPath);
+            	LOG.info("Starting to train model from scratch.");
             }
+
         } catch (IOException e) {
             throw new GuaguaRuntimeException(e);
         }
         return params;
     }
 
-    private NNParams initModelParams(BasicNetwork loadModel) {
-        NNParams params = new NNParams();
-        params.setTrainError(0);
-        params.setTestError(0);
-        // prevent null point
-        params.setGradients(new double[0]);
-        params.setWeights(loadModel.getFlat().getWeights());
-        return params;
-    }
-
     @SuppressWarnings({ "unchecked" })
     private NNParams initWeights() {
         NNParams params = new NNParams();
+        boolean isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
 
         int[] inputAndOutput = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
                 this.columnConfigList);
@@ -346,15 +349,18 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         int inputNodeCount = inputAndOutput[0] == 0 ? inputAndOutput[2] : inputAndOutput[0];
         // if is one vs all classification, outputNodeCount is set to 1, if classes=2, outputNodeCount is also 1
         int classes = modelConfig.getTags().size();
-        int outputNodeCount = modelConfig.isRegression() ? inputAndOutput[1]
+        int outputNodeCount = (isLinearTarget || modelConfig.isRegression()) ? inputAndOutput[1]
                 : (modelConfig.getTrain().isOneVsAll() ? inputAndOutput[1] : (classes == 2 ? 1 : classes));
         int numLayers = (Integer) validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
         BasicNetwork network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers, actFunc,
-                hiddenNodeList, true, this.dropoutRate, this.wgtInit);
+                hiddenNodeList, true, this.dropoutRate, this.wgtInit,
+                CommonUtils.isLinearTarget(modelConfig, columnConfigList));
 
+        this.flatNetwork = (FloatFlatNetwork) network.getFlat();
+        
         params.setTrainError(0);
         params.setTestError(0);
         // prevent null point
@@ -481,4 +487,30 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         }
     }
 
+	private HashSet<Integer> dropoutNodes() {
+		Random random = new Random(System.currentTimeMillis());
+
+		HashSet<Integer> droppedNodeIndices = new HashSet<Integer>();
+
+		// from input to last hidden layer. (exclude output layer)
+		for (int i = this.flatNetwork.getLayerIndex().length - 1; i > 0; i--) {
+			int beginNeuronIndex = this.flatNetwork.getLayerIndex()[i];
+			// exclude constant neuron
+			int neuronCount = this.flatNetwork.getLayerFeedCounts()[i];
+
+			// from first neuron to last neuron in current layer
+			for (int j = 0; j < neuronCount; j++) {
+				if (random.nextDouble() < this.flatNetwork.getLayerDropoutRates()[i]) {
+					// drop this node by adding it into list and will passing
+					// this list to workers
+					droppedNodeIndices.add(beginNeuronIndex + j);
+				}
+			}
+		}
+
+		LOG.info("layerIndex:{}; layerCounts:{}; dropoutNodes:{}", Arrays.toString(this.flatNetwork.getLayerIndex()),
+				Arrays.toString(this.flatNetwork.getLayerCounts()),
+				Arrays.toString(droppedNodeIndices.toArray(new Integer[droppedNodeIndices.size()])));
+		return droppedNodeIndices;
+	}
 }

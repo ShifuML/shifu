@@ -132,13 +132,6 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
         columnConfig.setBinCountNeg(binning.getBinCountNeg());
         columnConfig.setBinCountPos(binning.getBinCountPos());
         columnConfig.setBinPosCaseRate(binning.getBinPosCaseRate());
-        columnConfig.setKs(columnCountMetrics.getKs());
-        columnConfig.setIv(columnCountMetrics.getIv());
-        columnConfig.getColumnStats().setWoe(columnCountMetrics.getWoe());
-        columnConfig.getColumnStats().setWeightedKs(columnWeightMetrics.getKs());
-        columnConfig.getColumnStats().setWeightedIv(columnWeightMetrics.getIv());
-        columnConfig.getColumnStats().setWeightedWoe(columnWeightMetrics.getWoe());
-
         columnConfig.setMax(basicStatsCalculator.getMax());
         columnConfig.setMin(basicStatsCalculator.getMin());
         columnConfig.setMean(basicStatsCalculator.getMean());
@@ -146,8 +139,20 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
         columnConfig.setMedian(basicStatsCalculator.getMedian());
         columnConfig.setBinWeightedNeg(binning.getBinWeightedNeg());
         columnConfig.setBinWeightedPos(binning.getBinWeightedPos());
-        columnConfig.getColumnBinning().setBinCountWoe(columnCountMetrics.getBinningWoe());
-        columnConfig.getColumnBinning().setBinWeightedWoe(columnWeightMetrics.getBinningWoe());
+
+        if ( columnCountMetrics != null ) {
+            columnConfig.setKs(columnCountMetrics.getKs());
+            columnConfig.setIv(columnCountMetrics.getIv());
+            columnConfig.getColumnStats().setWoe(columnCountMetrics.getWoe());
+            columnConfig.getColumnBinning().setBinCountWoe(columnCountMetrics.getBinningWoe());
+        }
+
+        if (columnWeightMetrics != null) {
+            columnConfig.getColumnStats().setWeightedKs(columnWeightMetrics.getKs());
+            columnConfig.getColumnStats().setWeightedIv(columnWeightMetrics.getIv());
+            columnConfig.getColumnStats().setWeightedWoe(columnWeightMetrics.getWoe());
+            columnConfig.getColumnBinning().setBinWeightedWoe(columnWeightMetrics.getBinningWoe());
+        }
 
         // columnConfig.setMissingCnt(cnt)
     }

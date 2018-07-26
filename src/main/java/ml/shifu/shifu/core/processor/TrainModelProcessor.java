@@ -15,12 +15,7 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -76,10 +71,7 @@ import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.guagua.GuaguaParquetMapReduceClient;
 import ml.shifu.shifu.guagua.ShifuInputFormat;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-import ml.shifu.shifu.util.HDFSUtils;
+import ml.shifu.shifu.util.*;
 
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.collections.CollectionUtils;
@@ -148,6 +140,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      * If for variable selection, only using bagging number 1 to train only one model.
      */
     private boolean isForVarSelect;
+
+    /**
+     * Will be used as the train log file prefix, when run variable selection
+     */
+    private String trainLogFile;
 
     private boolean isToShuffle = false;
 
@@ -559,7 +556,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 }
                 if(!isContinous && !isOneJobNotContinuous) {
                     isOneJobNotContinuous = true;
-                    // delete all old models if not continous
+                    // delete all old models if not continuous
                     String srcModelPath = super.getPathFinder().getModelsPath(sourceType);
                     String mvModelPath = srcModelPath + "_" + System.currentTimeMillis();
                     LOG.info("Old model path has been moved to {}", mvModelPath);
@@ -1000,7 +997,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             Thread.currentThread().interrupt();
         }
         // delete progress file at last
-        thread.deleteProgressFiles();
+        thread.deleteProgressFiles(trainLogFile);
     }
 
     private TailThread startTailThread(final String[] progressLog) {
@@ -1182,12 +1179,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 vcores));
 
         // one can set guagua conf in shifuconfig
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(),
-                        entry.getValue().toString()));
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, key.toString(), value.toString()));
             }
-        }
+        });
     }
 
     private int vcoresSetting() {
@@ -1319,7 +1316,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // number should be 400m
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
                 this.columnConfigList);
-        int candidateCount = inputOutputIndex[2];
+        int candidateCount = (inputOutputIndex[2] == 0 ? inputOutputIndex[0] : inputOutputIndex[2]);
         // 1. set benchmark
         long maxCombineSize = CommonUtils.isTreeModel(modelConfig.getAlgorithm()) ? 209715200L : 168435456L;
         if(modelConfig.isClassification()) {
@@ -1543,6 +1540,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
+     * set the train log file prefix
+     * @param trainLogFile - file to save train log
+     */
+    public void setTrainLogFile(String trainLogFile) {
+        this.trainLogFile = trainLogFile;
+    }
+
+    /**
      * A thread used to tail progress log from hdfs log file.
      */
     private static class TailThread extends Thread {
@@ -1627,7 +1632,23 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             return offset;
         }
 
-        public void deleteProgressFiles() throws IOException {
+        public void deleteProgressFiles(String trainLogFile) throws IOException {
+            if ( StringUtils.isNotBlank(trainLogFile) ) {
+                BufferedWriter writer = null;
+                try {
+                    writer = new BufferedWriter(new FileWriter(trainLogFile));
+                    for (String progressFile : this.progressLogs) {
+                        Reader reader = ShifuFileUtils.getReader(progressFile, SourceType.HDFS);
+                        org.apache.commons.io.IOUtils.copy(reader, writer);
+                        org.apache.commons.io.IOUtils.closeQuietly(reader);
+                    }
+                } catch (IOException e) {
+                    LOG.error("Fail to copy train log - {}", trainLogFile);
+                } finally {
+                    org.apache.commons.io.IOUtils.closeQuietly(writer);
+                }
+            }
+
             for(String progressFile: this.progressLogs) {
                 HDFSUtils.getFS().delete(new Path(progressFile), true);
             }

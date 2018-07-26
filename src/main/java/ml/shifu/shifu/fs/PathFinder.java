@@ -97,8 +97,8 @@ public class PathFinder {
             // return relative path which is in shifu-*.jar
             return path;
         } else {
-            String pathStr = (new Path(path)).isAbsolute() ? path : new Path(
-                    Environment.getProperty(Environment.SHIFU_HOME), path).toString();
+            String pathStr = (new Path(path)).isAbsolute() ? path
+                    : new Path(Environment.getProperty(Environment.SHIFU_HOME), path).toString();
             File file = new File(pathStr);
             if(file.exists()) {
                 return pathStr;
@@ -115,8 +115,8 @@ public class PathFinder {
             // return absolute path which is in shifu-*.jar
             return path;
         } else {
-            return (new Path(path)).isAbsolute() ? path : new Path(Environment.getProperty(Environment.SHIFU_HOME),
-                    path).toString();
+            return (new Path(path)).isAbsolute() ? path
+                    : new Path(Environment.getProperty(Environment.SHIFU_HOME), path).toString();
         }
     }
 
@@ -203,8 +203,9 @@ public class PathFinder {
 
     public String getLocalColumnStatsPath() {
 
-        return getPathBySourceType(Constants.COLUMN_META_FOLDER_NAME + File.separator
-                + Constants.COLUMN_STATS_CSV_FILE_NAME, SourceType.LOCAL);
+        return getPathBySourceType(
+                Constants.COLUMN_META_FOLDER_NAME + File.separator + Constants.COLUMN_STATS_CSV_FILE_NAME,
+                SourceType.LOCAL);
     }
 
     /**
@@ -454,7 +455,8 @@ public class PathFinder {
      * @return path of var select MSE stats path
      */
     public String getUpdatedBinningInfoPath(SourceType sourceType) {
-        String preTrainPath = getPreferPath(modelConfig.getTrain().getCustomPaths(), Constants.KEY_PRE_TRAIN_STATS_PATH);
+        String preTrainPath = getPreferPath(modelConfig.getTrain().getCustomPaths(),
+                Constants.KEY_PRE_TRAIN_STATS_PATH);
 
         if(StringUtils.isBlank(preTrainPath)) {
             return getPathBySourceType(new Path(Constants.TMP, "UpdatedBinningInfo"), sourceType);
@@ -596,7 +598,8 @@ public class PathFinder {
      * @return path of train score
      */
     public String getTrainScoresPath(SourceType sourceType) {
-        String trainScoresPath = getPreferPath(modelConfig.getTrain().getCustomPaths(), Constants.KEY_TRAIN_SCORES_PATH);
+        String trainScoresPath = getPreferPath(modelConfig.getTrain().getCustomPaths(),
+                Constants.KEY_TRAIN_SCORES_PATH);
 
         if(StringUtils.isBlank(trainScoresPath)) {
             return getPathBySourceType(new Path(Constants.TMP, Constants.TRAIN_SCORES), sourceType);
@@ -776,8 +779,8 @@ public class PathFinder {
         String evalPerformancePath = getPreferPath(evalConfig.getCustomPaths(), Constants.KEY_PERFORMANCE_PATH);
 
         if(StringUtils.isBlank(evalPerformancePath)) {
-            String evalMetaPerfPath = getEvalFilePath(evalConfig.getName(), Constants.EVAL_META_SCORE, evalConfig
-                    .getDataSet().getSource());
+            String evalMetaPerfPath = getEvalFilePath(evalConfig.getName(), Constants.EVAL_META_SCORE,
+                    evalConfig.getDataSet().getSource());
             return new Path(evalMetaPerfPath, metaColumn + Constants.EVAL_PERFORMANCE).toString();
         } else {
             return new Path(evalPerformancePath, metaColumn + Constants.EVAL_PERFORMANCE).toString();
@@ -860,8 +863,9 @@ public class PathFinder {
      * @return - the Path of local home directory
      */
     private Path getModelSetLocalPath() {
-        return (otherConfigs != null && otherConfigs.get(Constants.SHIFU_CURRENT_WORKING_DIR) != null) ? new Path(
-                otherConfigs.get(Constants.SHIFU_CURRENT_WORKING_DIR).toString()) : new Path(".");
+        return (otherConfigs != null && otherConfigs.get(Constants.SHIFU_CURRENT_WORKING_DIR) != null)
+                ? new Path(otherConfigs.get(Constants.SHIFU_CURRENT_WORKING_DIR).toString())
+                : new Path(".");
     }
 
     /**
@@ -960,8 +964,8 @@ public class PathFinder {
      * @return - train data path for assemble model
      */
     public String getSubModelsAssembleTrainData() {
-        return getPathBySourceType(new Path(Constants.TMP, "AssembleTrainData"), this.modelConfig.getDataSet()
-                .getSource());
+        return getPathBySourceType(new Path(Constants.TMP, "AssembleTrainData"),
+                this.modelConfig.getDataSet().getSource());
     }
 
     /**
@@ -979,6 +983,7 @@ public class PathFinder {
 
     /**
      * Get the shuffle data path
+     * 
      * @return - the shuffle data path
      */
     public String getShuffleDataPath() {
@@ -987,7 +992,9 @@ public class PathFinder {
 
     /**
      * Get the shuffle data path according SourceType
-     * @param sourceType - Local/HDFS
+     * 
+     * @param sourceType
+     *            - Local/HDFS
      * @return - the shuffle data path
      */
     private String getShuffleDataPath(SourceType sourceType) {
@@ -996,6 +1003,7 @@ public class PathFinder {
 
     /**
      * Get the backup ColumnConfig
+     * 
      * @return - the ColumnConfig.json path for backup
      */
     public String getBackupColumnConfig() {
@@ -1003,7 +1011,19 @@ public class PathFinder {
     }
 
     /**
+     * Get the backup ColumnConfig
+     * @param postTimeStamp - timestamp to back ColumnConfig file name
+     * @return - the ColumnConfig.json path for backup
+     */
+    public String getBackupColumnConfig(String postTimeStamp) {
+        return getPathBySourceType(
+                new Path(Constants.TMP, Constants.COLUMN_CONFIG_JSON_FILE_NAME + "." + postTimeStamp),
+                SourceType.LOCAL);
+    }
+
+    /**
      * Get the varsel auto filter history to let user have the opportunity to change
+     * 
      * @return - the varsel.history path for variable auto filter
      */
     public String getVarSelHistory() {
@@ -1012,6 +1032,7 @@ public class PathFinder {
 
     /**
      * Get the correlation export path
+     * 
      * @return - the correlation path for export
      */
     public String getCorrExportPath() {
@@ -1020,6 +1041,7 @@ public class PathFinder {
 
     /**
      * Get the ColumnConfig.json history by index
+     * 
      * @return - ColumnConfig.json path for variable selection history
      */
     public String getVarSelDir() {
@@ -1028,19 +1050,26 @@ public class PathFinder {
 
     /**
      * Get the ColumnConfig.json history by index
-     * @param index - the iteration of variable selection
+     * 
+     * @param index
+     *            - the iteration of variable selection
      * @return - ColumnConfig.json path for variable selection history
      */
     public String getVarSelColumnConfig(int index) {
-        return getPathBySourceType(new Path(Constants.VAR_SELECT, Constants.COLUMN_CONFIG_JSON_FILE_NAME + "." + index), SourceType.LOCAL);
+        return getPathBySourceType(new Path(Constants.VAR_SELECT, Constants.COLUMN_CONFIG_JSON_FILE_NAME + "." + index),
+                SourceType.LOCAL);
     }
 
     /**
      * Get the SE history by index
-     * @param index - the iteration of variable selection
+     * 
+     * @param index
+     *            - the iteration of variable selection
      * @return - se path for variable selection history
      */
     public String getVarSelMSEHistPath(int index) {
-        return getPathBySourceType(new Path(Constants.VAR_SELECT, Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME + "." + index), SourceType.LOCAL);
+        return getPathBySourceType(
+                new Path(Constants.VAR_SELECT, Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME + "." + index),
+                SourceType.LOCAL);
     }
 }

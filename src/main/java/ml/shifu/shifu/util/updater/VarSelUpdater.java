@@ -81,6 +81,14 @@ public class VarSelUpdater extends BasicUpdater {
         // No need reset ColumnType since column type should be set well in stats and later cannot be changed
         if(NSColumnUtils.isColumnEqual(this.targetColumnName, varName)) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Target);
+            if ( CollectionUtils.isEmpty(this.modelConfig.getTags()) ) {
+                // allow tags are empty to support linear target
+                // set columnType to N
+                columnConfig.setColumnType(ColumnType.N);
+            } else {
+                // target column is set to categorical column
+                columnConfig.setColumnType(ColumnType.C);
+            }
         } else if(this.setMeta.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Meta);
         } else if(this.setForceRemove.contains(new NSColumn(varName))) {
