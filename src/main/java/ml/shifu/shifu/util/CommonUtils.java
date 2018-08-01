@@ -440,12 +440,12 @@ public final class CommonUtils {
             return columnName;
         }
         String newColumnName = columnName.replaceAll("\\.", "_");
-//        newColumnName = newColumnName.replaceAll(" ", "_");
+        newColumnName = newColumnName.replaceAll(" ", "_");
         newColumnName = newColumnName.replaceAll("/", "_");
         newColumnName = newColumnName.replaceAll("-", "_");
         return newColumnName;
     }
-    
+
     /**
      * Return final selected column collection.
      * 
@@ -1156,7 +1156,7 @@ public final class CommonUtils {
 
     public static boolean isLinearTarget(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
         ColumnConfig columnConfig = getTargetColumnConfig(columnConfigList);
-        if ( columnConfig == null ) {
+        if(columnConfig == null) {
             throw new ShifuException(ShifuErrorCode.ERROR_NO_TARGET_COLUMN, "Target column is not detected.");
         }
         return (CollectionUtils.isEmpty(modelConfig.getTags()) && columnConfig.isNumerical());
@@ -2636,7 +2636,7 @@ public final class CommonUtils {
     }
 
     public static boolean isToNormVariable(ColumnConfig columnConfig, boolean hasCandidate,
-                                          boolean isBinaryClassification) {
+            boolean isBinaryClassification) {
         if(columnConfig == null) {
             return false;
         }
@@ -2654,10 +2654,11 @@ public final class CommonUtils {
         } else {
             // multiple classification
             return columnConfig.isCandidate(hasCandidate)
-                    && (columnConfig.getMean() != null
-                        && columnConfig.getStdDev() != null
-                        && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null&& columnConfig.getBinCategory().size() > 1)
-                            || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1)));
+                    && (columnConfig.getMean() != null && columnConfig.getStdDev() != null
+                            && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
+                                    && columnConfig.getBinCategory().size() > 1)
+                                    || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
+                                            && columnConfig.getBinBoundary().size() > 1)));
         }
     }
 
@@ -2680,10 +2681,9 @@ public final class CommonUtils {
             return false;
         }
 
-        return columnConfig.isCandidate(hasCandidate) && (
-                columnConfig.getKs() != null && columnConfig.getKs() > 0
-                && columnConfig.getIv() != null && columnConfig.getIv() > 0
-                && columnConfig.getMean() != null && columnConfig.getStdDev() != null
+        return columnConfig.isCandidate(hasCandidate) && (columnConfig.getKs() != null && columnConfig.getKs() > 0
+                && columnConfig.getIv() != null && columnConfig.getIv() > 0 && columnConfig.getMean() != null
+                && columnConfig.getStdDev() != null
                 && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
                         && columnConfig.getBinCategory().size() > 1)
                         || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
@@ -3041,27 +3041,29 @@ public final class CommonUtils {
     }
 
     public static double[] floatToDouble(float[] src) {
-        if (src == null) {
-        	return null;
+        if(src == null) {
+            return null;
         }
-    	
+
         double[] output = new double[src.length];
 
         for(int i = 0; i < src.length; i++) {
-        	output[i] = src[i];
+            output[i] = src[i];
         }
-        
+
         return output;
     }
 
     /**
      * Inject Shifu or Hadoop parameters into MapReduce / Pig jobs, by using visitor.
-     * @param visitor - provider to do injection
+     * 
+     * @param visitor
+     *            - provider to do injection
      */
     public static void injectHadoopShifuEnvironments(ValueVisitor visitor) {
         for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
             if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                if ( StringUtils.equalsIgnoreCase(entry.getKey().toString(), Constants.SHIFU_OUTPUT_DATA_DELIMITER) ) {
+                if(StringUtils.equalsIgnoreCase(entry.getKey().toString(), Constants.SHIFU_OUTPUT_DATA_DELIMITER)) {
                     visitor.inject(entry.getKey(), Base64Utils.base64Encode(entry.getValue().toString()));
                 } else {
                     visitor.inject(entry.getKey(), entry.getValue());
@@ -3072,10 +3074,12 @@ public final class CommonUtils {
 
     /**
      * Check whether the prefix of key is Shifu or Hadoop-related.
-     * @param key - key to check
+     * 
+     * @param key
+     *            - key to check
      * @return
-     *      true - is Shifu or Hadoop related keys
-     *      or false
+     *         true - is Shifu or Hadoop related keys
+     *         or false
      */
     public static boolean isHadoopConfigurationInjected(String key) {
         return key.startsWith("nn") || key.startsWith("guagua") || key.startsWith("shifu") || key.startsWith("mapred")
@@ -3083,4 +3087,3 @@ public final class CommonUtils {
                 || key.startsWith("hive") || key.startsWith("job");
     }
 }
-
