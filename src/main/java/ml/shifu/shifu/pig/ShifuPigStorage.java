@@ -121,6 +121,7 @@ public class ShifuPigStorage extends PigStorage {
         return shifuStorage.getSchema(location, job);
     }
     
+    @SuppressWarnings("rawtypes")
     @Override
     public OutputFormat getOutputFormat() {
         return shifuStorage.getOutputFormat();

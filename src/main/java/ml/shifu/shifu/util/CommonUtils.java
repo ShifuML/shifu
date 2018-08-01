@@ -440,7 +440,7 @@ public final class CommonUtils {
             return columnName;
         }
         String newColumnName = columnName.replaceAll("\\.", "_");
-        newColumnName = newColumnName.replaceAll(" ", "_");
+//        newColumnName = newColumnName.replaceAll(" ", "_");
         newColumnName = newColumnName.replaceAll("/", "_");
         newColumnName = newColumnName.replaceAll("-", "_");
         return newColumnName;
