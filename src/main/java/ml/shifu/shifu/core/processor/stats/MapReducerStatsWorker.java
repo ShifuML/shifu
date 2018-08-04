@@ -540,7 +540,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 }
                 if(raw.length >= 32) {
                     if(raw[31] != null) {
-                        List<String> sampleValues = Arrays.asList(raw[31].split(","));
+                        List<String> sampleValues = Arrays.asList(Base64Utils.base64Decode(raw[31]).split(","));
                         config.setSampleValues(sampleValues);
                     }
                 }

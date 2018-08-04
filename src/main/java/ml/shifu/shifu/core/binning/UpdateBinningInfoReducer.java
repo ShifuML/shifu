@@ -414,7 +414,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 .append(Constants.DEFAULT_DELIMITER).append(invalidCount) // invalid count
                 .append(Constants.DEFAULT_DELIMITER).append(validNumCount) // valid num count
                 .append(Constants.DEFAULT_DELIMITER).append(hyperLogLogPlus.cardinality()) // cardinality
-                .append(Constants.DEFAULT_DELIMITER).append(limitedFrequentItems(fis)) // frequent items
+                .append(Constants.DEFAULT_DELIMITER).append(Base64Utils.base64Encode(limitedFrequentItems(fis))) // frequent items
                 .append(Constants.DEFAULT_DELIMITER).append(p25th) // the 25 percentile value
                 .append(Constants.DEFAULT_DELIMITER).append(p75th);
 
