@@ -33,7 +33,6 @@ SET mapred.map.output.compress.codec org.apache.hadoop.io.compress.GzipCodec;
 SET mapreduce.output.fileoutputformat.compress.codec org.apache.hadoop.io.compress.GzipCodec;
 SET mapreduce.output.fileoutputformat.compress.type block;
 
-
 DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE Normalize        ml.shifu.shifu.udf.NormalizeUDF('$source_type', '$path_model_config', '$path_column_config', '$is_norm_for_clean');
 
@@ -44,4 +43,4 @@ normalized = FOREACH filtered GENERATE Normalize(*);
 normalized = FILTER normalized BY $0 IS NOT NULL;
 normalized = FOREACH normalized GENERATE FLATTEN($0);
 
-STORE normalized INTO '$pathNormalizedData' USING ml.shifu.shifu.pig.ShifuPigStorage('$is_csv', '|');
+STORE normalized INTO '$pathNormalizedData' USING ml.shifu.shifu.pig.ShifuPigStorage('$is_csv', '$output_delimiter');

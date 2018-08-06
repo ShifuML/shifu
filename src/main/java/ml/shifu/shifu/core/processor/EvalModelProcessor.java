@@ -15,19 +15,6 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Scanner;
-import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -40,6 +27,7 @@ import ml.shifu.shifu.core.Scorer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
 import ml.shifu.shifu.core.eval.GainChart;
+import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -48,15 +36,20 @@ import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.pig.tools.pigstats.JobStats;
 import org.apache.pig.tools.pigstats.PigStats;
+import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * EvalModelProcessor class
@@ -224,6 +217,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      *             any io exception
      */
     private void runScore(List<EvalConfig> evalSetList) throws IOException {
+        // do the validation before scoring the data set
+        for (EvalConfig evalConfig : evalSetList) {
+            validateEvalColumnConfig(evalConfig);
+        }
+
         // do it only once
         syncDataToHdfs(evalSetList);
 
@@ -608,12 +606,12 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         // validation for score column
         for(EvalConfig evalConfig: evalSetList) {
             List<String> scoreMetaColumns = evalConfig.getScoreMetaColumns(modelConfig);
-            if(scoreMetaColumns.size() > 5) {
-                LOG.warn(
+            if (scoreMetaColumns.size() > 5) {
+                LOG.error(
                         "Starting from 0.10.x, 'scoreMetaColumns' is used for benchmark score columns and limited to at most 5.");
-                LOG.warn(
+                LOG.error(
                         "If meta columns are set in file of 'scoreMetaColumns', please move meta column config to 'eval#dataSet#metaColumnNameFile' part.");
-                LOG.warn(
+                LOG.error(
                         "If 'eval#dataSet#metaColumnNameFile' is duplicated with training 'metaColumnNameFile', you can rename it to another file with different name.");
                 return;
             }
@@ -754,13 +752,12 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             }
         }
 
-        for(ColumnConfig config: this.columnConfigList) {
-            NSColumn nsColumn = new NSColumn(config.getColumnName());
-            if(config.isFinalSelect() && !names.contains(nsColumn)
-                    && !names.contains(new NSColumn(nsColumn.getSimpleName()))) {
-                throw new IllegalArgumentException("Final selected column " + config.getColumnName()
-                        + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
-            }
+        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig,
+                SourceType.LOCAL, evalConfig.getGbtConvertToProb(),
+                evalConfig.getGbtScoreConvertStrategy());
+        if (CollectionUtils.isNotEmpty(models)) {
+            validateFinalColumns(evalConfig, this.modelConfig.getModelSetName(), false,
+                    this.columnConfigList, names);
         }
 
         NSColumn targetColumn = new NSColumn(evalConfig.getDataSet().getTargetColumnName());
@@ -775,6 +772,29 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 && !names.contains(new NSColumn(weightColumn.getSimpleName()))) {
             throw new IllegalArgumentException("Weight column " + evalConfig.getDataSet().getWeightColumnName()
                     + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
+        }
+
+        List<ModelSpec> subModels = CommonUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
+                SourceType.LOCAL, evalConfig.getGbtConvertToProb(),
+                evalConfig.getGbtScoreConvertStrategy());
+        if (CollectionUtils.isNotEmpty(subModels)) {
+            for (ModelSpec modelSpec : subModels) {
+                validateFinalColumns(evalConfig, modelSpec.getModelName(), true,
+                        modelSpec.getColumnConfigList(), names);
+            }
+        }
+    }
+
+    private void validateFinalColumns(EvalConfig evalConfig, String modelName, boolean isSubModel,
+                                      List<ColumnConfig> columnConfigs, Set<NSColumn> names) {
+        for (ColumnConfig config : columnConfigs) {
+            NSColumn nsColumn = new NSColumn(config.getColumnName());
+            if (config.isFinalSelect() && !names.contains(nsColumn)
+                    && !names.contains(new NSColumn(nsColumn.getSimpleName()))) {
+                throw new IllegalArgumentException("Final selected column " + config.getColumnName()
+                        + " in " + (isSubModel ? "sub[" : "current[") + modelName + "]"
+                        + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
+            }
         }
     }
 

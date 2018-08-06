@@ -30,7 +30,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
+import ml.shifu.shifu.fs.SourceFile;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.IOUtils;
@@ -614,28 +616,37 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(),
                 modelConfig.getDataSet().getSource());
-
-        if(scanners == null || scanners.size() == 0) {
+        if ( CollectionUtils.isEmpty(scanners) ) {
             log.info("The PSI got failure during the computation");
             return;
         }
 
+        List<String> unitStats = new ArrayList<String>(this.columnConfigList.size());
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
                 String[] output = scanner.nextLine().trim().split("\\|");
-
                 try {
                     int columnNum = Integer.parseInt(output[0]);
                     ColumnConfig config = this.columnConfigList.get(columnNum);
                     config.setPSI(Double.parseDouble(output[1]));
-                    config.setUnitStats(
-                            Arrays.asList(StringUtils.split(output[2], CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
+                    unitStats.add(output[0] + "|" + output[2]);
+                    // config.setUnitStats(
+                    //        Arrays.asList(StringUtils.split(output[2], CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
                 } catch (Exception e) {
                     log.error("error in parsing", e);
                 }
-
             }
+            // close scanner
+            IOUtils.closeQuietly(scanner);
         }
+
+        // write unit stat into a temporary file
+        ShifuFileUtils.createDirIfNotExists(new SourceFile(Constants.TMP, RawSourceData.SourceType.LOCAL));
+
+        String ccUnitStatsFile = this.pathFinder.getColumnConfigUnitStatsPath();
+        ShifuFileUtils.writeLines(unitStats, ccUnitStatsFile, RawSourceData.SourceType.LOCAL);
+
+        log.info("The Unit Stats is stored in - {}.", ccUnitStatsFile);
         log.info("Run PSI - done.");
     }
 }

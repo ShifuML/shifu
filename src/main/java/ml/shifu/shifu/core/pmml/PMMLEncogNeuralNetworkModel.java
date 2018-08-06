@@ -62,7 +62,8 @@ public class PMMLEncogNeuralNetworkModel implements
         int weightID = 0;
         List<NeuralLayer> layerList = new ArrayList<NeuralLayer>();
 
-        pmmlModel.withFunctionName(MiningFunctionType.REGRESSION);
+        // by zhanhu - set the function name in NNPmmlModelCreator
+        // pmmlModel.withFunctionName(MiningFunctionType.REGRESSION);
         for(int i = 0; i < numLayers - 1; i++) {
             NeuralLayer layer = new NeuralLayer();
             layer.setNumberOfNeurons(layerFeedCount[i]);

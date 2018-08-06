@@ -15,15 +15,16 @@
  */
 package ml.shifu.shifu.pig;
 
+import org.apache.hadoop.mapreduce.OutputFormat;
+import org.apache.hadoop.mapreduce.RecordReader;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.RecordWriter;
+
 import org.apache.pig.piggybank.storage.CSVExcelStorage;
 import org.apache.pig.builtin.PigStorage;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.ResourceSchema;
-import org.apache.hadoop.mapreduce.RecordReader;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.InputFormat;
-import org.apache.hadoop.mapreduce.OutputFormat;
-import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.pig.impl.logicalLayer.FrontendException;
 import org.apache.pig.backend.hadoop.executionengine.mapReduceLayer.PigSplit;
 
