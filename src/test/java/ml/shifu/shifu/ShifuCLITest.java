@@ -288,6 +288,7 @@ public class ShifuCLITest {
 
         FileUtils.deleteQuietly(tmpModel);
         FileUtils.deleteQuietly(new File("EvalC" + Constants.DEFAULT_CHAMPIONSCORE_META_COLUMN_FILE));
+        FileUtils.deleteDirectory(new File("columns"));
     }
 
     @Test

@@ -51,4 +51,4 @@ data_stats = GROUP data_cols BY $0 PARALLEL $column_parallel;
 data_stats = JOIN data_stats BY $0, binning_info BY columnId PARALLEL $column_parallel;
 
 stats_info = FOREACH data_stats GENERATE FLATTEN(CalculateStats(*));
-STORE stats_info INTO '$path_pre_training_stats' USING PigStorage('|', '-schema');
+STORE stats_info INTO '$path_pre_training_stats' USING PigStorage('$output_delimiter', '-schema');

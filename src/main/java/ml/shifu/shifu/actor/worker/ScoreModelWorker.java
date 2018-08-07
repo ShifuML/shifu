@@ -20,6 +20,7 @@ import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.fs.PathFinder;
@@ -182,10 +183,13 @@ public class ScoreModelWorker extends AbstractWorkerActor {
     }
 
     private void addModelScoreData(StringBuilder buf, CaseScoreResult cs) {
-        buf.append("|" + cs.getAvgScore());
-        buf.append("|" + cs.getMaxScore());
-        buf.append("|" + cs.getMinScore());
-        buf.append("|" + cs.getMedianScore());
+        if ( !(modelConfig.isClassification()
+                && ModelTrainConf.MultipleClassification.NATIVE.equals(modelConfig.getTrain().getMultiClassifyMethod())) ) {
+            buf.append("|" + cs.getAvgScore());
+            buf.append("|" + cs.getMaxScore());
+            buf.append("|" + cs.getMinScore());
+            buf.append("|" + cs.getMedianScore());
+        }
 
         // score
         for (Double score : cs.getScores()) {
@@ -236,12 +240,21 @@ public class ScoreModelWorker extends AbstractWorkerActor {
     }
 
     private void addModelScoreHeader(StringBuilder buf, Integer modelCnt, String modelName) {
-        buf.append("|" + addModelNameAsNS(modelName, "mean"));
-        buf.append("|" + addModelNameAsNS(modelName, "max"));
-        buf.append("|" + addModelNameAsNS(modelName, "min"));
-        buf.append("|" + addModelNameAsNS(modelName, "median"));
-        for (int i = 0; i < modelCnt; i++) {
-            buf.append("|" + addModelNameAsNS(modelName, "model" + i));
+        if ( modelConfig.isClassification()
+                && ModelTrainConf.MultipleClassification.NATIVE.equals(modelConfig.getTrain().getMultiClassifyMethod())) {
+            for (int i = 0; i < modelCnt; i++) {
+                for (int j = 0; j < modelConfig.getTags().size(); j ++ ) {
+                    buf.append("|" + ((StringUtils.isNotBlank(modelName) ? modelName : "model") + i + "_tag_" + j));
+                }
+            }
+        } else {
+            buf.append("|" + addModelNameAsNS(modelName, "mean"));
+            buf.append("|" + addModelNameAsNS(modelName, "max"));
+            buf.append("|" + addModelNameAsNS(modelName, "min"));
+            buf.append("|" + addModelNameAsNS(modelName, "median"));
+            for (int i = 0; i < modelCnt; i++) {
+                buf.append("|" + addModelNameAsNS(modelName, "model" + i));
+            }
         }
     }
 

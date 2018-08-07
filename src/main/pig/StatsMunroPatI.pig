@@ -46,4 +46,4 @@ data_cols = FOREACH data_cols GENERATE FLATTEN($0);
 -- Do binning
 data_binning_grp = GROUP data_cols BY $0 PARALLEL $column_parallel;
 binning_info = FOREACH data_binning_grp GENERATE FLATTEN(GenBinningData(*));
-STORE binning_info INTO '$path_stats_binning_info' USING PigStorage('|', '-schema');
+STORE binning_info INTO '$path_stats_binning_info' USING PigStorage('$output_delimiter', '-schema');
