@@ -457,8 +457,15 @@ public class Normalizer {
         } else {
             try {
                 value = Double.parseDouble(raw);
+                // if raw is NaN, it won't throw Exception. The value will be Double.NaN
             } catch (Exception e) {
                 log.debug("Not decimal format " + raw + ", using default!");
+                value = defaultMissingValue(config);
+            }
+
+            if ( Double.isInfinite(value) || Double.isNaN(value) ) {
+                // if the value is Infinite or NaN, treat it as missing value
+                // should treat Infinite as missing value?
                 value = defaultMissingValue(config);
             }
         }

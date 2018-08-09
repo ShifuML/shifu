@@ -169,6 +169,11 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
             sumSquare += info.getSumSquareScoreDiff();
             count += info.getCount();
         }
+
+        LOG.info("The sum is {}", sum);
+        LOG.info("The sumSquare is {}", sumSquare);
+        LOG.info("The count is {}", count);
+
         column.setMean(sum / count);
         column.setRms(Math.sqrt(sumSquare / count));
         column.setVariance((sumSquare / count) - power2(sum / count));
