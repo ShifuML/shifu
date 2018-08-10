@@ -37,6 +37,7 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
@@ -67,6 +68,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     public enum EvalStep {
         LIST, NEW, DELETE, RUN, PERF, SCORE, CONFMAT, NORM, GAINCHART;
     }
+
+    public static final String NOSORT = "NOSORT";
 
     private String evalName = null;
 
@@ -102,6 +105,21 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     public EvalModelProcessor(EvalStep step, String name) {
         this.evalName = name;
         this.evalStep = step;
+    }
+
+    /**
+     * Constructor
+     *
+     * @param step
+     *            the evaluation step
+     * @param name
+     *            the evaluation name
+     * @param params
+     *            the command params
+     */
+    public EvalModelProcessor(EvalStep step, String name, Map<String, Object> params) {
+        this(step, name);
+        this.params = params;
     }
 
     /**
@@ -402,7 +420,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 "tmp" + File.separator + "maxmin_score_" + System.currentTimeMillis() + "_" + RANDOM.nextLong()))
                 .toString();
         confMap.put(Constants.SHIFU_EVAL_MAXMIN_SCORE_OUTPUT, maxMinScoreFolder);
-        if(modelConfig.isClassification()) {
+        if(modelConfig.isClassification() || (isNoSort() && EvalStep.SCORE.equals(this.evalStep))) {
             pigScript = "scripts/EvalScore.pig";
         }
         try {
@@ -1180,6 +1198,17 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runConfusionMatrix(EvalConfig config) throws IOException {
         runConfusionMatrix(config, null, false);
+    }
+
+    /**
+     * Check "-nosort" is specified or not
+     * @return true if nosort is specified, or false
+     */
+    private boolean isNoSort() {
+        if(MapUtils.isNotEmpty(this.params) && this.params.get(NOSORT) instanceof Boolean) {
+            return (Boolean) this.params.get(NOSORT);
+        }
+        return false;
     }
 
     private static class ScoreStatus {

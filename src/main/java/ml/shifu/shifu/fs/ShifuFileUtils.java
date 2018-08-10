@@ -463,7 +463,7 @@ public class ShifuFileUtils {
      * @throws IOException
      *             - if any I/O exception in processing
      */
-    public static void move(String srcPath, String destPath, SourceType sourceType) throws IOException {
+    public static boolean move(String srcPath, String destPath, SourceType sourceType) throws IOException {
         if(StringUtils.isEmpty(srcPath) || StringUtils.isEmpty(destPath) || sourceType == null) {
             throw new IllegalArgumentException(String.format(
                     "Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", srcPath, destPath,
@@ -476,7 +476,13 @@ public class ShifuFileUtils {
             // ignore delete failed, it's ok.
         }
 
-        fs.rename(new Path(srcPath), new Path(destPath));
+        if(fs.exists(new Path(srcPath))) {
+            // copy file only when source file exists.
+            fs.rename(new Path(srcPath), new Path(destPath));
+            return true;
+        }
+
+        return false;
     }
 
     /**

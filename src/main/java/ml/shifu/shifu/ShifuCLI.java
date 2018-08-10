@@ -111,6 +111,7 @@ public class ShifuCLI {
     private static final String CONFMAT = "confmat";
     private static final String PERF = "perf";
     private static final String NORM = "norm";
+    private static final String NOSORT = "nosort";
 
     private static final String SAVE = "save";
     private static final String SWITCH = "switch";
@@ -313,6 +314,8 @@ public class ShifuCLI {
                     ManageModelProcessor p = new ManageModelProcessor(ModelAction.SHOW, null);
                     p.run();
                 } else if(cleanedArgs[0].equals(EVAL_CMD)) {
+                    Map<String, Object> params = new HashMap<String, Object>();
+
                     // eval step
                     if(cleanedArgs.length == 1) {
                         // run everything
@@ -331,20 +334,18 @@ public class ShifuCLI {
                         runEvalSet(cmd.getOptionValue(EVAL_CMD_RUN), cmd.hasOption(TRAIN_CMD_DRY));
                         log.info("Finish run eval performance with eval set {}.", cmd.getOptionValue(EVAL_CMD_RUN));
                     } else if(cmd.hasOption(SCORE)) {
+                        params.put(EvalModelProcessor.NOSORT, cmd.hasOption(NOSORT));
                         // run score
-                        runEvalScore(cmd.getOptionValue(SCORE));
+                        runEvalScore(cmd.getOptionValue(SCORE), params);
                         log.info("Finish run score with eval set {}.", cmd.getOptionValue(SCORE));
                     } else if(cmd.hasOption(CONFMAT)) {
-
                         // run confusion matrix
                         runEvalConfMat(cmd.getOptionValue(CONFMAT));
                         log.info("Finish run confusion matrix with eval set {}.", cmd.getOptionValue(CONFMAT));
-
                     } else if(cmd.hasOption(PERF)) {
                         // run perfermance
                         runEvalPerf(cmd.getOptionValue(PERF));
                         log.info("Finish run performance maxtrix with eval set {}.", cmd.getOptionValue(PERF));
-
                     } else if(cmd.hasOption(LIST)) {
                         // list all evaluation sets
                         listEvalSet();
@@ -497,8 +498,8 @@ public class ShifuCLI {
         return p.run();
     }
 
-    public static int runEvalScore(String evalSetNames) throws Exception {
-        EvalModelProcessor p = new EvalModelProcessor(EvalStep.SCORE, evalSetNames);
+    public static int runEvalScore(String evalSetNames, Map<String, Object> params) throws Exception {
+        EvalModelProcessor p = new EvalModelProcessor(EvalStep.SCORE, evalSetNames, params);
         return p.run();
     }
 
@@ -624,6 +625,7 @@ public class ShifuCLI {
         Option opt_norm = OptionBuilder.hasArg().create(NORM);
         Option opt_eval = OptionBuilder.hasArg(false).create(EVAL_CMD);
         Option opt_init = OptionBuilder.hasArg(false).create(INIT_CMD);
+        Option opt_nosort = OptionBuilder.hasArg(false).create(NOSORT);
 
         // options for variable re-binning
         Option opt_rebin = OptionBuilder.hasArg(false).create(REBIN);
@@ -646,6 +648,7 @@ public class ShifuCLI {
         opts.addOption(opt_debug);
         opts.addOption(opt_model);
         opts.addOption(opt_concise);
+        opts.addOption(opt_nosort);
 
         opts.addOption(opt_reset);
         opts.addOption(opt_filter_auto);
@@ -709,7 +712,7 @@ public class ShifuCLI {
         System.out.println("\teval -new     <EvalSetName>             Create a new eval set.");
         System.out.println("\teval -delete  <EvalSetName>             Delete an eval set.");
         System.out.println("\teval -run     <EvalSetName>             Run eval set evaluation.");
-        System.out.println("\teval -score   <EvalSetName>             Scoring evaluation dataset.");
+        System.out.println("\teval -score   <EvalSetName> [-nosort]   Scoring evaluation dataset.");
         System.out.println("\teval -norm    <EvalSetName>             Normalize evaluation dataset.");
         System.out.println("\teval -confmat <EvalSetName>             Compute the TP/FP/TN/FN based on scoring");
         System.out
