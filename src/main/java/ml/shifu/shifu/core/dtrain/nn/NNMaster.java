@@ -238,7 +238,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.learningRate = this.rawLearningRate;
             this.weightCalculator = new Weight(this.globalNNParams.getGradients().length,
                     this.globalNNParams.getTrainSize(), learningRate, propagation, this.regularizedConstant,
-                    RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)), this.dropoutRate,
+                    RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)),
                     this.propagation, this.momentum, this.learningDecay, this.adamBeta1, this.adamBeta2);
         } else {
             this.learningRate = this.learningRate * (1.0d - this.learningDecay);

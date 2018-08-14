@@ -15,8 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
-import java.util.Random;
-
 import ml.shifu.shifu.core.dtrain.nn.update.AdaGradUpdate;
 import ml.shifu.shifu.core.dtrain.nn.update.AdamUpdate;
 import ml.shifu.shifu.core.dtrain.nn.update.MomentumUpdate;
@@ -86,16 +84,6 @@ public class Weight {
     private RegulationLevel rl = RegulationLevel.NONE;
 
     /**
-     * Dropout rate.
-     */
-    private double dropoutRate = 0d;
-
-    /**
-     * Random object to do drop out
-     */
-    private Random random;
-
-    /**
      * Enable Adam, Momentum, AdaGrad or RMSProp optimization, if {@link #updateRule} is null, by default old BGD.
      */
     private UpdateRule updateRule;
@@ -123,22 +111,18 @@ public class Weight {
     // for back propagation
     private double momentum = 0.5;
 
-    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl,
-            double dropoutRate) {
-        this(numWeight, numTrainSize, rate, algorithm, reg, rl, dropoutRate, null);
+    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl) {
+        this(numWeight, numTrainSize, rate, algorithm, reg, rl, null);
     }
 
     public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl,
-            double dropoutRate, String propagation) {
-        this(numWeight, numTrainSize, rate, algorithm, reg, rl, dropoutRate, propagation, 0.5d, 0d, 0.9d, 0.999d);
+            String propagation) {
+        this(numWeight, numTrainSize, rate, algorithm, reg, rl, propagation, 0.5d, 0d, 0.9d, 0.999d);
     }
 
-    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl,
-            double dropoutRate, String propagation, double momentum, double learningDecay, double adamBeta1,
+    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl, String propagation, double momentum, double learningDecay, double adamBeta1,
             double adamBeta2) {
         this.numWeight = numWeight;
-        this.dropoutRate = dropoutRate;
-        this.random = new Random();
         this.lastDelta = new double[numWeight];
         this.lastGradient = new double[numWeight];
         this.numTrainSize = numTrainSize;
@@ -196,10 +180,6 @@ public class Weight {
             return weights;
         } else {
             for(int i = 0; i < gradients.length; i++) {
-                if(this.dropoutRate > 0 && this.random.nextDouble() < this.dropoutRate) {
-                    // drop out, no need to update weight, just continue next weight
-                    continue;
-                }
                 switch(this.rl) {
                     case NONE:
                         weights[i] += updateWeight(i, weights, gradients);
