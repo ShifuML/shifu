@@ -180,6 +180,11 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
     */
     private FloatFlatNetwork flatNetwork = null;
     
+    /**
+     * Fixed Layers id, used for fine tune
+     */
+    private List<Integer> fixedLayers = new ArrayList<Integer>();
+    
     @Override
     public NNParams doCompute(MasterContext<NNParams, NNParams> context) {
         if(context.isFirstIteration()) {
@@ -239,7 +244,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.weightCalculator = new Weight(this.globalNNParams.getGradients().length,
                     this.globalNNParams.getTrainSize(), learningRate, propagation, this.regularizedConstant,
                     RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)),
-                    this.propagation, this.momentum, this.learningDecay, this.adamBeta1, this.adamBeta2);
+                    this.propagation, this.momentum, this.learningDecay, this.adamBeta1, this.adamBeta2, 
+                    getFixedWights(this.fixedLayers));
         } else {
             this.learningRate = this.learningRate * (1.0d - this.learningDecay);
             // without learningDecay Parameter using sqrt(iteration number) to decrease learning rate
@@ -254,7 +260,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         // data reading
         double[] weights = this.weightCalculator.calculateWeights(this.globalNNParams.getWeights(),
                 this.globalNNParams.getGradients(), (context.getCurrentIteration() - 1));
-
+        
         this.globalNNParams.setWeights(weights);
 
         // average error
@@ -457,6 +463,13 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         Object rconstant = validParams.get(CommonConstants.LR_REGULARIZED_CONSTANT);
         this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
 
+        // We do not update weight in fixed layers so that we could fine tune other layers of NN
+        Object fixedLayers2O = validParams.get(CommonConstants.FIXED_LAYERS);
+        if (fixedLayers2O != null) {
+            this.fixedLayers = (List<Integer>) fixedLayers2O;
+        }
+        LOG.info("Fixed layers in master is :{}", this.fixedLayers.toString());
+        
         // check if variables are set final selected
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         this.isAfterVarSelect = (inputOutputIndex[3] == 1);
@@ -512,5 +525,33 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
 				Arrays.toString(this.flatNetwork.getLayerCounts()),
 				Arrays.toString(droppedNodeIndices.toArray(new Integer[droppedNodeIndices.size()])));
 		return droppedNodeIndices;
+	}
+	
+	/**
+	 * fixed layer cannot be output layer and input layer, which does not have meanings
+	 * @param fixedLayers
+	 * @return
+	 */
+	private Set<Integer> getFixedWights(List<Integer> fixedLayers) {
+	    Set<Integer> fixedWights = new HashSet<Integer>();
+        
+	    for (int fixedLayer : fixedLayers) {
+	        int inputIndex = this.flatNetwork.getLayerIndex()[fixedLayer + 1];
+	        int outputIndex = this.flatNetwork.getLayerIndex()[fixedLayer];
+	        int inputSize = this.flatNetwork.getLayerCounts()[fixedLayer + 1];
+	        int outputSize = this.flatNetwork.getLayerFeedCounts()[fixedLayer];
+	        
+	        int index = this.flatNetwork.getWeightIndex()[fixedLayer];
+	        int limitX = outputIndex + outputSize;
+	        int limitY = inputIndex + inputSize;
+	        
+	        // weight values
+	        for (int x = outputIndex; x < limitX; x++) {
+	            for (int y = inputIndex; y < limitY; y++) {
+	                fixedWights.add(index++);
+	            }
+	        }
+	    }
+	    return fixedWights;
 	}
 }

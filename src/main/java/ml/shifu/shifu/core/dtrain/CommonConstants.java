@@ -98,4 +98,6 @@ public interface CommonConstants {
     public static final String MAPREDUCE_MAP_CPU_VCORES = "mapreduce.map.cpu.vcores";
     
     public static final String SHIFU_UPDATEBINNING_REDUCER = "shifu.updatebinning.reducer";
+    
+    public static final String FIXED_LAYERS = "FixedLayers";
 }

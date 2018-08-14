@@ -600,6 +600,20 @@ public class ModelInspector {
                     }
                 }
 
+                Object fixedLayersObj = params.get(CommonConstants.FIXED_LAYERS);
+                if (fixedLayersObj != null) {
+                    List<Integer> fixedLayers = (List<Integer>) fixedLayersObj;
+                    for (int layer : fixedLayers) {
+                        if (layer <= 0 || layer > layerCnt) {
+                            ValidateResult tmpResult = new ValidateResult(true);
+                            tmpResult.setStatus(false);
+                            tmpResult.getCauses().add("Fixed layer id " + layer +
+                                    " is invaild. It should be between 0 and hidden layer cnt:" + layerCnt);
+                            result = ValidateResult.mergeResult(result, tmpResult);
+                        }
+                    }
+                }
+                
                 Object miniBatchsO = params.get("MiniBatchs");
                 if(miniBatchsO != null) {
                     Integer miniBatchs = Integer.valueOf(miniBatchsO.toString());
