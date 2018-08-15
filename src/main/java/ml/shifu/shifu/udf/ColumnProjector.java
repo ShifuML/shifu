@@ -18,6 +18,8 @@ package ml.shifu.shifu.udf;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.ShifuFileUtils;
@@ -119,7 +121,7 @@ public class ColumnProjector extends AbstractTrainerUDF<Tuple> {
     @Override
     public Tuple exec(Tuple input) throws IOException {
         Tuple tuple = TupleFactory.getInstance().newTuple(3);
-        String tag = input.get(targetColumnIndex).toString();
+        String tag = CommonUtils.trimTag(input.get(targetColumnIndex).toString());
         tuple.set(0, tag);
         double score = 0;
         try {

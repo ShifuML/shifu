@@ -285,14 +285,15 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         if(reducerSize != null) {
             job.setNumReduceTasks(Environment.getInt(CommonConstants.SHIFU_UPDATEBINNING_REDUCER, 20));
         } else {
-            int newReducerSize = 1;
+            // By average, each reducer handle 100 variables
+            int newReducerSize = (this.columnConfigList.size() / 100);
             // if(newReducerSize < 1) {
             // newReducerSize = 1;
             // }
             // if(newReducerSize > 500) {
             // newReducerSize = 500;
             // }
-            // log.info("Adjust updating binning info reducer size to {} ", newReducerSize);
+            log.info("Adjust updating binning info reducer size to {} ", newReducerSize);
             job.setNumReduceTasks(newReducerSize);
         }
         job.setOutputKeyClass(NullWritable.class);

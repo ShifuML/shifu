@@ -21,13 +21,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UTFDataFormatException;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.GZIPInputStream;
 
@@ -263,6 +258,76 @@ public class IndependentTreeModel {
                         || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_CUTOFF_CONVETER)
                         || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_HALF_CUTOFF_CONVETER) || gbtScoreConvertStrategy
                             .equalsIgnoreCase(Constants.GBT_SCORE_MAXMIN_SCALE_CONVETER));
+    }
+
+    public final List<String> encode(int depth, Map<String, Object> dataMap) {
+        return encode(depth, convertDataMapToDoubleArray(dataMap));
+    }
+
+    public List<String> encode(int depth, double[] data) {
+        List<String> encodingResult = new ArrayList<String>();
+        for (int i = 0; i < this.trees.size(); i ++ ) {
+            List<TreeNode> treeBag = this.trees.get(i);
+            for (int j = 0; j < treeBag.size(); j ++ ) {
+                //use tree to encoding
+                TreeNode tree = treeBag.get(j);
+                String[] treeCodes = encodeTree(depth, tree.getNode(), data);
+                encodingResult.add(StringUtils.join(treeCodes));
+            }
+        }
+        return encodingResult;
+    }
+
+    private String[] encodeTree(int depth, Node topNode, double[] data) {
+        String[] treeCodes = new String[depth];
+        Arrays.fill(treeCodes, "L");
+        int ops = 0;
+
+        Node currNode = topNode;
+        // go until leaf
+        while(currNode.getSplit() != null && !currNode.isRealLeaf()) {
+            Split split = currNode.getSplit();
+            double value = data[this.getColumnIndex(split.getColumnNum())];
+            if(split.getFeatureType() == Split.CONTINUOUS) {
+                // value is real numeric value and no need to transform to binLowestValue
+                if(value < split.getThreshold()) {
+                    currNode = currNode.getLeft();
+                    treeCodes[ops++] = "L";
+                } else {
+                    currNode = currNode.getRight();
+                    treeCodes[ops++] = "R";
+                }
+            } else if(split.getFeatureType() == Split.CATEGORICAL) {
+                short indexValue = -1;
+                int categoricalSize = this.getCategoricalSize(split.getColumnNum());
+                if(Double.compare(value, 0d) < 0 || Double.compare(value, categoricalSize) >= 0) {
+                    indexValue = (short) categoricalSize;
+                } else {
+                    // value is category index + 0.1d is to avoid 0.9999999 converted to 0, is there?
+                    indexValue = (short) (value + 0.1d);
+                }
+                Set<Short> childCategories = split.getLeftOrRightCategories();
+                if(split.isLeft()) {
+                    if(childCategories.contains(indexValue)) {
+                        currNode = currNode.getLeft();
+                        treeCodes[ops++] = "L";
+                    } else {
+                        currNode = currNode.getRight();
+                        treeCodes[ops++] = "R";
+                    }
+                } else {
+                    if(childCategories.contains(indexValue)) {
+                        currNode = currNode.getRight();
+                        treeCodes[ops++] = "R";
+                    } else {
+                        currNode = currNode.getLeft();
+                        treeCodes[ops++] = "L";
+                    }
+                }
+            }
+        }
+
+        return treeCodes;
     }
 
     /**

@@ -196,6 +196,30 @@ public class ShifuFileUtils {
         }
     }
 
+    /**
+     * Get InputStream from (Path, SourceType)
+     * @param path - file path
+     * @param sourceType - file type
+     * @return InputStream of file(Path, SourceType)
+     * @throws IOException - if fail to open file
+     */
+    public static InputStream getInputStream(Path path, SourceType sourceType) throws IOException {
+        try {
+            return getCompressInputStream(getFileSystemBySourceType(sourceType).open(path), path);
+        } catch (IOException e) {
+            // To manual fix a issue that FileSystem is closed exceptionally. Here we renew a FileSystem object to make
+            // sure all go through such issues.
+            if(e.getMessage() != null) {
+                if(e.getMessage().toLowerCase().indexOf("filesystem closed") >= 0) {
+                    if(sourceType == SourceType.HDFS) {
+                        return HDFSUtils.renewFS().open(path);
+                    }
+                }
+            }
+            throw e;
+        }
+    }
+
     private static InputStream getCompressInputStream(FSDataInputStream fdis, Path path) throws IOException {
         String name = path.getName();
         if(name.toLowerCase().endsWith(".gz")) {
@@ -460,6 +484,7 @@ public class ShifuFileUtils {
      *            - destination file
      * @param sourceType
      *            - local/hdfs
+     * @return true if moving successfully, or false
      * @throws IOException
      *             - if any I/O exception in processing
      */

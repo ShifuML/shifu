@@ -889,12 +889,12 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
 
         // 1. Get challenge model performance
-        PerformanceResult challendgeModelPerformance = runConfusionMatrix(evalConfig, ss,
+        PerformanceResult challengeModelPerformance = runConfusionMatrix(evalConfig, ss,
                 pathFinder.getEvalScorePath(evalConfig), pathFinder.getEvalPerformancePath(evalConfig), false, false,
                 isGBTNotConvertToProb(evalConfig));
 
         List<PerformanceResult> prList = new ArrayList<PerformanceResult>();
-        prList.add(challendgeModelPerformance);
+        prList.add(challengeModelPerformance);
 
         // 2. Get all champion model performance
         List<String> names = new ArrayList<String>();
