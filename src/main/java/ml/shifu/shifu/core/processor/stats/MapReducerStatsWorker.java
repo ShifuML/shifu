@@ -270,7 +270,6 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         Job job = new Job(conf, "Shifu: Stats Updating Binning Job : " + this.modelConfig.getModelSetName());
         job.setJarByClass(getClass());
         job.setMapperClass(UpdateBinningInfoMapper.class);
-
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(BinningInfoWritable.class);
         job.setInputFormatClass(CombineInputFormat.class);
@@ -286,7 +285,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             job.setNumReduceTasks(Environment.getInt(CommonConstants.SHIFU_UPDATEBINNING_REDUCER, 20));
         } else {
             // By average, each reducer handle 100 variables
-            int newReducerSize = (this.columnConfigList.size() / 100);
+            int newReducerSize = (this.columnConfigList.size() / 100) + 1;
             // if(newReducerSize < 1) {
             // newReducerSize = 1;
             // }

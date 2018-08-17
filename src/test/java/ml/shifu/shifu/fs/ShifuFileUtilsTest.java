@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.fs;
 
+import com.google.common.io.Files;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import org.apache.commons.io.FileUtils;
 import org.testng.Assert;
@@ -135,5 +136,13 @@ public class ShifuFileUtilsTest {
         List<String> lines = ShifuFileUtils.readFilePartsIntoList("src/test/resources/example/partfile",
                 SourceType.LOCAL);
         Assert.assertEquals(5, lines.size());
+    }
+
+    @Test
+    public void testCopyCurrentDir() throws IOException {
+        File file = Files.createTempDir();
+        ShifuFileUtils.copy(".", file.getPath(), SourceType.LOCAL);
+        Assert.assertTrue(file.exists());
+        FileUtils.deleteDirectory(file);
     }
 }

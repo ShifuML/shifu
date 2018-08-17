@@ -1205,10 +1205,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * @return true if nosort is specified, or false
      */
     private boolean isNoSort() {
-        if(MapUtils.isNotEmpty(this.params) && this.params.get(NOSORT) instanceof Boolean) {
-            return (Boolean) this.params.get(NOSORT);
-        }
-        return false;
+        return getBooleanParam(this.params, NOSORT);
     }
 
     private static class ScoreStatus {

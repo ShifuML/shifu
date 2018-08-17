@@ -24,21 +24,9 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
-import ml.shifu.shifu.core.processor.BasicModelProcessor;
-import ml.shifu.shifu.core.processor.ComboModelProcessor;
-import ml.shifu.shifu.core.processor.CreateModelProcessor;
-import ml.shifu.shifu.core.processor.EvalModelProcessor;
+import ml.shifu.shifu.core.processor.*;
 import ml.shifu.shifu.core.processor.EvalModelProcessor.EvalStep;
-import ml.shifu.shifu.core.processor.ExportModelProcessor;
-import ml.shifu.shifu.core.processor.InitModelProcessor;
-import ml.shifu.shifu.core.processor.ManageModelProcessor;
 import ml.shifu.shifu.core.processor.ManageModelProcessor.ModelAction;
-import ml.shifu.shifu.core.processor.NormalizeModelProcessor;
-import ml.shifu.shifu.core.processor.PostTrainModelProcessor;
-import ml.shifu.shifu.core.processor.Processor;
-import ml.shifu.shifu.core.processor.StatsModelProcessor;
-import ml.shifu.shifu.core.processor.TrainModelProcessor;
-import ml.shifu.shifu.core.processor.VarSelectModelProcessor;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
@@ -84,8 +72,8 @@ public class ShifuCLI {
     private static final String NEW = "new";
 
     private static final String CMD_EXPORT = "export";
-
     private static final String CMD_COMBO = "combo";
+    private static final String CMD_ENCODE = "encode";
 
     // options for stats
     private static final String CORRELATION = "correlation";
@@ -112,6 +100,7 @@ public class ShifuCLI {
     private static final String PERF = "perf";
     private static final String NORM = "norm";
     private static final String NOSORT = "nosort";
+    private static final String REF = "ref";
 
     private static final String SAVE = "save";
     private static final String SWITCH = "switch";
@@ -275,6 +264,11 @@ public class ShifuCLI {
                     } else {
                         log.info("Do model training with error, please check error message or report issue.");
                     }
+                } else if (cleanedArgs[0].equals(CMD_ENCODE)) {
+                    Map<String, Object> params = new HashMap<String, Object>();
+                    params.put(ModelDataEncodeProcessor.ENCODE_DATA_SET, cmd.getOptionValue(EVAL_CMD_RUN));
+                    params.put(ModelDataEncodeProcessor.ENCODE_REF_MODEL, cmd.getOptionValue(REF));
+                    status = runEncode(params);
                 } else if(cleanedArgs[0].equals(CMD_COMBO)) {
                     if(cmd.hasOption(MODELSET_CMD_NEW)) {
                         log.info("Create new commbo models");
@@ -567,6 +561,11 @@ public class ShifuCLI {
         p.checkAlgorithmParam();
     }
 
+    private static int runEncode(Map<String,Object> params) {
+        ModelDataEncodeProcessor processor = new ModelDataEncodeProcessor(params);
+        return processor.run();
+    }
+
     private static void printModelSetCopiedSuccessfulLog(String newModelSetName) {
         log.info(String.format("ModelSet %s is copied successfully with ModelConfig.json in %s folder.",
                 newModelSetName, newModelSetName));
@@ -626,6 +625,7 @@ public class ShifuCLI {
         Option opt_eval = OptionBuilder.hasArg(false).create(EVAL_CMD);
         Option opt_init = OptionBuilder.hasArg(false).create(INIT_CMD);
         Option opt_nosort = OptionBuilder.hasArg(false).create(NOSORT);
+        Option opt_ref = OptionBuilder.hasArg(true).create(REF);
 
         // options for variable re-binning
         Option opt_rebin = OptionBuilder.hasArg(false).create(REBIN);
@@ -649,6 +649,7 @@ public class ShifuCLI {
         opts.addOption(opt_model);
         opts.addOption(opt_concise);
         opts.addOption(opt_nosort);
+        opts.addOption(opt_ref);
 
         opts.addOption(opt_reset);
         opts.addOption(opt_filter_auto);
@@ -726,6 +727,8 @@ public class ShifuCLI {
         System.out.println("\tcombo -init                             Generate sub-models.");
         System.out.println("\tcombo -run [-shuffle] [-resume]         Run Combo-Model train.");
         System.out.println("\tcombo -eval [-resume]                   Evaluate Combo-Model performance.");
+        System.out.println("\tencode -run [TDS|EvalSetNames] [-ref encode_ref_model]");
+        System.out.println("\t                                        Run encode on training or evaluation datasets and set them to encode_ref_model.");
         System.out.println("\tversion|v|-v|-version                   Print version of current package.");
         System.out.println("\thelp|h|-h|-help                         Help message.");
     }
