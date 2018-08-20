@@ -128,12 +128,15 @@ public class NNWorker extends AbstractNNWorker<Text> {
                     pos++;
                 } else {
                     if(subFeatureSet.contains(index)) {
-                        if ( columnConfig != null && columnConfig.isNumerical()
+                        if ( columnConfig.isMeta() || columnConfig.isForceRemove() ) {
+                            // it shouldn't happen here
+                            pos += 1;
+                        } else if ( columnConfig != null && columnConfig.isNumerical()
                                 && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT) ) {
                             for(int k = 0; k < columnConfig.getBinBoundary().size() + 1; k++) {
                                 String tval = fields[pos];
                                 // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-                                float fval = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
+                                float fval = tval.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
                                 // no idea about why NaN in input data, we should process it as missing value TODO ,
                                 // according to norm type
                                 fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? 0f : fval;
@@ -146,7 +149,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
                             for(int k = 0; k < columnConfig.getBinCategory().size() + 1; k++) {
                                 String tval = fields[pos];
                                 // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-                                float fval = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
+                                float fval = tval.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
                                 // no idea about why NaN in input data, we should process it as missing value TODO ,
                                 // according to norm type
                                 fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? 0f : fval;
@@ -159,7 +162,9 @@ public class NNWorker extends AbstractNNWorker<Text> {
                         }
                         hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
                     } else {
-                        if ( columnConfig.isNumerical()
+                        if ( columnConfig.isMeta() || columnConfig.isForceRemove() ) {
+                            pos += 1;
+                        } else if ( columnConfig.isNumerical()
                                 && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)
                                 && columnConfig.getBinBoundary() != null
                                 && columnConfig.getBinBoundary().size() > 1) {

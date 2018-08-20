@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu;
 
+import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -333,5 +334,12 @@ public class ShifuCLITest {
 
         double a = Double.parseDouble("NaN");
         System.out.println(a);
+
+        float t = NumberFormatUtils.getFloat("1", 0f);
+        Assert.assertTrue(isPositive(t));
+    }
+
+    protected boolean isPositive(float value) {
+        return Float.compare(1f, value) == 0 ? true : false;
     }
 }
