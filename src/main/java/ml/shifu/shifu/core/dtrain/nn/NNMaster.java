@@ -185,6 +185,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
      */
     private List<Integer> fixedLayers = new ArrayList<Integer>();
     
+    private Integer hiddenLayerNum = 0;
+    
     @Override
     public NNParams doCompute(MasterContext<NNParams, NNParams> context) {
         if(context.isFirstIteration()) {
@@ -260,6 +262,14 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         // data reading
         double[] weights = this.weightCalculator.calculateWeights(this.globalNNParams.getWeights(),
                 this.globalNNParams.getGradients(), (context.getCurrentIteration() - 1));
+        
+        StringBuilder sameWeightIndices = new StringBuilder();
+        for (int i = 0; i < weights.length; i++) {
+            if (weights[i] == oldWeights[i]) {
+                sameWeightIndices.append(i).append(",");
+            }
+        }
+        LOG.info("Same Weight Indices: " + sameWeightIndices.toString());
         
         this.globalNNParams.setWeights(weights);
 
@@ -470,6 +480,12 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         }
         LOG.info("Fixed layers in master is :{}", this.fixedLayers.toString());
         
+        Object hiddenLayerNumObj = validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
+        if (hiddenLayerNumObj != null && StringUtils.isNumeric(hiddenLayerNumObj.toString())) {
+            this.hiddenLayerNum = Integer.valueOf(hiddenLayerNumObj.toString());
+        }
+        LOG.info("hiddenLayerNum in master is :{}", this.hiddenLayerNum);
+        
         // check if variables are set final selected
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         this.isAfterVarSelect = (inputOutputIndex[3] == 1);
@@ -528,30 +544,43 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
 	}
 	
 	/**
+	 * User's input fixed layer ID is different from ours. we need to use hiddenLayerNum to do transformation. 
+	 * For examaple, when user what to fix first hidden layer, 2 -> his.hiddenLayerNum - 2 + 1
+	 * 
 	 * fixed layer cannot be output layer and input layer, which does not have meanings
 	 * @param fixedLayers
 	 * @return
 	 */
 	private Set<Integer> getFixedWights(List<Integer> fixedLayers) {
-	    Set<Integer> fixedWights = new HashSet<Integer>();
+	    Set<Integer> fixedWeight = new HashSet<Integer>();
         
 	    for (int fixedLayer : fixedLayers) {
-	        int inputIndex = this.flatNetwork.getLayerIndex()[fixedLayer + 1];
-	        int outputIndex = this.flatNetwork.getLayerIndex()[fixedLayer];
-	        int inputSize = this.flatNetwork.getLayerCounts()[fixedLayer + 1];
-	        int outputSize = this.flatNetwork.getLayerFeedCounts()[fixedLayer];
+	        int realLayer = this.hiddenLayerNum - fixedLayer + 1;
+	        int inputIndex = this.flatNetwork.getLayerIndex()[realLayer + 1];
+	        int outputIndex = this.flatNetwork.getLayerIndex()[realLayer];
+	        int inputSize = this.flatNetwork.getLayerCounts()[realLayer + 1];
+	        int outputSize = this.flatNetwork.getLayerFeedCounts()[realLayer];
 	        
-	        int index = this.flatNetwork.getWeightIndex()[fixedLayer];
+	        int index = this.flatNetwork.getWeightIndex()[realLayer];
 	        int limitX = outputIndex + outputSize;
 	        int limitY = inputIndex + inputSize;
+	        
+	        LOG.info("fixedLayer:{}; realLayer{}; inputIndex:{}; outputIndex:{}; inputSize{}; outputSize{}; index{}; limitX{};limitY{}", 
+	                fixedLayer, realLayer, inputIndex, outputIndex, inputSize, outputSize, index, limitX, limitY);
 	        
 	        // weight values
 	        for (int x = outputIndex; x < limitX; x++) {
 	            for (int y = inputIndex; y < limitY; y++) {
-	                fixedWights.add(index++);
+	                fixedWeight.add(index++);
 	            }
 	        }
+	        
+	        // add constant weight, output layer does not have constant node, so skip
+	        if (fixedLayer != (hiddenLayerNum+1)) {
+	            fixedWeight.add(index++);
+	        }
 	    }
-	    return fixedWights;
+	    
+	    return fixedWeight;
 	}
 }

@@ -604,11 +604,11 @@ public class ModelInspector {
                 if (fixedLayersObj != null) {
                     List<Integer> fixedLayers = (List<Integer>) fixedLayersObj;
                     for (int layer : fixedLayers) {
-                        if (layer <= 0 || layer > layerCnt) {
+                        if (layer <= 0 || layer > (layerCnt+1)) {
                             ValidateResult tmpResult = new ValidateResult(true);
                             tmpResult.setStatus(false);
                             tmpResult.getCauses().add("Fixed layer id " + layer +
-                                    " is invaild. It should be between 0 and hidden layer cnt:" + layerCnt);
+                                    " is invaild. It should be between 0 and hidden layer cnt +  output layer:" + (layerCnt + 1));
                             result = ValidateResult.mergeResult(result, tmpResult);
                         }
                     }
