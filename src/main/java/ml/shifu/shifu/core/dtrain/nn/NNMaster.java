@@ -180,6 +180,13 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
     */
     private FloatFlatNetwork flatNetwork = null;
     
+    /**
+     * Fixed Layers id, used for fine tune
+     */
+    private List<Integer> fixedLayers = new ArrayList<Integer>();
+    
+    private Integer hiddenLayerNum = 0;
+    
     @Override
     public NNParams doCompute(MasterContext<NNParams, NNParams> context) {
         if(context.isFirstIteration()) {
@@ -238,8 +245,9 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.learningRate = this.rawLearningRate;
             this.weightCalculator = new Weight(this.globalNNParams.getGradients().length,
                     this.globalNNParams.getTrainSize(), learningRate, propagation, this.regularizedConstant,
-                    RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)), this.dropoutRate,
-                    this.propagation, this.momentum, this.learningDecay, this.adamBeta1, this.adamBeta2);
+                    RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)),
+                    this.propagation, this.momentum, this.learningDecay, this.adamBeta1, this.adamBeta2, 
+                    getFixedWights(this.fixedLayers));
         } else {
             this.learningRate = this.learningRate * (1.0d - this.learningDecay);
             // without learningDecay Parameter using sqrt(iteration number) to decrease learning rate
@@ -254,7 +262,15 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         // data reading
         double[] weights = this.weightCalculator.calculateWeights(this.globalNNParams.getWeights(),
                 this.globalNNParams.getGradients(), (context.getCurrentIteration() - 1));
-
+        
+        StringBuilder sameWeightIndices = new StringBuilder();
+        for (int i = 0; i < weights.length; i++) {
+            if (weights[i] == oldWeights[i]) {
+                sameWeightIndices.append(i).append(",");
+            }
+        }
+        LOG.info("Same Weight Indices: " + sameWeightIndices.toString());
+        
         this.globalNNParams.setWeights(weights);
 
         // average error
@@ -457,6 +473,19 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         Object rconstant = validParams.get(CommonConstants.LR_REGULARIZED_CONSTANT);
         this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
 
+        // We do not update weight in fixed layers so that we could fine tune other layers of NN
+        Object fixedLayers2O = validParams.get(CommonConstants.FIXED_LAYERS);
+        if (fixedLayers2O != null) {
+            this.fixedLayers = (List<Integer>) fixedLayers2O;
+        }
+        LOG.info("Fixed layers in master is :{}", this.fixedLayers.toString());
+        
+        Object hiddenLayerNumObj = validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
+        if (hiddenLayerNumObj != null && StringUtils.isNumeric(hiddenLayerNumObj.toString())) {
+            this.hiddenLayerNum = Integer.valueOf(hiddenLayerNumObj.toString());
+        }
+        LOG.info("hiddenLayerNum in master is :{}", this.hiddenLayerNum);
+        
         // check if variables are set final selected
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         this.isAfterVarSelect = (inputOutputIndex[3] == 1);
@@ -512,5 +541,46 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
 				Arrays.toString(this.flatNetwork.getLayerCounts()),
 				Arrays.toString(droppedNodeIndices.toArray(new Integer[droppedNodeIndices.size()])));
 		return droppedNodeIndices;
+	}
+	
+	/**
+	 * User's input fixed layer ID is different from ours. we need to use hiddenLayerNum to do transformation. 
+	 * For examaple, when user what to fix first hidden layer, 2 -> his.hiddenLayerNum - 2 + 1
+	 * 
+	 * fixed layer cannot be output layer and input layer, which does not have meanings
+	 * @param fixedLayers
+	 * @return
+	 */
+	private Set<Integer> getFixedWights(List<Integer> fixedLayers) {
+	    Set<Integer> fixedWeight = new HashSet<Integer>();
+        
+	    for (int fixedLayer : fixedLayers) {
+	        int realLayer = this.hiddenLayerNum - fixedLayer + 1;
+	        int inputIndex = this.flatNetwork.getLayerIndex()[realLayer + 1];
+	        int outputIndex = this.flatNetwork.getLayerIndex()[realLayer];
+	        int inputSize = this.flatNetwork.getLayerCounts()[realLayer + 1];
+	        int outputSize = this.flatNetwork.getLayerFeedCounts()[realLayer];
+	        
+	        int index = this.flatNetwork.getWeightIndex()[realLayer];
+	        int limitX = outputIndex + outputSize;
+	        int limitY = inputIndex + inputSize;
+	        
+	        LOG.info("fixedLayer:{}; realLayer{}; inputIndex:{}; outputIndex:{}; inputSize{}; outputSize{}; index{}; limitX{};limitY{}", 
+	                fixedLayer, realLayer, inputIndex, outputIndex, inputSize, outputSize, index, limitX, limitY);
+	        
+	        // weight values
+	        for (int x = outputIndex; x < limitX; x++) {
+	            for (int y = inputIndex; y < limitY; y++) {
+	                fixedWeight.add(index++);
+	            }
+	        }
+	        
+	        // add constant weight, output layer does not have constant node, so skip
+	        if (fixedLayer != (hiddenLayerNum+1)) {
+	            fixedWeight.add(index++);
+	        }
+	    }
+	    
+	    return fixedWeight;
 	}
 }
