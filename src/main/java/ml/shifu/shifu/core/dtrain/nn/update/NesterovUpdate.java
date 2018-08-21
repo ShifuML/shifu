@@ -23,6 +23,8 @@
  */
 package ml.shifu.shifu.core.dtrain.nn.update;
 
+import java.util.Set;
+
 import ml.shifu.shifu.core.dtrain.Weight;
 
 /**
@@ -47,8 +49,10 @@ public class NesterovUpdate implements UpdateRule {
     }
 
     @Override
-    public void update(double[] gradients, double[] weights, int iteration) {
+    public void update(double[] gradients, double[] weights, int iteration, Set<Integer> fixedWeights) {
         for(int i = 0; i < weights.length; i++) {
+            if (fixedWeights.contains(i)) continue;
+            
             double prevNesterov = this.lastDelta[i];
             this.lastDelta[i] = (this.momentum * prevNesterov) + (gradients[i] * this.learningRate);
             final double delta = (this.momentum * prevNesterov) - ((1 + this.momentum) * this.lastDelta[i]);
