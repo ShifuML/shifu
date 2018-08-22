@@ -33,7 +33,7 @@ import org.testng.annotations.Test;
 
 public class TreeModelPmmlTest {
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "incomplete-switch" })
     @Test
     public void testTreeModel() throws Exception {
         InputStream is = null;

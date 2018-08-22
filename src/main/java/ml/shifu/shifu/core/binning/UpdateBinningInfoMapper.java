@@ -28,15 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.DataPurifier;
-import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper.CountAndFrequentItems;
-import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -46,6 +37,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Splitter;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.DataPurifier;
+import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper.CountAndFrequentItems;
+import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
+import ml.shifu.shifu.util.BinUtils;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 
 /**
  * {@link UpdateBinningInfoMapper} is a mapper to update local data statistics given bin boundary list.
@@ -435,7 +436,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 isMissingValue = true;
             }
             String str = StringUtils.trim(units[columnIndex]);
-            double douVal = CommonUtils.parseNumber(str);
+            double douVal = BinUtils.parseNumber(str);
 
             Double hybridThreshould = columnConfig.getHybridThreshold();
             if(hybridThreshould == null) {
@@ -592,11 +593,11 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         } catch (Exception e) {
             return -1;
         }
-        return CommonUtils.getBinIndex(binBoundaryList, dval);
+        return BinUtils.getBinIndex(binBoundaryList, dval);
     }
 
     public static int getBinNum(List<Double> binBoundaryList, double dVal) {
-        return CommonUtils.getBinIndex(binBoundaryList, dVal);
+        return BinUtils.getBinIndex(binBoundaryList, dVal);
     }
 
     private int quickLocateCategoricalBin(Map<String, Integer> map, String val) {

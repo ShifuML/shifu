@@ -15,14 +15,6 @@
  */
 package ml.shifu.shifu.core.posttrain;
 
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,10 +26,19 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
+import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
@@ -187,7 +188,7 @@ public class FeatureImportanceMapper extends Mapper<LongWritable, Text, IntWrita
         for(int i = 0; i < headers.length; i++) {
             ColumnConfig config = this.columnConfigList.get(i);
             if(!config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
-                int binNum = CommonUtils.getBinNum(config, units[i]);
+                int binNum = BinUtils.getBinNum(config, units[i]);
                 List<Integer> binAvgScores = config.getBinAvgScore();
                 int binScore = 0;
                 if(binNum == -1) {

@@ -27,18 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
-import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
-import ml.shifu.shifu.container.obj.ModelStatsConf.BinningAlgorithm;
-import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
-import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-import ml.shifu.shifu.util.HDFSUtils;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
@@ -48,6 +36,19 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.common.collect.Lists;
+
+import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
+import ml.shifu.shifu.container.obj.ModelStatsConf.BinningAlgorithm;
+import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
+import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.util.BinUtils;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.HDFSUtils;
 
 /**
  * ModelConfig is for ModelConfig.json configurations.
@@ -183,9 +184,9 @@ public class ModelConfig {
         ModelSourceDataConf dataSet = new ModelSourceDataConf();
         dataSet.setDataDelimiter("|");
 
-        String exampleLocalDSPath = new File(Environment.getProperty(Environment.SHIFU_HOME), File.separator
-                + "example" + File.separator + "cancer-judgement" + File.separator + "DataStore" + File.separator
-                + "DataSet1").toString();
+        String exampleLocalDSPath = new File(Environment.getProperty(Environment.SHIFU_HOME), File.separator + "example"
+                + File.separator + "cancer-judgement" + File.separator + "DataStore" + File.separator + "DataSet1")
+                        .toString();
         if(enableHadoop) {
             Path dst = new Path(File.separator + "user" + File.separator
                     + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement");
@@ -194,9 +195,9 @@ public class ModelConfig {
 
             HDFSUtils.getFS().copyFromLocalFile(new Path(exampleLocalDSPath), dst);
             dataSet.setSource(SourceType.HDFS);
-            dataSet.setDataPath(new File(File.separator + "user" + File.separator
-                    + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement"
-                    + File.separator + "DataSet1").toString());
+            dataSet.setDataPath(
+                    new File(File.separator + "user" + File.separator + Environment.getProperty(Environment.SYSTEM_USER)
+                            + File.separator + "cancer-judgement" + File.separator + "DataSet1").toString());
             dataSet.setHeaderPath(new File(File.separator + "user" + File.separator
                     + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement"
                     + File.separator + "DataSet1" + File.separator + ".pig_header").toString());
@@ -218,15 +219,18 @@ public class ModelConfig {
 
         dataSet.setMissingOrInvalidValues(Lists.asList("", new String[] { "*", "#", "?", "null", "~" }));
         // create empty <ModelName>/meta.column.names
-        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.COLUMN_META_FOLDER_NAME + File.separator
-                + Constants.DEFAULT_META_COLUMN_FILE).toString(), SourceType.LOCAL);
-        dataSet.setMetaColumnNameFile(Constants.COLUMN_META_FOLDER_NAME + File.separator
-                + Constants.DEFAULT_META_COLUMN_FILE);
+        ShifuFileUtils.createFileIfNotExists(new Path(modelName,
+                Constants.COLUMN_META_FOLDER_NAME + File.separator + Constants.DEFAULT_META_COLUMN_FILE).toString(),
+                SourceType.LOCAL);
+        dataSet.setMetaColumnNameFile(
+                Constants.COLUMN_META_FOLDER_NAME + File.separator + Constants.DEFAULT_META_COLUMN_FILE);
         // create empty <ModelName>/categorical.column.names
-        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.COLUMN_META_FOLDER_NAME + File.separator
-                + Constants.DEFAULT_CATEGORICAL_COLUMN_FILE).toString(), SourceType.LOCAL);
-        dataSet.setCategoricalColumnNameFile(Constants.COLUMN_META_FOLDER_NAME + File.separator
-                + Constants.DEFAULT_CATEGORICAL_COLUMN_FILE);
+        ShifuFileUtils.createFileIfNotExists(new Path(modelName,
+                Constants.COLUMN_META_FOLDER_NAME + File.separator + Constants.DEFAULT_CATEGORICAL_COLUMN_FILE)
+                        .toString(),
+                SourceType.LOCAL);
+        dataSet.setCategoricalColumnNameFile(
+                Constants.COLUMN_META_FOLDER_NAME + File.separator + Constants.DEFAULT_CATEGORICAL_COLUMN_FILE);
         modelConfig.setDataSet(dataSet);
 
         // build stats info
@@ -239,16 +243,20 @@ public class ModelConfig {
         // build varselect info
         ModelVarSelectConf varselect = new ModelVarSelectConf();
         // create empty <ModelName>/forceselect.column.names
-        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.COLUMN_META_FOLDER_NAME + File.separator
-                + Constants.DEFAULT_FORCESELECT_COLUMN_FILE).toString(), SourceType.LOCAL);
-        varselect.setForceSelectColumnNameFile(Constants.COLUMN_META_FOLDER_NAME + File.separator
-                + Constants.DEFAULT_FORCESELECT_COLUMN_FILE);
+        ShifuFileUtils.createFileIfNotExists(new Path(modelName,
+                Constants.COLUMN_META_FOLDER_NAME + File.separator + Constants.DEFAULT_FORCESELECT_COLUMN_FILE)
+                        .toString(),
+                SourceType.LOCAL);
+        varselect.setForceSelectColumnNameFile(
+                Constants.COLUMN_META_FOLDER_NAME + File.separator + Constants.DEFAULT_FORCESELECT_COLUMN_FILE);
 
         // create empty <ModelName>/forceremove.column.names
-        ShifuFileUtils.createFileIfNotExists(new Path(modelName, Constants.COLUMN_META_FOLDER_NAME + File.separator
-                + Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE).toString(), SourceType.LOCAL);
-        varselect.setForceRemoveColumnNameFile(Constants.COLUMN_META_FOLDER_NAME + File.separator
-                + Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE);
+        ShifuFileUtils.createFileIfNotExists(new Path(modelName,
+                Constants.COLUMN_META_FOLDER_NAME + File.separator + Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE)
+                        .toString(),
+                SourceType.LOCAL);
+        varselect.setForceRemoveColumnNameFile(
+                Constants.COLUMN_META_FOLDER_NAME + File.separator + Constants.DEFAULT_FORCEREMOVE_COLUMN_FILE);
         varselect.setFilterEnable(Boolean.TRUE);
         varselect.setFilterNum(200);
         modelConfig.setVarSelect(varselect);
@@ -278,18 +286,18 @@ public class ModelConfig {
         evalConfig.setName("Eval1");
         RawSourceData evalSet = modelConfig.getDataSet().cloneRawSourceData();
         evalSet.setDataDelimiter("|");
-        String exampleLocalESFolder = new File(Environment.getProperty(Environment.SHIFU_HOME), File.separator
-                + "example" + File.separator + "cancer-judgement" + File.separator + "DataStore" + File.separator
-                + "EvalSet1").toString();
+        String exampleLocalESFolder = new File(Environment.getProperty(Environment.SHIFU_HOME),
+                File.separator + "example" + File.separator + "cancer-judgement" + File.separator + "DataStore"
+                        + File.separator + "EvalSet1").toString();
         if(enableHadoop) {
             evalSet.setSource(SourceType.HDFS);
             Path dst = new Path(File.separator + "user" + File.separator
                     + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement");
             HDFSUtils.getFS().copyFromLocalFile(new Path(exampleLocalESFolder), dst);
 
-            evalSet.setDataPath(new File(File.separator + "user" + File.separator
-                    + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement"
-                    + File.separator + "EvalSet1").toString());
+            evalSet.setDataPath(
+                    new File(File.separator + "user" + File.separator + Environment.getProperty(Environment.SYSTEM_USER)
+                            + File.separator + "cancer-judgement" + File.separator + "EvalSet1").toString());
             evalSet.setHeaderPath(new File(File.separator + "user" + File.separator
                     + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement"
                     + File.separator + "EvalSet1" + File.separator + ".pig_header").toString());
@@ -609,8 +617,8 @@ public class ModelConfig {
 
     @JsonIgnore
     public List<String> getMetaColumnNames() throws IOException {
-        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter() : this
-                .getHeaderDelimiter();
+        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter()
+                : this.getHeaderDelimiter();
         String metaColumnNameFile = dataSet.getMetaColumnNameFile();
         if(StringUtils.isBlank(metaColumnNameFile)) {
             String defaultMetaColumnFileName = Constants.COLUMN_META_FOLDER_NAME + File.separator
@@ -632,8 +640,8 @@ public class ModelConfig {
 
     @JsonIgnore
     public List<String> getCategoricalColumnNames() throws IOException {
-        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter() : this
-                .getHeaderDelimiter();
+        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter()
+                : this.getHeaderDelimiter();
 
         String categoricalColumnNameFile = dataSet.getCategoricalColumnNameFile();
         if(StringUtils.isBlank(categoricalColumnNameFile)) {
@@ -689,8 +697,8 @@ public class ModelConfig {
 
     @JsonIgnore
     public Map<String, Double> getHybridColumnNames() throws IOException {
-        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter() : this
-                .getHeaderDelimiter();
+        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter()
+                : this.getHeaderDelimiter();
 
         String hybridColumnNameFile = dataSet.getHybridColumnNameFile();
         if(StringUtils.isBlank(hybridColumnNameFile)) {
@@ -713,7 +721,7 @@ public class ModelConfig {
         for(String string: list) {
             if(string.contains(Constants.DEFAULT_DELIMITER)) {
                 String[] splits = CommonUtils.split(string, Constants.DEFAULT_DELIMITER);
-                double parNum = CommonUtils.parseNumber(splits[1]);
+                double parNum = BinUtils.parseNumber(splits[1]);
                 if(Double.isNaN(parNum)) {
                     map.put(string, Double.NEGATIVE_INFINITY);
                 } else {
@@ -775,7 +783,7 @@ public class ModelConfig {
     @JsonIgnore
     public List<String> getListCandidates() throws IOException {
         String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) // header delimiter has higher priority
-        ? this.getDataSetDelimiter()
+                ? this.getDataSetDelimiter()
                 : this.getHeaderDelimiter();
 
         String candidateColumnNameFile = varSelect.getCandidateColumnNameFile();
@@ -799,8 +807,8 @@ public class ModelConfig {
 
     @JsonIgnore
     public List<String> getListForceRemove() throws IOException {
-        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter() : this
-                .getHeaderDelimiter();
+        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter()
+                : this.getHeaderDelimiter();
 
         String forceRemoveColumnNameFile = varSelect.getForceRemoveColumnNameFile();
         if(StringUtils.isBlank(forceRemoveColumnNameFile)) {
@@ -823,8 +831,8 @@ public class ModelConfig {
 
     @JsonIgnore
     public List<String> getListForceSelect() throws IOException {
-        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter() : this
-                .getHeaderDelimiter();
+        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter()
+                : this.getHeaderDelimiter();
 
         String forceSelectColumnNameFile = varSelect.getForceSelectColumnNameFile();
         if(StringUtils.isBlank(forceSelectColumnNameFile)) {

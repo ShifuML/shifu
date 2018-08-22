@@ -40,6 +40,7 @@ import org.testng.annotations.Test;
  */
 public class EqualPopulationBinningTest {
 
+    @SuppressWarnings("unused")
     @Test void testExtraSmallBins() {
         Random rd = new Random(System.currentTimeMillis());
         EqualPopulationBinning binning = new EqualPopulationBinning(10);
