@@ -15,6 +15,12 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
+import java.util.HashSet;
+import java.util.Set;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ml.shifu.shifu.core.dtrain.nn.update.AdaGradUpdate;
 import ml.shifu.shifu.core.dtrain.nn.update.AdamUpdate;
 import ml.shifu.shifu.core.dtrain.nn.update.MomentumUpdate;
@@ -22,14 +28,6 @@ import ml.shifu.shifu.core.dtrain.nn.update.NesterovUpdate;
 import ml.shifu.shifu.core.dtrain.nn.update.RMSPropUpdate;
 import ml.shifu.shifu.core.dtrain.nn.update.UpdateRule;
 import ml.shifu.shifu.util.ClassUtils;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * {@link Weight} is used to update NN weights according to propagation option. Which is also copied from Encog.

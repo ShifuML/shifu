@@ -20,6 +20,11 @@ package ml.shifu.shifu.udf;
 import java.io.IOException;
 import java.util.Iterator;
 
+import org.apache.pig.data.DataBag;
+import org.apache.pig.data.DataType;
+import org.apache.pig.data.Tuple;
+import org.apache.pig.impl.logicalLayer.schema.Schema;
+
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
@@ -27,13 +32,8 @@ import ml.shifu.shifu.core.binning.AbstractBinning;
 import ml.shifu.shifu.core.binning.CategoricalBinning;
 import ml.shifu.shifu.core.binning.EqualIntervalBinning;
 import ml.shifu.shifu.core.binning.EqualPopulationBinning;
-import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.Constants;
-
-import org.apache.pig.data.DataBag;
-import org.apache.pig.data.DataType;
-import org.apache.pig.data.Tuple;
-import org.apache.pig.impl.logicalLayer.schema.Schema;
 
 /**
  * GenBinningDataUDF class
@@ -116,7 +116,7 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
                 }
                 if(this.columnConfig.isHybrid()) {
                     // missing value and not number value go to categorical binning
-                    double douVal = CommonUtils.parseNumber(valStr);
+                    double douVal = BinUtils.parseNumber(valStr);
                     Double hybridThreshould = this.columnConfig.getHybridThreshold();
                     if(hybridThreshould == null) {
                         hybridThreshould = Double.NEGATIVE_INFINITY;

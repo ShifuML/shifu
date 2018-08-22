@@ -46,6 +46,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper.CountAndFrequentItems;
 import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
+import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.MapReduceUtils;
@@ -447,7 +448,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 isMissingValue = true;
             }
             String str = StringUtils.trim(units[columnIndex]);
-            double douVal = CommonUtils.parseNumber(str);
+            double douVal = BinUtils.parseNumber(str);
 
             Double hybridThreshold = columnConfig.getHybridThreshold();
             if(hybridThreshold == null) {
@@ -605,11 +606,11 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         } catch (Exception e) {
             return -1;
         }
-        return CommonUtils.getBinIndex(binBoundaryList, dval);
+        return BinUtils.getBinIndex(binBoundaryList, dval);
     }
 
     public static int getBinNum(List<Double> binBoundaryList, double dVal) {
-        return CommonUtils.getBinIndex(binBoundaryList, dVal);
+        return BinUtils.getBinIndex(binBoundaryList, dVal);
     }
 
     private int quickLocateCategoricalBin(Map<String, Integer> map, String val) {

@@ -33,6 +33,7 @@ public abstract class AbstractSpecifCreator {
     public static final String FINAL_RESULT = "FinalResult";
 
     private ModelConfig modelConfig;
+    @SuppressWarnings("unused")
     private List<ColumnConfig> columnConfigList;
 
     public AbstractSpecifCreator(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
