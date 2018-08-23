@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ml.shifu</groupId>
 	<artifactId>shifu</artifactId>
-	<version>0.11.3</version>
+	<version>0.11.4</version>
 	<name>Shifu</name>
 	<description>An open-source, end-to-end and distributed machine learning and data mining framework built on top of Hadoop.</description>
 	<properties>
@@ -65,7 +65,7 @@
 		<developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
 		<connection>scm:git:https://github.com/shifuml/shifu.git</connection>
 		<url>https://github.com/shifuml/shifu.git</url>
-		<tag>shifu-0.11.3</tag>
+		<tag>shifu-0.11.4</tag>
 	</scm>
 	<dependencies>
 		<dependency>
@@ -722,18 +722,19 @@
 			<properties>
 				<platform.version>hdp-yarn</platform.version>
 			</properties>
-			<!-- 
-			<repositories>
+			<!-- <repositories> <repository> <id>HortonWorks HDP Local</id> <url>http://repo.hortonworks.com/service/local/repositories/releases/content/</url> 
+				</repository> <repository> <id>HortonWorks HDP</id> <url>http://repo.hortonworks.com/nexus/content/repositories/releases</url> 
+				</repository> </repositories> -->
+			<distributionManagement>
 				<repository>
-					<id>HortonWorks HDP Local</id>
-					<url>http://repo.hortonworks.com/service/local/repositories/releases/content/</url>
+					<id>raptor.releases</id>
+					<url>https://paypalcentral.es.paypalcorp.com/nexus/content/repositories/releases/</url>
 				</repository>
-				<repository>
-					<id>HortonWorks HDP</id>
-					<url>http://repo.hortonworks.com/nexus/content/repositories/releases</url>
-				</repository>
-			</repositories>
-			-->
+				<snapshotRepository>
+					<id>raptor.snapshots</id>
+					<url>https://paypalcentral.es.paypalcorp.com/nexus/content/repositories/snapshots/</url>
+				</snapshotRepository>
+			</distributionManagement>
 			<build>
 				<plugins>
 					<plugin>
