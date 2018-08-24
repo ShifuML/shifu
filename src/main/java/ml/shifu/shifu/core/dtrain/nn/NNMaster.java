@@ -385,6 +385,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         return params;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void init(MasterContext<NNParams, NNParams> context) {
         Properties props = context.getProps();

@@ -15,13 +15,12 @@
  */
 package ml.shifu.shifu.core.dtrain.dataset;
 
-import ml.shifu.shifu.core.dtrain.nn.BasicDropoutLayer;
-
-import java.util.Collections;
 import java.util.Set;
 
 import org.encog.neural.flat.FlatLayer;
 import org.encog.neural.flat.FlatNetwork;
+
+import ml.shifu.shifu.core.dtrain.nn.BasicDropoutLayer;
 
 /**
  * To solve float input and output types.

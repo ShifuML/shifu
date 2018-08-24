@@ -700,6 +700,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
     }
 
+    @SuppressWarnings("deprecation")
     private void validateEvalColumnConfig(EvalConfig evalConfig) throws IOException {
         if(this.columnConfigList == null) {
             return;

@@ -15,6 +15,15 @@
  */
 package ml.shifu.shifu.core.posttrain;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -26,15 +35,6 @@ import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -42,6 +42,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.core.ModelRunner;
 import ml.shifu.shifu.core.posttrain.FeatureStatsWritable.BinStats;
+import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
@@ -223,7 +224,7 @@ public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, Fea
         for(int i = 0; i < headers.length; i++) {
             ColumnConfig config = this.columnConfigList.get(i);
             if(!config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
-                int binNum = CommonUtils.getBinNum(config, units[i]);
+                int binNum = BinUtils.getBinNum(config, units[i]);
                 List<BinStats> feaureStatistics = this.variableStatsMap.get(config.getColumnNum());
                 BinStats bs = null;
                 if(binNum == -1) {

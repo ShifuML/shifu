@@ -222,7 +222,7 @@ public class CommonUtilsTest {
         config.setColumnType(ColumnType.C);
         config.setBinCategory(Arrays.asList(new String[] { "2", "1", "3" }));
 
-        int rt = CommonUtils.getBinNum(config, "2");
+        int rt = BinUtils.getBinNum(config, "2");
 
         Assert.assertTrue(rt == 0);
 
@@ -474,12 +474,12 @@ public class CommonUtilsTest {
                 0.23977 };
         List<Double> binBoundary = Arrays.asList(array);
 
-        Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.00350), 1);
-        Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.00351), 2);
-        Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.00353), 2);
-        Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.0642), 5);
-        Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.00010), 0);
-        Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 5D), 8);
+        Assert.assertEquals(BinUtils.getBinIndex(binBoundary, 0.00350), 1);
+        Assert.assertEquals(BinUtils.getBinIndex(binBoundary, 0.00351), 2);
+        Assert.assertEquals(BinUtils.getBinIndex(binBoundary, 0.00353), 2);
+        Assert.assertEquals(BinUtils.getBinIndex(binBoundary, 0.0642), 5);
+        Assert.assertEquals(BinUtils.getBinIndex(binBoundary, 0.00010), 0);
+        Assert.assertEquals(BinUtils.getBinIndex(binBoundary, 5D), 8);
 
     }
 

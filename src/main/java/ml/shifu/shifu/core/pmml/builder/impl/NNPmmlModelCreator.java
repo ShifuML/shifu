@@ -15,16 +15,23 @@
  */
 package ml.shifu.shifu.core.pmml.builder.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.MiningFunctionType;
+import org.dmg.pmml.Model;
+import org.dmg.pmml.NeuralNetwork;
+import org.dmg.pmml.OpType;
+import org.dmg.pmml.Target;
+import org.dmg.pmml.TargetValue;
+import org.dmg.pmml.Targets;
+import org.encog.ml.BasicML;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
-import org.dmg.pmml.*;
-import org.encog.ml.BasicML;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
 /**
  * Created by zhanhu on 3/29/16.

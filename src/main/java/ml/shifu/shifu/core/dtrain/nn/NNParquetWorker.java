@@ -27,6 +27,7 @@ import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLData;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLDataPair;
 import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataPair;
 import ml.shifu.shifu.guagua.GuaguaParquetRecordReader;
+import ml.shifu.shifu.util.Constants;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -167,6 +168,15 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                 }
             }
             index += 1;
+        }
+
+        // output delimiter in norm can be set by user now and if user set a special one later changed, this exception
+        // is helped to quick find such issue.
+        if(inputsIndex != inputs.length) {
+            String delimiter = workerContext.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER,
+                    Constants.DEFAULT_DELIMITER);
+            throw new RuntimeException("Input length is inconsistent with parsing size. Input original size: "
+                    + inputs.length + ", parsing size:" + inputsIndex + ", delimiter:" + delimiter + ".");
         }
 
         // sample negative only logic here

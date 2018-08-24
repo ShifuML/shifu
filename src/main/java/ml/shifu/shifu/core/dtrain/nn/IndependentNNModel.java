@@ -26,6 +26,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.zip.GZIPInputStream;
 
+import org.encog.ml.data.basic.BasicMLData;
+
 import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.core.Normalizer;
@@ -33,10 +35,8 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.StringUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
-import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.Constants;
-
-import org.encog.ml.data.basic.BasicMLData;
 
 /**
  * {@link IndependentNNModel} is a light NN engine to predict NN model, the only dependency is shifu, guagua and
@@ -356,16 +356,16 @@ public class IndependentNNModel {
     private double getHybridWoeValue(Integer columnNum, Object obj, boolean isWeighted) {
         // for hybrid categories, category bin merge is not supported, so we can use
         List<String> binCategories = this.cateCateMap.get(columnNum);
-        int binIndex = CommonUtils.getCategoicalBinIndex(binCategories, obj == null ? null : obj.toString());
+        int binIndex = BinUtils.getCategoicalBinIndex(binCategories, obj == null ? null : obj.toString());
         List<Double> binBoundaries = this.numerBinBoundaries.get(columnNum);
         if(binIndex != -1) {
             binIndex = binIndex + binBoundaries.size(); // append the first numerical bins
         } else {
-            double douVal = CommonUtils.parseNumber(obj == null ? null : obj.toString());
+            double douVal = BinUtils.parseNumber(obj == null ? null : obj.toString());
             if(Double.isNaN(douVal)) {
                 binIndex = binBoundaries.size() + binCategories.size();
             } else {
-                binIndex = CommonUtils.getBinIndex(binBoundaries, douVal);
+                binIndex = BinUtils.getBinIndex(binBoundaries, douVal);
             }
         }
 
@@ -383,7 +383,7 @@ public class IndependentNNModel {
     private double getNumericalWoeValue(Integer columnNum, Object obj, boolean isWeighted) {
         int binIndex = -1;
         if(obj != null) {
-            binIndex = CommonUtils.getNumericalBinIndex(this.numerBinBoundaries.get(columnNum), obj.toString());
+            binIndex = BinUtils.getNumericalBinIndex(this.numerBinBoundaries.get(columnNum), obj.toString());
         }
         List<Double> binWoes = isWeighted ? this.numerWgtWoes.get(columnNum) : this.numerWoes.get(columnNum);
 
