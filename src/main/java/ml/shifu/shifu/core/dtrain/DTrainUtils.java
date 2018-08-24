@@ -171,8 +171,8 @@ public final class DTrainUtils {
                 }
             }
             if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
-                if ( normType.equals(ModelNormalizeConf.NormType.ONEHOT) ) {
-                    if ( config.isCategorical() ) {
+                if(normType.equals(ModelNormalizeConf.NormType.ONEHOT)) {
+                    if(config.isCategorical()) {
                         input += config.getBinCategory().size() + 1;
                     } else {
                         input += config.getBinBoundary().size() + 1;
@@ -205,7 +205,8 @@ public final class DTrainUtils {
      *             if columnConfigList or ColumnConfig object in columnConfigList is null.
      */
     public static int[] getNumericAndCategoricalInputAndOutputCounts(List<ColumnConfig> columnConfigList) {
-        int numericInput = 0, categoricalInput = 0, output = 0, numericCandidateInput = 0, categoricalCandidateInput = 0;
+        int numericInput = 0, categoricalInput = 0, output = 0, numericCandidateInput = 0,
+                categoricalCandidateInput = 0;
         boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
 
         for(ColumnConfig config: columnConfigList) {
@@ -251,18 +252,19 @@ public final class DTrainUtils {
         return Math.max(epochs / 25, 20);
     }
 
-//    public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
-//            List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate) {
-//        return generateNetwork(in, out, numLayers, actFunc, hiddenNodeList, isRandomizeWeights, dropoutRate,
-//                WGT_INIT_DEFAULT);
-//    }
+    // public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
+    // List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate) {
+    // return generateNetwork(in, out, numLayers, actFunc, hiddenNodeList, isRandomizeWeights, dropoutRate,
+    // WGT_INIT_DEFAULT);
+    // }
 
     public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
-            List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate, String wgtInit, boolean isLinearTarget) {
+            List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate, String wgtInit,
+            boolean isLinearTarget) {
         final BasicFloatNetwork network = new BasicFloatNetwork();
 
         // in shifuconfig, we have a switch to control enable input layer dropout
-        if (Boolean.valueOf(Environment.getProperty(CommonConstants.SHIFU_TRAIN_NN_INPUTLAYERDROPOUT_ENABLE, "true"))) { 
+        if(Boolean.valueOf(Environment.getProperty(CommonConstants.SHIFU_TRAIN_NN_INPUTLAYERDROPOUT_ENABLE, "true"))) {
             // we need to guarantee that input layer dropout rate is 40% of hiddenlayer dropout rate
             network.addLayer(new BasicDropoutLayer(new ActivationLinear(), true, in, dropoutRate * 0.4d));
         } else {
@@ -291,7 +293,7 @@ public final class DTrainUtils {
             }
         }
 
-        if ( isLinearTarget ) {
+        if(isLinearTarget) {
             network.addLayer(new BasicLayer(new ActivationLinear(), true, out));
         } else {
             network.addLayer(new BasicLayer(new ActivationSigmoid(), false, out));

@@ -17,17 +17,15 @@ package ml.shifu.shifu.core.pmml;
 
 import java.io.File;
 import java.io.PrintWriter;
-import java.util.*;
-
-import ml.shifu.shifu.ShifuCLI;
-import ml.shifu.shifu.container.obj.ModelTrainConf;
-import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
-import ml.shifu.shifu.core.pmml.builder.impl.NNSpecifCreator;
-import ml.shifu.shifu.core.processor.ExportModelProcessor;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.dmg.pmml.Field;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.Model;
 import org.dmg.pmml.PMML;
@@ -38,7 +36,12 @@ import org.jpmml.evaluator.ModelEvaluatorFactory;
 import org.jpmml.evaluator.NeuralNetworkEvaluator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testng.collections.CollectionUtils;
+
+import ml.shifu.shifu.ShifuCLI;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
+import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
+import ml.shifu.shifu.core.pmml.builder.impl.NNSpecifCreator;
+import ml.shifu.shifu.core.processor.ExportModelProcessor;
 
 /**
  * Created by zhanhu on 7/15/16.
