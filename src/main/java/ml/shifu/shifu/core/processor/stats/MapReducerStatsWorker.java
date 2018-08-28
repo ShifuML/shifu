@@ -624,7 +624,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         List<String> unitStats = new ArrayList<String>(this.columnConfigList.size());
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
-                String[] output = scanner.nextLine().trim().split("\\|");
+                String[] output = scanner.nextLine().trim().split(String.valueOf(CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
                 try {
                     int columnNum = Integer.parseInt(output[0]);
                     ColumnConfig config = this.columnConfigList.get(columnNum);
