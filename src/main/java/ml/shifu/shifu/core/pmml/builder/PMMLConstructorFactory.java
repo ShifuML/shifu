@@ -45,10 +45,10 @@ public class PMMLConstructorFactory {
         AbstractSpecifCreator specifCreator = null;
         if(ModelTrainConf.ALGORITHM.NN.name().equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
             modelCreator = new NNPmmlModelCreator(modelConfig, columnConfigList, isConcise);
-            specifCreator = new NNSpecifCreator();
+            specifCreator = new NNSpecifCreator(modelConfig, columnConfigList);
         } else if(ModelTrainConf.ALGORITHM.LR.name().equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
             modelCreator = new RegressionPmmlModelCreator(modelConfig, columnConfigList, isConcise);
-            specifCreator = new RegressionSpecifCreator();
+            specifCreator = new RegressionSpecifCreator(modelConfig, columnConfigList);
         } else if(ModelTrainConf.ALGORITHM.GBT.name().equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())
                 || ModelTrainConf.ALGORITHM.RF.name().equalsIgnoreCase(modelConfig.getTrain().getAlgorithm())) {
             TreeEnsemblePmmlCreator gbtmodelCreator = new TreeEnsemblePmmlCreator(modelConfig, columnConfigList);
@@ -82,6 +82,9 @@ public class PMMLConstructorFactory {
                 || normType == ModelNormalizeConf.NormType.WEIGHT_WOE_ZSCALE) {
             localTransformationsCreator = new WoeZscoreLocalTransformCreator(modelConfig, columnConfigList, isConcise,
                     true);
+        } else if(normType == ModelNormalizeConf.NormType.ZSCALE_ONEHOT) {
+            localTransformationsCreator = new ZscoreOneHotLocalTransformCreator(modelConfig, columnConfigList,
+                    isConcise);
         } else {
             localTransformationsCreator = new ZscoreLocalTransformCreator(modelConfig, columnConfigList, isConcise);
         }

@@ -31,14 +31,6 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.zip.GZIPInputStream;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.EvalConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.HDFSUtils;
-import ml.shifu.shifu.util.HdfsPartFile;
-
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -51,9 +43,17 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
+import org.apache.hadoop.io.compress.SnappyCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xerial.snappy.SnappyInputStream;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.HDFSUtils;
+import ml.shifu.shifu.util.HdfsPartFile;
 
 /**
  * ShifuFileUtils class encapsulate the file system interface from other components.
@@ -203,7 +203,10 @@ public class ShifuFileUtils {
         } else if(name.toLowerCase().endsWith(".bz2")) {
             return new BZip2CompressorInputStream(fdis);
         } else if(name.toLowerCase().endsWith(".snappy")) {
-            return new SnappyInputStream(fdis);
+            Configuration conf = new Configuration();
+            CompressionCodecFactory ccf = new CompressionCodecFactory(conf);
+            CompressionCodec codec = ccf.getCodecByClassName(SnappyCodec.class.getName());
+            return codec.createInputStream(fdis);
         } else {
             return fdis;
         }
@@ -645,8 +648,8 @@ public class ShifuFileUtils {
         }
 
         if(fileStatsArr == null || fileStatsArr.length == 0) {
-            // protected by reading glob status agaion
-            fileStatsArr = fs.globStatus(new Path(filePath), filter);
+            // protected by reading glob status again
+            fileStatsArr = fs.globStatus(new Path(filePath));
         }
 
         return fileStatsArr;
@@ -662,7 +665,7 @@ public class ShifuFileUtils {
 
         boolean isGzip = true;
         for(FileStatus fileStatus: fileStatsArr) {
-            if(!fileStatus.getPath().toString().endsWith("gz") && !fileStatus.getPath().toString().endsWith("gz")) {
+            if(!fileStatus.getPath().toString().endsWith("gz")) {
                 isGzip = false;
             }
         }
@@ -677,6 +680,19 @@ public class ShifuFileUtils {
             size += fileStats.getLen();
         }
         return size;
+    }
+
+    public static boolean isCompressedFileOrDirectory(String filePath, SourceType sourceType) throws IOException {
+        boolean isCompressedFile = false;
+
+        FileStatus[] fileStatsArr = getFilePartStatus(filePath, sourceType);
+        for(FileStatus fileStatus: fileStatsArr) {
+            if(fileStatus.getPath().toString().endsWith("gz") || fileStatus.getPath().toString().endsWith("bz2")) {
+                isCompressedFile = true;
+                break;
+            }
+        }
+        return isCompressedFile;
     }
 
     public static void writeLines(@SuppressWarnings("rawtypes") Collection collection, String filePath,
@@ -694,13 +710,13 @@ public class ShifuFileUtils {
         }
     }
 
-    public static void copyToLocal(String hdfsFilePath, String localOutputPath) throws IOException {
-        copyToLocal(hdfsFilePath, Constants.HADOOP_PART_PREFIX, localOutputPath);
+    public static void copyToLocal(SourceFile sourceFile, String localOutputPath) throws IOException {
+        copyToLocal(sourceFile, Constants.HADOOP_PART_PREFIX, localOutputPath);
     }
 
-    public static void copyToLocal(String hdfsFilePath, String partFilePrefix, String localOutputPath)
+    public static void copyToLocal(SourceFile sourceFile, String partFilePrefix, String localOutputPath)
             throws IOException {
-        HdfsPartFile hdfsPartFile = new HdfsPartFile(hdfsFilePath, SourceType.HDFS, partFilePrefix);
+        HdfsPartFile hdfsPartFile = new HdfsPartFile(sourceFile.getPath(), sourceFile.getSourceType(), partFilePrefix);
         BufferedWriter writer = new BufferedWriter(new FileWriter(localOutputPath));
         String line = null;
         try {

@@ -15,15 +15,16 @@
  */
 package ml.shifu.shifu.core;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelNormalizeConf;
-import ml.shifu.shifu.udf.NormalizeUDF.CategoryMissingNormType;
-import ml.shifu.shifu.util.CommonUtils;
+import java.util.Arrays;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-import java.util.List;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf;
+import ml.shifu.shifu.udf.NormalizeUDF.CategoryMissingNormType;
+import ml.shifu.shifu.util.BinUtils;
 
 /**
  * Util normalization class which is used for any kind of transformation.
@@ -239,8 +240,10 @@ public class Normalizer {
             case WEIGHT_WOE_ZSCORE:
             case WEIGHT_WOE_ZSCALE:
                 return woeZScoreNormalize(config, raw, cutoff, true);
+            case ONEHOT:
+                return OneHotNormalize(config, raw);
             case ZSCALE_ONEHOT:
-                return woeOneHotNormalize(config, raw, cutoff, categoryMissingNormType);
+                return zscaleOneHotNormalize(config, raw, cutoff, categoryMissingNormType);
             case DISCRETE_ZSCORE:
             case DISCRETE_ZSCALE:
                 return discreteZScoreNormalize(config, raw, cutoff, categoryMissingNormType);
@@ -267,26 +270,38 @@ public class Normalizer {
         } else {
             // categorical variables
             List<Double> normVals = (toUseWoe ? config.getBinCountWoe() : config.getBinPosRate());
-            int binIndex = CommonUtils.getBinNum(config, raw);
+            int binIndex = BinUtils.getBinNum(config, raw);
             return ((binIndex == -1) ? Arrays.asList(new Double[] { normVals.get(normVals.size() - 1) })
                     : Arrays.asList(new Double[] { normVals.get(binIndex) }));
         }
     }
 
-    private static List<Double> woeOneHotNormalize(ColumnConfig config, String raw, Double cutoff,
+    private static List<Double> OneHotNormalize(ColumnConfig config, String raw) {
+        Double[] normData = (config.isNumerical() ?
+                new Double[config.getBinBoundary().size() + 1] : new Double[config.getBinCategory().size() + 1]);
+        Arrays.fill(normData, 0.0d);
+        int binNum = BinUtils.getBinNum(config, raw);
+        if ( binNum < 0 ) {
+            binNum = normData.length - 1;
+        }
+        normData[binNum] = 1.0d;
+        return Arrays.asList(normData);
+    }
+
+    private static List<Double> zscaleOneHotNormalize(ColumnConfig config, String raw, Double cutoff,
             CategoryMissingNormType categoryMissingNormType) {
         if(config.isNumerical()) {
             return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, false);
         } else {
-            Double[] normVals = new Double[config.getBinCategory().size() + 1];
-            Arrays.fill(normVals, 0.0d);
+            Double[] normData = new Double[config.getBinCategory().size() + 1];
+            Arrays.fill(normData, 0.0d);
 
-            int binNum = CommonUtils.getBinNum(config, raw);
+            int binNum = BinUtils.getBinNum(config, raw);
             if(binNum < 0) {
                 binNum = config.getBinCategory().size();
             }
-            normVals[binNum] = 1.0d;
-            return Arrays.asList(normVals);
+            normData[binNum] = 1.0d;
+            return Arrays.asList(normData);
         }
     }
 
@@ -357,7 +372,7 @@ public class Normalizer {
         if(config.isCategorical()) {
             value = parseRawValue(config, raw, categoryMissingNormType);
         } else {
-            int binIndex = CommonUtils.getBinNum(config, raw);
+            int binIndex = BinUtils.getBinNum(config, raw);
             if(binIndex < 0 || binIndex >= config.getBinBoundary().size()) {
                 // missing value, use mean value, after zscore, it is 0
                 value = config.getMean();
@@ -411,7 +426,7 @@ public class Normalizer {
         }
         double value = 0.0;
         if(config.isCategorical()) {
-            int index = CommonUtils.getBinNum(config, raw);
+            int index = BinUtils.getBinNum(config, raw);
             if(index == -1) {
                 switch(categoryMissingNormType) {
                     case POSRATE:
@@ -480,19 +495,19 @@ public class Normalizer {
         List<Double> woeBins = isWeightedNorm ? config.getBinWeightedWoe() : config.getBinCountWoe();
         int binIndex = 0;
         if(config.isHybrid()) {
-            binIndex = CommonUtils.getCategoicalBinIndex(config.getBinCategory(), raw);
+            binIndex = BinUtils.getCategoicalBinIndex(config.getBinCategory(), raw);
             if(binIndex != -1) {
                 binIndex = binIndex + config.getBinBoundary().size(); // append the first numerical bins
             } else {
-                double douVal = CommonUtils.parseNumber(raw);
+                double douVal = BinUtils.parseNumber(raw);
                 if(Double.isNaN(douVal)) {
                     binIndex = config.getBinBoundary().size() + config.getBinCategory().size();
                 } else {
-                    binIndex = CommonUtils.getBinIndex(config.getBinBoundary(), douVal);
+                    binIndex = BinUtils.getBinIndex(config.getBinBoundary(), douVal);
                 }
             }
         } else {
-            binIndex = CommonUtils.getBinNum(config, raw);
+            binIndex = BinUtils.getBinNum(config, raw);
         }
         if(binIndex == -1) {
             // The last bin in woeBins is the miss value bin.

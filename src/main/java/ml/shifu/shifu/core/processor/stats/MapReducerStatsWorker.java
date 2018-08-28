@@ -30,32 +30,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-import ml.shifu.guagua.hadoop.util.HDPUtils;
-import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
-import ml.shifu.guagua.util.FileUtils;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ColumnType;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.RawSourceData;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
-import ml.shifu.shifu.core.binning.BinningInfoWritable;
-import ml.shifu.shifu.core.binning.UpdateBinningInfoMapper;
-import ml.shifu.shifu.core.binning.UpdateBinningInfoReducer;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
-import ml.shifu.shifu.core.mr.input.CombineInputFormat;
-import ml.shifu.shifu.core.processor.BasicModelProcessor;
-import ml.shifu.shifu.exception.ShifuErrorCode;
-import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.fs.PathFinder;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.pig.PigExecutor;
-import ml.shifu.shifu.udf.CalculateStatsUDF;
-import ml.shifu.shifu.util.Base64Utils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-
+import ml.shifu.shifu.fs.SourceFile;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.IOUtils;
@@ -82,6 +59,33 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
 
+import ml.shifu.guagua.hadoop.util.HDPUtils;
+import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
+import ml.shifu.guagua.util.FileUtils;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
+import ml.shifu.shifu.container.obj.ColumnType;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.RawSourceData;
+import ml.shifu.shifu.core.binning.BinningInfoWritable;
+import ml.shifu.shifu.core.binning.UpdateBinningInfoMapper;
+import ml.shifu.shifu.core.binning.UpdateBinningInfoReducer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.core.mr.input.CombineInputFormat;
+import ml.shifu.shifu.core.processor.BasicModelProcessor;
+import ml.shifu.shifu.exception.ShifuErrorCode;
+import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.pig.PigExecutor;
+import ml.shifu.shifu.udf.CalculateStatsUDF;
+import ml.shifu.shifu.util.Base64Utils;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.ValueVisitor;
+
 /**
  * Created by zhanhu on 6/30/16.
  */
@@ -104,15 +108,19 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         Map<String, String> paramsMap = new HashMap<String, String>();
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
         int columnParallel = 0;
-        if(columnConfigList.size() <= 1000) {
+        if(columnConfigList.size() <= 100) {
+            columnParallel = columnConfigList.size() * 2;
+        }  else if ( columnConfigList.size() <= 500 ) {
+            columnParallel = columnConfigList.size();
+        } else if(columnConfigList.size() <= 1000) {
             // 1000 => 200 reducers
-            columnParallel = columnConfigList.size() / 5;
+            columnParallel = columnConfigList.size() / 2;
         } else if(columnConfigList.size() > 1000 && columnConfigList.size() <= 2000) {
             // 2000 => 320 reducers
-            columnParallel = columnConfigList.size() / 6;
+            columnParallel = columnConfigList.size() / 4;
         } else if(columnConfigList.size() > 2000 && columnConfigList.size() <= 3000) {
             // 3000 => 420 reducers
-            columnParallel = columnConfigList.size() / 7;
+            columnParallel = columnConfigList.size() / 6;
         } else if(columnConfigList.size() > 3000 && columnConfigList.size() <= 4000) {
             // 4000 => 500
             columnParallel = columnConfigList.size() / 8;
@@ -121,6 +129,11 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             columnParallel = columnConfigList.size() / 10;
         }
         // limit max reducer to 999
+        int parallelNumbByVolume = getParallelNumByDataVolume();
+        if(columnParallel < parallelNumbByVolume) {
+            columnParallel = parallelNumbByVolume;
+            log.info("Adjust parallel number to {} according data volume", columnParallel);
+        }
         columnParallel = columnParallel > 999 ? 999 : columnParallel;
         paramsMap.put("column_parallel", Integer.toString(columnParallel));
 
@@ -159,6 +172,18 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         }
 
         return true;
+    }
+
+    private int getParallelNumByDataVolume() throws IOException {
+        long fileSize = ShifuFileUtils.getFileOrDirectorySize(modelConfig.getDataSet().getDataPath(),
+                modelConfig.getDataSet().getSource());
+        log.info("File Size is - {}, for {}", fileSize, modelConfig.getDataSet().getDataPath());
+        if(ShifuFileUtils.isCompressedFileOrDirectory(modelConfig.getDataSet().getDataPath(),
+                modelConfig.getDataSet().getSource())) {
+            log.info("File is compressed, for {}", modelConfig.getDataSet().getDataPath());
+            fileSize = fileSize * 3; // multi 3 times, if the file is compressed
+        }
+        return (int) (fileSize / (256 * 1024 * 1024l)); // each reducer handle 256MB data
     }
 
     /**
@@ -224,8 +249,8 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         List<Scanner> scanners = null;
         try {
             scanners = ShifuFileUtils.getDataScanners(pathFinder.getUpdatedBinningInfoPath(source), source);
-            writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(new File(filePath)),
-                    Charset.forName("UTF-8")));
+            writer = new BufferedWriter(
+                    new OutputStreamWriter(new FileOutputStream(new File(filePath)), Charset.forName("UTF-8")));
             for(Scanner scanner: scanners) {
                 while(scanner.hasNextLine()) {
                     String line = scanner.nextLine();
@@ -249,13 +274,27 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(BinningInfoWritable.class);
         job.setInputFormatClass(CombineInputFormat.class);
-        FileInputFormat.setInputPaths(
-                job,
-                ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(
-                        new Path(super.modelConfig.getDataSetRawPath())));
+        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.modelConfig.getDataSetRawPath())));
 
         job.setReducerClass(UpdateBinningInfoReducer.class);
-        job.setNumReduceTasks(1);
+
+        int mapperSize = new CombineInputFormat().getSplits(job).size();
+        log.info("DEBUG: Test mapper size is {} ", mapperSize);
+        Integer reducerSize = Environment.getInt(CommonConstants.SHIFU_UPDATEBINNING_REDUCER);
+        if(reducerSize != null) {
+            job.setNumReduceTasks(Environment.getInt(CommonConstants.SHIFU_UPDATEBINNING_REDUCER, 20));
+        } else {
+            int newReducerSize = 1;
+            // if(newReducerSize < 1) {
+            // newReducerSize = 1;
+            // }
+            // if(newReducerSize > 500) {
+            // newReducerSize = 500;
+            // }
+            // log.info("Adjust updating binning info reducer size to {} ", newReducerSize);
+            job.setNumReduceTasks(newReducerSize);
+        }
         job.setOutputKeyClass(NullWritable.class);
         job.setOutputValueClass(Text.class);
         job.setOutputFormatClass(TextOutputFormat.class);
@@ -290,7 +329,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         FileUtils.deleteQuietly(new File(filePath));
     }
 
-    private void prepareJobConf(RawSourceData.SourceType source, Configuration conf, String filePath)
+    private void prepareJobConf(RawSourceData.SourceType source, final Configuration conf, String filePath)
             throws IOException {
         // add jars to hadoop mapper and reducer
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars(), "-files", filePath });
@@ -305,14 +344,10 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_MAP_SPECULATIVE, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_REDUCE_SPECULATIVE, true);
-        conf.set(
-                Constants.SHIFU_MODEL_CONFIG,
-                ShifuFileUtils.getFileSystemBySourceType(source)
-                        .makeQualified(new Path(this.pathFinder.getModelConfigPath(source))).toString());
-        conf.set(
-                Constants.SHIFU_COLUMN_CONFIG,
-                ShifuFileUtils.getFileSystemBySourceType(source)
-                        .makeQualified(new Path(this.pathFinder.getColumnConfigPath(source))).toString());
+        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(this.pathFinder.getModelConfigPath(source))).toString());
+        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(this.pathFinder.getColumnConfigPath(source))).toString());
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
 
@@ -335,11 +370,12 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         }
 
         // one can set guagua conf in shifuconfig
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                conf.set(entry.getKey().toString(), entry.getValue().toString());
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                conf.set(key.toString(), value.toString());
             }
-        }
+        });
     }
 
     // GuaguaOptionsParser doesn't to support *.jar currently.
@@ -382,8 +418,8 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
      *             in stats processing from hdfs files
      */
     public void updateColumnConfigWithPreTrainingStats() throws IOException {
-        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPreTrainingStatsPath(), modelConfig
-                .getDataSet().getSource());
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPreTrainingStatsPath(),
+                modelConfig.getDataSet().getSource());
         int initSize = columnConfigList.size();
         for(Scanner scanner: scanners) {
             scanStatsResult(scanner, initSize);
@@ -451,12 +487,12 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                     String[] splits = CommonUtils.split(raw[1], Constants.HYBRID_BIN_STR_DILIMETER);
                     config.setBinBoundary(CommonUtils.stringToDoubleList(splits[0]));
                     String binCategory = Base64Utils.base64Decode(splits[1]);
-                    config.setBinCategory(CommonUtils.stringToStringList(binCategory,
-                            CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+                    config.setBinCategory(
+                            CommonUtils.stringToStringList(binCategory, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
                 } else if(config.isCategorical()) {
                     String binCategory = Base64Utils.base64Decode(raw[1]);
-                    config.setBinCategory(CommonUtils.stringToStringList(binCategory,
-                            CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+                    config.setBinCategory(
+                            CommonUtils.stringToStringList(binCategory, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
                     config.setBinBoundary(null);
                 } else {
                     config.setBinBoundary(CommonUtils.stringToDoubleList(raw[1]));
@@ -506,7 +542,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 }
                 if(raw.length >= 32) {
                     if(raw[31] != null) {
-                        List<String> sampleValues = Arrays.asList(raw[31].split(","));
+                        List<String> sampleValues = Arrays.asList(Base64Utils.base64Decode(raw[31]).split(","));
                         config.setSampleValues(sampleValues);
                     }
                 }
@@ -556,13 +592,14 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
      */
     public void runPSI() throws IOException {
         log.info("Run PSI to use {} to compute the PSI ", modelConfig.getPsiColumnName());
-        ColumnConfig columnConfig = CommonUtils
-                .findColumnConfigByName(columnConfigList, modelConfig.getPsiColumnName());
+        ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(columnConfigList,
+                modelConfig.getPsiColumnName());
 
         if(columnConfig == null || (!columnConfig.isMeta() && !columnConfig.isCategorical())) {
-            log.warn("Unable to use the PSI column {} specify in ModelConfig to compute PSI\n"
-                    + "neither meta nor categorical type", columnConfig != null ? columnConfig.getColumnName()
-                    : "unknown");
+            log.warn(
+                    "Unable to use the PSI column {} specify in ModelConfig to compute PSI\n"
+                            + "neither meta nor categorical type",
+                    columnConfig != null ? columnConfig.getColumnName() : "unknown");
 
             return;
         }
@@ -577,30 +614,39 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/PSI.pig"), paramsMap);
 
-        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(), modelConfig.getDataSet()
-                .getSource());
-
-        if(scanners == null || scanners.size() == 0) {
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(),
+                modelConfig.getDataSet().getSource());
+        if ( CollectionUtils.isEmpty(scanners) ) {
             log.info("The PSI got failure during the computation");
             return;
         }
 
+        List<String> unitStats = new ArrayList<String>(this.columnConfigList.size());
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
                 String[] output = scanner.nextLine().trim().split("\\|");
-
                 try {
                     int columnNum = Integer.parseInt(output[0]);
                     ColumnConfig config = this.columnConfigList.get(columnNum);
                     config.setPSI(Double.parseDouble(output[1]));
-                    config.setUnitStats(Arrays.asList(StringUtils.split(output[2],
-                            CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
+                    unitStats.add(output[0] + "|" + output[2]);
+                    // config.setUnitStats(
+                    //        Arrays.asList(StringUtils.split(output[2], CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
                 } catch (Exception e) {
                     log.error("error in parsing", e);
                 }
-
             }
+            // close scanner
+            IOUtils.closeQuietly(scanner);
         }
+
+        // write unit stat into a temporary file
+        ShifuFileUtils.createDirIfNotExists(new SourceFile(Constants.TMP, RawSourceData.SourceType.LOCAL));
+
+        String ccUnitStatsFile = this.pathFinder.getColumnConfigUnitStatsPath();
+        ShifuFileUtils.writeLines(unitStats, ccUnitStatsFile, RawSourceData.SourceType.LOCAL);
+
+        log.info("The Unit Stats is stored in - {}.", ccUnitStatsFile);
         log.info("Run PSI - done.");
     }
 }

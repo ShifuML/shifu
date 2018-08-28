@@ -15,14 +15,23 @@
  */
 package ml.shifu.shifu.core.pmml.builder.impl;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
-import org.dmg.pmml.*;
-import org.encog.ml.BasicML;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.MiningFunctionType;
+import org.dmg.pmml.Model;
+import org.dmg.pmml.NeuralNetwork;
+import org.dmg.pmml.OpType;
+import org.dmg.pmml.Target;
+import org.dmg.pmml.TargetValue;
+import org.dmg.pmml.Targets;
+import org.encog.ml.BasicML;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
+import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 
 /**
  * Created by zhanhu on 3/29/16.
@@ -40,6 +49,12 @@ public class NNPmmlModelCreator extends AbstractPmmlElementCreator<Model> {
     @Override
     public Model build(BasicML basicML) {
         Model model = new NeuralNetwork();
+/*        if ( modelConfig.isClassification() &&
+                ModelTrainConf.MultipleClassification.NATIVE.equals(modelConfig.getTrain().getMultiClassifyMethod())) {
+            model.setFunctionName(MiningFunctionType.CLASSIFICATION);
+        } else {*/
+            model.setFunctionName(MiningFunctionType.REGRESSION);
+/*        }*/
         model.setTargets(createTargets());
         return model;
     }
@@ -47,7 +62,11 @@ public class NNPmmlModelCreator extends AbstractPmmlElementCreator<Model> {
     public Targets createTargets() {
         Targets targets = new Targets();
 
-        Target target = new Target();
+        if ( modelConfig.isClassification() &&
+                ModelTrainConf.MultipleClassification.NATIVE.equals(modelConfig.getTrain().getMultiClassifyMethod()) ) {
+            targets.withTargets(createMultiClassTargets());
+        } else {
+            Target target = new Target();
 
         target.setOptype(OpType.CATEGORICAL);
         target.setField(new FieldName(modelConfig.getTargetColumnName()));
@@ -72,8 +91,29 @@ public class NNPmmlModelCreator extends AbstractPmmlElementCreator<Model> {
 
         target.withTargetValues(targetValueList);
 
-        targets.withTargets(target);
+            targets.withTargets(target);
+        }
 
+        return targets;
+    }
+
+    private List<Target> createMultiClassTargets() {
+        List<Target> targets = new ArrayList<Target>();
+        for ( int i = 0; i < modelConfig.getTags().size(); i ++ ) {
+            String tag = modelConfig.getTags().get(i);
+
+            Target target = new Target();
+            target.setOptype(OpType.CONTINUOUS);
+            target.setField(new FieldName(modelConfig.getTargetColumnName() + "_" + i));
+
+            TargetValue targetValue = new TargetValue();
+            targetValue.withValue(Integer.toString(i));
+            targetValue.withDisplayValue(tag);
+
+            target.withTargetValues(targetValue);
+
+            targets.add(target);
+        }
         return targets;
     }
 }

@@ -59,6 +59,9 @@ public interface CommonConstants {
 
     public static final String SHIFU_DT_MASTER_CHECKPOINT_FOLDER = "shifu.dt.master.checkpoint.folder";
 
+    // Used to enable input layer dropout  
+    public static final String SHIFU_TRAIN_NN_INPUTLAYERDROPOUT_ENABLE = "shifu.train.nn.inputlayerdropout.enable";
+    
     /**
      * Version 2: support final selected columns
      * Version 3: in Node to change wgtCnt float to double
@@ -93,5 +96,8 @@ public interface CommonConstants {
     public static final int PART_FILE_COUNT_THRESHOLD = 20;
     
     public static final String MAPREDUCE_MAP_CPU_VCORES = "mapreduce.map.cpu.vcores";
-
+    
+    public static final String SHIFU_UPDATEBINNING_REDUCER = "shifu.updatebinning.reducer";
+    
+    public static final String FIXED_LAYERS = "FixedLayers";
 }

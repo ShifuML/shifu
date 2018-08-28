@@ -40,7 +40,6 @@ import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
 import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.FeatureSubsetStrategy;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
@@ -283,8 +282,23 @@ public class ModelInspector {
         if(modelConfig.getStats().getMaxNumBin() > Short.MAX_VALUE || modelConfig.getStats().getMaxNumBin() < 0) {
             result = ValidateResult.mergeResult(result,
                     new ValidateResult(false, Arrays.asList("stats#maxNumBin should be in [0, 32767].")));
-
         }
+
+        if(CollectionUtils.isEmpty(modelConfig.getTags())) {
+            if(!(BinningMethod.EqualInterval.equals(modelConfig.getStats().getBinningMethod())
+                    || BinningMethod.EqualTotal.equals(modelConfig.getStats().getBinningMethod()))) {
+                result = ValidateResult.mergeResult(result,
+                        new ValidateResult(false,
+                                Arrays.asList("For numerical target, only EqualInterval and EqualTotal are allowed")));
+            }
+
+            if(BinningAlgorithm.DynamicBinning.equals(modelConfig.getBinningAlgorithm())) {
+                result = ValidateResult.mergeResult(result,
+                        new ValidateResult(false,
+                                Arrays.asList("For numerical target, DynamicBinning is not allowed")));
+            }
+        }
+
         return result;
     }
 
@@ -575,16 +589,6 @@ public class ModelInspector {
                     }
                 }
 
-                Object elmObject = params.get(DTrainUtils.IS_ELM);
-                boolean isELM = elmObject == null ? false : "true".equalsIgnoreCase(elmObject.toString());
-                if(isELM && layerCnt != 1) {
-                    ValidateResult tmpResult = new ValidateResult(true);
-                    tmpResult.setStatus(false);
-                    tmpResult.getCauses()
-                            .add("If ELM(extreme learning machine), hidden layer should only be one layer.");
-                    result = ValidateResult.mergeResult(result, tmpResult);
-                }
-
                 Object dropoutObj = params.get(CommonConstants.DROPOUT_RATE);
                 if(dropoutObj != null) {
                     Double dropoutRate = Double.valueOf(dropoutObj.toString());
@@ -596,6 +600,20 @@ public class ModelInspector {
                     }
                 }
 
+                Object fixedLayersObj = params.get(CommonConstants.FIXED_LAYERS);
+                if (fixedLayersObj != null) {
+                    List<Integer> fixedLayers = (List<Integer>) fixedLayersObj;
+                    for (int layer : fixedLayers) {
+                        if (layer <= 0 || layer > (layerCnt+1)) {
+                            ValidateResult tmpResult = new ValidateResult(true);
+                            tmpResult.setStatus(false);
+                            tmpResult.getCauses().add("Fixed layer id " + layer +
+                                    " is invaild. It should be between 0 and hidden layer cnt +  output layer:" + (layerCnt + 1));
+                            result = ValidateResult.mergeResult(result, tmpResult);
+                        }
+                    }
+                }
+                
                 Object miniBatchsO = params.get("MiniBatchs");
                 if(miniBatchsO != null) {
                     Integer miniBatchs = Integer.valueOf(miniBatchsO.toString());

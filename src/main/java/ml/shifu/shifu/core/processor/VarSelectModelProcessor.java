@@ -47,9 +47,11 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.fs.SourceFile;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.ValueVisitor;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -78,6 +80,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.*;
@@ -98,6 +101,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     @SuppressWarnings("unused")
     private static final double BAD_IV_THRESHOLD = 0.02d;
+
+    private static final String TRAIN_LOG_PREFIX = "vs-train";
 
     /**
      * SE stats mao for correlation variable selection,if not se, this field will be null.
@@ -202,14 +207,20 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         ShifuFileUtils.createDirIfNotExists(pathFinder.getVarSelDir(), SourceType.LOCAL);
                         super.saveColumnConfigList(pathFinder.getVarSelColumnConfig(i), this.columnConfigList);
                         while((i++) < recursiveCnt) {
-                            distributedSEWrapper();
+                            String trainLogFile = TRAIN_LOG_PREFIX + "-" + (i - 1) + ".log";
+                            distributedSEWrapper(trainLogFile);
+                            // copy training log to SE train.log
+                            ShifuFileUtils.move(trainLogFile,
+                                    new File(pathFinder.getVarSelDir(), trainLogFile).getPath(), SourceType.LOCAL);
+
                             String varSelectMSEOutputPath = pathFinder
                                     .getVarSelectMSEOutputPath(modelConfig.getDataSet().getSource());
                             // even fail to run SE, still to create an empty se.x file
                             String varSelMSEHistPath = pathFinder.getVarSelMSEHistPath(i - 1);
                             ShifuFileUtils.createFileIfNotExists(varSelMSEHistPath, SourceType.LOCAL);
-                            ShifuFileUtils.copyToLocal(varSelectMSEOutputPath, Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME,
-                                    varSelMSEHistPath);
+                            ShifuFileUtils.copyToLocal(new SourceFile(varSelectMSEOutputPath,
+                                            modelConfig.getDataSet().getSource()),
+                                    Constants.SHIFU_VARSELECT_SE_OUTPUT_NAME, varSelMSEHistPath);
                             // save as backup
                             super.saveColumnConfigList(pathFinder.getVarSelColumnConfig(i), this.columnConfigList);
                             // save as current copy
@@ -219,11 +230,27 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         votedVariablesSelection();
                     }
                 } else {
-                    // multiple classification, select all candidate at first, TODO add SE for multi-classification
                     boolean hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
-                    for(ColumnConfig config: this.columnConfigList) {
-                        if(CommonUtils.isGoodCandidate(config, hasCandidates, modelConfig.isRegression())) {
-                            config.setFinalSelect(true);
+                    if ( this.modelConfig.getVarSelect().getForceEnable()
+                            && CollectionUtils.isNotEmpty(this.modelConfig.getListForceSelect()) ) {
+                        log.info("Force Selection is enabled ... " +
+                                    "for multi-classification, currently only use it to selected variables.");
+                        for (ColumnConfig config : this.columnConfigList) {
+                            if ( config.isForceSelect() ) {
+                                if (!CommonUtils.isGoodCandidate(config, hasCandidates, modelConfig.isRegression())) {
+                                    log.warn("!! Variable - {} is not a good candidate. But it is in forceselect list",
+                                            config.getColumnName());
+                                }
+                                config.setFinalSelect(true);
+                            }
+                        }
+                        log.info("{} variables are selected by force.", this.modelConfig.getListForceSelect().size());
+                    } else {
+                        // multiple classification, select all candidate at first, TODO add SE for multi-classification
+                        for (ColumnConfig config : this.columnConfigList) {
+                            if (CommonUtils.isGoodCandidate(config, hasCandidates, modelConfig.isRegression())) {
+                                config.setFinalSelect(true);
+                            }
                         }
                     }
                 }
@@ -279,7 +306,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private List<VarSelDesc> loadVarSelDescList(String varselHistory) throws IOException {
         Reader reader = ShifuFileUtils.getReader(varselHistory, SourceType.LOCAL);
         List<String> autoFilterList = IOUtils.readLines(reader);
-        IOUtils.closeQuietly(reader);;
+        IOUtils.closeQuietly(reader);
 
         List<VarSelDesc> varSelDescList = new ArrayList<VarSelDesc>();
         for(String filterDesc: autoFilterList) {
@@ -549,12 +576,12 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         setHeapSizeAndSplitSize(args);
 
         // one can set guagua conf in shifuconfig
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, entry.getKey().toString(),
-                        entry.getValue().toString()));
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, key.toString(), value.toString()));
             }
-        }
+        });
     }
 
     // GuaguaOptionsParser doesn't to support *.jar currently.
@@ -606,7 +633,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     /**
      * Wrapper through {@link TrainModelProcessor} and a MapReduce job to analyze biggest sensitivity RMS.
      */
-    private void distributedSEWrapper() throws Exception {
+    private void distributedSEWrapper(String trainLogFile) throws Exception {
         // 1. Train a model using current selected variables, if no variables selected, use all candidate variables.
         boolean reuseCurrentModel = Environment.getBoolean("shifu.varsel.se.reuse", Boolean.FALSE);
         SourceType source = this.modelConfig.getDataSet().getSource();
@@ -614,6 +641,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         if(!reuseCurrentModel) {
             TrainModelProcessor trainModelProcessor = new TrainModelProcessor();
             trainModelProcessor.setForVarSelect(true);
+            trainModelProcessor.setTrainLogFile(trainLogFile);
             trainModelProcessor.run();
         }
 
@@ -691,7 +719,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         return job;
     }
 
-    private void prepareSEJobConf(SourceType source, Configuration conf) throws IOException {
+    private void prepareSEJobConf(SourceType source, final Configuration conf) throws IOException {
         String modelConfigPath = ShifuFileUtils.getFileSystemBySourceType(source)
                 .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString();
         String columnConfigPath = ShifuFileUtils.getFileSystemBySourceType(source)
@@ -748,11 +776,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
         }
         // one can set guagua conf in shifuconfig
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                conf.set(entry.getKey().toString(), entry.getValue().toString());
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                conf.set(key.toString(), value.toString());
             }
-        }
+        });
+
         // no matter how the mapreduce.task.io.sort.mb is set for sensitivity job, only 1 reducer and each mapper only
         // output column stats, 150MB is enough.
         conf.setInt("mapreduce.task.io.sort.mb", 150);
@@ -919,7 +949,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
         return map; // should be a bug, if it always return null
     }
-
+    
     @Override
     protected void clearUp(ModelStep step) throws IOException {
         try {

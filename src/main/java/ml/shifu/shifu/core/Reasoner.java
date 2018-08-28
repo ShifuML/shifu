@@ -23,11 +23,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-
-import ml.shifu.shifu.util.CommonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.util.BinUtils;
 
 /**
  * Reasoner, it helps to find the the majority contributor to the model
@@ -100,7 +100,7 @@ public class Reasoner {
                 sd.varCategory = rawDataMap.get(key);
 
                 while ((--binNum) >= 0) {
-                    if (CommonUtils.isCategoricalBinValue(binCategory.get(binNum), sd.varCategory)) {
+                    if (BinUtils.isCategoricalBinValue(binCategory.get(binNum), sd.varCategory)) {
                     // if (sd.varCategory.equals(binCategory.get(binNum))) {
                         break;
                     }

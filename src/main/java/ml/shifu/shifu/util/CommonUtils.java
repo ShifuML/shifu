@@ -15,33 +15,10 @@
  */
 package ml.shifu.shifu.util;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.zip.GZIPInputStream;
-
+import com.google.common.base.Function;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -65,7 +42,6 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.io.IOUtils;
@@ -73,13 +49,8 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.encog.ml.BasicML;
@@ -92,10 +63,10 @@ import org.encog.persist.PersistorRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Function;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
+import java.io.*;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.zip.GZIPInputStream;
 
 /**
  * {@link CommonUtils} is used to for almost all kinds of utility function in this framework.
@@ -427,7 +398,7 @@ public final class CommonUtils {
     }
 
     /**
-     * Some column name has illegal chars which are all be normed in shifu. This is a hook to norm column name but 
+     * Some column name has illegal chars which are all be normed in shifu. This is a hook to norm column name but
      * actually so far it is just return;
      * 
      * @param columnName
@@ -435,7 +406,15 @@ public final class CommonUtils {
      * @return normed column name
      */
     public static String normColumnName(String columnName) {
-        return columnName;
+        if(columnName == null) {
+            // NPE protection
+            return columnName;
+        }
+        String newColumnName = columnName.replaceAll("\\.", "_");
+        newColumnName = newColumnName.replaceAll(" ", "_");
+        newColumnName = newColumnName.replaceAll("/", "_");
+        newColumnName = newColumnName.replaceAll("-", "_");
+        return newColumnName;
     }
 
     /**
@@ -652,86 +631,6 @@ public final class CommonUtils {
     }
 
     /**
-     * Given a column value, return bin list index. Return 0 for Category because of index 0 is started from
-     * NEGATIVE_INFINITY.
-     * 
-     * @param columnConfig
-     *            column config
-     * @param columnVal
-     *            value of the column
-     * @return bin index of than value
-     * @throws IllegalArgumentException
-     *             if input is null or empty.
-     * 
-     * @throws NumberFormatException
-     *             if columnVal does not contain a parsable number.
-     */
-    public static int getBinNum(ColumnConfig columnConfig, String columnVal) {
-        if(columnConfig.isCategorical()) {
-            return getCategoicalBinIndex(columnConfig.getBinCategory(), columnVal);
-        } else {
-            return getNumericalBinIndex(columnConfig.getBinBoundary(), columnVal);
-        }
-    }
-
-    /**
-     * Get numerical bin index according to string column value.
-     * 
-     * @param binBoundaries
-     *            the bin boundaries
-     * @param columnVal
-     *            the column value
-     * @return bin index, -1 if invalid values
-     */
-    public static int getNumericalBinIndex(List<Double> binBoundaries, String columnVal) {
-        if(StringUtils.isBlank(columnVal)) {
-            return -1;
-        }
-        double dval = 0.0;
-        try {
-            dval = Double.parseDouble(columnVal);
-        } catch (Exception e) {
-            return -1;
-        }
-        return getBinIndex(binBoundaries, dval);
-    }
-
-    /**
-     * Get categorical bin index according to string column value.
-     * 
-     * @param binCategories
-     *            the bin categories
-     * @param columnVal
-     *            the column value
-     * @return bin index, -1 if invalid values
-     */
-    public static int getCategoicalBinIndex(List<String> binCategories, String columnVal) {
-        if(StringUtils.isBlank(columnVal)) {
-            return -1;
-        }
-        for(int i = 0; i < binCategories.size(); i++) {
-            if(isCategoricalBinValue(binCategories.get(i), columnVal)) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    /**
-     * Check some categorical value is in the categorical value group or not
-     * 
-     * @param binVal
-     *            - categorical value group, the format is lik cn^us^uk^jp
-     * @param cval
-     *            - categorical value to look up
-     * @return true if the categorical value exists in group, else false
-     */
-    public static boolean isCategoricalBinValue(String binVal, String cval) {
-        // TODO cache CommonUtils.flattenCatValGrp(binVal)??
-        return binVal.equals(cval) ? true : CommonUtils.flattenCatValGrp(binVal).contains(cval);
-    }
-
-    /**
      * Return the real bin number for one value. As the first bin value is NEGATIVE_INFINITY, invalid index is 0, not
      * -1.
      * 
@@ -810,10 +709,26 @@ public final class CommonUtils {
      *             if no target column can be found.
      */
     public static Integer getTargetColumnNum(List<ColumnConfig> columnConfigList) {
+        return getTargetColumnConfig(columnConfigList).getColumnNum();
+    }
+
+    /**
+     * Get target ColumnConfig.
+     *
+     * @param columnConfigList
+     *            column config list
+     * @return target ColumnConfig
+     * @throws IllegalArgumentException
+     *             if columnConfigList is null or empty.
+     *
+     * @throws IllegalStateException
+     *             if no target column can be found.
+     */
+    public static ColumnConfig getTargetColumnConfig(List<ColumnConfig> columnConfigList) {
         if(CollectionUtils.isEmpty(columnConfigList)) {
             throw new IllegalArgumentException("columnConfigList should not be null or empty.");
         }
-        // I need cast operation because of common-collections dosen't support generic.
+        // I need cast operation because of common-collections doesn't support generic.
         ColumnConfig cc = (ColumnConfig) CollectionUtils.find(columnConfigList, new Predicate() {
             @Override
             public boolean evaluate(Object object) {
@@ -823,7 +738,7 @@ public final class CommonUtils {
         if(cc == null) {
             throw new IllegalStateException("No target column can be found, please check your column configurations");
         }
-        return cc.getColumnNum();
+        return cc;
     }
 
     /**
@@ -856,40 +771,6 @@ public final class CommonUtils {
         }
 
         return loadBasicModels(modelConfig, evalConfig, modelConfig.getDataSet().getSource());
-    }
-
-    /**
-     * Get bin index by binary search. The last bin in <code>binBoundary</code> is missing value bin.
-     * 
-     * @param binBoundary
-     *            bin boundary list which should be sorted.
-     * @param dVal
-     *            value of column
-     * @return bin index
-     */
-    public static int getBinIndex(List<Double> binBoundary, Double dVal) {
-        assert binBoundary != null && binBoundary.size() > 0;
-        assert dVal != null;
-        int binSize = binBoundary.size();
-
-        int low = 0;
-        int high = binSize - 1;
-
-        while(low <= high) {
-            int mid = (low + high) >>> 1;
-            Double midVal = binBoundary.get(mid);
-            int cmp = midVal.compareTo(dVal);
-
-            if(cmp < 0) {
-                low = mid + 1;
-            } else if(cmp > 0) {
-                high = mid - 1;
-            } else {
-                return mid; // key found
-            }
-        }
-
-        return low == 0 ? 0 : low - 1;
     }
 
     public static List<BasicML> loadBasicModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
@@ -1128,6 +1009,14 @@ public final class CommonUtils {
             }
         }
         return null;
+    }
+
+    public static boolean isLinearTarget(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
+        ColumnConfig columnConfig = getTargetColumnConfig(columnConfigList);
+        if(columnConfig == null) {
+            throw new ShifuException(ShifuErrorCode.ERROR_NO_TARGET_COLUMN, "Target column is not detected.");
+        }
+        return (CollectionUtils.isEmpty(modelConfig.getTags()) && columnConfig.isNumerical());
     }
 
     public static class GzipStreamPair {
@@ -1406,19 +1295,6 @@ public final class CommonUtils {
         return candidateColumns;
     }
 
-    public static class FileSuffixPathFilter implements PathFilter {
-        private String fileSuffix;
-
-        public FileSuffixPathFilter(String fileSuffix) {
-            this.fileSuffix = fileSuffix;
-        }
-
-        @Override
-        public boolean accept(Path path) {
-            return path.getName().endsWith(fileSuffix);
-        }
-    }
-
     public static List<BasicML> loadBasicModels(final String modelsPath, final ALGORITHM alg) throws IOException {
         return loadBasicModels(modelsPath, alg, false, Constants.GBT_SCORE_RAW_CONVETER);
     }
@@ -1611,6 +1487,10 @@ public final class CommonUtils {
         pigParamMap.put(Constants.JOB_QUEUE,
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE));
         pigParamMap.put(Constants.DATASET_NAME, modelConfig.getBasic().getName());
+
+        pigParamMap.put(Constants.SHIFU_OUTPUT_DELIMITER, CommonUtils.escapePigString(
+                Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER)));
+
         return pigParamMap;
     }
 
@@ -2090,12 +1970,6 @@ public final class CommonUtils {
         return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
     }
 
-    public static boolean isHadoopConfigurationInjected(String key) {
-        return key.startsWith("nn") || key.startsWith("guagua") || key.startsWith("shifu") || key.startsWith("mapred")
-                || key.startsWith("io") || key.startsWith("hadoop") || key.startsWith("yarn") || key.startsWith("pig")
-                || key.startsWith("hive") || key.startsWith("job");
-    }
-
     /**
      * Assemble map data to Encog standard input format.
      * 
@@ -2304,24 +2178,6 @@ public final class CommonUtils {
             return true;
         } catch (NumberFormatException e) {
             return false;
-        }
-    }
-
-    /**
-     * Avoid parsing times, failed parsing is set to NaN
-     * 
-     * @param valStr
-     *            param string
-     * @return double after parsing
-     */
-    public static double parseNumber(String valStr) {
-        if(StringUtils.isBlank(valStr)) {
-            return Double.NaN;
-        }
-        try {
-            return Double.parseDouble(valStr);
-        } catch (NumberFormatException e) {
-            return Double.NaN;
         }
     }
 
@@ -2605,6 +2461,14 @@ public final class CommonUtils {
         return rawDataNsMap;
     }
 
+    public static boolean isToNormVariable(ColumnConfig columnConfig, boolean hasCandidate,
+            boolean isBinaryClassification) {
+        if(columnConfig == null) {
+            return false;
+        }
+        return columnConfig.isFinalSelect() || isGoodCandidate(columnConfig, hasCandidate, isBinaryClassification);
+    }
+
     public static boolean isGoodCandidate(ColumnConfig columnConfig, boolean hasCandidate,
             boolean isBinaryClassification) {
         if(columnConfig == null) {
@@ -2673,7 +2537,7 @@ public final class CommonUtils {
 
         String firstValidFile = null;
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source);
-        FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HIDDEN_FILE_FILTER);
+        FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HiddenPathFilter.getHiddenPathFilter());
         if(globStatus == null || globStatus.length == 0) {
             throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
         } else {
@@ -2741,7 +2605,7 @@ public final class CommonUtils {
 
         String firstValidFile = null;
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source);
-        FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HIDDEN_FILE_FILTER);
+        FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HiddenPathFilter.getHiddenPathFilter());
         if(globStatus == null || globStatus.length == 0) {
             throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
         } else {
@@ -2797,13 +2661,6 @@ public final class CommonUtils {
             IOUtils.closeQuietly(reader);
         }
     }
-
-    private static final PathFilter HIDDEN_FILE_FILTER = new PathFilter() {
-        public boolean accept(Path p) {
-            String name = p.getName();
-            return !name.startsWith("_") && !name.startsWith(".");
-        }
-    };
 
     public static String genPigFieldName(String name) {
         return ((name != null) ? name.replace('-', '_') : null);
@@ -3002,4 +2859,50 @@ public final class CommonUtils {
         return categories.toArray(new String[0]);
     }
 
+    public static double[] floatToDouble(float[] src) {
+        if(src == null) {
+            return null;
+        }
+
+        double[] output = new double[src.length];
+
+        for(int i = 0; i < src.length; i++) {
+            output[i] = src[i];
+        }
+
+        return output;
+    }
+
+    /**
+     * Inject Shifu or Hadoop parameters into MapReduce / Pig jobs, by using visitor.
+     * 
+     * @param visitor
+     *            - provider to do injection
+     */
+    public static void injectHadoopShifuEnvironments(ValueVisitor visitor) {
+        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
+            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
+                if(StringUtils.equalsIgnoreCase(entry.getKey().toString(), Constants.SHIFU_OUTPUT_DATA_DELIMITER)) {
+                    visitor.inject(entry.getKey(), Base64Utils.base64Encode(entry.getValue().toString()));
+                } else {
+                    visitor.inject(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+    }
+
+    /**
+     * Check whether the prefix of key is Shifu or Hadoop-related.
+     * 
+     * @param key
+     *            - key to check
+     * @return
+     *         true - is Shifu or Hadoop related keys
+     *         or false
+     */
+    public static boolean isHadoopConfigurationInjected(String key) {
+        return key.startsWith("nn") || key.startsWith("guagua") || key.startsWith("shifu") || key.startsWith("mapred")
+                || key.startsWith("io") || key.startsWith("hadoop") || key.startsWith("yarn") || key.startsWith("pig")
+                || key.startsWith("hive") || key.startsWith("job");
+    }
 }

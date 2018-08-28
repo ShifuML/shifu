@@ -18,6 +18,12 @@ package ml.shifu.shifu.core.dtrain.nn;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+
+import com.google.common.collect.Lists;
+
 import ml.shifu.guagua.ComputableMonitor;
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
@@ -29,10 +35,7 @@ import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLData;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLDataPair;
 import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataPair;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
+import ml.shifu.shifu.util.Constants;
 
 /**
  * {@link NNWorker} is used to compute NN model according to splits assigned. The result will be sent to master for
@@ -72,7 +75,9 @@ public class NNWorker extends AbstractNNWorker<Text> {
         // use NNConstants.NN_DEFAULT_COLUMN_SEPARATOR to replace getModelConfig().getDataSetDelimiter(), super follows
         // the function in akka mode.
         int index = 0, inputsIndex = 0, outputIndex = 0;
-        String[] fields = currentValue.getWritable().toString().split("\\|", -1);
+
+        String[] fields = Lists.newArrayList(this.splitter.split(currentValue.getWritable().toString()))
+                .toArray(new String[0]);
         for(int pos = 0; pos < fields.length;) {
             String input = fields[pos];
             // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
@@ -102,7 +107,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
             } else {
                 ColumnConfig columnConfig = super.columnConfigList.get(index);
                 if(columnConfig != null && columnConfig.isTarget()) {
-                    if(modelConfig.isRegression()) {
+                    if(isLinearTarget || modelConfig.isRegression()) {
                         ideal[outputIndex++] = floatValue;
                     } else {
                         if(modelConfig.getTrain().isOneVsAll()) {
@@ -126,8 +131,21 @@ public class NNWorker extends AbstractNNWorker<Text> {
                     pos++;
                 } else {
                     if(subFeatureSet.contains(index)) {
-                        if(columnConfig != null && columnConfig.isCategorical()
-                                && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)) {
+                        if(columnConfig != null && columnConfig.isNumerical()
+                                && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)) {
+                            for(int k = 0; k < columnConfig.getBinBoundary().size() + 1; k++) {
+                                String tval = fields[pos];
+                                // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+                                float fval = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
+                                // no idea about why NaN in input data, we should process it as missing value TODO ,
+                                // according to norm type
+                                fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? 0f : fval;
+                                inputs[inputsIndex++] = fval;
+                                pos++;
+                            }
+                        } else if(columnConfig != null && columnConfig.isCategorical()
+                                && (modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
+                                        || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))) {
                             for(int k = 0; k < columnConfig.getBinCategory().size() + 1; k++) {
                                 String tval = fields[pos];
                                 // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
@@ -144,17 +162,31 @@ public class NNWorker extends AbstractNNWorker<Text> {
                         }
                         hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
                     } else {
-                        if(columnConfig.isCategorical()
-                                && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
+                        if(columnConfig.isNumerical()
+                                && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)
+                                && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1) {
+                            pos += (columnConfig.getBinBoundary().size() + 1);
+                        } else if(columnConfig.isCategorical()
+                                && (modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
+                                        || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))
                                 && columnConfig.getBinCategory().size() > 1) {
-                            pos = pos + columnConfig.getBinCategory().size() + 1;
+                            pos += (columnConfig.getBinCategory().size() + 1);
                         } else {
-                            pos++;
+                            pos += 1;
                         }
                     }
                 }
             }
             index += 1;
+        }
+
+        // output delimiter in norm can be set by user now and if user set a special one later changed, this exception
+        // is helped to quick find such issue.
+        if(inputsIndex != inputs.length) {
+            String delimiter = workerContext.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER,
+                    Constants.DEFAULT_DELIMITER);
+            throw new RuntimeException("Input length is inconsistent with parsing size. Input original size: "
+                    + inputs.length + ", parsing size:" + inputsIndex + ", delimiter:" + delimiter + ".");
         }
 
         // sample negative only logic here
@@ -218,6 +250,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
             // for validation data, according bagging sampling logic, we may need to sampling validation data set, while
             // validation data set are only used to compute validation error, not to do real sampling is ok.
         }
+
     }
 
     /*

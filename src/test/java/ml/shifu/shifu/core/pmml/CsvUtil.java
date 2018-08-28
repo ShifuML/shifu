@@ -188,7 +188,9 @@ public class CsvUtil {
                 }
 
                 String value = bodyRow.get(column);
-                if (("").equals(value) || ("NA").equals(value) || ("N/A").equals(value)) {
+                // remove "NA" as condition
+                // by zhanhu - there is a variable whose value is just "NA" (means North America)
+                if (("").equals(value) || ("N/A").equals(value)) {
                     value = null;
                 }
 

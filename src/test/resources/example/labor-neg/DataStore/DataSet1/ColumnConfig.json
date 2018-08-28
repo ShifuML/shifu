@@ -30,7 +30,7 @@
   }
 }, {
   "columnNum" : 1,
-  "columnName" : "wage increase first year",
+  "columnName" : "wage_increase_first_year",
   "version" : "0.2.0",
   "columnType" : "N",
   "columnFlag" : null,
@@ -60,7 +60,7 @@
   }
 }, {
   "columnNum" : 2,
-  "columnName" : "wage increase second year",
+  "columnName" : "wage_increase_second_year",
   "version" : "0.2.0",
   "columnType" : "N",
   "columnFlag" : null,
@@ -90,7 +90,7 @@
   }
 }, {
   "columnNum" : 3,
-  "columnName" : "wage increase third year",
+  "columnName" : "wage_increase_third_year",
   "version" : "0.2.0",
   "columnType" : "N",
   "columnFlag" : null,
@@ -120,7 +120,7 @@
   }
 }, {
   "columnNum" : 4,
-  "columnName" : "cost of living adjustment",
+  "columnName" : "cost_of_living_adjustment",
   "version" : "0.2.0",
   "columnType" : "C",
   "columnFlag" : null,
@@ -150,7 +150,7 @@
   }
 }, {
   "columnNum" : 5,
-  "columnName" : "working hours",
+  "columnName" : "working_hours",
   "version" : "0.2.0",
   "columnType" : "N",
   "columnFlag" : null,
@@ -210,7 +210,7 @@
   }
 }, {
   "columnNum" : 7,
-  "columnName" : "standby pay",
+  "columnName" : "standby_pay",
   "version" : "0.2.0",
   "columnType" : "N",
   "columnFlag" : null,
@@ -240,7 +240,7 @@
   }
 }, {
   "columnNum" : 8,
-  "columnName" : "shift differential",
+  "columnName" : "shift_differential",
   "version" : "0.2.0",
   "columnType" : "N",
   "columnFlag" : null,
@@ -270,7 +270,7 @@
   }
 }, {
   "columnNum" : 9,
-  "columnName" : "education allowance",
+  "columnName" : "education_allowance",
   "version" : "0.2.0",
   "columnType" : "C",
   "columnFlag" : null,
@@ -300,7 +300,7 @@
   }
 }, {
   "columnNum" : 10,
-  "columnName" : "statutory holidays",
+  "columnName" : "statutory_holidays",
   "version" : "0.2.0",
   "columnType" : "N",
   "columnFlag" : null,
@@ -360,7 +360,7 @@
   }
 }, {
   "columnNum" : 12,
-  "columnName" : "longterm disability assistance",
+  "columnName" : "longterm_disability_assistance",
   "version" : "0.2.0",
   "columnType" : "C",
   "columnFlag" : null,
@@ -390,7 +390,7 @@
   }
 }, {
   "columnNum" : 13,
-  "columnName" : "contribution to dental plan",
+  "columnName" : "contribution_to_dental_plan",
   "version" : "0.2.0",
   "columnType" : "C",
   "columnFlag" : null,
@@ -420,7 +420,7 @@
   }
 }, {
   "columnNum" : 14,
-  "columnName" : "bereavement assistance",
+  "columnName" : "bereavement_assistance",
   "version" : "0.2.0",
   "columnType" : "C",
   "columnFlag" : null,
@@ -450,7 +450,7 @@
   }
 }, {
   "columnNum" : 15,
-  "columnName" : "contribution to health plan",
+  "columnName" : "contribution_to_health_plan",
   "version" : "0.2.0",
   "columnType" : "C",
   "columnFlag" : null,
