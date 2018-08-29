@@ -297,7 +297,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         if(!this.isForExpressions) {
-            if ( input.size() != this.columnConfigList.size() ) {
+            if(input.size() != this.columnConfigList.size()) {
                 this.mismatchCnt++;
                 log.error("the input size - " + input.size() + ", while column size - " + columnConfigList.size());
                 this.mismatchCnt++;
@@ -418,8 +418,10 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         if(CommonUtils.isToNormVariable(config, super.hasCandidates, modelConfig.isRegression())) {
                             // for multiple classification, binPosRate means rate of such category over all counts,
                             // reuse binPosRate for normalize
+
                             List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
                                     this.categoryMissingNormType);
+
                             for(Double normVal: normVals) {
                                 appendOutputValue(tuple, normVal, true);
                             }
