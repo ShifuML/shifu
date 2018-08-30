@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
+import com.google.common.collect.Lists;
 import ml.shifu.shifu.fs.SourceFile;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.CollectionUtils;
@@ -621,10 +622,14 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             return;
         }
 
+        String delimiter = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER);
+        Splitter splitter = Splitter.on(delimiter).trimResults();
+
         List<String> unitStats = new ArrayList<String>(this.columnConfigList.size());
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
-                String[] output = scanner.nextLine().trim().split("\\|");
+                //String[] output = scanner.nextLine().trim().split("\\|");
+                String[] output = Lists.newArrayList(splitter.split(scanner.nextLine())).toArray(new String[0]);
                 try {
                     int columnNum = Integer.parseInt(output[0]);
                     ColumnConfig config = this.columnConfigList.get(columnNum);

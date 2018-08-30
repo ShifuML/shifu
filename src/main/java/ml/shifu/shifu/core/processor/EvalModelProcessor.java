@@ -454,6 +454,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             double pigNegWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.COUNTER_WNEGTAGS) / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
 
+            LOG.info("Total positive record count is : {}", pigPosTags);
+            LOG.info("Total negative record count is : {}", pigNegTags);
+            LOG.info("Total weighted positive record count is : {}", pigPosWeightTags);
+            LOG.info("Total weighted negative record count is : {}", pigNegWeightTags);
+
             long totalRunTime = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.TOTAL_MODEL_RUNTIME);
 

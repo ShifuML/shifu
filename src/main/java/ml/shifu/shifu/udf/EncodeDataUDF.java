@@ -42,15 +42,14 @@ import java.util.Map;
 /**
  * Calculate the score for each evaluation data
  */
-public class EncodeDataUDF extends AbstractTrainerUDF<Tuple> {
+public class EncodeDataUDF extends AbstractEvalUDF<Tuple> {
 
     private PathFinder pathFinder;
     private IndependentTreeModel treeModel;
-    private EvalConfig evalConfig;
 
     public EncodeDataUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
-        super(source, pathModelConfig, pathColumnConfig);
+        super(source, pathModelConfig, pathColumnConfig, evalSetName);
         this.pathFinder = new PathFinder(this.modelConfig);
 
         // get model path
