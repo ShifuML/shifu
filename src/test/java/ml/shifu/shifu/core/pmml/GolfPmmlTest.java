@@ -23,7 +23,7 @@ import java.util.Map.Entry;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.PMML;
 import org.jpmml.evaluator.FieldValue;
-import org.jpmml.evaluator.NeuralNetworkEvaluator;
+import org.jpmml.evaluator.neural_network.NeuralNetworkEvaluator;
 import org.junit.Test;
 
 public class GolfPmmlTest {

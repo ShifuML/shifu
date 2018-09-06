@@ -24,14 +24,14 @@ import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 
 import org.dmg.pmml.FieldName;
-import org.dmg.pmml.MiningFunctionType;
-import org.dmg.pmml.MissingValueStrategyType;
+import org.dmg.pmml.MiningFunction;
 import org.dmg.pmml.Model;
-import org.dmg.pmml.Node;
 import org.dmg.pmml.OpType;
 import org.dmg.pmml.Target;
 import org.dmg.pmml.TargetValue;
 import org.dmg.pmml.Targets;
+import org.dmg.pmml.tree.Node;
+import org.dmg.pmml.tree.TreeModel.MissingValueStrategy;
 import org.encog.ml.BasicML;
 
 public class TreeModelPmmlElementCreator extends AbstractPmmlElementCreator<Model> {
@@ -45,19 +45,19 @@ public class TreeModelPmmlElementCreator extends AbstractPmmlElementCreator<Mode
         return null;
     }
 
-    public org.dmg.pmml.TreeModel convert(IndependentTreeModel model, Node root) {
-        org.dmg.pmml.TreeModel pmmlTreeModel = new org.dmg.pmml.TreeModel();
+    public org.dmg.pmml.tree.TreeModel convert(IndependentTreeModel model, Node root) {
+        org.dmg.pmml.tree.TreeModel pmmlTreeModel = new org.dmg.pmml.tree.TreeModel();
         pmmlTreeModel.setMiningSchema(new TreeModelMiningSchemaCreator(this.modelConfig, this.columnConfigList).build(null));
         //pmmlTreeModel.setModelStats(new ModelStatsCreator(this.modelConfig, this.columnConfigList).build());
         pmmlTreeModel.setTargets(createTargets(this.modelConfig));
-        pmmlTreeModel.setMissingValueStrategy(MissingValueStrategyType.fromValue("none"));
-        pmmlTreeModel.setSplitCharacteristic(org.dmg.pmml.TreeModel.SplitCharacteristic.fromValue("binarySplit"));
+        pmmlTreeModel.setMissingValueStrategy(MissingValueStrategy.fromValue("none"));
+        pmmlTreeModel.setSplitCharacteristic(org.dmg.pmml.tree.TreeModel.SplitCharacteristic.fromValue("binarySplit"));
         pmmlTreeModel.setModelName(String.valueOf(root.getId()));
         pmmlTreeModel.setNode(root);
         if(model.isClassification()) {
-           pmmlTreeModel.setFunctionName(MiningFunctionType.fromValue("classification")); 
+           pmmlTreeModel.setMiningFunction(MiningFunction.fromValue("classification")); 
         } else {
-           pmmlTreeModel.setFunctionName(MiningFunctionType.fromValue("regression"));
+           pmmlTreeModel.setMiningFunction(MiningFunction.fromValue("regression"));
         }
         return pmmlTreeModel;
         
@@ -68,7 +68,7 @@ public class TreeModelPmmlElementCreator extends AbstractPmmlElementCreator<Mode
 
         Target target = new Target();
 
-        target.setOptype(OpType.CATEGORICAL);
+        target.setOpType(OpType.CATEGORICAL);
         target.setField(new FieldName(modelConfig.getTargetColumnName()));
 
         List<TargetValue> targetValueList = new ArrayList<TargetValue>();
@@ -89,9 +89,9 @@ public class TreeModelPmmlElementCreator extends AbstractPmmlElementCreator<Mode
             targetValueList.add(neg);
         }
 
-        target.withTargetValues(targetValueList);
+        target.addTargetValues(targetValueList.toArray(new TargetValue[targetValueList.size()]));
 
-        targets.withTargets(target);
+        targets.addTargets(target);
 
         return targets;
     }
