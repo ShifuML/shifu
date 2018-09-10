@@ -134,6 +134,7 @@ public class ModelDataEncodeProcessor extends BasicModelProcessor {
 
             clearUp(ModelStep.ENCODE);
         } catch (Exception e) {
+            LOG.error("Fail to run encoding.", e);
             status = 1;
         }
 

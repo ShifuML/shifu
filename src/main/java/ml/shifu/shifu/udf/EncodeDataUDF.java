@@ -148,7 +148,7 @@ public class EncodeDataUDF extends AbstractEvalUDF<Tuple> {
 
             if(evalConfig == null) {
                 for(ColumnConfig columnConfig : this.columnConfigList) {
-                    if(columnConfig.isMeta()) {
+                    if(ColumnConfig.ColumnFlag.Meta.equals(columnConfig.getColumnFlag())) { // only Meta, skip Weight
                         tupleSchema.add(new FieldSchema(columnConfig.getColumnName(), DataType.CHARARRAY));
                     }
                 }
