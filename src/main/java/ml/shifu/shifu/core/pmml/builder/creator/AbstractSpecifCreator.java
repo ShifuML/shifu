@@ -55,24 +55,24 @@ public abstract class AbstractSpecifCreator {
         if ( modelConfig.isClassification() &&
                 ModelTrainConf.MultipleClassification.NATIVE.equals(modelConfig.getTrain().getMultiClassifyMethod()) ) {
             for ( int i = 0; i < modelConfig.getTags().size(); i ++ ) {
-                output.withOutputFields(createOutputField(RAW_RESULT + "_" + i, OpType.CONTINUOUS, DataType.DOUBLE,
-                        new FieldName(modelConfig.getTargetColumnName() + "_" + i), ResultFeatureType.PREDICTED_VALUE));
+                output.addOutputFields(createOutputField(RAW_RESULT + "_" + i, OpType.CONTINUOUS, DataType.DOUBLE,
+                        new FieldName(modelConfig.getTargetColumnName() + "_" + i), ResultFeature.PREDICTED_VALUE));
 
                 OutputField finalResult = createOutputField(FINAL_RESULT + "_" + i, OpType.CONTINUOUS, DataType.DOUBLE,
-                        new FieldName(modelConfig.getTargetColumnName() + "_" + i), ResultFeatureType.TRANSFORMED_VALUE);
-                finalResult.withExpression(createNormExpr(i));
+                        new FieldName(modelConfig.getTargetColumnName() + "_" + i), ResultFeature.TRANSFORMED_VALUE);
+                finalResult.setExpression(createNormExpr(i));
 
-                output.withOutputFields(finalResult);
+                output.addOutputFields(finalResult);
             }
         } else {
-            output.withOutputFields(createOutputField(RAW_RESULT, OpType.CONTINUOUS, DataType.DOUBLE,
-                    new FieldName(modelConfig.getTargetColumnName()), ResultFeatureType.PREDICTED_VALUE));
+            output.addOutputFields(createOutputField(RAW_RESULT, OpType.CONTINUOUS, DataType.DOUBLE,
+                    new FieldName(modelConfig.getTargetColumnName()), ResultFeature.PREDICTED_VALUE));
 
             OutputField finalResult = createOutputField(FINAL_RESULT, OpType.CONTINUOUS, DataType.DOUBLE,
-                    new FieldName(modelConfig.getTargetColumnName()), ResultFeatureType.TRANSFORMED_VALUE);
-            finalResult.withExpression(createNormExpr());
+                    new FieldName(modelConfig.getTargetColumnName()), ResultFeature.TRANSFORMED_VALUE);
+            finalResult.setExpression(createNormExpr());
 
-            output.withOutputFields(finalResult);
+            output.addOutputFields(finalResult);
         }
         return output;
     }
@@ -87,14 +87,14 @@ public abstract class AbstractSpecifCreator {
     protected Output createNormalizedOutput(int id) {
         Output output = new Output();
 
-        output.withOutputFields(createOutputField(RAW_RESULT + "_" + id, OpType.CONTINUOUS, DataType.DOUBLE,
-                new FieldName(modelConfig.getTargetColumnName() + "_" + id), ResultFeatureType.PREDICTED_VALUE));
+        output.addOutputFields(createOutputField(RAW_RESULT + "_" + id, OpType.CONTINUOUS, DataType.DOUBLE,
+                new FieldName(modelConfig.getTargetColumnName() + "_" + id), ResultFeature.PREDICTED_VALUE));
 
         OutputField finalResult = createOutputField(FINAL_RESULT + "_" + id, OpType.CONTINUOUS, DataType.DOUBLE,
-                new FieldName(modelConfig.getTargetColumnName() + "_" + id), ResultFeatureType.TRANSFORMED_VALUE);
-        finalResult.withExpression(createNormExpr(id));
+                new FieldName(modelConfig.getTargetColumnName() + "_" + id), ResultFeature.TRANSFORMED_VALUE);
+        finalResult.setExpression(createNormExpr(id));
 
-        output.withOutputFields(finalResult);
+        output.addOutputFields(finalResult);
 
         return output;
     }
@@ -115,14 +115,14 @@ public abstract class AbstractSpecifCreator {
      * @return OutputField
      */
     protected OutputField createOutputField(String fieldName, OpType opType, DataType dataType,
-            FieldName targetField, ResultFeatureType feature) {
+            FieldName targetField, ResultFeature feature) {
         OutputField outputField = new OutputField();
-        outputField.withName(new FieldName(fieldName));
-        outputField.withOptype(opType);
-        outputField.withDataType(dataType);
-        outputField.withFeature(feature);
+        outputField.setName(new FieldName(fieldName));
+        outputField.setOpType(opType);
+        outputField.setDataType(dataType);
+        outputField.setResultFeature(feature);
         if ( targetField != null ) {
-            outputField.withTargetField(targetField);
+            outputField.setTargetField(targetField);
         }
         return outputField;
     }
@@ -134,17 +134,17 @@ public abstract class AbstractSpecifCreator {
      */
     protected Expression createNormExpr() {
         NormContinuous normContinuous = new NormContinuous();
-        normContinuous.withField(new FieldName(RAW_RESULT));
-        normContinuous.withLinearNorms(new LinearNorm().withOrig(0).withNorm(0));
-        normContinuous.withLinearNorms(new LinearNorm().withOrig(1).withNorm(1000));
+        normContinuous.setField(new FieldName(RAW_RESULT));
+        normContinuous.addLinearNorms(new LinearNorm().setOrig(0).setNorm(0));
+        normContinuous.addLinearNorms(new LinearNorm().setOrig(1).setNorm(1000));
         return normContinuous;
     }
 
     protected Expression createNormExpr(int id) {
         NormContinuous normContinuous = new NormContinuous();
-        normContinuous.withField(new FieldName(RAW_RESULT + "_" + id));
-        normContinuous.withLinearNorms(new LinearNorm().withOrig(0).withNorm(0));
-        normContinuous.withLinearNorms(new LinearNorm().withOrig(1).withNorm(1000));
+        normContinuous.setField(new FieldName(RAW_RESULT + "_" + id));
+        normContinuous.addLinearNorms(new LinearNorm().setOrig(0).setNorm(0));
+        normContinuous.addLinearNorms(new LinearNorm().setOrig(1).setNorm(1000));
         return normContinuous;
     }
 }

@@ -16,9 +16,24 @@
 package ml.shifu.shifu.core.pmml;
 
 import org.apache.commons.io.IOUtils;
-import org.dmg.pmml.*;
-import org.jpmml.model.ImportFilter;
+import org.dmg.pmml.DataDictionary;
+import org.dmg.pmml.DataField;
+import org.dmg.pmml.DataType;
+import org.dmg.pmml.DerivedField;
+import org.dmg.pmml.Extension;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.LocalTransformations;
+import org.dmg.pmml.MiningField;
+import org.dmg.pmml.MiningField.UsageType;
+import org.dmg.pmml.MiningSchema;
+import org.dmg.pmml.Model;
+import org.dmg.pmml.ModelStats;
+import org.dmg.pmml.OpType;
+import org.dmg.pmml.PMML;
+import org.dmg.pmml.UnivariateStats;
+import org.dmg.pmml.neural_network.NeuralNetwork;
 import org.jpmml.model.JAXBUtil;
+import org.jpmml.model.filters.ImportFilter;
 import org.xml.sax.InputSource;
 
 import javax.xml.transform.sax.SAXSource;
@@ -173,7 +188,7 @@ public class PMMLUtils {
 
         Integer cnt = 0;
         for(MiningField miningField: miningSchema.getMiningFields()) {
-            if(miningField.getUsageType().equals(FieldUsageType.ACTIVE)) {
+            if(miningField.getUsageType().equals(UsageType.ACTIVE)) {
                 cnt += 1;
             }
         }
@@ -185,7 +200,7 @@ public class PMMLUtils {
 
         Integer cnt = 0;
         for(MiningField miningField: miningSchema.getMiningFields()) {
-            if(miningField.getUsageType().equals(FieldUsageType.TARGET)) {
+            if(miningField.getUsageType().equals(UsageType.TARGET)) {
                 cnt += 1;
             }
         }

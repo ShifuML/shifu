@@ -34,7 +34,7 @@ import org.dmg.pmml.SimpleSetPredicate;
 import org.dmg.pmml.True;
 import org.encog.ml.BasicML;
 
-public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.dmg.pmml.Node> {
+public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.dmg.pmml.tree.Node> {
 
     public TreeNodePmmlElementCreator(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
         super(modelConfig, columnConfigList);
@@ -52,29 +52,29 @@ public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.d
         this.treeModel = treeModel;
     }
 
-    public org.dmg.pmml.Node build(BasicML basicML) {
+    public org.dmg.pmml.tree.Node build(BasicML basicML) {
         return null;
     }
 
-    public org.dmg.pmml.Node convert(Node node) {
-        org.dmg.pmml.Node pmmlNode = new org.dmg.pmml.Node();
+    public org.dmg.pmml.tree.Node convert(Node node) {
+        org.dmg.pmml.tree.Node pmmlNode = new org.dmg.pmml.tree.Node();
         pmmlNode.setId(String.valueOf(node.getId()));
 
         pmmlNode.setDefaultChild(null);
         pmmlNode.setPredicate(new True());
         pmmlNode.setEmbeddedModel(null);
 
-        List<org.dmg.pmml.Node> childList = pmmlNode.getNodes();
-        org.dmg.pmml.Node left = convert(node.getLeft(), true, node.getSplit());
+        List<org.dmg.pmml.tree.Node> childList = pmmlNode.getNodes();
+        org.dmg.pmml.tree.Node left = convert(node.getLeft(), true, node.getSplit());
         childList.add(left);
-        org.dmg.pmml.Node right = convert(node.getRight(), false, node.getSplit());
+        org.dmg.pmml.tree.Node right = convert(node.getRight(), false, node.getSplit());
         childList.add(right);
 
         return pmmlNode;
     }
 
-    public org.dmg.pmml.Node convert(Node node, boolean isLeft, Split split) {
-        org.dmg.pmml.Node pmmlNode = new org.dmg.pmml.Node();
+    public org.dmg.pmml.tree.Node convert(Node node, boolean isLeft, Split split) {
+        org.dmg.pmml.tree.Node pmmlNode = new org.dmg.pmml.tree.Node();
         pmmlNode.setId(String.valueOf(node.getId()));
         if(node.getPredict() != null) {
             pmmlNode.setScore(String.valueOf(treeModel.isClassification() ? node.getPredict().getClassValue() : node
@@ -127,7 +127,7 @@ public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.d
                     }
                 }
             }
-            Array array = new Array(arrayStr.toString().trim(), Array.Type.fromValue("string"));
+            Array array = new Array(Array.Type.fromValue("string"), arrayStr.toString().trim());
             p.setArray(array);
             if(isLeft) {
                 if(split.isLeft()) {
@@ -149,9 +149,9 @@ public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.d
             return pmmlNode;
         }
 
-        List<org.dmg.pmml.Node> childList = pmmlNode.getNodes();
-        org.dmg.pmml.Node left = convert(node.getLeft(), true, node.getSplit());
-        org.dmg.pmml.Node right = convert(node.getRight(), false, node.getSplit());
+        List<org.dmg.pmml.tree.Node> childList = pmmlNode.getNodes();
+        org.dmg.pmml.tree.Node left = convert(node.getLeft(), true, node.getSplit());
+        org.dmg.pmml.tree.Node right = convert(node.getRight(), false, node.getSplit());
         childList.add(left);
         childList.add(right);
         return pmmlNode;
