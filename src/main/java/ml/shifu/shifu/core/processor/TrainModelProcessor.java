@@ -620,14 +620,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     guaguaClient.addJob(localArgs.toArray(new String[0]));
                 } else {
                     TailThread tailThread = startTailThread(new String[] { progressLogFile });
-                    guaguaClient.createJob(localArgs.toArray(new String[0])).waitForCompletion(true);
+                    boolean ret = guaguaClient.createJob(localArgs.toArray(new String[0])).waitForCompletion(true);
+                    status += (ret ? 0 : 1);
                     stopTailThread(tailThread);
                 }
             }
 
             if(isParallel) {
                 TailThread tailThread = startTailThread(progressLogList.toArray(new String[0]));
-                guaguaClient.run();
+                status += guaguaClient.run();
                 stopTailThread(tailThread);
             }
         }
@@ -643,7 +644,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 } else {
                     LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
                             modelPath.toString());
-                    status = 1;
+                    status += 1;
                 }
             }
 
@@ -664,13 +665,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 String modelName = getModelName(i);
                 Path modelPath = fileSystem
                         .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
-                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath) && isSuccessModel(modelPath,
-                        sourceType)) {
+                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath) && (status == 0)) {
                     copyModelToLocal(modelName, modelPath, sourceType);
                 } else {
                     LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
                             modelPath.toString());
-                    status = 1;
                 }
             }
             LOG.info("The best parameters in grid search is {}", params);
@@ -683,13 +682,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     String modelName = getModelName(i);
                     Path modelPath = fileSystem
                             .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
-                    if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath) && isSuccessModel(
-                            modelPath, sourceType)) {
+                    if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath) && (status == 0)) {
                         copyModelToLocal(modelName, modelPath, sourceType);
                     } else {
                         LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
                                 modelPath.toString());
-                        status = 1;
                     }
                 }
 
@@ -721,32 +718,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         if(status != 0) {
             LOG.error("Error may occurred. There is no model generated. Please check!");
-        }
-        return status;
-    }
-
-    /**
-     * Check the model is legal model or not
-     *
-     * @param modelPath  - model path
-     * @param sourceType - model source type
-     * @return true - if the model is legal model, false or else
-     */
-    private boolean isSuccessModel(Path modelPath, SourceType sourceType) throws IOException {
-        boolean status = true;
-        if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
-            InputStream inputStream = null;
-            try {
-                inputStream = ShifuFileUtils.getInputStream(modelPath, sourceType);
-                IndependentTreeModel treeModel = IndependentTreeModel.loadFromStream(inputStream);
-                Integer treeNum = Integer.valueOf(modelConfig.getTrain().getParams().get("TreeNum").toString());
-                status = (treeNum == treeModel.getTrees().get(0).size());
-            } catch (IOException e) {
-                LOG.error("Fail to load model - {}:{}", modelPath, sourceType);
-                status = false;
-            } finally {
-                IOUtils.closeStream(inputStream);
-            }
         }
         return status;
     }

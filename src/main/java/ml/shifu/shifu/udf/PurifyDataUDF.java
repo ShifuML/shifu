@@ -41,7 +41,7 @@ public class PurifyDataUDF extends AbstractTrainerUDF<Boolean> {
             throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(evalSetName);
-        dataPurifier = new DataPurifier(evalConfig);
+        dataPurifier = ((evalConfig == null) ? new DataPurifier(modelConfig) : new DataPurifier(evalConfig));
     }
 
     /*

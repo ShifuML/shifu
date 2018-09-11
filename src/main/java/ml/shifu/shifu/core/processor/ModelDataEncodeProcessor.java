@@ -218,7 +218,8 @@ public class ModelDataEncodeProcessor extends BasicModelProcessor {
         Map<String, String> paramsMap = new HashMap<String, String>();
 
         paramsMap.put(Constants.SOURCE_TYPE, sourceType.toString());
-        paramsMap.put("pathRawData", modelConfig.getDataSetRawPath());
+        paramsMap.put("pathRawData", (evalConfig == null) ?
+                modelConfig.getDataSetRawPath() : evalConfig.getDataSet().getDataPath());
         paramsMap.put("pathEncodeData", pathFinder.getEncodeDataPath(evalConfig));
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
         paramsMap.put("evalSetName", (evalConfig == null ? TRAINING_DATA_SET : evalConfig.getName()));

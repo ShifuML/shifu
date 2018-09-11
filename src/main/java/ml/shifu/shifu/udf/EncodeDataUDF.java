@@ -101,7 +101,7 @@ public class EncodeDataUDF extends AbstractEvalUDF<Tuple> {
         outputList.addAll(treeModel.encode(depth - 1, rawInput));
 
         for(ColumnConfig columnConfig : this.columnConfigList) {
-            if(columnConfig.isMeta()) {
+            if(ColumnConfig.ColumnFlag.Meta.equals(columnConfig.getColumnFlag())) { // only Meta, skip Weight
                 obj = rawInput.get(columnConfig.getColumnName());
                 outputList.add(obj == null ? null : obj.toString());
             }
