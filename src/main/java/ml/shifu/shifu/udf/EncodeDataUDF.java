@@ -86,12 +86,15 @@ public class EncodeDataUDF extends AbstractEvalUDF<Tuple> {
 
         Map<String, Object> rawInput = convertTupleToRawInput(tuple);
         //1. append the tag
-        Object obj = rawInput.get(this.modelConfig.getTargetColumnName());
+        Object obj = ((evalConfig == null) ? rawInput.get(this.modelConfig.getTargetColumnName())
+                : rawInput.get(this.modelConfig.getTargetColumnName(evalConfig)));
         outputList.add(obj == null ? null : obj.toString());
 
         //2. append the weight
-        if(StringUtils.isNotBlank(this.modelConfig.getWeightColumnName())) {
-            obj = rawInput.get(this.modelConfig.getWeightColumnName());
+        String weightColumn = ((evalConfig == null) ? this.modelConfig.getWeightColumnName()
+                : this.evalConfig.getDataSet().getWeightColumnName());
+        if (StringUtils.isNotBlank(weightColumn)) {
+            obj = rawInput.get(weightColumn);
             outputList.add(obj == null ? null : obj.toString());
         } else {
             outputList.add("1.0");
@@ -100,9 +103,16 @@ public class EncodeDataUDF extends AbstractEvalUDF<Tuple> {
         int depth = Integer.parseInt(this.modelConfig.getParams().get("MaxDepth").toString());
         outputList.addAll(treeModel.encode(depth - 1, rawInput));
 
-        for(ColumnConfig columnConfig : this.columnConfigList) {
-            if(ColumnConfig.ColumnFlag.Meta.equals(columnConfig.getColumnFlag())) { // only Meta, skip Weight
-                obj = rawInput.get(columnConfig.getColumnName());
+        if ( evalConfig == null ) {
+            for(ColumnConfig columnConfig : this.columnConfigList) {
+                if(ColumnConfig.ColumnFlag.Meta.equals(columnConfig.getColumnFlag())) { // only Meta, skip Weight
+                    obj = rawInput.get(columnConfig.getColumnName());
+                    outputList.add(obj == null ? null : obj.toString());
+                }
+            }
+        } else {
+            for (String metaColumn : this.evalConfig.getAllMetaColumns(this.modelConfig)) {
+                obj = rawInput.get(metaColumn);
                 outputList.add(obj == null ? null : obj.toString());
             }
         }
