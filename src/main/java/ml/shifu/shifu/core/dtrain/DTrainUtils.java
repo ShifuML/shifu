@@ -260,7 +260,7 @@ public final class DTrainUtils {
 
     public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
             List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate, String wgtInit,
-            boolean isLinearTarget) {
+            boolean isLinearTarget, String outputActivationFunc) {
         final BasicFloatNetwork network = new BasicFloatNetwork();
 
         // in shifuconfig, we have a switch to control enable input layer dropout
@@ -294,7 +294,11 @@ public final class DTrainUtils {
         }
 
         if(isLinearTarget) {
-            network.addLayer(new BasicLayer(new ActivationLinear(), true, out));
+            if (NNConstants.NN_RELU.equalsIgnoreCase(outputActivationFunc)) {
+                network.addLayer(new BasicLayer(new ActivationReLU(), true, out));
+            } else {
+                network.addLayer(new BasicLayer(new ActivationLinear(), true, out));
+            }
         } else {
             network.addLayer(new BasicLayer(new ActivationSigmoid(), false, out));
         }
