@@ -25,14 +25,15 @@ import org.dmg.pmml.DerivedField;
 import org.dmg.pmml.Discretize;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.FieldRef;
+import org.dmg.pmml.FieldUsageType;
 import org.dmg.pmml.LocalTransformations;
 import org.dmg.pmml.MapValues;
 import org.dmg.pmml.MiningField;
+import org.dmg.pmml.NeuralInput;
+import org.dmg.pmml.NeuralInputs;
+import org.dmg.pmml.NeuralNetwork;
 import org.dmg.pmml.NormContinuous;
 import org.dmg.pmml.OpType;
-import org.dmg.pmml.neural_network.NeuralInput;
-import org.dmg.pmml.neural_network.NeuralInputs;
-import org.dmg.pmml.neural_network.NeuralNetwork;
 
 /**
  * This class glues the partial PMML neural network model with the neural layers
@@ -49,7 +50,7 @@ public class NeuralNetworkModelIntegrator {
      * @return nn model after adaptored
      */
     public NeuralNetwork adaptPMML(NeuralNetwork model) {
-        model.setNeuralInputs(getNeuralInputs(model));
+        model.withNeuralInputs(getNeuralInputs(model));
         model.setLocalTransformations(getLocalTranformations(model));
         return model;
     }
@@ -92,16 +93,16 @@ public class NeuralNetworkModelIntegrator {
             boolean isLeaf = (list == null || list.size() == 0);
             FieldName root = getRoot(dField.getName(), reversMiningTransformMap);
             if(isLeaf && isRootInMiningList(root, miningList)) {
-                DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).setName(dField.getName())
-                        .setExpression(new FieldRef(dField.getName()));
-                nnInputs.addNeuralInputs(new NeuralInput("0," + (index++), field));
+                DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(dField.getName())
+                        .withExpression(new FieldRef(dField.getName()));
+                nnInputs.withNeuralInputs(new NeuralInput(field, "0," + (index++)));
             }
         }
 
-        DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).setName(
-                new FieldName(PluginConstants.biasValue)).setExpression(
+        DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
+                new FieldName(PluginConstants.biasValue)).withExpression(
                 new FieldRef(new FieldName(PluginConstants.biasValue)));
-        nnInputs.addNeuralInputs(new NeuralInput(PluginConstants.biasValue, field));
+        nnInputs.withNeuralInputs(new NeuralInput(field, PluginConstants.biasValue));
         return nnInputs;
     }
 
@@ -121,7 +122,7 @@ public class NeuralNetworkModelIntegrator {
     private boolean isRootInMiningList(FieldName root, List<MiningField> miningList) {
         for(int i = 0; i < miningList.size(); i++) {
             MiningField mField = miningList.get(i);
-            if(mField.getUsageType() != MiningField.UsageType.ACTIVE)
+            if(mField.getUsageType() != FieldUsageType.ACTIVE)
                 continue;
             FieldName mFieldName = mField.getName();
             if(root.equals(mFieldName)) {
@@ -136,11 +137,11 @@ public class NeuralNetworkModelIntegrator {
         List<DerivedField> derivedFields = model.getLocalTransformations().getDerivedFields();
 
         // add bias
-        DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).setName(new FieldName(
+        DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(new FieldName(
                 PluginConstants.biasValue));
-        field.setExpression(new Constant(String.valueOf(PluginConstants.bias)));
+        field.withExpression(new Constant(String.valueOf(PluginConstants.bias)));
         derivedFields.add(field);
-        return new LocalTransformations().addDerivedFields(derivedFields.toArray(new DerivedField[derivedFields.size()]));
+        return new LocalTransformations().withDerivedFields(derivedFields);
     }
 
 }

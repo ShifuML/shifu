@@ -19,13 +19,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.dmg.pmml.FieldName;
-import org.dmg.pmml.MiningFunction;
+import org.dmg.pmml.MiningFunctionType;
 import org.dmg.pmml.Model;
+import org.dmg.pmml.NeuralNetwork;
 import org.dmg.pmml.OpType;
 import org.dmg.pmml.Target;
 import org.dmg.pmml.TargetValue;
 import org.dmg.pmml.Targets;
-import org.dmg.pmml.neural_network.NeuralNetwork;
 import org.encog.ml.BasicML;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -53,7 +53,7 @@ public class NNPmmlModelCreator extends AbstractPmmlElementCreator<Model> {
                 ModelTrainConf.MultipleClassification.NATIVE.equals(modelConfig.getTrain().getMultiClassifyMethod())) {
             model.setFunctionName(MiningFunctionType.CLASSIFICATION);
         } else {*/
-            model.setMiningFunction(MiningFunction.REGRESSION);
+            model.setFunctionName(MiningFunctionType.REGRESSION);
 /*        }*/
         model.setTargets(createTargets());
         return model;
@@ -64,12 +64,11 @@ public class NNPmmlModelCreator extends AbstractPmmlElementCreator<Model> {
 
         if ( modelConfig.isClassification() &&
                 ModelTrainConf.MultipleClassification.NATIVE.equals(modelConfig.getTrain().getMultiClassifyMethod()) ) {
-            List<Target> targetList = createMultiClassTargets();
-            targets.addTargets(targetList.toArray(new Target[targetList.size()]));
+            targets.withTargets(createMultiClassTargets());
         } else {
             Target target = new Target();
 
-        target.setOpType(OpType.CATEGORICAL);
+        target.setOptype(OpType.CATEGORICAL);
         target.setField(new FieldName(modelConfig.getTargetColumnName()));
 
         List<TargetValue> targetValueList = new ArrayList<TargetValue>();
@@ -90,9 +89,9 @@ public class NNPmmlModelCreator extends AbstractPmmlElementCreator<Model> {
             targetValueList.add(neg);
         }
 
-        target.addTargetValues(targetValueList.toArray(new TargetValue[targetValueList.size()]));
+        target.withTargetValues(targetValueList);
 
-            targets.addTargets(target);
+            targets.withTargets(target);
         }
 
         return targets;
@@ -104,14 +103,14 @@ public class NNPmmlModelCreator extends AbstractPmmlElementCreator<Model> {
             String tag = modelConfig.getTags().get(i);
 
             Target target = new Target();
-            target.setOpType(OpType.CONTINUOUS);
+            target.setOptype(OpType.CONTINUOUS);
             target.setField(new FieldName(modelConfig.getTargetColumnName() + "_" + i));
 
             TargetValue targetValue = new TargetValue();
-            targetValue.setValue(Integer.toString(i));
-            targetValue.setDisplayValue(tag);
+            targetValue.withValue(Integer.toString(i));
+            targetValue.withDisplayValue(tag);
 
-            target.addTargetValues(targetValue);
+            target.withTargetValues(targetValue);
 
             targets.add(target);
         }

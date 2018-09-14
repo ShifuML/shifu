@@ -29,13 +29,11 @@ import org.apache.commons.io.IOUtils;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.Model;
 import org.dmg.pmml.PMML;
-import org.jpmml.evaluator.Classification;
+import org.jpmml.evaluator.ClassificationMap;
 import org.jpmml.evaluator.FieldValue;
 import org.jpmml.evaluator.ModelEvaluator;
 import org.jpmml.evaluator.ModelEvaluatorFactory;
-import org.jpmml.evaluator.TargetField;
-import org.jpmml.evaluator.Value;
-import org.jpmml.evaluator.neural_network.NeuralNetworkEvaluator;
+import org.jpmml.evaluator.NeuralNetworkEvaluator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -199,7 +197,7 @@ public class PMMLVerifySuit {
         NeuralNetworkEvaluator evaluator = new NeuralNetworkEvaluator(pmml);
 
         PrintWriter writer = new PrintWriter(OutPath, "UTF-8");
-        List<TargetField> targetFields = evaluator.getTargetFields();
+        List<FieldName> targetFields = evaluator.getTargetFields();
         if ( targetFields.size() == 1 ) {
             writer.println(scoreName);
         } else {
@@ -215,7 +213,7 @@ public class PMMLVerifySuit {
         List<Map<FieldName, FieldValue>> input = CsvUtil.load(evaluator, DataPath, sep);
 
         for (Map<FieldName, FieldValue> maps : input) {
-            switch (evaluator.getModel().getMiningFunction()) {
+            switch (evaluator.getModel().getFunctionName()) {
                 case REGRESSION:
                     if ( targetFields.size() == 1 ) {
                         Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(maps);
@@ -243,10 +241,10 @@ public class PMMLVerifySuit {
                     }
                     break;
                 case CLASSIFICATION:
-                    Map<FieldName, Classification<Double>> classificationTerm = (Map<FieldName, Classification<Double>>) evaluator.evaluate(maps);
-                    for (Classification<Double> cMap : classificationTerm.values())
-                        for (Map.Entry<String,Value<Double>> entry : cMap.getValues().entrySet())
-                            System.out.println(entry.getValue().getValue() * 1000);
+                    Map<FieldName, ClassificationMap<String>> classificationTerm = (Map<FieldName, ClassificationMap<String>>) evaluator.evaluate(maps);
+                    for (ClassificationMap<String> cMap : classificationTerm.values())
+                        for (Map.Entry<String, Double> entry : cMap.entrySet())
+                            System.out.println(entry.getValue() * 1000);
                     break;
                 default:
                     break;
@@ -261,7 +259,7 @@ public class PMMLVerifySuit {
             throws Exception {
         PMML pmml = PMMLUtils.loadPMML(pmmlPath);
         Model m =pmml.getModels().get(0);
-        ModelEvaluator<?> evaluator = ModelEvaluatorFactory.newInstance().newModelEvaluator(pmml, m);
+        ModelEvaluator<?> evaluator = ModelEvaluatorFactory.getInstance().getModelManager(pmml, m);
         PrintWriter writer = new PrintWriter(OutPath, "UTF-8");
         writer.println(scoreName);
         List<Map<FieldName, FieldValue>> input = CsvUtil.load(evaluator, DataPath, sep);

@@ -16,10 +16,8 @@
 
 package ml.shifu.shifu.core.pmml;
 
-import org.dmg.pmml.neural_network.Connection;
-import org.dmg.pmml.neural_network.NeuralLayer;
-import org.dmg.pmml.neural_network.NeuralNetwork.ActivationFunction;
-import org.dmg.pmml.neural_network.Neuron;
+import org.dmg.pmml.*;
+import org.encog.engine.network.activation.ActivationFunction;
 import org.encog.neural.flat.FlatNetwork;
 
 import java.util.ArrayList;
@@ -33,7 +31,7 @@ import java.util.List;
  * PMMLModelBuilder(pmml.RegressionModel,Encog.NeuralNetwork).
  */
 public class PMMLEncogNeuralNetworkModel implements
-        PMMLModelBuilder<org.dmg.pmml.neural_network.NeuralNetwork, org.encog.neural.networks.BasicNetwork> {
+        PMMLModelBuilder<org.dmg.pmml.NeuralNetwork, org.encog.neural.networks.BasicNetwork> {
 
     private FlatNetwork network;
 
@@ -51,14 +49,14 @@ public class PMMLEncogNeuralNetworkModel implements
      *            the model conversion
      * @return The generated PMML NeuralNetwork Model
      */
-    public org.dmg.pmml.neural_network.NeuralNetwork adaptMLModelToPMML(org.encog.neural.networks.BasicNetwork bNetwork,
-            org.dmg.pmml.neural_network.NeuralNetwork pmmlModel) {
+    public org.dmg.pmml.NeuralNetwork adaptMLModelToPMML(org.encog.neural.networks.BasicNetwork bNetwork,
+            org.dmg.pmml.NeuralNetwork pmmlModel) {
         network = bNetwork.getFlat();
         pmmlModel = new NeuralNetworkModelIntegrator().adaptPMML(pmmlModel);
         int[] layerCount = network.getLayerCounts();
         int[] layerFeedCount = network.getLayerFeedCounts();
         double[] weights = network.getWeights();
-        ActivationFunction[] functionList = transformActivationFunction(network.getActivationFunctions());
+        ActivationFunctionType[] functionList = transformActivationFunction(network.getActivationFunctions());
 
         int numLayers = layerCount.length;
         int weightID = 0;
@@ -72,37 +70,35 @@ public class PMMLEncogNeuralNetworkModel implements
             layer.setActivationFunction(functionList[i]);
             int layerID = numLayers - i - 1;
             for(int j = 0; j < layerFeedCount[i]; j++) {
-                Neuron neuron = new Neuron();
-                neuron.setId(String.valueOf(layerID + "," + j));
+                Neuron neuron = new Neuron(String.valueOf(layerID + "," + j));
                 for(int k = 0; k < layerFeedCount[i + 1]; k++) {
-                    neuron.addConnections(new Connection(String.valueOf(layerID - 1 + "," + k), weights[weightID++]));
+                    neuron.withConnections(new Connection(String.valueOf(layerID - 1 + "," + k), weights[weightID++]));
                 }// weights
                 int tmp = layerCount[i + 1] - layerFeedCount[i + 1];
                 for(int k = 0; k < tmp; k++) {
                     neuron.setBias(weights[weightID++]);
                 } // bias neuron for each layer
-                layer.addNeurons(neuron);
+                layer.withNeurons(neuron);
             }// finish build Neuron
             layerList.add(layer);
         }// finish build layer
          // reserve the layer list to fit fot PMML format
         Collections.reverse(layerList);
-        pmmlModel.addNeuralLayers(layerList.toArray(new NeuralLayer[layerList.size()]));
+        pmmlModel.withNeuralLayers(layerList);
         // set neural output based on target id
-        pmmlModel.setNeuralOutputs(PMMLAdapterCommonUtil.getOutputFields(pmmlModel.getMiningSchema(), numLayers - 1));
+        pmmlModel.withNeuralOutputs(PMMLAdapterCommonUtil.getOutputFields(pmmlModel.getMiningSchema(), numLayers - 1));
         return pmmlModel;
     }
 
-    private ActivationFunction[] transformActivationFunction(org.encog.engine.network.activation.ActivationFunction[] functions) {
+    private ActivationFunctionType[] transformActivationFunction(ActivationFunction[] functions) {
         int funLen = functions.length;
-        ActivationFunction[] functionType = new ActivationFunction[funLen];
+        ActivationFunctionType[] functionType = new ActivationFunctionType[funLen];
         @SuppressWarnings("serial")
-        HashMap<String, ActivationFunction> functionMap = new HashMap<String, ActivationFunction>() {
+        HashMap<String, ActivationFunctionType> functionMap = new HashMap<String, ActivationFunctionType>() {
             {
-                put("ActivationSigmoid", ActivationFunction.LOGISTIC);
-                put("ActivationLinear", ActivationFunction.IDENTITY);
-                put("ActivationTANH", ActivationFunction.TANH);
-                put("ActivationReLU", ActivationFunction.RECTIFIER);
+                put("ActivationSigmoid", ActivationFunctionType.LOGISTIC);
+                put("ActivationLinear", ActivationFunctionType.IDENTITY);
+                put("ActivationTANH", ActivationFunctionType.TANH);
             }
         };
         for(int i = 0; i < funLen; i++) {

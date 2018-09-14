@@ -63,11 +63,11 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
                         DiscrStats discrStats = new DiscrStats();
 
                         Array countArray = createCountArray(columnConfig);
-                        discrStats.addArrays(countArray);
+                        discrStats.withArrays(countArray);
 
                         if(!isConcise) {
                             List<Extension> extensions = createExtensions(columnConfig);
-                            discrStats.addExtensions(extensions.toArray(new Extension[extensions.size()]));
+                            discrStats.withExtensions(extensions);
                         }
 
                         univariateStats.setDiscrStats(discrStats);
@@ -79,7 +79,7 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
                         }
                     }
 
-                    modelStats.addUnivariateStats(univariateStats);
+                    modelStats.withUnivariateStats(univariateStats);
                 }
             }
         } else {
@@ -95,11 +95,11 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
                         DiscrStats discrStats = new DiscrStats();
 
                         Array countArray = createCountArray(columnConfig);
-                        discrStats.addArrays(countArray);
+                        discrStats.withArrays(countArray);
 
                         if(!isConcise) {
                             List<Extension> extensions = createExtensions(columnConfig);
-                            discrStats.addExtensions(extensions.toArray(new Extension[extensions.size()]));
+                            discrStats.withExtensions(extensions);
                         }
 
                         univariateStats.setDiscrStats(discrStats);
@@ -111,7 +111,7 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
                         }
                     }
 
-                    modelStats.addUnivariateStats(univariateStats);
+                    modelStats.withUnivariateStats(univariateStats);
                 }
             }
         }
@@ -224,7 +224,7 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
 
             intervals.add(interval);
         }
-        conStats.addIntervals(intervals.toArray(new Interval[intervals.size()]));
+        conStats.withIntervals(intervals);
 
         Map<String, String> extensionMap = new HashMap<String, String>();
 
@@ -237,8 +237,8 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
                 .toString());
         extensionMap.put("KS", Double.toString(columnConfig.getKs()));
         extensionMap.put("IV", Double.toString(columnConfig.getIv()));
-        List<Extension> extensions = createExtensions(extensionMap);
-        conStats.addExtensions(extensions.toArray(new Extension[extensions.size()]));
+        conStats.withExtensions(createExtensions(extensionMap));
+
         return conStats;
     }
 

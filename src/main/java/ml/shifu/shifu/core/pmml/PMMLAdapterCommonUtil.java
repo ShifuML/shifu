@@ -19,25 +19,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import org.dmg.pmml.DataDictionary;
-import org.dmg.pmml.DataField;
-import org.dmg.pmml.DataType;
-import org.dmg.pmml.DerivedField;
-import org.dmg.pmml.Expression;
-import org.dmg.pmml.FieldName;
-import org.dmg.pmml.FieldRef;
-import org.dmg.pmml.MiningField;
-import org.dmg.pmml.MiningField.UsageType;
-import org.dmg.pmml.MiningFunction;
-import org.dmg.pmml.MiningSchema;
-import org.dmg.pmml.NormContinuous;
-import org.dmg.pmml.OpType;
-import org.dmg.pmml.PMML;
-import org.dmg.pmml.neural_network.*;
-import org.dmg.pmml.regression.NumericPredictor;
-import org.dmg.pmml.regression.RegressionModel;
-import org.dmg.pmml.regression.RegressionModel.NormalizationMethod;
-import org.dmg.pmml.regression.RegressionTable;
+import org.dmg.pmml.*;
 
 import com.google.common.primitives.Ints;
 
@@ -48,11 +30,11 @@ import com.google.common.primitives.Ints;
  */
 public class PMMLAdapterCommonUtil {
 
-    private static List<String> getSchemaFieldViaUsageType(final MiningSchema schema, final UsageType type) {
+    private static List<String> getSchemaFieldViaUsageType(final MiningSchema schema, final FieldUsageType type) {
         List<String> targetFields = new ArrayList<String>();
 
         for(MiningField f: schema.getMiningFields()) {
-            UsageType uType = f.getUsageType();
+            FieldUsageType uType = f.getUsageType();
             if(uType == type)
                 targetFields.add(f.getName().getValue());
         }
@@ -68,7 +50,7 @@ public class PMMLAdapterCommonUtil {
      * @return target field names
      */
     public static List<String> getSchemaTargetFields(final MiningSchema schema) {
-        return getSchemaFieldViaUsageType(schema, UsageType.TARGET);
+        return getSchemaFieldViaUsageType(schema, FieldUsageType.TARGET);
     }
 
     /**
@@ -80,7 +62,7 @@ public class PMMLAdapterCommonUtil {
      * @return active field names
      */
     public static List<String> getSchemaActiveFields(final MiningSchema schema) {
-        return getSchemaFieldViaUsageType(schema, UsageType.ACTIVE);
+        return getSchemaFieldViaUsageType(schema, FieldUsageType.ACTIVE);
     }
 
     /**
@@ -94,8 +76,8 @@ public class PMMLAdapterCommonUtil {
     public static List<String> getSchemaSelectedFields(final MiningSchema schema) {
         List<String> targetFields = new ArrayList<String>();
         for(MiningField f: schema.getMiningFields()) {
-            UsageType uType = f.getUsageType();
-            if(uType == UsageType.TARGET || uType == UsageType.ACTIVE)
+            FieldUsageType uType = f.getUsageType();
+            if(uType == FieldUsageType.TARGET || uType == FieldUsageType.ACTIVE)
                 targetFields.add(f.getName().getValue());
         }
         return targetFields;
@@ -111,7 +93,7 @@ public class PMMLAdapterCommonUtil {
      * @return neural outputs
      */
     public static NeuralOutputs getOutputFields(final MiningSchema schema, final int layerID) {
-        List<String> outputID = getSchemaFieldViaUsageType(schema, UsageType.TARGET);
+        List<String> outputID = getSchemaFieldViaUsageType(schema, FieldUsageType.TARGET);
         NeuralOutputs outputs = new NeuralOutputs();
         int outputFieldsNum = outputID.size();
         outputs.setNumberOfOutputs(outputFieldsNum);
@@ -126,8 +108,8 @@ public class PMMLAdapterCommonUtil {
         } else {*/
             for (int i = 0; i < outputFieldsNum; i++) {
                 DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE);
-                field.setExpression(new FieldRef(new FieldName(outputID.get(i))));
-                outputs.addNeuralOutputs(new NeuralOutput(String.valueOf(layerID + "," + i), field));
+                field.withExpression(new FieldRef(new FieldName(outputID.get(i))));
+                outputs.withNeuralOutputs(new NeuralOutput(field, String.valueOf(layerID + "," + i)));
             }
 /*        }*/
         return outputs;
@@ -150,25 +132,25 @@ public class PMMLAdapterCommonUtil {
         RegressionTable table = new RegressionTable();
         MiningSchema schema = pmmlModel.getMiningSchema();
         // TODO may not need target field in LRModel
-        pmmlModel.setMiningFunction(MiningFunction.REGRESSION);
-        pmmlModel.setNormalizationMethod(NormalizationMethod.LOGIT);
-        List<String> outputFields = getSchemaFieldViaUsageType(schema, UsageType.TARGET);
+        pmmlModel.withFunctionName(MiningFunctionType.REGRESSION).withNormalizationMethod(
+                RegressionNormalizationMethodType.LOGIT);
+        List<String> outputFields = getSchemaFieldViaUsageType(schema, FieldUsageType.TARGET);
         // TODO only one outputField, what if we have more than one outputField
-        pmmlModel.setTargetFieldName(new FieldName(outputFields.get(0)));
-        table.setTargetCategory(outputFields.get(0));
+        pmmlModel.withTargetFieldName(new FieldName(outputFields.get(0)));
+        table.withTargetCategory(outputFields.get(0));
 
-        List<String> activeFields = getSchemaFieldViaUsageType(schema, UsageType.ACTIVE);
+        List<String> activeFields = getSchemaFieldViaUsageType(schema, FieldUsageType.ACTIVE);
         int index = 0;
         for(DerivedField dField: pmmlModel.getLocalTransformations().getDerivedFields()) {
             Expression expression = dField.getExpression();
             if(expression instanceof NormContinuous) {
                 NormContinuous norm = (NormContinuous) expression;
                 if(activeFields.contains(norm.getField().getValue()))
-                    table.addNumericPredictors(new NumericPredictor(dField.getName(), weights[index++]));
+                    table.withNumericPredictors(new NumericPredictor(dField.getName(), weights[index++]));
             }
 
         }
-        pmmlModel.addRegressionTables(table);
+        pmmlModel.withRegressionTables(table);
         return pmmlModel;
     }
 
@@ -198,7 +180,7 @@ public class PMMLAdapterCommonUtil {
      * @return active id
      */
     public static int[] getActiveID(PMML pmml) {
-        return getDicFieldIDViaType(pmml, UsageType.ACTIVE);
+        return getDicFieldIDViaType(pmml, FieldUsageType.ACTIVE);
     }
 
     /**
@@ -209,7 +191,7 @@ public class PMMLAdapterCommonUtil {
      * @return target id
      */
     public static int[] getTargetID(PMML pmml) {
-        return getDicFieldIDViaType(pmml, UsageType.TARGET);
+        return getDicFieldIDViaType(pmml, FieldUsageType.TARGET);
     }
 
     /**
@@ -222,7 +204,7 @@ public class PMMLAdapterCommonUtil {
      *            the type
      * @return dic fields
      */
-    public static int[] getDicFieldIDViaType(PMML pmml, UsageType type) {
+    public static int[] getDicFieldIDViaType(PMML pmml, FieldUsageType type) {
         List<Integer> activeFields = new ArrayList<Integer>();
         HashMap<String, Integer> dMap = new HashMap<String, Integer>();
         int index = 0;

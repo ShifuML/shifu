@@ -25,25 +25,18 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import ml.shifu.shifu.util.Constants;
 
 import org.dmg.pmml.DataType;
 import org.dmg.pmml.FieldName;
-import org.dmg.pmml.MiningField.UsageType;
-import org.dmg.pmml.OpType;
 import org.jpmml.evaluator.EvaluationException;
+import org.jpmml.evaluator.Evaluator;
 import org.jpmml.evaluator.EvaluatorUtil;
 import org.jpmml.evaluator.FieldValue;
-import org.jpmml.evaluator.FieldValueUtil;
-import org.jpmml.evaluator.InputField;
-import org.jpmml.evaluator.ModelEvaluator;
 
 public class CsvUtil {
     private CsvUtil() {
@@ -162,51 +155,35 @@ public class CsvUtil {
     }
 
     @SuppressWarnings("unused")
-    static public List<Map<FieldName, FieldValue>> prepareAll(ModelEvaluator<?> evaluator, Table table) {
-        List<InputField> tableInputFields = new ArrayList<InputField>();
+    static public List<Map<FieldName, FieldValue>> prepareAll(Evaluator evaluator, Table table) {
+        List<FieldName> names = new ArrayList<FieldName>();
 
-//        List<FieldName> activeFields = evaluator.getInputFields().get(0).getMiningField().gettgetActiveFields();
-//        List<FieldName> groupFields = evaluator.getInputFields()..getGroupFields();
+        List<FieldName> activeFields = evaluator.getActiveFields();
+        List<FieldName> groupFields = evaluator.getGroupFields();
 
-        List<InputField> inputFields = evaluator.getInputFields();
-        Map<FieldName, InputField> activeFields = new HashMap<FieldName, InputField>();
-        Map<FieldName, InputField> groupFields = new HashMap<FieldName, InputField>();
-        
-        for (InputField inputField : inputFields) {
-            UsageType usageType = inputField.getMiningField().getUsageType();
-            if (UsageType.ACTIVE == usageType) {
-                activeFields.put(inputField.getName(), inputField);
-            } else if (UsageType.GROUP == usageType) {
-                groupFields.put(inputField.getName(), inputField);
-            }
-        }
-        
         header: {
             List<String> headerRow = table.get(0);
             for (int column = 0; column < headerRow.size(); column++) {
                 FieldName field = FieldName.create(headerRow.get(column));
-                InputField tableInputField = null;
-                
-                if (activeFields.containsKey(field)) {
-                    tableInputField = activeFields.get(field);
-                } else if (groupFields.containsKey(field)) {
-                    tableInputField = groupFields.get(field);
+
+                if (!(activeFields.contains(field) || groupFields.contains(field))) {
+                    field = null;
                 }
 
-                tableInputFields.add(tableInputField);
+                names.add(field);
             }
         }
 
-        List<Map<InputField, Object>> stringRows = new ArrayList<Map<InputField, Object>>();
+        List<Map<FieldName, Object>> stringRows = new ArrayList<Map<FieldName, Object>>();
 
         body: for (int row = 1; row < table.size(); row++) {
             List<String> bodyRow = table.get(row);
 
-            Map<InputField, Object> stringRow = new LinkedHashMap<InputField, Object>();
+            Map<FieldName, Object> stringRow = new LinkedHashMap<FieldName, Object>();
 
             for (int column = 0; column < bodyRow.size(); column++) {
-                InputField field = tableInputFields.get(column);
-                if (field == null) {
+                FieldName name = names.get(column);
+                if (name == null) {
                     continue;
                 }
 
@@ -217,40 +194,39 @@ public class CsvUtil {
                     value = null;
                 }
 
-                stringRow.put(field, value);
+                stringRow.put(name, value);
             }
 
             stringRows.add(stringRow);
         }
 
         if (groupFields.size() == 1) {
-            InputField groupField = groupFields.values().iterator().next();
+            FieldName groupField = groupFields.get(0);
 
             stringRows = EvaluatorUtil.groupRows(groupField, stringRows);
         } else if (groupFields.size() > 1) {
-            throw new EvaluationException("Group Field size is larger than 1");
+            throw new EvaluationException();
         }
 
         List<Map<FieldName, FieldValue>> fieldValueRows = new ArrayList<Map<FieldName, FieldValue>>();
 
-        for (Map<InputField, Object> stringRow : stringRows) {
+        for (Map<FieldName, Object> stringRow : stringRows) {
             Map<FieldName, FieldValue> fieldValueRow = new LinkedHashMap<FieldName, FieldValue>();
 
-            Collection<Map.Entry<InputField, Object>> entries = stringRow.entrySet();
-            for (Map.Entry<InputField, Object> entry : entries) {
-                InputField field = entry.getKey();
+            Collection<Map.Entry<FieldName, Object>> entries = stringRow.entrySet();
+            for (Map.Entry<FieldName, Object> entry : entries) {
+                FieldName name = entry.getKey();
                 // Pre Data process: for numeric variable convert non-double
                 // value to null.
-                if (evaluator.getDataField(field.getName()).getDataType() == DataType.DOUBLE) {
+                if (evaluator.getDataField(name).getDataType() == DataType.DOUBLE) {
                     try {
                         Double.parseDouble((String) entry.getValue());
                     } catch (Exception e) {
                         entry.setValue(null);
                     }
                 }
-           
-                FieldValue value = prepare(field, entry.getValue());
-                fieldValueRow.put(field.getName(), value);
+                FieldValue value = EvaluatorUtil.prepare(evaluator, name, entry.getValue());
+                fieldValueRow.put(name, value);
             }
 
             fieldValueRows.add(fieldValueRow);
@@ -259,55 +235,12 @@ public class CsvUtil {
         return fieldValueRows;
     }
 
-    static public List<Map<FieldName, FieldValue>> load(ModelEvaluator<?> evaluator, String dataPath, String c)
+    static public List<Map<FieldName, FieldValue>> load(Evaluator evaluator, String dataPath, String c)
             throws IOException {
         Table table = CsvUtil.readTable(new File(dataPath), c);
         return CsvUtil.prepareAll(evaluator, table);
     }
 
-    static public FieldValue prepare(InputField inputField, Object value){
-
-        if(value instanceof Collection){
-            Collection<?> rawValues = (Collection<?>)value;
-
-            DataType dataType = null;
-
-            OpType opType = null;
-
-            Collection<Object> preparedValues = createCollection(rawValues);
-
-            for(Object rawValue : rawValues){
-                FieldValue preparedValue = inputField.prepare(rawValue);
-
-                if(preparedValue != null){
-
-                    if(dataType == null){
-                        dataType = preparedValue.getDataType();
-                    } // End if
-
-                    if(opType == null){
-                        opType = preparedValue.getOpType();
-                    }
-                }
-
-                preparedValues.add(FieldValueUtil.getValue(preparedValue));
-            }
-
-            return FieldValueUtil.create(dataType, opType, preparedValues);
-        }
-
-        return inputField.prepare(value);
-    }
-    static
-    private Collection<Object> createCollection(Collection<?> template){
-
-        // Try to preserve the original contract
-        if(template instanceof Set){
-            return new LinkedHashSet<Object>(template.size());
-        }
-
-        return new ArrayList<Object>(template.size());
-    }
     static public class Table extends ArrayList<List<String>> {
 
         private static final long serialVersionUID = -3317839096636490372L;

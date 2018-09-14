@@ -69,20 +69,20 @@ public class ZscoreOneHotLocalTransformCreator extends ZscoreLocalTransformCreat
 
             Element origin = document.createElementNS(NAME_SPACE_URI, ELEMENT_ORIGIN);
             origin.setTextContent(cval);
-            inlineTable.addRows(new Row().addContent(origin).addContent(out));
+            inlineTable.withRows(new Row().withContent(origin).withContent(out));
         }
 
         MapValues mapValues = new MapValues("out")
-                .setDataType(DataType.DOUBLE)
-                .setDefaultValue(defaultValue)
-                .addFieldColumnPairs(new FieldColumnPair(new FieldName(
+                .withDataType(DataType.DOUBLE)
+                .withDefaultValue(defaultValue)
+                .withFieldColumnPairs(new FieldColumnPair(new FieldName(
                         CommonUtils.getSimpleColumnName(config, columnConfigList, segmentExpansions, datasetHeaders)),
-                        ELEMENT_ORIGIN)).setInlineTable(inlineTable)
-                .setMapMissingTo(missingValue);
+                        ELEMENT_ORIGIN)).withInlineTable(inlineTable)
+                .withMapMissingTo(missingValue);
 
-        return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).setName(FieldName.create(genPmmlColumnName(
+        return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(FieldName.create(genPmmlColumnName(
                 CommonUtils.getSimpleColumnName(config.getColumnName()), normType) + "_" + ops))
-                .setExpression(mapValues);
+                .withExpression(mapValues);
     }
 
 }

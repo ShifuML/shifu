@@ -21,8 +21,8 @@ import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.dmg.pmml.FieldName;
+import org.dmg.pmml.FieldUsageType;
 import org.dmg.pmml.MiningField;
-import org.dmg.pmml.MiningField.UsageType;
 import org.dmg.pmml.MiningSchema;
 import org.encog.ml.BasicML;
 
@@ -47,19 +47,19 @@ public class TreeModelMiningSchemaCreator extends AbstractPmmlElementCreator<Min
                 MiningField miningField = new MiningField();
                 // TODO, how to support segment variable in tree model, here should be changed
                 miningField.setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig.getColumnName())));
-                miningField.setOpType(getOptype(columnConfig));
+                miningField.setOptype(getOptype(columnConfig));
                 if(columnConfig.isNumerical()) {
                     miningField.setMissingValueReplacement(String.valueOf(columnConfig.getColumnStats().getMean()));
                 } else {
                     miningField.setMissingValueReplacement("");
                 }
                 if(columnConfig.isFinalSelect()) {
-                    miningField.setUsageType(UsageType.ACTIVE);
+                    miningField.setUsageType(FieldUsageType.ACTIVE);
                 } else if(columnConfig.isTarget()) {
-                    miningField.setUsageType(UsageType.TARGET);
+                    miningField.setUsageType(FieldUsageType.TARGET);
                 }
 
-                miningSchema.addMiningFields(miningField);
+                miningSchema.withMiningFields(miningField);
             }
         }
         return miningSchema;
