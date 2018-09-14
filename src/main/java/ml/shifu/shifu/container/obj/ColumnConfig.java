@@ -183,8 +183,9 @@ public class ColumnConfig {
 
     @JsonIgnore
     public boolean isCandidate(boolean hasCandidate) {
-        return ( hasCandidate
-                ? ColumnFlag.Candidate.equals(columnFlag) : (!isForceRemove() && !isMeta() && !isTarget()));
+        return ( hasCandidate  // if candidate is set, all (Candidate and ForceSelect) will be treated as candidate
+                ? (ColumnFlag.Candidate.equals(columnFlag) || ColumnFlag.ForceSelect.equals(columnFlag))
+                : (!isForceRemove() && !isMeta() && !isTarget()));
     }
 
     @JsonIgnore
