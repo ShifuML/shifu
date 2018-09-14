@@ -48,7 +48,7 @@ Changes for Shifu-0.11.0
        https://github.com/ShifuML/shifu/issues?q=is%3Aissue+is%3Aclosed
 
 Changes for Shifu-0.10.5
-    * Optimize IndependetTreeModel by decreaseing model memory to 70% and CPU time to 90%
+    * Optimize IndependetTreeModel by decreasing model memory to 70% and CPU time to 90%
     * Upgrade guagua to 0.7.0 t fix a bug on empty gzip files in one worker
 
 Changes for Shifu-0.10.4

@@ -15,9 +15,12 @@
  */
 package ml.shifu.shifu.util;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
+
+import com.google.common.base.Splitter;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 
@@ -110,8 +113,25 @@ public final class BinUtils {
      * @return true if the categorical value exists in group, else false
      */
     public static boolean isCategoricalBinValue(String binVal, String cval) {
-        // TODO cache CommonUtils.flattenCatValGrp(binVal)??
-        return binVal.equals(cval) ? true : CommonUtils.flattenCatValGrp(binVal).contains(cval);
+        // TODO cache flattenCatValGrp(binVal)??
+        return binVal.equals(cval) ? true : flattenCatValGrp(binVal).contains(cval);
+    }
+
+    /**
+     * flatten categorical value group into values list
+     * 
+     * @param categoricalValGrp
+     *            - categorical val group, it some values like zn^us^ck^
+     * @return value list of categorical val
+     */
+    private static List<String> flattenCatValGrp(String categoricalValGrp) {
+        List<String> catVals = new ArrayList<String>();
+        if(StringUtils.isNotBlank(categoricalValGrp)) {
+            for(String cval: Splitter.on(Constants.CATEGORICAL_GROUP_VAL_DELIMITER).split(categoricalValGrp)) {
+                catVals.add(cval);
+            }
+        }
+        return catVals;
     }
 
     /**
