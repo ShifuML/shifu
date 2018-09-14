@@ -32,6 +32,7 @@ import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -261,7 +262,11 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         }
 
         // To merge categorical binning
-        if(columnConfig.isCategorical() && modelConfig.getStats().getCateMaxNumBin() > 0) {
+        if(columnConfig.isCategorical()
+                && modelConfig.getStats().getCateMaxNumBin() > 0
+                && CollectionUtils.isNotEmpty(columnConfig.getBinCategory())
+                && columnConfig.getBinCategory().size() > modelConfig.getStats().getCateMaxNumBin() ) {
+            // only category size large then expected max bin number
             CateBinningStats cateBinningStats = rebinCategoricalValues(
                     new CateBinningStats(binCategories, binCountPos, binCountNeg, binWeightPos, binWeightNeg));
             LOG.info("For variable - {}, {} bins is rebined to {} bins", columnConfig.getColumnName(),

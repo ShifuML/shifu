@@ -100,6 +100,10 @@ public class AutoDynamicBinning {
     }
 
     private double getInfoValue(AbstractBinInfo cateBinInfo, double totalInstCnt) {
+        if (cateBinInfo.getTotalInstCnt() == 0) {
+            return 0.0;
+        }
+
         double percent = cateBinInfo.getTotalInstCnt() / totalInstCnt;
         double positiveRate = (cateBinInfo.getPositiveCnt() + EPS) / cateBinInfo.getTotalInstCnt();
         double negativeRate = (cateBinInfo.getNegativeCnt() + EPS) / cateBinInfo.getTotalInstCnt();

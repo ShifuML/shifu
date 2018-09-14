@@ -22,6 +22,7 @@ import ml.shifu.shifu.core.binning.CategoricalBinning;
 import ml.shifu.shifu.core.binning.EqualIntervalBinning;
 import ml.shifu.shifu.core.binning.MunroPatBinning;
 import org.apache.commons.lang.StringUtils;
+import org.apache.pig.Accumulator;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
@@ -29,14 +30,18 @@ import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 /**
  * Created by zhanhu on 7/5/16.
  */
-public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> {
+public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> implements Accumulator<Tuple> {
 
     private int scaleFactor = 1024;
+    private Integer columnId =  null;
+    private Map<Integer, AbstractBinning> binningMap = new HashMap<Integer, AbstractBinning>();
 
     public GenSmallBinningInfoUDF(String source, String pathModelConfig, String pathColumnConfig,
             String histoScaleFactor) throws IOException {
@@ -50,9 +55,7 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> {
             return null;
         }
 
-        Integer columnId = null;
         ColumnConfig columnConfig = null;
-        @SuppressWarnings("rawtypes")
         AbstractBinning binning = null;
 
         DataBag dataBag = (DataBag) input.get(0);
@@ -82,6 +85,8 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> {
         Tuple output = TupleFactory.getInstance().newTuple(2);
         output.set(0, columnId);
         output.set(1, StringUtils.join(binning.getDataBin(), AbstractBinning.FIELD_SEPARATOR));
+
+        this.columnId = null;
 
         return output;
     }
@@ -128,4 +133,53 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> {
         }
     }
 
+    @Override
+    public void accumulate(Tuple input) throws IOException {
+        ColumnConfig columnConfig = null;
+        AbstractBinning binning = null;
+
+        DataBag dataBag = (DataBag) input.get(0);
+        Iterator<Tuple> iterator = dataBag.iterator();
+        while(iterator.hasNext()) {
+            Tuple tuple = iterator.next();
+            if(tuple != null && tuple.size() >= 3) {
+                if(columnId == null) {
+                    columnId = (Integer) tuple.get(0);
+                    if(columnId >= super.columnConfigList.size()) {
+                        int newColumnId = columnId % super.columnConfigList.size();
+                        columnConfig = super.columnConfigList.get(newColumnId);
+                    } else {
+                        columnConfig = super.columnConfigList.get(columnId);
+                    }
+
+                    binning = this.binningMap.get(columnId);
+                    if ( binning == null ) {
+                        binning = getBinningHandler(columnConfig);
+                        this.binningMap.put(columnId, binning);
+                    }
+                }
+
+                Boolean isPositive = (Boolean) tuple.get(2);
+                if(isToBinningVal(columnConfig, isPositive)) {
+                    String val = (String) tuple.get(1);
+                    binning.addData(val);
+                }
+            }
+        }
+    }
+
+    @Override
+    public Tuple getValue() {
+        Tuple output = TupleFactory.getInstance().newTuple();
+        output.append(columnId);
+        output.append(StringUtils.join(this.binningMap.get(this.columnId).getDataBin(),
+                AbstractBinning.FIELD_SEPARATOR));
+        return output;
+    }
+
+    @Override
+    public void cleanup() {
+        this.binningMap.remove(this.columnId);
+        this.columnId = null;
+    }
 }

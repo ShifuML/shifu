@@ -88,7 +88,8 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
                 }
                 columnConfig = super.columnConfigList.get(columnId);
                 if(columnConfig.isCategorical()) {
-                    binning = new CategoricalBinning(-1, this.maxCategorySize);
+                    binning = new CategoricalBinning(-1, modelConfig.getMissingOrInvalidValues(),
+                            this.maxCategorySize);
                 } else {
                     if(super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)) {
                         binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin() > 0
@@ -101,7 +102,8 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
                 }
 
                 if(columnConfig.isHybrid()) {
-                    this.backUpbinning = new CategoricalBinning(-1, this.maxCategorySize);
+                    this.backUpbinning = new CategoricalBinning(-1, modelConfig.getMissingOrInvalidValues(),
+                            this.maxCategorySize);
                 }
             }
 
