@@ -18,6 +18,7 @@ package ml.shifu.shifu.core;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -391,15 +392,13 @@ public class Normalizer {
             categoryMissingNormType = CategoryMissingNormType.POSRATE;
         }
         double value = 0.0;
-        
-        if (raw == null) {
+        if (raw == null || StringUtils.EMPTY.equals(raw)) {
             log.debug("Not decimal format but null, using default!");
             if(config.isCategorical()) {
                 value = fillDefaultValue(config, categoryMissingNormType);
             } else {
                 value = defaultMissingValue(config);
             }
-            
             return value;
         }
         
