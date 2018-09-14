@@ -23,6 +23,8 @@
  */
 package ml.shifu.shifu.core.dtrain.nn.update;
 
+import java.util.Set;
+
 import ml.shifu.shifu.core.dtrain.Weight;
 
 /**
@@ -47,8 +49,10 @@ public class MomentumUpdate implements UpdateRule {
     }
 
     @Override
-    public void update(double[] gradients, double[] weights, int iteration) {
+    public void update(double[] gradients, double[] weights, int iteration, Set<Integer> fixedWeights) {
         for(int i = 0; i < weights.length; i++) {
+            if (fixedWeights.contains(i)) continue;
+            
             final double delta = (this.learningRate * gradients[i]) + (this.momentum * this.lastDelta[i]);
             weights[i] += delta;
             this.lastDelta[i] = delta;

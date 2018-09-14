@@ -17,23 +17,24 @@ recordCntPerMessage=100000
 # fix a bug on hdp 2.4.1 by default mapreduce.job.max.split.locations is 10
 mapreduce.job.max.split.locations=5000
 
-# disable map output compress because some issue for snappy config in our clusters
+## disable map output compress because some issue for snappy config in our clusters
 # mapreduce.map.output.compress=false
 
-# how to control how many mappers when training models
+## how to control how many mappers when training models
 # If there are too many small files after normalization, set it to true
 # It will try to merge multi small files in mapper and reduce the number of mappers
-# guagua.split.combinable=true
+guagua.split.combinable=true
 
-# It will control the max combined split size for each mapper.
+## It will control the max combined split size for each mapper.
 # Sometimes mapper will timeout for loading data, if there are too much data for mapper
 # This option can limit the records for each mapper
-# guagua.split.maxCombinedSplitSize=256000000
+# change default to 200m to disable auto split in TrainModelProcessor
+guagua.split.maxCombinedSplitSize=209715200
 
-# set to 30mins (default 10mins)
+## set to 30mins (default 10mins)
 mapreduce.task.timeout=1800000
 
-# set default zk in client machine by default it is false and in master node, if set it to false, zk will be sstarted in 
+## set default zk in client machine by default it is false and in master node, if set it to false, zk will be sstarted in
 # master task. Please tune memory to make sure enough memory in master zookeeper process.
 guagua.zk.embedbed.isInClient=true
 
@@ -45,7 +46,11 @@ guagua.computation.time.threshold=1800000
 mapreduce.map.memory.mb=2048
 mapreduce.map.java.opts=-Xms1700m -Xmx1700m -server -XX:MaxPermSize=64m -XX:PermSize=64m -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
 
-#set io buffer in mapper to 400mb to avoid too many memory consumption in mapper heap
+## specified reduce memory to avoid default memory too big or too small
+mapreduce.reduce.memory.mb=2048
+mapreduce.reduce.java.opts=-Xms1700m -Xmx1700m -server -XX:MaxPermSize=64m -XX:PermSize=64m
+
+## set io buffer in mapper to 400mb to avoid too many memory consumption in mapper heap
 mapreduce.task.io.sort.mb=400
 
 ## each round how many jobs can be running, if bagging is 10, two rounds of bagging with each one 5 guagua jobs 
@@ -65,26 +70,44 @@ guagua.min.workers.ratio=0.95
 # shifu.combo.max.retry = 3
 
 ## control the behavior of normalized data
-# how many parts of normalized data that will generate
+## how many parts of normalized data that will generate
 # shifu.norm.shuffle.size = 100
 # the preferred normalized data size per part
 # shifu.norm.prefer.part.size = 256000000
 
-# the precision of model scores
+## the precision of model scores
 # shifu.score.scale = 1000
 
 ## enable pig combination to save mappers
 pig.splitCombination=true
 pig.maxCombinedSplitSize=268435456
 
-## specified reduce memory to avoid default memory too big or too small
-mapreduce.reduce.memory.mb=2048
-mapreduce.reduce.java.opts=-Xms1700m -Xmx1700m -server -XX:MaxPermSize=64m -XX:PermSize=64m
-
-# namespace support - default disable
+## namespace support - default disable
 shifu.namespace.strict.mode = false
 
-# add worker get result waiting timeout to 10 minutes
+## add worker get result waiting timeout to 10 minutes
 guagua.worker.getresult.timeout=600000
 
+# set vcores to 1 for better cluster scheduling, if cpu scheduling is enabled in cluster, better set it to 
+# ModelConfig#trains#workerThreadCount
+mapreduce.map.cpu.vcores=1
 
+## the HDFS directory that used to store all user's usage info. This is for summary shifu usage
+# the directory should have 777 permission so that other user have permission to write it
+# shifu.usage.statistics.dir=
+
+## the delimiter for Shifu output data
+# shifu.output.data.delimiter=|
+
+## enable to use multi-thread to score evaluation set
+shifu.eval.score.multithread=true
+
+## define the max distinct value for categorical variable
+## if a categorical variable has mor than ${shifu.max.category.size} variables, it will be ignored
+# shifu.max.category.size=10000
+
+## switch of input layer dropout
+shifu.train.nn.inputlayerdropout.enable=true
+
+# set worker timeout to 1 hour to avoid timeout (by default in guagua it is 60s)
+guagua.computation.time.threshold=3600000

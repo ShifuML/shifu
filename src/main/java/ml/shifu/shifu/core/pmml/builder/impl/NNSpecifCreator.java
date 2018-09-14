@@ -15,16 +15,24 @@
  */
 package ml.shifu.shifu.core.pmml.builder.impl;
 
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.pmml.PMMLEncogNeuralNetworkModel;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
 import org.dmg.pmml.*;
 import org.encog.ml.BasicML;
 import org.encog.neural.networks.BasicNetwork;
 
+import java.util.List;
+
 /**
  * Created by zhanhu on 3/29/16.
  */
 public class NNSpecifCreator extends AbstractSpecifCreator {
+
+    public NNSpecifCreator(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
+        super(modelConfig, columnConfigList);
+    }
 
     @Override
     public boolean build(BasicML basicML, Model model) {

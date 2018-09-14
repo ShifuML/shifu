@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -37,6 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -47,6 +49,7 @@ import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
 import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.MapReduceUtils;
 
 /**
  * {@link UpdateBinningInfoMapper} is a mapper to update local data statistics given bin boundary list.
@@ -132,6 +135,9 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
     private int weightExceptions = 0;
     private boolean isThrowforWeightException;
+    private boolean isLinearTarget = false;
+
+    private Splitter splitter;
 
     /**
      * Data purifiers for column expansion
@@ -144,12 +150,12 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
      */
     private void loadConfigFiles(final Context context) {
         try {
-            SourceType sourceType = SourceType.valueOf(context.getConfiguration().get(
-                    Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
-            this.modelConfig = CommonUtils.loadModelConfig(
-                    context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG), sourceType);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+            SourceType sourceType = SourceType.valueOf(
+                    context.getConfiguration().get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
+            this.modelConfig = CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
+                    sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -183,6 +189,10 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         this.columnBinningInfo = new HashMap<Integer, BinningInfoWritable>(this.columnConfigList.size(), 1f);
         this.categoricalBinMap = new HashMap<Integer, Map<String, Integer>>(this.columnConfigList.size(), 1f);
 
+        // create Splitter
+        String delimiter = context.getConfiguration().get(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
+        this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
+
         loadColumnBinningInfo();
 
         this.outputKey = new IntWritable();
@@ -195,10 +205,12 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         this.missingOrInvalidValues = new HashSet<String>(this.modelConfig.getDataSet().getMissingOrInvalidValues());
 
-        this.isThrowforWeightException = "true".equalsIgnoreCase(context.getConfiguration().get(
-                "shifu.weight.exception", "false"));
+        this.isThrowforWeightException = "true"
+                .equalsIgnoreCase(context.getConfiguration().get("shifu.weight.exception", "false"));
 
         LOG.debug("Column binning info: {}", this.columnBinningInfo);
+        this.isLinearTarget = (CollectionUtils.isEmpty(modelConfig.getTags())
+                && CommonUtils.getTargetColumnConfig(columnConfigList).isNumerical());
     }
 
     /**
@@ -213,7 +225,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             while(line != null && line.length() != 0) {
                 LOG.debug("line is {}", line);
                 // here just use String.split for just two columns
-                String[] cols = CommonUtils.split(line.trim(), Constants.DEFAULT_DELIMITER);
+                String[] cols = Lists.newArrayList(this.splitter.split(line.trim())).toArray(new String[0]);
                 if(cols != null && cols.length >= 2) {
                     Integer rawColumnNum = Integer.parseInt(cols[0]);
                     BinningInfoWritable binningInfo = new BinningInfoWritable();
@@ -350,7 +362,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         String[] units = CommonUtils.split(valueStr, this.dataSetDelimiter);
         // tagColumnNum should be in units array, if not IndexOutofBoundException
-        if ( units.length != this.columnConfigList.size() ) {
+        if(units.length != this.columnConfigList.size()) {
             LOG.error("Data column length doesn't match with ColumnConfig size. Just skip.");
             return;
         }
@@ -363,7 +375,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 return;
             }
         } else {
-            if(tag == null || (!tags.contains(tag))) {
+            if(tag == null || (!isLinearTarget && !tags.contains(tag))) {
                 context.getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1L);
                 return;
             }
@@ -438,12 +450,12 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             String str = StringUtils.trim(units[columnIndex]);
             double douVal = BinUtils.parseNumber(str);
 
-            Double hybridThreshould = columnConfig.getHybridThreshold();
-            if(hybridThreshould == null) {
-                hybridThreshould = Double.NEGATIVE_INFINITY;
+            Double hybridThreshold = columnConfig.getHybridThreshold();
+            if(hybridThreshold == null) {
+                hybridThreshold = Double.NEGATIVE_INFINITY;
             }
             // douVal < hybridThreshould which will also be set to category
-            boolean isCategory = Double.isNaN(douVal) || douVal < hybridThreshould;
+            boolean isCategory = Double.isNaN(douVal) || douVal < hybridThreshold;
             boolean isNumber = !Double.isNaN(douVal);
 
             if(isMissingValue) {
@@ -526,7 +538,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         } else if(columnConfig.isNumerical()) {
             int lastBinIndex = binningInfoWritable.getBinBoundaries().size();
             double douVal = 0.0;
-            if(units[columnIndex] == null || units[columnIndex].length() == 0) {
+            if(units[columnIndex] == null || units[columnIndex].length() == 0
+                    || missingOrInvalidValues.contains(units[columnIndex].toLowerCase())) {
                 isMissingValue = true;
             } else {
                 try {
@@ -616,9 +629,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         for(Map.Entry<Integer, BinningInfoWritable> entry: this.columnBinningInfo.entrySet()) {
             CountAndFrequentItems cfi = this.variableCountMap.get(entry.getKey());
             if(cfi != null) {
-                entry.getValue().setCfiw(
-                        new CountAndFrequentItemsWritable(cfi.getCount(), cfi.getInvalidCount(),
-                                cfi.getValidNumCount(), cfi.getHyper().getBytes(), cfi.getFrequentItems()));
+                entry.getValue().setCfiw(new CountAndFrequentItemsWritable(cfi.getCount(), cfi.getInvalidCount(),
+                        cfi.getValidNumCount(), cfi.getHyper().getBytes(), cfi.getFrequentItems()));
             } else {
                 entry.getValue().setEmpty(true);
                 LOG.warn("cci is null for column {}", entry.getKey());

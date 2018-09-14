@@ -324,7 +324,7 @@
                 "type": "text",
                 "directive": "select",
                 "options": [
-                    {"label": "SE", "value":"KS"},
+                    {"label": "KS", "value":"KS"},
                     {"label": "IV", "value":"IV"},
                     {"label": "Sensitivity Analysis", "value":"SE"}
                 ]
@@ -380,6 +380,8 @@
                     {"label":"old zscale mode", "value":"OLD_ZSCALE"},
                     {"label":"zscale mode", "value":"ZSCALE"},
                     {"label":"same as zscale mode", "value":"ZSCORE"},
+                    {"label":"asIs and WOE mode", "value":"ASIS_WOE"},
+                    {"label":"asIs and positive rate mode", "value":"ASIS_PR"},
                     {"label":"woe mode", "value":"WOE"},
                     {"label":"weight woe mode", "value":"WEIGHT_WOE"},
                     {"label":"hybrid mode", "value":"HYBRID"},
@@ -388,7 +390,8 @@
                     {"label":"same as woe zscale mode", "value":"WOE_ZSCORE"},
                     {"label":"weight woe zscale mode", "value":"WEIGHT_WOE_ZSCALE"},
                     {"label":"same as weight woe zscale mode", "value":"WEIGHT_WOE_ZSCORE"},
-                    {"label":"zscore and onehot for categorical", "value":"ZSCALE_ONEHOT"},
+                    {"label":"OneHot for categorical and numerical", "value":"ONEHOT"},
+                    {"label":"zscore and OneHot for categorical", "value":"ZSCALE_ONEHOT"},
                     {"label":"Discrete numerical feature in each bin and positive rate for categorical feature", "value":"DISCRETE_ZSCALE"},
                     {"label":"Discrete numerical feature in each bin and positive rate for categorical feature", "value":"DISCRETE_ZSCORE"}
                 ]
@@ -751,6 +754,18 @@
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.1
+                    }, {
+                    	"name" : "FixedLayers",
+                    	"type" : "list",
+                    	"directive": "input",
+                    	"elementType" : "integer",
+                    	"element": [
+                            {
+                                "name": "dummy",
+                                "type": "integer",
+                                "directive": "input"
+                            }                            
+                         ]
                     }
                 ]
             }, {
@@ -894,7 +909,12 @@
                 "type": "boolean",
                 "directive": "input",
                 "defval": true
-             }, {
+            }, { 
+                "name": "normAllColumns",
+                "type": "boolean",
+                "directive": "input",
+                "defval": false
+            }, {
                 "name" : "gbtScoreConvertStrategy",
                 "type" : "text",
                 "directive": "select",

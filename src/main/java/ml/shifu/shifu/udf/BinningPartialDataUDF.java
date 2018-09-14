@@ -87,26 +87,21 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
                     columnId = columnId % super.columnConfigList.size();
                 }
                 columnConfig = super.columnConfigList.get(columnId);
-                if(columnConfig.isHybrid()) {
-                    if(super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)) {
-                        binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin() > 0 ? modelConfig
-                                .getStats().getMaxNumBin() : 1024);
-                    } else {
-                        binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin() > 0 ? modelConfig
-                                .getStats().getMaxNumBin() : 1024);
-                    }
-
-                    this.backUpbinning = new CategoricalBinning(-1, this.maxCategorySize);
-                } else if(columnConfig.isCategorical()) {
+                if(columnConfig.isCategorical()) {
                     binning = new CategoricalBinning(-1, this.maxCategorySize);
                 } else {
                     if(super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)) {
-                        binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin() > 0 ? modelConfig
-                                .getStats().getMaxNumBin() : 1024);
+                        binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin() > 0
+                                    ? modelConfig.getStats().getMaxNumBin() : 1024,
+                                modelConfig.getMissingOrInvalidValues());
                     } else {
-                        binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin() > 0 ? modelConfig
-                                .getStats().getMaxNumBin() : 1024);
+                        binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin() > 0
+                                ? modelConfig.getStats().getMaxNumBin() : 1024, modelConfig.getMissingOrInvalidValues());
                     }
+                }
+
+                if(columnConfig.isHybrid()) {
+                    this.backUpbinning = new CategoricalBinning(-1, this.maxCategorySize);
                 }
             }
 

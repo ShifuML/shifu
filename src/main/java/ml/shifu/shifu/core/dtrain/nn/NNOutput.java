@@ -24,6 +24,19 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
+import org.encog.ml.BasicML;
+import org.encog.neural.networks.BasicNetwork;
+import org.encog.persist.EncogDirectoryPersistence;
+import org.encog.persist.PersistorRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ml.shifu.guagua.master.BasicMasterInterceptor;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -37,19 +50,6 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
-import org.encog.ml.BasicML;
-import org.encog.neural.networks.BasicNetwork;
-import org.encog.persist.EncogDirectoryPersistence;
-import org.encog.persist.PersistorRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * {@link NNOutput} is used to write the model output to file system.
@@ -155,8 +155,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             return;
         }
 
-        double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON) ? context.getMasterResult()
-                .getTrainError() : context.getMasterResult().getTestError());
+        double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON)
+                ? context.getMasterResult().getTrainError()
+                : context.getMasterResult().getTestError());
 
         // save the weights according the error decreasing
         if(currentError < this.minTestError) {
@@ -257,8 +258,8 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      * Save tmp nn model to HDFS.
      */
     private void saveTmpNNToHDFS(int iteration, double[] weights) {
-        Path out = new Path(DTrainUtils.getTmpModelName(this.tmpModelsFolder, this.trainerId, iteration, modelConfig
-                .getTrain().getAlgorithm().toLowerCase()));
+        Path out = new Path(DTrainUtils.getTmpModelName(this.tmpModelsFolder, this.trainerId, iteration,
+                modelConfig.getTrain().getAlgorithm().toLowerCase()));
         writeModelWeightsToFileSystem(weights, out, false);
     }
 
@@ -272,8 +273,8 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             loadConfigFiles(context.getProps());
             this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
             this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);
-            gridSearch = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
-                    .getGridConfigFileContent());
+            gridSearch = new GridSearch(modelConfig.getTrain().getParams(),
+                    modelConfig.getTrain().getGridConfigFileContent());
             validParams = this.modelConfig.getTrain().getParams();
             if(gridSearch.hasHyperParam()) {
                 validParams = gridSearch.getParams(Integer.parseInt(trainerId));
@@ -321,12 +322,12 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      */
     private void loadConfigFiles(final Properties props) {
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
-                    SourceType.HDFS.toString()));
+            SourceType sourceType = SourceType
+                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -336,11 +337,13 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     private void initNetwork(MasterContext<NNParams, NNParams> context) {
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
                 this.columnConfigList);
+        boolean isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
         @SuppressWarnings("unused")
         int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        // if is one vs all classification, outputNodeCount is set to 1
-        int outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1]
-                : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : modelConfig.getTags().size());
+        // if is one vs all classification, outputNodeCount is set to 1, if classes=2, outputNodeCount is also 1
+        int classes = modelConfig.getTags().size();
+        int outputNodeCount = (isLinearTarget || modelConfig.isRegression()) ? inputOutputIndex[1]
+                : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : (classes == 2 ? 1 : classes));
         int numLayers = (Integer) validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
@@ -362,7 +365,8 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         int featureInputsCnt = DTrainUtils.getFeatureInputsCnt(modelConfig, columnConfigList, this.subFeatures);
 
         this.network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers, actFunc,
-                hiddenNodeList, false, this.dropoutRate, this.wgtInit);
+                hiddenNodeList, false, this.dropoutRate, this.wgtInit,
+                CommonUtils.isLinearTarget(modelConfig, columnConfigList));
         ((BasicFloatNetwork) this.network).setFeatureSet(this.subFeatures);
 
         // register here to save models
@@ -377,12 +381,11 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     }
 
     private void writeEncogModelToFileSystem(double[] weights, Path out) {
-        double[] finalWeights = refineWeights(weights);
         FSDataOutputStream fos = null;
         try {
             fos = FileSystem.get(new Configuration()).create(out);
             LOG.info("Writing results to {}", out);
-            this.network.getFlat().setWeights(finalWeights);
+            this.network.getFlat().setWeights(weights);
             if(out != null) {
                 EncogDirectoryPersistence.saveObject(fos, this.network);
             }
@@ -393,26 +396,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         }
     }
 
-    private double[] refineWeights(double[] weights) {
-        double[] finalWeights;
-        if(this.dropoutRate == 0d) {
-            finalWeights = weights;
-        } else {
-            finalWeights = new double[weights.length];
-            for(int i = 0; i < finalWeights.length; i++) {
-                // do we need to norm all weights or leave last hidden layer to output layer not normed???
-                // it is ok to add or not added in last iteration as such parameters only impact last final output score
-                // but not change the order of scores
-                finalWeights[i] = weights[i] * (1 - this.dropoutRate);
-            }
-        }
-        return finalWeights;
-    }
-
     private void writeBinaryModelWeightsToFileSystem(double[] weights, Path out) {
-        double[] finalWeights = refineWeights(weights);
         LOG.info("Writing NN models to {}.", out);
-        this.network.getFlat().setWeights(finalWeights);
+        this.network.getFlat().setWeights(weights);
 
         BasicML basicML = this.network;
         try {

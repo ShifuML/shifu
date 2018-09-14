@@ -31,6 +31,7 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import ml.shifu.shifu.core.dtrain.Weight;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.FloatFlatNetwork;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -174,6 +175,18 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
      */
     private double adamBeta2 = 0.999d;
 
+    /**
+    * NN network structure. we use it us pick dropout node index only.
+    */
+    private FloatFlatNetwork flatNetwork = null;
+    
+    /**
+     * Fixed Layers id, used for fine tune
+     */
+    private List<Integer> fixedLayers = new ArrayList<Integer>();
+    
+    private Integer hiddenLayerNum = 0;
+    
     @Override
     public NNParams doCompute(MasterContext<NNParams, NNParams> context) {
         if(context.isFirstIteration()) {
@@ -232,8 +245,9 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.learningRate = this.rawLearningRate;
             this.weightCalculator = new Weight(this.globalNNParams.getGradients().length,
                     this.globalNNParams.getTrainSize(), learningRate, propagation, this.regularizedConstant,
-                    RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)), this.dropoutRate,
-                    this.propagation, this.momentum, this.learningDecay, this.adamBeta1, this.adamBeta2);
+                    RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)),
+                    this.propagation, this.momentum, this.learningDecay, this.adamBeta1, this.adamBeta2, 
+                    getFixedWights(this.fixedLayers));
         } else {
             this.learningRate = this.learningRate * (1.0d - this.learningDecay);
             // without learningDecay Parameter using sqrt(iteration number) to decrease learning rate
@@ -248,7 +262,15 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         // data reading
         double[] weights = this.weightCalculator.calculateWeights(this.globalNNParams.getWeights(),
                 this.globalNNParams.getGradients(), (context.getCurrentIteration() - 1));
-
+        
+        StringBuilder sameWeightIndices = new StringBuilder();
+        for (int i = 0; i < weights.length; i++) {
+            if (weights[i] == oldWeights[i]) {
+                sameWeightIndices.append(i).append(",");
+            }
+        }
+        LOG.info("Same Weight Indices: " + sameWeightIndices.toString());
+        
         this.globalNNParams.setWeights(weights);
 
         // average error
@@ -276,8 +298,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.bestValidationError = currentTestError;
         }
 
-        LOG.info("NNMaster compute iteration {} ( avg train error {}, avg validation error {} )", new Object[] {
-                context.getCurrentIteration(), currentTrainError, currentTestError });
+        LOG.info("NNMaster compute iteration {} ( avg train error {}, avg validation error {} )",
+                new Object[] { context.getCurrentIteration(), currentTrainError, currentTestError });
 
         NNParams params = new NNParams();
         params.setTrainError(currentTrainError);
@@ -285,6 +307,9 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         // prevent null point
         params.setGradients(new double[0]);
         params.setWeights(weights);
+        if (this.dropoutRate > 0d) {
+        	 params.setDropoutNodes(dropoutNodes());
+        }
         LOG.debug("master result {} in iteration {}", params, context.getCurrentIteration());
 
         // Convergence judging part
@@ -310,33 +335,27 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             BasicML basicML = CommonUtils.loadModel(modelConfig, modelPath,
                     ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
+            
+            params = initWeights();
+            
             BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils.getBasicNetwork(basicML);
-            if(existingModel == null) {
-                params = initWeights();
-                LOG.info("Starting to train model from scratch.");
+            if (existingModel != null) {
+            	LOG.info("Starting to train model from existing model {}.", modelPath);
+            	params.setWeights(existingModel.getFlat().getWeights());
             } else {
-                params = initModelParams(existingModel);
-                LOG.info("Starting to train model from existing model {}.", modelPath);
+            	LOG.info("Starting to train model from scratch.");
             }
+
         } catch (IOException e) {
             throw new GuaguaRuntimeException(e);
         }
         return params;
     }
 
-    private NNParams initModelParams(BasicNetwork loadModel) {
-        NNParams params = new NNParams();
-        params.setTrainError(0);
-        params.setTestError(0);
-        // prevent null point
-        params.setGradients(new double[0]);
-        params.setWeights(loadModel.getFlat().getWeights());
-        return params;
-    }
-
     @SuppressWarnings({ "unchecked" })
     private NNParams initWeights() {
         NNParams params = new NNParams();
+        boolean isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
 
         int[] inputAndOutput = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
                 this.columnConfigList);
@@ -344,16 +363,20 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
                 new HashSet<Integer>(this.subFeatures));
         @SuppressWarnings("unused")
         int inputNodeCount = inputAndOutput[0] == 0 ? inputAndOutput[2] : inputAndOutput[0];
-        // if is one vs all classification, outputNodeCount is set to 1
-        int outputNodeCount = modelConfig.isRegression() ? inputAndOutput[1]
-                : (modelConfig.getTrain().isOneVsAll() ? inputAndOutput[1] : modelConfig.getTags().size());
+        // if is one vs all classification, outputNodeCount is set to 1, if classes=2, outputNodeCount is also 1
+        int classes = modelConfig.getTags().size();
+        int outputNodeCount = (isLinearTarget || modelConfig.isRegression()) ? inputAndOutput[1]
+                : (modelConfig.getTrain().isOneVsAll() ? inputAndOutput[1] : (classes == 2 ? 1 : classes));
         int numLayers = (Integer) validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
         BasicNetwork network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers, actFunc,
-                hiddenNodeList, true, this.dropoutRate, this.wgtInit);
+                hiddenNodeList, true, this.dropoutRate, this.wgtInit,
+                CommonUtils.isLinearTarget(modelConfig, columnConfigList));
 
+        this.flatNetwork = (FloatFlatNetwork) network.getFlat();
+        
         params.setTrainError(0);
         params.setTestError(0);
         // prevent null point
@@ -362,25 +385,26 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         return params;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void init(MasterContext<NNParams, NNParams> context) {
         Properties props = context.getProps();
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
-                    SourceType.HDFS.toString()));
+            SourceType sourceType = SourceType
+                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
 
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
 
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
         int trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
-                .getGridConfigFileContent());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(),
+                modelConfig.getTrain().getGridConfigFileContent());
         validParams = this.modelConfig.getTrain().getParams();
         if(gs.hasHyperParam()) {
             validParams = gs.getParams(trainerId);
@@ -445,11 +469,24 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.wgtInit = wgtInitObj.toString();
         }
 
-        this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
-                context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
+        this.isContinuousEnabled = Boolean.TRUE.toString()
+                .equalsIgnoreCase(context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
         Object rconstant = validParams.get(CommonConstants.LR_REGULARIZED_CONSTANT);
         this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
 
+        // We do not update weight in fixed layers so that we could fine tune other layers of NN
+        Object fixedLayers2O = validParams.get(CommonConstants.FIXED_LAYERS);
+        if (fixedLayers2O != null) {
+            this.fixedLayers = (List<Integer>) fixedLayers2O;
+        }
+        LOG.info("Fixed layers in master is :{}", this.fixedLayers.toString());
+        
+        Object hiddenLayerNumObj = validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
+        if (hiddenLayerNumObj != null && StringUtils.isNumeric(hiddenLayerNumObj.toString())) {
+            this.hiddenLayerNum = Integer.valueOf(hiddenLayerNumObj.toString());
+        }
+        LOG.info("hiddenLayerNum in master is :{}", this.hiddenLayerNum);
+        
         // check if variables are set final selected
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         this.isAfterVarSelect = (inputOutputIndex[3] == 1);
@@ -480,4 +517,71 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         }
     }
 
+	private HashSet<Integer> dropoutNodes() {
+		Random random = new Random(System.currentTimeMillis());
+
+		HashSet<Integer> droppedNodeIndices = new HashSet<Integer>();
+
+		// from input to last hidden layer. (exclude output layer)
+		for (int i = this.flatNetwork.getLayerIndex().length - 1; i > 0; i--) {
+			int beginNeuronIndex = this.flatNetwork.getLayerIndex()[i];
+			// exclude constant neuron
+			int neuronCount = this.flatNetwork.getLayerFeedCounts()[i];
+
+			// from first neuron to last neuron in current layer
+			for (int j = 0; j < neuronCount; j++) {
+				if (random.nextDouble() < this.flatNetwork.getLayerDropoutRates()[i]) {
+					// drop this node by adding it into list and will passing
+					// this list to workers
+					droppedNodeIndices.add(beginNeuronIndex + j);
+				}
+			}
+		}
+
+		LOG.info("layerIndex:{}; layerCounts:{}; dropoutNodes:{}", Arrays.toString(this.flatNetwork.getLayerIndex()),
+				Arrays.toString(this.flatNetwork.getLayerCounts()),
+				Arrays.toString(droppedNodeIndices.toArray(new Integer[droppedNodeIndices.size()])));
+		return droppedNodeIndices;
+	}
+	
+	/**
+	 * User's input fixed layer ID is different from ours. we need to use hiddenLayerNum to do transformation. 
+	 * For examaple, when user what to fix first hidden layer, 2 -> his.hiddenLayerNum - 2 + 1
+	 * 
+	 * fixed layer cannot be output layer and input layer, which does not have meanings
+	 * @param fixedLayers
+	 * @return
+	 */
+	private Set<Integer> getFixedWights(List<Integer> fixedLayers) {
+	    Set<Integer> fixedWeight = new HashSet<Integer>();
+        
+	    for (int fixedLayer : fixedLayers) {
+	        int realLayer = this.hiddenLayerNum - fixedLayer + 1;
+	        int inputIndex = this.flatNetwork.getLayerIndex()[realLayer + 1];
+	        int outputIndex = this.flatNetwork.getLayerIndex()[realLayer];
+	        int inputSize = this.flatNetwork.getLayerCounts()[realLayer + 1];
+	        int outputSize = this.flatNetwork.getLayerFeedCounts()[realLayer];
+	        
+	        int index = this.flatNetwork.getWeightIndex()[realLayer];
+	        int limitX = outputIndex + outputSize;
+	        int limitY = inputIndex + inputSize;
+	        
+	        LOG.info("fixedLayer:{}; realLayer{}; inputIndex:{}; outputIndex:{}; inputSize{}; outputSize{}; index{}; limitX{};limitY{}", 
+	                fixedLayer, realLayer, inputIndex, outputIndex, inputSize, outputSize, index, limitX, limitY);
+	        
+	        // weight values
+	        for (int x = outputIndex; x < limitX; x++) {
+	            for (int y = inputIndex; y < limitY; y++) {
+	                fixedWeight.add(index++);
+	            }
+	        }
+	        
+	        // add constant weight, output layer does not have constant node, so skip
+	        if (fixedLayer != (hiddenLayerNum+1)) {
+	            fixedWeight.add(index++);
+	        }
+	    }
+	    
+	    return fixedWeight;
+	}
 }

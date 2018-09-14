@@ -278,7 +278,7 @@ public class LogisticRegressionMaster extends
             if(this.weightCalculator == null) {
                 this.weightCalculator = new Weight(weights.length, trainSize, learningRate, this.propagation,
                         this.regularizedConstant, RegulationLevel.to(this.validParams
-                                .get(CommonConstants.REG_LEVEL_KEY)), 0d);
+                                .get(CommonConstants.REG_LEVEL_KEY)));
             } else {
                 this.weightCalculator.setNumTrainSize(trainSize);
             }

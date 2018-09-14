@@ -121,6 +121,7 @@ public final class BinUtils {
      * @return true if the categorical value exists in group, else false
      */
     public static boolean isCategoricalBinValue(String binVal, String cval) {
+        // TODO cache flattenCatValGrp(binVal)??
         return binVal.equals(cval) ? true : flattenCatValGrp(binVal).contains(cval);
     }
 

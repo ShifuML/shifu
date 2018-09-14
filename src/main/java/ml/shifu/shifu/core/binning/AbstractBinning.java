@@ -58,12 +58,27 @@ public abstract class AbstractBinning<T> {
      */
     protected int expectedBinningNum;
 
+    /**
+     * The maximum distinct value count for categorical variable
+     */
     protected int maxCategorySize = Constants.MAX_CATEGORICAL_BINC_COUNT;
 
     /**
      * Empty constructor : it is just for bin merging bin
      */
     protected AbstractBinning() {
+    }
+
+    /**
+     * Constructor with expected bin number
+     *
+     * @param binningNum
+     *      - the binningNum
+     * @param missingValList
+     *      - the missing value list
+     */
+    public AbstractBinning(int binningNum, List<String> missingValList) {
+        this(binningNum, missingValList, Constants.MAX_CATEGORICAL_BINC_COUNT);
     }
 
     /**

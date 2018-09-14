@@ -15,8 +15,13 @@
  */
 package ml.shifu.shifu.core.pmml.builder.creator;
 
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
 import org.dmg.pmml.*;
 import org.encog.ml.BasicML;
+
+import java.util.List;
 
 /**
  * Created by zhanhu on 3/30/16.
@@ -26,6 +31,15 @@ public abstract class AbstractSpecifCreator {
     public static final String RAW_RESULT = "RawResult";
     public static final String ROUND_FUNC = "round";
     public static final String FINAL_RESULT = "FinalResult";
+
+    private ModelConfig modelConfig;
+    @SuppressWarnings("unused")
+    private List<ColumnConfig> columnConfigList;
+
+    public AbstractSpecifCreator(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
+        this.modelConfig = modelConfig;
+        this.columnConfigList = columnConfigList;
+    }
 
     public abstract boolean build(BasicML basicML, Model model);
 
@@ -38,16 +52,28 @@ public abstract class AbstractSpecifCreator {
      */
     protected Output createNormalizedOutput() {
         Output output = new Output();
+        if ( modelConfig.isClassification() &&
+                ModelTrainConf.MultipleClassification.NATIVE.equals(modelConfig.getTrain().getMultiClassifyMethod()) ) {
+            for ( int i = 0; i < modelConfig.getTags().size(); i ++ ) {
+                output.withOutputFields(createOutputField(RAW_RESULT + "_" + i, OpType.CONTINUOUS, DataType.DOUBLE,
+                        new FieldName(modelConfig.getTargetColumnName() + "_" + i), ResultFeatureType.PREDICTED_VALUE));
 
-        output.withOutputFields(createOutputField(RAW_RESULT, OpType.CONTINUOUS, DataType.DOUBLE,
-                ResultFeatureType.PREDICTED_VALUE));
+                OutputField finalResult = createOutputField(FINAL_RESULT + "_" + i, OpType.CONTINUOUS, DataType.DOUBLE,
+                        new FieldName(modelConfig.getTargetColumnName() + "_" + i), ResultFeatureType.TRANSFORMED_VALUE);
+                finalResult.withExpression(createNormExpr(i));
 
-        OutputField finalResult = createOutputField(FINAL_RESULT, OpType.CONTINUOUS, DataType.DOUBLE,
-                ResultFeatureType.TRANSFORMED_VALUE);
-        finalResult.withExpression(createNormExpr());
+                output.withOutputFields(finalResult);
+            }
+        } else {
+            output.withOutputFields(createOutputField(RAW_RESULT, OpType.CONTINUOUS, DataType.DOUBLE,
+                    new FieldName(modelConfig.getTargetColumnName()), ResultFeatureType.PREDICTED_VALUE));
 
-        output.withOutputFields(finalResult);
+            OutputField finalResult = createOutputField(FINAL_RESULT, OpType.CONTINUOUS, DataType.DOUBLE,
+                    new FieldName(modelConfig.getTargetColumnName()), ResultFeatureType.TRANSFORMED_VALUE);
+            finalResult.withExpression(createNormExpr());
 
+            output.withOutputFields(finalResult);
+        }
         return output;
     }
 
@@ -62,10 +88,10 @@ public abstract class AbstractSpecifCreator {
         Output output = new Output();
 
         output.withOutputFields(createOutputField(RAW_RESULT + "_" + id, OpType.CONTINUOUS, DataType.DOUBLE,
-                ResultFeatureType.PREDICTED_VALUE));
+                new FieldName(modelConfig.getTargetColumnName() + "_" + id), ResultFeatureType.PREDICTED_VALUE));
 
         OutputField finalResult = createOutputField(FINAL_RESULT + "_" + id, OpType.CONTINUOUS, DataType.DOUBLE,
-                ResultFeatureType.TRANSFORMED_VALUE);
+                new FieldName(modelConfig.getTargetColumnName() + "_" + id), ResultFeatureType.TRANSFORMED_VALUE);
         finalResult.withExpression(createNormExpr(id));
 
         output.withOutputFields(finalResult);
@@ -82,17 +108,22 @@ public abstract class AbstractSpecifCreator {
      *            - operation type
      * @param dataType
      *            - data type
+     * @param targetField
+     *            - the target field name
      * @param feature
      *            - result feature type
      * @return OutputField
      */
     protected OutputField createOutputField(String fieldName, OpType opType, DataType dataType,
-            ResultFeatureType feature) {
+            FieldName targetField, ResultFeatureType feature) {
         OutputField outputField = new OutputField();
         outputField.withName(new FieldName(fieldName));
         outputField.withOptype(opType);
         outputField.withDataType(dataType);
         outputField.withFeature(feature);
+        if ( targetField != null ) {
+            outputField.withTargetField(targetField);
+        }
         return outputField;
     }
 

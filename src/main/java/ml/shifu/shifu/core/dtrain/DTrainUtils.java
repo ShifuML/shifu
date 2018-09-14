@@ -31,6 +31,7 @@ import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.dtrain.random.XaiverRandomizer;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
 
 import org.apache.hadoop.fs.Path;
@@ -56,8 +57,6 @@ public final class DTrainUtils {
     public static final String MANHATTAN_PROPAGATION = "M";
     public static final String QUICK_PROPAGATION = "Q";
     public static final String BACK_PROPAGATION = "B";
-
-    public static final String IS_ELM = "IsELM";
 
     public static final String WGT_INIT_GAUSSIAN = "gaussian";
 
@@ -172,7 +171,13 @@ public final class DTrainUtils {
                 }
             }
             if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
-                if(normType.equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT) && config.isCategorical()) {
+                if(normType.equals(ModelNormalizeConf.NormType.ONEHOT)) {
+                    if(config.isCategorical()) {
+                        input += config.getBinCategory().size() + 1;
+                    } else {
+                        input += config.getBinBoundary().size() + 1;
+                    }
+                } else if(normType.equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT) && config.isCategorical()) {
                     input += config.getBinCategory().size() + 1;
                 } else {
                     input += 1;
@@ -200,7 +205,8 @@ public final class DTrainUtils {
      *             if columnConfigList or ColumnConfig object in columnConfigList is null.
      */
     public static int[] getNumericAndCategoricalInputAndOutputCounts(List<ColumnConfig> columnConfigList) {
-        int numericInput = 0, categoricalInput = 0, output = 0, numericCandidateInput = 0, categoricalCandidateInput = 0;
+        int numericInput = 0, categoricalInput = 0, output = 0, numericCandidateInput = 0,
+                categoricalCandidateInput = 0;
         boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
 
         for(ColumnConfig config: columnConfigList) {
@@ -226,7 +232,7 @@ public final class DTrainUtils {
         }
 
         // check if it is after varselect, if not, no variable is set to finalSelect which means, all good variable
-        // should be set as finalSelect TODO, bad practice, refact me
+        // should be set as finalSelect TODO, bad practice, refactor me
         int isVarSelect = 1;
         if(numericInput == 0 && categoricalInput == 0) {
             numericInput = numericCandidateInput;
@@ -246,17 +252,24 @@ public final class DTrainUtils {
         return Math.max(epochs / 25, 20);
     }
 
-//    public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
-//            List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate) {
-//        return generateNetwork(in, out, numLayers, actFunc, hiddenNodeList, isRandomizeWeights, dropoutRate,
-//                WGT_INIT_DEFAULT);
-//    }
+    // public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
+    // List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate) {
+    // return generateNetwork(in, out, numLayers, actFunc, hiddenNodeList, isRandomizeWeights, dropoutRate,
+    // WGT_INIT_DEFAULT);
+    // }
 
     public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
-            List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate, String wgtInit) {
+            List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate, String wgtInit,
+            boolean isLinearTarget) {
         final BasicFloatNetwork network = new BasicFloatNetwork();
 
-        network.addLayer(new BasicLayer(new ActivationLinear(), true, in));
+        // in shifuconfig, we have a switch to control enable input layer dropout
+        if(Boolean.valueOf(Environment.getProperty(CommonConstants.SHIFU_TRAIN_NN_INPUTLAYERDROPOUT_ENABLE, "true"))) {
+            // we need to guarantee that input layer dropout rate is 40% of hiddenlayer dropout rate
+            network.addLayer(new BasicDropoutLayer(new ActivationLinear(), true, in, dropoutRate * 0.4d));
+        } else {
+            network.addLayer(new BasicDropoutLayer(new ActivationLinear(), true, in, 0d));
+        }
 
         // int hiddenNodes = 0;
         for(int i = 0; i < numLayers; i++) {
@@ -280,7 +293,11 @@ public final class DTrainUtils {
             }
         }
 
-        network.addLayer(new BasicLayer(new ActivationSigmoid(), false, out));
+        if(isLinearTarget) {
+            network.addLayer(new BasicLayer(new ActivationLinear(), true, out));
+        } else {
+            network.addLayer(new BasicLayer(new ActivationSigmoid(), false, out));
+        }
 
         NeuralStructure structure = network.getStructure();
         if(network.getStructure() instanceof FloatNeuralStructure) {
@@ -354,7 +371,19 @@ public final class DTrainUtils {
 
     public static int getFeatureInputsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Set<Integer> featureSet) {
-        if(modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)) {
+        if(modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)) {
+            int inputCount = 0;
+            for(ColumnConfig columnConfig: columnConfigList) {
+                if(columnConfig.isFinalSelect() && featureSet.contains(columnConfig.getColumnNum())) {
+                    if(columnConfig.isNumerical()) {
+                        inputCount += (columnConfig.getBinBoundary().size() + 1);
+                    } else {
+                        inputCount += (columnConfig.getBinCategory().size() + 1);
+                    }
+                }
+            }
+            return inputCount;
+        } else if(modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)) {
             int inputCount = 0;
             for(ColumnConfig columnConfig: columnConfigList) {
                 if(columnConfig.isFinalSelect() && featureSet.contains(columnConfig.getColumnNum())) {
