@@ -52,9 +52,9 @@ public final class BinUtils {
      * @throws NumberFormatException
      *             if columnVal does not contain a parsable number.
      */
-    public static int getBinNum(ColumnConfig columnConfig, String columnVal) {
+    public static int getBinNum(ColumnConfig columnConfig, Object columnVal) {
         if(columnConfig.isCategorical()) {
-            return getCategoicalBinIndex(columnConfig.getBinCategory(), columnVal);
+            return getCategoicalBinIndex(columnConfig.getBinCategory(), (String) columnVal);
         } else {
             return getNumericalBinIndex(columnConfig.getBinBoundary(), columnVal);
         }
@@ -69,15 +69,23 @@ public final class BinUtils {
      *            the column value
      * @return bin index, -1 if invalid values
      */
-    public static int getNumericalBinIndex(List<Double> binBoundaries, String columnVal) {
-        if(StringUtils.isBlank(columnVal)) {
+    public static int getNumericalBinIndex(List<Double> binBoundaries, Object columnVal) {
+        if (columnVal == null) {
             return -1;
         }
+
         double dval = 0.0;
-        try {
-            dval = Double.parseDouble(columnVal);
-        } catch (Exception e) {
-            return -1;
+        
+        if(columnVal instanceof Double) {
+            dval = (Double) columnVal;
+        } else if (columnVal instanceof Integer) {
+            dval = ((Integer)columnVal).doubleValue();
+        } else {
+            try {
+                dval = Double.parseDouble((String) columnVal);
+            } catch (Exception e) {
+                return -1;
+            }
         }
         return getBinIndex(binBoundaries, dval);
     }
@@ -175,14 +183,21 @@ public final class BinUtils {
      *            param string
      * @return double after parsing
      */
-    public static double parseNumber(String valStr) {
-        if(StringUtils.isBlank(valStr)) {
+    public static double parseNumber(Object valStr) {
+        if (valStr == null) {
             return Double.NaN;
         }
-        try {
-            return Double.parseDouble(valStr);
-        } catch (NumberFormatException e) {
-            return Double.NaN;
+        
+        if (valStr instanceof Double) {
+            return (Double) valStr;
+        } else if (valStr instanceof Integer) {
+            return ((Integer)valStr).doubleValue();
+        } else {
+            try {
+                return Double.parseDouble((String) valStr);
+            } catch (NumberFormatException e) {
+                return Double.NaN;
+            }
         }
     }
 

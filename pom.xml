@@ -652,6 +652,7 @@
 			<properties>
 				<platform.version>hdp-yarn</platform.version>
 			</properties>
+
 			<build>
 				<plugins>
 					<plugin>
