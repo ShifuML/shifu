@@ -185,12 +185,7 @@ public class PigExecutor {
                 pigServer.getPigContext().addJar(HDPUtils.findContainingFile("core-site.xml"));
                 pigServer.getPigContext().addJar(HDPUtils.findContainingFile("mapred-site.xml"));
                 pigServer.getPigContext().addJar(HDPUtils.findContainingFile("yarn-site.xml"));
-                pigServer.getPigContext().addJar(HDPUtils.findContainingFile("libstdc++.so.6"));
             }
-            pigServer.getPigContext().getConf().put("mapreduce.admin.user.env", 
-                "JAVA_HOME=./jdk1.8.zip/jdk1.8/");
-            pigServer.getPigContext().getConf().put("mapred.cache.archives", 
-                "hdfs:///user/wzhu1/glibc_2.17.zip,hdfs:///user/wzhu1/jdk1.8.zip");
         } else {
             log.info("ExecType: LOCAL");
             pigServer = new ShifuPigServer(ExecType.LOCAL);
