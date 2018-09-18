@@ -705,6 +705,7 @@ public class ShifuCLI {
         System.out.println(
                 "\tvarselect/varsel -autofilter            Auto filter variables by MissingRate, KS/IV, and Correlation.");
         System.out.println("\tvarselect/varsel -recoverauto           Recover those variables that are auto-filtered.");
+        System.out.println("\tvarselect/varsel -r                     Run variable selection recursively.");
         System.out.println("\tnormalize/norm/transform [-shuffle]     Normalize the columns with finalSelect as true.");
         System.out.println("\ttrain [-dry] [-shuffle]                 Train the model with the normalized data.");
         System.out.println("\tposttrain                               Post-process data after training models.");

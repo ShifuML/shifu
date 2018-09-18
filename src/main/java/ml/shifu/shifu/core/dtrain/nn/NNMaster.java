@@ -547,7 +547,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
 	
 	/**
 	 * User's input fixed layer ID is different from ours. we need to use hiddenLayerNum to do transformation. 
-	 * For examaple, when user what to fix first hidden layer, 2 -> his.hiddenLayerNum - 2 + 1
+	 * For example, when user what to fix first hidden layer, 2 -> his.hiddenLayerNum - 2 + 1
 	 * 
 	 * fixed layer cannot be output layer and input layer, which does not have meanings
 	 * @param fixedLayers
