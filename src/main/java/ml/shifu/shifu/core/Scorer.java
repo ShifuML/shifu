@@ -508,7 +508,6 @@ public class Scorer {
             this.scale = scale;
         }
     }
-<<<<<<< HEAD
 
     private String featureSetToString(Set<Integer> featureSet) {
         if (CollectionUtils.isEmpty(featureSet)) {
@@ -526,6 +525,3 @@ public class Scorer {
         this.multiThread = multiThread;
     }
 }
-=======
-}
->>>>>>> d0fee662... Impl of Generic model and tensorflow eval
