@@ -1895,7 +1895,7 @@ public final class CommonUtils {
                 if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
                     // only select numerical feature with getBinBoundary().size() larger than 1
                     // or categorical feature with getBinCategory().size() larger than 0
-                    if((config.isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 1)
+                    if((config.isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 0)
                             || (config.isCategorical() && config.getBinCategory() != null
                                     && config.getBinCategory().size() > 0)) {
                         features.add(config.getColumnNum());
@@ -1905,7 +1905,7 @@ public final class CommonUtils {
                 if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config, hasCandidate)) {
                     // only select numerical feature with getBinBoundary().size() larger than 1
                     // or categorical feature with getBinCategory().size() larger than 0
-                    if((config.isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 1)
+                    if((config.isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 0)
                             || (config.isCategorical() && config.getBinCategory() != null
                                     && config.getBinCategory().size() > 0)) {
                         features.add(config.getColumnNum());
@@ -2507,12 +2507,14 @@ public final class CommonUtils {
             return false;
         }
 
-        return columnConfig.isCandidate(hasCandidate) && (columnConfig.getKs() != null && columnConfig.getKs() > 0
-                && columnConfig.getIv() != null && columnConfig.getIv() > 0 && columnConfig.getMean() != null
-                && columnConfig.getStdDev() != null
+        return columnConfig.isCandidate(hasCandidate)
+                && (columnConfig.getKs() != null && columnConfig.getKs() > 0
+                &&  columnConfig.getIv() != null && columnConfig.getIv() > 0
+                &&  columnConfig.getMean() != null
+                &&  columnConfig.getStdDev() != null
                 && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
                         && columnConfig.getBinCategory().size() > 0)
-                        || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
+                 || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
                                 && columnConfig.getBinBoundary().size() > 0)));
     }
 

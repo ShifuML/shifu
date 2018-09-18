@@ -371,9 +371,10 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
+        String outputActivationFunc = (String)validParams.get(CommonConstants.OUTPUT_ACTIVATION_FUNC);
         BasicNetwork network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers, actFunc,
                 hiddenNodeList, true, this.dropoutRate, this.wgtInit,
-                CommonUtils.isLinearTarget(modelConfig, columnConfigList));
+                CommonUtils.isLinearTarget(modelConfig, columnConfigList), outputActivationFunc);
 
         this.flatNetwork = (FloatFlatNetwork) network.getFlat();
         

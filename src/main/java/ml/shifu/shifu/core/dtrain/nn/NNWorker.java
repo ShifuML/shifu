@@ -78,7 +78,9 @@ public class NNWorker extends AbstractNNWorker<Text> {
 
         String[] fields = Lists.newArrayList(this.splitter.split(currentValue.getWritable().toString()))
                 .toArray(new String[0]);
-        for(int pos = 0; pos < fields.length;) {
+        int pos = 0;
+
+        for(pos = 0; pos < fields.length;) {
             String input = fields[pos];
             // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
             float floatValue = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(input, 0f);
@@ -183,6 +185,13 @@ public class NNWorker extends AbstractNNWorker<Text> {
                 }
             }
             index += 1;
+        }
+
+        if ( index != this.columnConfigList.size() || pos != fields.length - 1 ) {
+            throw new RuntimeException("Wrong data indexing. ColumnConfig index = " + index
+                    + ", while it should be " + columnConfigList.size() + ". "
+                    + "Data Pos = " + pos
+                    + ", while it should be " + (fields.length - 1));
         }
 
         // output delimiter in norm can be set by user now and if user set a special one later changed, this exception

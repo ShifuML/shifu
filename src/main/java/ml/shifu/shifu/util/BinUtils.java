@@ -17,6 +17,7 @@ package ml.shifu.shifu.util;
 
 import java.util.List;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -67,7 +68,7 @@ public final class BinUtils {
      * @return bin index, -1 if invalid values
      */
     public static int getNumericalBinIndex(List<Double> binBoundaries, String columnVal) {
-        if(StringUtils.isBlank(columnVal)) {
+        if(StringUtils.isBlank(columnVal) || CollectionUtils.isEmpty(binBoundaries)) {
             return -1;
         }
         double dval = 0.0;
@@ -89,7 +90,7 @@ public final class BinUtils {
      * @return bin index, -1 if invalid values
      */
     public static int getCategoicalBinIndex(List<String> binCategories, String columnVal) {
-        if(StringUtils.isBlank(columnVal)) {
+        if(StringUtils.isBlank(columnVal) || CollectionUtils.isEmpty(binCategories)) {
             return -1;
         }
         for(int i = 0; i < binCategories.size(); i++) {

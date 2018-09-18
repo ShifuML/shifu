@@ -30,9 +30,7 @@ import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 
 /**
  * Created by zhanhu on 7/5/16.
@@ -40,8 +38,10 @@ import java.util.Map;
 public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> implements Accumulator<Tuple> {
 
     private int scaleFactor = 1024;
+
     private Integer columnId =  null;
-    private Map<Integer, AbstractBinning> binningMap = new HashMap<Integer, AbstractBinning>();
+    private ColumnConfig columnConfig = null;
+    private AbstractBinning binning = null;
 
     public GenSmallBinningInfoUDF(String source, String pathModelConfig, String pathColumnConfig,
             String histoScaleFactor) throws IOException {
@@ -51,12 +51,9 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> implements
 
     @Override
     public Tuple exec(Tuple input) throws IOException {
-        if(input == null || input.size() != 1) {
-            return null;
-        }
-
-        ColumnConfig columnConfig = null;
-        AbstractBinning binning = null;
+        //if(input == null || input.size() != 1) {
+        //    return null;
+        //}
 
         DataBag dataBag = (DataBag) input.get(0);
         Iterator<Tuple> iterator = dataBag.iterator();
@@ -135,9 +132,6 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> implements
 
     @Override
     public void accumulate(Tuple input) throws IOException {
-        ColumnConfig columnConfig = null;
-        AbstractBinning binning = null;
-
         DataBag dataBag = (DataBag) input.get(0);
         Iterator<Tuple> iterator = dataBag.iterator();
         while(iterator.hasNext()) {
@@ -152,11 +146,7 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> implements
                         columnConfig = super.columnConfigList.get(columnId);
                     }
 
-                    binning = this.binningMap.get(columnId);
-                    if ( binning == null ) {
-                        binning = getBinningHandler(columnConfig);
-                        this.binningMap.put(columnId, binning);
-                    }
+                    binning = getBinningHandler(columnConfig);
                 }
 
                 Boolean isPositive = (Boolean) tuple.get(2);
@@ -172,14 +162,14 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> implements
     public Tuple getValue() {
         Tuple output = TupleFactory.getInstance().newTuple();
         output.append(columnId);
-        output.append(StringUtils.join(this.binningMap.get(this.columnId).getDataBin(),
-                AbstractBinning.FIELD_SEPARATOR));
+        output.append(StringUtils.join(this.binning.getDataBin(), AbstractBinning.FIELD_SEPARATOR));
         return output;
     }
 
     @Override
     public void cleanup() {
-        this.binningMap.remove(this.columnId);
         this.columnId = null;
+        this.columnConfig = null;
+        this.binning = null;
     }
 }
