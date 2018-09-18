@@ -373,6 +373,16 @@ public class Scorer {
                         log.error("error in model evaluation", e);
                     }
                 }
+            } else if(model instanceof GenericModel) {
+                modelResults.add(new Callable<MLData>() {
+                    @Override
+                    public MLData call() {
+                        log.error("model is " + ((GenericModel)model).getModel().getClass() + " " +
+                            ((GenericModel)model).getGMProperties().toString());
+                        MLData md = pair.getInput();
+                        return ((GenericModel) model).compute(pair.getInput());
+                    }
+                }.call());
             } else {
                 throw new RuntimeException("unsupport models");
             }
@@ -466,6 +476,8 @@ public class Scorer {
                     if(!tm.isClassfication() && !tm.isGBDT()) {
                         rfTreeSizeList.add(tm.getTrees().size());
                     }
+                } else if(model instanceof GenericModel) {
+                    scores.add(toScore(score.getData(0)));
                 } else {
                     throw new RuntimeException("unsupport models");
                 }
@@ -498,6 +510,7 @@ public class Scorer {
             this.scale = scale;
         }
     }
+<<<<<<< HEAD
 
     private String featureSetToString(Set<Integer> featureSet) {
         if (CollectionUtils.isEmpty(featureSet)) {
@@ -515,3 +528,6 @@ public class Scorer {
         this.multiThread = multiThread;
     }
 }
+=======
+}
+>>>>>>> d0fee662... Impl of Generic model and tensorflow eval
