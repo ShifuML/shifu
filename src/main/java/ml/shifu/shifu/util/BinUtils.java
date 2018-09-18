@@ -54,7 +54,9 @@ public final class BinUtils {
      */
     public static int getBinNum(ColumnConfig columnConfig, Object columnVal) {
         if(columnConfig.isCategorical()) {
-            return getCategoicalBinIndex(columnConfig.getBinCategory(), (String) columnVal);
+            if (columnVal == null) return -1;
+            
+            return getCategoicalBinIndex(columnConfig.getBinCategory(), columnVal.toString());
         } else {
             return getNumericalBinIndex(columnConfig.getBinBoundary(), columnVal);
         }
@@ -82,7 +84,7 @@ public final class BinUtils {
             dval = ((Integer)columnVal).doubleValue();
         } else {
             try {
-                dval = Double.parseDouble((String) columnVal);
+                dval = Double.parseDouble(columnVal.toString());
             } catch (Exception e) {
                 return -1;
             }
