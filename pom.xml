@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ml.shifu</groupId>
 	<artifactId>shifu</artifactId>
-	<version>0.11.6</version>
+	<version>0.12.0-SNAPSHOT</version>
 	<name>Shifu</name>
 	<description>An open-source, end-to-end and distributed machine learning and data mining framework built on top of Hadoop.</description>
 	<properties>
@@ -16,7 +16,7 @@
 		<powermock.version>1.5.1</powermock.version>
 		<guagua.version>0.7.7</guagua.version>
 	</properties>
-	
+
 	<url>https://github.com/ShifuML/shifu/</url>
 	<licenses>
 		<license>
@@ -73,6 +73,11 @@
 		</developer>
 		<developer>
 			<name>Wu Devin</name>
+			<organization>PayPal</organization>
+			<organizationUrl>http://www.paypal.com</organizationUrl>
+		</developer>
+		<developer>
+			<name>Bai Fred</name>
 			<organization>PayPal</organization>
 			<organizationUrl>http://www.paypal.com</organizationUrl>
 		</developer>
