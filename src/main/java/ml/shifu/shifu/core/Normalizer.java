@@ -274,7 +274,7 @@ public class Normalizer {
                 values[0] = ((Integer)raw).doubleValue();
             } else {
                 try {
-                    values[0] = Double.parseDouble((String) raw);
+                    values[0] = Double.parseDouble(raw.toString());
                 } catch ( Exception e ) {
                     log.warn("Illegal numerical value - {}, use mean instead.", raw);
                     values[0] = config.getMean();
@@ -468,7 +468,7 @@ public class Normalizer {
             }
         } else {
             try {
-                value = Double.parseDouble((String) raw);
+                value = Double.parseDouble(raw.toString());
             } catch (Exception e) {
                 log.debug("Not decimal format " + raw + ", using default!");
                 value = defaultMissingValue(config);
@@ -522,8 +522,13 @@ public class Normalizer {
         List<Double> woeBins = isWeightedNorm ? config.getBinWeightedWoe() : config.getBinCountWoe();
         int binIndex = 0;
         if(config.isHybrid()) {
-            binIndex = BinUtils.getCategoicalBinIndex(config.getBinCategory(), (String)raw);
-            if(binIndex != -1) {
+            if (raw == null) {
+                binIndex = -1;
+            } else {
+                binIndex = BinUtils.getCategoicalBinIndex(config.getBinCategory(), raw.toString());
+            }
+
+            if (binIndex != -1) {
                 binIndex = binIndex + config.getBinBoundary().size(); // append the first numerical bins
             } else {
                 double douVal = BinUtils.parseNumber(raw);
