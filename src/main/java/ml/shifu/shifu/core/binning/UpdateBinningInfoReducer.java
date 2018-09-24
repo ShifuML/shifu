@@ -261,11 +261,14 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
 
         }
 
+        LOG.info("Coloumn num is {}, columnType value is {}, cateMaxNumBin is {}, binCategory size is {}",
+                columnConfig.getColumnNum(), columnConfig.getColumnType(), modelConfig.getStats().getCateMaxNumBin(),
+                (CollectionUtils.isNotEmpty(columnConfig.getBinCategory()) ? columnConfig.getBinCategory().size() : 0));
         // To merge categorical binning
         if(columnConfig.isCategorical()
                 && modelConfig.getStats().getCateMaxNumBin() > 0
-                && CollectionUtils.isNotEmpty(columnConfig.getBinCategory())
-                && columnConfig.getBinCategory().size() > modelConfig.getStats().getCateMaxNumBin() ) {
+                && CollectionUtils.isNotEmpty(binCategories)
+                && binCategories.size() > modelConfig.getStats().getCateMaxNumBin() ) {
             // only category size large then expected max bin number
             CateBinningStats cateBinningStats = rebinCategoricalValues(
                     new CateBinningStats(binCategories, binCountPos, binCountNeg, binWeightPos, binWeightNeg));

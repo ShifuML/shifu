@@ -240,6 +240,20 @@ public class JexlTest {
     }
 
     @Test
+    public void testJavaCompare() {
+        JexlEngine jexl = new JexlEngine();
+        String jexlExp = "time_window == 'DEV' and live_xm_send_amount <= 10000.0";
+
+        Expression e = jexl.createExpression(jexlExp);
+
+        JexlContext jc = new MapContext();
+        jc.set("time_window", "DEV");
+        jc.set("live_xm_send_amount", "50");
+
+        Assert.assertEquals(Boolean.TRUE, e.evaluate(jc));
+    }
+
+    @Test
     public void testDoubleFormat() {
         Double a = Double.NaN;
         DecimalFormat df = new DecimalFormat("##.######");
