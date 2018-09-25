@@ -15,10 +15,63 @@
  */
 package ml.shifu.shifu.util;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.zip.GZIPInputStream;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.Predicate;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.pig.backend.executionengine.ExecException;
+import org.apache.pig.data.Tuple;
+import org.encog.ml.BasicML;
+import org.encog.ml.data.MLDataPair;
+import org.encog.ml.data.basic.BasicMLData;
+import org.encog.ml.data.basic.BasicMLDataPair;
+import org.encog.neural.networks.BasicNetwork;
+import org.encog.persist.EncogDirectoryPersistence;
+import org.encog.persist.PersistorRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
+
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -42,31 +95,6 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.Predicate;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.math.NumberUtils;
-import org.apache.commons.lang3.tuple.MutablePair;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.pig.backend.executionengine.ExecException;
-import org.apache.pig.data.Tuple;
-import org.encog.ml.BasicML;
-import org.encog.ml.data.MLDataPair;
-import org.encog.ml.data.basic.BasicMLData;
-import org.encog.ml.data.basic.BasicMLDataPair;
-import org.encog.neural.networks.BasicNetwork;
-import org.encog.persist.EncogDirectoryPersistence;
-import org.encog.persist.PersistorRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.*;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.zip.GZIPInputStream;
 
 /**
  * {@link CommonUtils} is used to for almost all kinds of utility function in this framework.
@@ -389,8 +417,30 @@ public final class CommonUtils {
         ColumnConfig[] configList = loadJSON(path, sourceType, ColumnConfig[].class);
         List<ColumnConfig> columnConfigList = new ArrayList<ColumnConfig>();
         for(ColumnConfig columnConfig: configList) {
+            // reset sample values to null to save memory
             if(nullSampleValues) {
                 columnConfig.setSampleValues(null);
+            }
+
+            // construct Category Index map for fast query.
+            if(columnConfig.isCategorical() && columnConfig.getColumnBinning() != null
+                    && columnConfig.getColumnBinning().getBinCategory() != null) {
+                List<String> categories = columnConfig.getColumnBinning().getBinCategory();
+                Map<String, Integer> categoryIndexMapping = new HashMap<String, Integer>();
+                for(int i = 0; i < categories.size(); i++) {
+                    String category = categories.get(i);
+                    if(category.contains(Constants.CATEGORICAL_GROUP_VAL_DELIMITER)) {
+                        // merged category should be flatten, use split function this class to avoid depending on guava
+                        String[] splits = ml.shifu.shifu.core.dtrain.StringUtils.split(category,
+                                Constants.CATEGORICAL_GROUP_VAL_DELIMITER);
+                        for(String str: splits) {
+                            categoryIndexMapping.put(str, i);
+                        }
+                    } else {
+                        categoryIndexMapping.put(category, i);
+                    }
+                }
+                columnConfig.getColumnBinning().setBinCateMap(categoryIndexMapping);
             }
             columnConfigList.add(columnConfig);
         }

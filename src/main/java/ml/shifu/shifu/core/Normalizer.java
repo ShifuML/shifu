@@ -525,7 +525,7 @@ public class Normalizer {
             if (raw == null) {
                 binIndex = -1;
             } else {
-                binIndex = BinUtils.getCategoicalBinIndex(config.getBinCategory(), raw.toString());
+                binIndex = BinUtils.getCategoicalBinIndex(config, raw.toString());
             }
 
             if (binIndex != -1) {
