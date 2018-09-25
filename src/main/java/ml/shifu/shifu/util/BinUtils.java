@@ -15,12 +15,14 @@
  */
 package ml.shifu.shifu.util;
 
-import java.util.List;
-
+import com.google.common.base.Splitter;
+import ml.shifu.shifu.container.obj.ColumnConfig;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * {@link BinUtils} is used to for almost all kinds of utility function in this framework.
@@ -32,8 +34,6 @@ public final class BinUtils {
      */
     private BinUtils() {
     }
-
-    // private static final Logger log = LoggerFactory.getLogger(BinUtils.class);
 
     /**
      * Given a column value, return bin list index. Return 0 for Category because of index 0 is started from
@@ -50,9 +50,13 @@ public final class BinUtils {
      * @throws NumberFormatException
      *             if columnVal does not contain a parsable number.
      */
-    public static int getBinNum(ColumnConfig columnConfig, String columnVal) {
+    public static int getBinNum(ColumnConfig columnConfig, Object columnVal) {
         if(columnConfig.isCategorical()) {
-            return getCategoicalBinIndex(columnConfig.getBinCategory(), columnVal);
+            if(columnVal == null) {
+                return -1;
+            } else {
+                return getCategoicalBinIndex(columnConfig, columnVal.toString());
+            }
         } else {
             return getNumericalBinIndex(columnConfig.getBinBoundary(), columnVal);
         }
@@ -67,17 +71,57 @@ public final class BinUtils {
      *            the column value
      * @return bin index, -1 if invalid values
      */
-    public static int getNumericalBinIndex(List<Double> binBoundaries, String columnVal) {
-        if(StringUtils.isBlank(columnVal) || CollectionUtils.isEmpty(binBoundaries)) {
+    public static int getNumericalBinIndex(List<Double> binBoundaries, Object columnVal) {
+        if(columnVal == null) {
             return -1;
         }
+
         double dval = 0.0;
-        try {
-            dval = Double.parseDouble(columnVal);
-        } catch (Exception e) {
-            return -1;
+
+        if(columnVal instanceof Double) {
+            dval = (Double) columnVal;
+        } else if(columnVal instanceof Integer) {
+            dval = ((Integer) columnVal).doubleValue();
+        } else {
+            try {
+                dval = Double.parseDouble(columnVal.toString());
+            } catch (Exception e) {
+                return -1;
+            }
         }
         return getBinIndex(binBoundaries, dval);
+    }
+
+    /**
+     * Get categorical bin index according to string column value.
+     * 
+     * @param columnConfig
+     *            the column config
+     * @param columnVal
+     *            the column value
+     * @return bin index, -1 if invalid values
+     */
+    public static int getCategoicalBinIndex(ColumnConfig columnConfig, String columnVal) {
+        if(StringUtils.isBlank(columnVal)) {
+            return -1;
+        }
+
+        if(columnConfig.getColumnBinning().getBinCateMap() != null) {
+            Map<String, Integer> binCateMap = columnConfig.getColumnBinning().getBinCateMap();
+            Integer intIndex = binCateMap.get(columnVal);
+            if(intIndex == null || intIndex < 0) {
+                intIndex = -1;
+            }
+            return intIndex;
+        } else {
+            List<String> binCategories = columnConfig.getColumnBinning().getBinCategory();
+            for(int i = 0; i < binCategories.size(); i++) {
+                if(isCategoricalBinValue(binCategories.get(i), columnVal)) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 
     /**
@@ -111,8 +155,25 @@ public final class BinUtils {
      * @return true if the categorical value exists in group, else false
      */
     public static boolean isCategoricalBinValue(String binVal, String cval) {
-        // TODO cache CommonUtils.flattenCatValGrp(binVal)??
-        return binVal.equals(cval) ? true : CommonUtils.flattenCatValGrp(binVal).contains(cval);
+        // TODO cache flattenCatValGrp(binVal)??
+        return binVal.equals(cval) ? true : flattenCatValGrp(binVal).contains(cval);
+    }
+
+    /**
+     * flatten categorical value group into values list
+     * 
+     * @param categoricalValGrp
+     *            - categorical val group, it some values like zn^us^ck^
+     * @return value list of categorical val
+     */
+    private static List<String> flattenCatValGrp(String categoricalValGrp) {
+        List<String> catVals = new ArrayList<String>();
+        if(StringUtils.isNotBlank(categoricalValGrp)) {
+            for(String cval: Splitter.on(Constants.CATEGORICAL_GROUP_VAL_DELIMITER).split(categoricalValGrp)) {
+                catVals.add(cval);
+            }
+        }
+        return catVals;
     }
 
     /**
@@ -156,14 +217,21 @@ public final class BinUtils {
      *            param string
      * @return double after parsing
      */
-    public static double parseNumber(String valStr) {
-        if(StringUtils.isBlank(valStr)) {
+    public static double parseNumber(Object valStr) {
+        if(valStr == null) {
             return Double.NaN;
         }
-        try {
-            return Double.parseDouble(valStr);
-        } catch (NumberFormatException e) {
-            return Double.NaN;
+
+        if(valStr instanceof Double) {
+            return (Double) valStr;
+        } else if(valStr instanceof Integer) {
+            return ((Integer) valStr).doubleValue();
+        } else {
+            try {
+                return Double.parseDouble((String) valStr);
+            } catch (NumberFormatException e) {
+                return Double.NaN;
+            }
         }
     }
 
