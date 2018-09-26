@@ -15,17 +15,16 @@
  */
 package ml.shifu.shifu.core;
 
-import java.util.Arrays;
-import java.util.List;
-
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.udf.NormalizeUDF.CategoryMissingNormType;
 import ml.shifu.shifu.util.BinUtils;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Util normalization class which is used for any kind of transformation.
@@ -440,7 +439,7 @@ public class Normalizer {
             categoryMissingNormType = CategoryMissingNormType.POSRATE;
         }
         double value = 0.0;
-        if (raw == null || StringUtils.EMPTY.equals(raw)) {
+        if (raw == null || StringUtils.isBlank(raw.toString())) {
             log.debug("Not decimal format but null, using default!");
             if(config.isCategorical()) {
                 value = fillDefaultValue(config, categoryMissingNormType);
@@ -468,9 +467,16 @@ public class Normalizer {
             }
         } else {
             try {
+                // if raw is NaN, it won't throw Exception. The value will be Double.NaN
                 value = Double.parseDouble(raw.toString());
             } catch (Exception e) {
                 log.debug("Not decimal format " + raw + ", using default!");
+                value = defaultMissingValue(config);
+            }
+
+            if ( Double.isInfinite(value) || Double.isNaN(value) ) {
+                // if the value is Infinite or NaN, treat it as missing value
+                // should treat Infinite as missing value?
                 value = defaultMissingValue(config);
             }
         }

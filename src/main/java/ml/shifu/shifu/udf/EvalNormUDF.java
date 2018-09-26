@@ -49,13 +49,12 @@ import ml.shifu.shifu.util.Environment;
 /**
  * Calculate the score for each evaluation data
  */
-public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
+public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
 
     @SuppressWarnings("unused")
     private static final String SCHEMA_PREFIX = "eval::";
     private static final String ORIG_POSTFIX = "_orig";
 
-    private EvalConfig evalConfig;
     private String[] headers;
     private List<String> outputNames;
 
@@ -94,9 +93,7 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
 
     public EvalNormUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName, String scale)
             throws IOException {
-        super(source, pathModelConfig, pathColumnConfig);
-
-        evalConfig = modelConfig.getEvalConfigByName(evalSetName);
+        super(source, pathModelConfig, pathColumnConfig, evalSetName);
 
         if(!evalConfig.getNormAllColumns()) {
             // log such un compactiable

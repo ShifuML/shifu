@@ -229,6 +229,17 @@ public class BasicModelProcessor {
     }
 
     /**
+     * Loading ModelConfig from sub-folder
+     * @param subFolder - sub folder in current directory
+     * @return ModelConfig under sub-folder
+     * @throws IOException if fails to load ModelConfig.json
+     */
+    protected ModelConfig loadSubModelConfig(String subFolder) throws IOException {
+        return CommonUtils.loadModelConfig(
+                subFolder + File.separator + Constants.MODEL_CONFIG_JSON_FILE_NAME, SourceType.LOCAL);
+    }
+
+    /**
      * save Model Config
      * 
      * @throws IOException
@@ -495,7 +506,7 @@ public class BasicModelProcessor {
      * @throws IOException
      *             in load model config
      */
-    private void loadModelConfig() throws IOException {
+    protected void loadModelConfig() throws IOException {
         modelConfig = CommonUtils.loadModelConfig(
                 new Path(CommonUtils.getLocalModelSetPath(otherConfigs), Constants.LOCAL_MODEL_CONFIG_JSON).toString(),
                 SourceType.LOCAL);
@@ -726,6 +737,29 @@ public class BasicModelProcessor {
             }
         }
         return 0;
+    }
+
+    protected String getStringParam(Map<String, Object> params, String propKey) {
+        if(MapUtils.isNotEmpty(params) && params.get(propKey) instanceof String) {
+            return (String) params.get(propKey);
+        }
+        return null;
+    }
+
+    protected List<EvalConfig> getEvalConfigList(String encodeDataSets) {
+        List<EvalConfig> evalSetList = new ArrayList<EvalConfig>();
+
+        if(StringUtils.isNotBlank(encodeDataSets)) {
+            String[] evalList = encodeDataSets.split(",");
+            for(String eval: evalList) {
+                EvalConfig evalConfig = modelConfig.getEvalConfigByName(eval);
+                if(evalConfig != null) {
+                    evalSetList.add(evalConfig);
+                }
+            }
+        }
+
+        return evalSetList;
     }
 
 }

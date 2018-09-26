@@ -15,15 +15,14 @@
  */
 package ml.shifu.shifu.util;
 
+import com.google.common.base.Splitter;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.commons.lang.StringUtils;
-
-import com.google.common.base.Splitter;
-
-import ml.shifu.shifu.container.obj.ColumnConfig;
 
 /**
  * {@link BinUtils} is used to for almost all kinds of utility function in this framework.
@@ -135,7 +134,7 @@ public final class BinUtils {
      * @return bin index, -1 if invalid values
      */
     public static int getCategoicalBinIndex(List<String> binCategories, String columnVal) {
-        if(StringUtils.isBlank(columnVal)) {
+        if(StringUtils.isBlank(columnVal) || CollectionUtils.isEmpty(binCategories)) {
             return -1;
         }
         for(int i = 0; i < binCategories.size(); i++) {

@@ -148,6 +148,9 @@ public interface Constants {
     public static final String CORRELATION_PATH = "CorrelationPath";
     public static final String TAB_STR = "\t";
 
+    public static final String TRAIN_DATA_ENCODE_PATH = "encodedTrainData";
+    public static final String EVAL_DATA_ENCODE_PREFIX = "encodedEval";
+
     public static final String KEY_POSTTRAIN_OUT_PATH = "posttrainOutputPath";
     public static final String KEY_PRE_TRAIN_STATS_PATH = "preTrainStatsPath";
     public static final String KEY_PRE_PSI_PATH = "StatsPSIPath";

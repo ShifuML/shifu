@@ -100,4 +100,12 @@ public class StringUtils {
             return new String(bytes, "UTF-8");
         }
     }
+
+    public static String join(String[] cols) {
+        StringBuffer buf = new StringBuffer();
+        for(String col : cols) {
+            buf.append(col);
+        }
+        return buf.toString();
+    }
 }

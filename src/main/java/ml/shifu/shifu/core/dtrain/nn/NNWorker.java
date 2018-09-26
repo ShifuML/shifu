@@ -78,7 +78,9 @@ public class NNWorker extends AbstractNNWorker<Text> {
 
         String[] fields = Lists.newArrayList(this.splitter.split(currentValue.getWritable().toString()))
                 .toArray(new String[0]);
-        for(int pos = 0; pos < fields.length;) {
+        int pos = 0;
+
+        for(pos = 0; pos < fields.length;) {
             String input = fields[pos];
             // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
             float floatValue = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(input, 0f);
@@ -131,12 +133,15 @@ public class NNWorker extends AbstractNNWorker<Text> {
                     pos++;
                 } else {
                     if(subFeatureSet.contains(index)) {
-                        if(columnConfig != null && columnConfig.isNumerical()
-                                && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)) {
+                        if ( columnConfig.isMeta() || columnConfig.isForceRemove() ) {
+                            // it shouldn't happen here
+                            pos += 1;
+                        } else if ( columnConfig != null && columnConfig.isNumerical()
+                                && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT) ) {
                             for(int k = 0; k < columnConfig.getBinBoundary().size() + 1; k++) {
                                 String tval = fields[pos];
                                 // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-                                float fval = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
+                                float fval = tval.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
                                 // no idea about why NaN in input data, we should process it as missing value TODO ,
                                 // according to norm type
                                 fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? 0f : fval;
@@ -149,7 +154,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
                             for(int k = 0; k < columnConfig.getBinCategory().size() + 1; k++) {
                                 String tval = fields[pos];
                                 // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-                                float fval = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
+                                float fval = tval.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
                                 // no idea about why NaN in input data, we should process it as missing value TODO ,
                                 // according to norm type
                                 fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? 0f : fval;
@@ -162,7 +167,9 @@ public class NNWorker extends AbstractNNWorker<Text> {
                         }
                         hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
                     } else {
-                        if(columnConfig.isNumerical()
+                        if ( columnConfig.isMeta() || columnConfig.isForceRemove() ) {
+                            pos += 1;
+                        } else if ( columnConfig.isNumerical()
                                 && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)
                                 && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1) {
                             pos += (columnConfig.getBinBoundary().size() + 1);
@@ -178,6 +185,13 @@ public class NNWorker extends AbstractNNWorker<Text> {
                 }
             }
             index += 1;
+        }
+
+        if ( index != this.columnConfigList.size() || pos != fields.length - 1 ) {
+            throw new RuntimeException("Wrong data indexing. ColumnConfig index = " + index
+                    + ", while it should be " + columnConfigList.size() + ". "
+                    + "Data Pos = " + pos
+                    + ", while it should be " + (fields.length - 1));
         }
 
         // output delimiter in norm can be set by user now and if user set a special one later changed, this exception

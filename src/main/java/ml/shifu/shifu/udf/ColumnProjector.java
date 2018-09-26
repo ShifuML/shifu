@@ -18,6 +18,8 @@ package ml.shifu.shifu.udf;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+
+import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.ShifuFileUtils;
@@ -39,9 +41,7 @@ import org.apache.pig.tools.pigstats.PigStatusReporter;
 /**
  * To project only useful columns used in eval sorting. Meta, target, weight and score columns should be included.
  */
-public class ColumnProjector extends AbstractTrainerUDF<Tuple> {
-
-    private EvalConfig evalConfig;
+public class ColumnProjector extends AbstractEvalUDF<Tuple> {
 
     private String scoreMetaColumn;
 
@@ -62,14 +62,9 @@ public class ColumnProjector extends AbstractTrainerUDF<Tuple> {
      */
     private int weightExceptions;
 
-    public ColumnProjector(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
-        super(source, pathModelConfig, pathColumnConfig);
-    }
-
     public ColumnProjector(String source, String pathModelConfig, String pathColumnConfig, String evalSetName,
             String columnName) throws IOException {
-        super(source, pathModelConfig, pathColumnConfig);
-        this.evalConfig = modelConfig.getEvalConfigByName(evalSetName);
+        super(source, pathModelConfig, pathColumnConfig, evalSetName);
         this.scoreMetaColumn = columnName;
 
         // create model runner
@@ -119,7 +114,7 @@ public class ColumnProjector extends AbstractTrainerUDF<Tuple> {
     @Override
     public Tuple exec(Tuple input) throws IOException {
         Tuple tuple = TupleFactory.getInstance().newTuple(3);
-        String tag = input.get(targetColumnIndex).toString();
+        String tag = CommonUtils.trimTag(input.get(targetColumnIndex).toString());
         tuple.set(0, tag);
         double score = 0;
         try {

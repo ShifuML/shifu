@@ -766,6 +766,15 @@
                                 "directive": "input"
                             }                            
                          ]
+                    }, {
+                        "name": "OutputActivationFunc",
+                        "type": "text",
+                        "directive": "select",
+                        "defval": "Linear",
+                        "options": [
+                            {"label": "Linear", "value":"Linear"},
+                            {"label": "ReLU", "value":"ReLU"}
+                        ]
                     }
                 ]
             }, {

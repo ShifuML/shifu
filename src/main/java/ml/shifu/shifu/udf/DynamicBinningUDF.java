@@ -24,6 +24,7 @@ import ml.shifu.shifu.util.HdfsPartFile;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.pig.Accumulator;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
@@ -36,11 +37,15 @@ import java.util.*;
 /**
  * Created by zhanhu on 7/6/16.
  */
-public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
+public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> implements Accumulator<Tuple> {
 
     private HashMap<Integer, String> smallBinsMap;
-
     private String smallBinsPath;
+
+    private Integer columnId = null;
+    private ColumnConfig columnConfig = null;
+    private List<NumBinInfo> binInfoList = null;
+    private String binsData = null;
 
     public DynamicBinningUDF(String source, String pathModelConfig, String pathColumnConfig, String smallBinsPath)
             throws IOException {
@@ -50,84 +55,13 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
 
     @Override
     public Tuple exec(Tuple input) throws IOException {
-        // move initialization from constructor to be here because of Pig UDF will be called in client which will cause
-        // OOM in there
-        if (smallBinsMap == null) {
-            smallBinsMap = new HashMap<Integer, String>();
-            initSmallBinMap();
-        }
-
         if (input == null || input.size() != 1) {
             return null;
         }
 
-        Integer columnId = null;
-        ColumnConfig columnConfig = null;
-        String binsData = null;
-
-        Set<String> missingValSet = new HashSet<String>(super.modelConfig.getMissingOrInvalidValues());
-        List<NumBinInfo> binInfoList = null;
-
-        DataBag columnDataBag = (DataBag) input.get(0);
-        Iterator<Tuple> iterator = columnDataBag.iterator();
-        while (iterator.hasNext()) {
-            Tuple tuple = iterator.next();
-            if (columnId == null) {
-                columnId = (Integer) tuple.get(0);
-
-                // for filter expansions
-                if (columnId >= super.columnConfigList.size()) {
-                    int newColumnId = columnId % super.columnConfigList.size();
-                    columnConfig = super.columnConfigList.get(newColumnId);
-                } else {
-                    columnConfig = super.columnConfigList.get(columnId);
-                }
-
-                String smallBins = smallBinsMap.get(columnId);
-                if (columnConfig.isCategorical()) {
-                    binsData = smallBins;
-                    break;
-                } else {
-                    binInfoList = NumBinInfo.constructNumBinfo(smallBins, AbstractBinning.FIELD_SEPARATOR);
-                }
-            }
-
-            String val = (String) tuple.get(1);
-            Boolean isPositiveInst = (Boolean) tuple.get(2);
-
-            if (missingValSet.contains(val)) {
-                continue;
-            }
-
-            Double d = null;
-
-            try {
-                d = Double.valueOf(val);
-            } catch (Exception e) {
-                // illegal number, just skip it
-                continue;
-            }
-
-            NumBinInfo numBinInfo = binaryLocate(binInfoList, d);
-            if (numBinInfo != null) {
-                numBinInfo.incInstCnt(isPositiveInst);
-            }
-        }
-
-        if (binsData == null && CollectionUtils.isNotEmpty(binInfoList)) {
-            int maxNumBin = modelConfig.getStats().getMaxNumBin();
-            if (maxNumBin <= 0) {
-                maxNumBin = 1024;
-            }
-            DynamicBinning dynamicBinning = new DynamicBinning(binInfoList, maxNumBin);
-            List<Double> binFields = dynamicBinning.getDataBin();
-            binsData = StringUtils.join(binFields, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
-        }
-
-        Tuple output = TupleFactory.getInstance().newTuple(2);
-
-        output.set(0, columnId);
-        output.set(1, binsData);
+        accumulate(input);
+        Tuple output = getValue();
+        cleanup();
 
         return output;
     }
@@ -177,5 +111,98 @@ public class DynamicBinningUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         return null;
+    }
+
+    @Override
+    public void accumulate(Tuple input) throws IOException {
+        // move initialization from constructor to be here because of Pig UDF will be called in client which will cause
+        // OOM in there
+        if (smallBinsMap == null) {
+            smallBinsMap = new HashMap<Integer, String>();
+            initSmallBinMap();
+        }
+
+        Set<String> missingValSet = new HashSet<String>(super.modelConfig.getMissingOrInvalidValues());
+
+        DataBag columnDataBag = (DataBag) input.get(0);
+        Iterator<Tuple> iterator = columnDataBag.iterator();
+        while (iterator.hasNext()) {
+            Tuple tuple = iterator.next();
+            if (columnId == null) {
+                columnId = (Integer) tuple.get(0);
+
+                // for filter expansions
+                if (columnId >= super.columnConfigList.size()) {
+                    int newColumnId = columnId % super.columnConfigList.size();
+                    columnConfig = super.columnConfigList.get(newColumnId);
+                } else {
+                    columnConfig = super.columnConfigList.get(columnId);
+                }
+
+                String smallBins = smallBinsMap.get(columnId);
+                if (columnConfig.isCategorical()) {
+                    binsData = smallBins;
+                    break;
+                } else {
+                    binInfoList = NumBinInfo.constructNumBinfo(smallBins, AbstractBinning.FIELD_SEPARATOR);
+                }
+            }
+
+            if ( columnConfig.isCategorical() ) {
+                if ( binsData == null ) {
+                    binsData = smallBinsMap.get(columnId);
+                }
+                break;
+            }
+
+            String val = (String) tuple.get(1);
+            Boolean isPositiveInst = (Boolean) tuple.get(2);
+
+            if (missingValSet.contains(val)) {
+                continue;
+            }
+
+            Double d = null;
+
+            try {
+                d = Double.valueOf(val);
+            } catch (Exception e) {
+                // illegal number, just skip it
+                continue;
+            }
+
+            NumBinInfo numBinInfo = binaryLocate(binInfoList, d);
+            if (numBinInfo != null) {
+                numBinInfo.incInstCnt(isPositiveInst);
+            }
+        }
+    }
+
+    @Override
+    public Tuple getValue() {
+        if (binsData == null && CollectionUtils.isNotEmpty(binInfoList)) {
+            int maxNumBin = modelConfig.getStats().getMaxNumBin();
+            if (maxNumBin <= 0) {
+                maxNumBin = 1024;
+            }
+            DynamicBinning dynamicBinning = new DynamicBinning(binInfoList, maxNumBin);
+            List<Double> binFields = dynamicBinning.getDataBin();
+            binsData = StringUtils.join(binFields, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
+        }
+
+        Tuple output = TupleFactory.getInstance().newTuple();
+
+        output.append(columnId);
+        output.append(binsData);
+
+        return output;
+    }
+
+    @Override
+    public void cleanup() {
+        this.columnId = null;
+        this.columnConfig = null;
+        this.binInfoList = null;
+        this.binsData = null;
     }
 }

@@ -536,7 +536,7 @@ public class DTWorker extends
                 LOG.error("Error in get existing model, will ignore and start from scratch", e);
             }
             if(existingModel == null) {
-                LOG.warn("No mdel is found even set to continuous model training.");
+                LOG.warn("No model is found even set to continuous model training.");
                 return;
             } else {
                 recoverTrees = existingModel.getTrees();
@@ -1063,11 +1063,6 @@ public class DTWorker extends
             } else {
                 // for invalid category, set to last one
                 indexValue = (short) (columnConfig.getBinCategory().size());
-            }
-            if(split.getLeftOrRightCategories().contains(indexValue)) {
-                nextNode = currNode.getLeft();
-            } else {
-                nextNode = currNode.getRight();
             }
 
             Set<Short> childCategories = split.getLeftOrRightCategories();
