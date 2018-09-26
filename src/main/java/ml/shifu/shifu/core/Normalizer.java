@@ -19,7 +19,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.udf.NormalizeUDF.CategoryMissingNormType;
 import ml.shifu.shifu.util.BinUtils;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -439,7 +439,7 @@ public class Normalizer {
             categoryMissingNormType = CategoryMissingNormType.POSRATE;
         }
         double value = 0.0;
-        if (raw == null || StringUtils.EMPTY.equals(raw)) {
+        if (raw == null || StringUtils.isBlank(raw.toString())) {
             log.debug("Not decimal format but null, using default!");
             if(config.isCategorical()) {
                 value = fillDefaultValue(config, categoryMissingNormType);
