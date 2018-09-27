@@ -29,15 +29,15 @@ import org.dmg.pmml.Application;
 import org.dmg.pmml.DataDictionary;
 import org.dmg.pmml.Header;
 import org.dmg.pmml.LocalTransformations;
-import org.dmg.pmml.MiningFunctionType;
-import org.dmg.pmml.MiningModel;
+import org.dmg.pmml.MiningFunction;
+import org.dmg.pmml.mining.MiningModel;
+import org.dmg.pmml.mining.Segment;
+import org.dmg.pmml.mining.Segmentation;
+import org.dmg.pmml.mining.Segmentation.MultipleModelMethod;
 import org.dmg.pmml.MiningSchema;
 import org.dmg.pmml.Model;
 import org.dmg.pmml.ModelStats;
-import org.dmg.pmml.MultipleModelMethodType;
 import org.dmg.pmml.PMML;
-import org.dmg.pmml.Segment;
-import org.dmg.pmml.Segmentation;
 import org.dmg.pmml.True;
 import org.encog.ml.BasicML;
 import org.slf4j.Logger;
@@ -121,14 +121,14 @@ public class PMMLTranslator {
         if(isOutBaggingToOne) {
             MiningModel miningModel = new MiningModel();
             miningModel.setMiningSchema(this.miningSchemaCreator.build(null));
-            miningModel.setFunctionName(MiningFunctionType.fromValue("regression"));
+            miningModel.setMiningFunction(MiningFunction.fromValue("regression"));
 
             miningModel.setTargets(((NNPmmlModelCreator) this.modelCreator).createTargets());
 
             Segmentation seg = new Segmentation();
             miningModel.setSegmentation(seg);
 
-            seg.setMultipleModelMethod(MultipleModelMethodType.fromValue("weightedAverage"));
+            seg.setMultipleModelMethod(MultipleModelMethod.fromValue("weightedAverage"));
             List<Segment> list = seg.getSegments();
             int idCount = 0;
             for(BasicML basicML: basicMLs) {
@@ -167,7 +167,7 @@ public class PMMLTranslator {
             // create variable transform
             model.setLocalTransformations(this.localTransformationsCreator.build(basicML));
             this.specifCreator.build(basicML, model);
-            pmml.withModels(model);
+            pmml.addModels(model);
         }
 
         return pmml;

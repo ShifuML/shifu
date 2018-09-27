@@ -20,6 +20,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.pmml.PMMLEncogNeuralNetworkModel;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
 import org.dmg.pmml.*;
+import org.dmg.pmml.neural_network.NeuralNetwork;
 import org.encog.ml.BasicML;
 import org.encog.neural.networks.BasicNetwork;
 
@@ -38,7 +39,7 @@ public class NNSpecifCreator extends AbstractSpecifCreator {
     public boolean build(BasicML basicML, Model model) {
         NeuralNetwork nnPmmlModel = (NeuralNetwork) model;
         new PMMLEncogNeuralNetworkModel().adaptMLModelToPMML((BasicNetwork) basicML, nnPmmlModel);
-        nnPmmlModel.withOutput(createNormalizedOutput());
+        nnPmmlModel.setOutput(createNormalizedOutput());
         return true;
     }
 
@@ -46,7 +47,7 @@ public class NNSpecifCreator extends AbstractSpecifCreator {
     public boolean build(BasicML basicML, Model model, int id) {
         NeuralNetwork nnPmmlModel = (NeuralNetwork) model;
         new PMMLEncogNeuralNetworkModel().adaptMLModelToPMML((BasicNetwork) basicML, nnPmmlModel);
-        nnPmmlModel.withOutput(createNormalizedOutput(id));
+        nnPmmlModel.setOutput(createNormalizedOutput(id));
         return true;
     }
 }
