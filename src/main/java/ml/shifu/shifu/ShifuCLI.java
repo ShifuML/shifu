@@ -24,21 +24,9 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
-import ml.shifu.shifu.core.processor.BasicModelProcessor;
-import ml.shifu.shifu.core.processor.ComboModelProcessor;
-import ml.shifu.shifu.core.processor.CreateModelProcessor;
-import ml.shifu.shifu.core.processor.EvalModelProcessor;
+import ml.shifu.shifu.core.processor.*;
 import ml.shifu.shifu.core.processor.EvalModelProcessor.EvalStep;
-import ml.shifu.shifu.core.processor.ExportModelProcessor;
-import ml.shifu.shifu.core.processor.InitModelProcessor;
-import ml.shifu.shifu.core.processor.ManageModelProcessor;
 import ml.shifu.shifu.core.processor.ManageModelProcessor.ModelAction;
-import ml.shifu.shifu.core.processor.NormalizeModelProcessor;
-import ml.shifu.shifu.core.processor.PostTrainModelProcessor;
-import ml.shifu.shifu.core.processor.Processor;
-import ml.shifu.shifu.core.processor.StatsModelProcessor;
-import ml.shifu.shifu.core.processor.TrainModelProcessor;
-import ml.shifu.shifu.core.processor.VarSelectModelProcessor;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
@@ -84,8 +72,8 @@ public class ShifuCLI {
     private static final String NEW = "new";
 
     private static final String CMD_EXPORT = "export";
-
     private static final String CMD_COMBO = "combo";
+    private static final String CMD_ENCODE = "encode";
 
     // options for stats
     private static final String CORRELATION = "correlation";
@@ -111,6 +99,8 @@ public class ShifuCLI {
     private static final String CONFMAT = "confmat";
     private static final String PERF = "perf";
     private static final String NORM = "norm";
+    private static final String NOSORT = "nosort";
+    private static final String REF = "ref";
 
     private static final String SAVE = "save";
     private static final String SWITCH = "switch";
@@ -274,6 +264,11 @@ public class ShifuCLI {
                     } else {
                         log.info("Do model training with error, please check error message or report issue.");
                     }
+                } else if (cleanedArgs[0].equals(CMD_ENCODE)) {
+                    Map<String, Object> params = new HashMap<String, Object>();
+                    params.put(ModelDataEncodeProcessor.ENCODE_DATA_SET, cmd.getOptionValue(EVAL_CMD_RUN));
+                    params.put(ModelDataEncodeProcessor.ENCODE_REF_MODEL, cmd.getOptionValue(REF));
+                    status = runEncode(params);
                 } else if(cleanedArgs[0].equals(CMD_COMBO)) {
                     if(cmd.hasOption(MODELSET_CMD_NEW)) {
                         log.info("Create new commbo models");
@@ -313,6 +308,8 @@ public class ShifuCLI {
                     ManageModelProcessor p = new ManageModelProcessor(ModelAction.SHOW, null);
                     p.run();
                 } else if(cleanedArgs[0].equals(EVAL_CMD)) {
+                    Map<String, Object> params = new HashMap<String, Object>();
+
                     // eval step
                     if(cleanedArgs.length == 1) {
                         // run everything
@@ -331,20 +328,18 @@ public class ShifuCLI {
                         runEvalSet(cmd.getOptionValue(EVAL_CMD_RUN), cmd.hasOption(TRAIN_CMD_DRY));
                         log.info("Finish run eval performance with eval set {}.", cmd.getOptionValue(EVAL_CMD_RUN));
                     } else if(cmd.hasOption(SCORE)) {
+                        params.put(EvalModelProcessor.NOSORT, cmd.hasOption(NOSORT));
                         // run score
-                        runEvalScore(cmd.getOptionValue(SCORE));
+                        runEvalScore(cmd.getOptionValue(SCORE), params);
                         log.info("Finish run score with eval set {}.", cmd.getOptionValue(SCORE));
                     } else if(cmd.hasOption(CONFMAT)) {
-
                         // run confusion matrix
                         runEvalConfMat(cmd.getOptionValue(CONFMAT));
                         log.info("Finish run confusion matrix with eval set {}.", cmd.getOptionValue(CONFMAT));
-
                     } else if(cmd.hasOption(PERF)) {
                         // run perfermance
                         runEvalPerf(cmd.getOptionValue(PERF));
                         log.info("Finish run performance maxtrix with eval set {}.", cmd.getOptionValue(PERF));
-
                     } else if(cmd.hasOption(LIST)) {
                         // list all evaluation sets
                         listEvalSet();
@@ -497,8 +492,8 @@ public class ShifuCLI {
         return p.run();
     }
 
-    public static int runEvalScore(String evalSetNames) throws Exception {
-        EvalModelProcessor p = new EvalModelProcessor(EvalStep.SCORE, evalSetNames);
+    public static int runEvalScore(String evalSetNames, Map<String, Object> params) throws Exception {
+        EvalModelProcessor p = new EvalModelProcessor(EvalStep.SCORE, evalSetNames, params);
         return p.run();
     }
 
@@ -566,6 +561,11 @@ public class ShifuCLI {
         p.checkAlgorithmParam();
     }
 
+    private static int runEncode(Map<String,Object> params) {
+        ModelDataEncodeProcessor processor = new ModelDataEncodeProcessor(params);
+        return processor.run();
+    }
+
     private static void printModelSetCopiedSuccessfulLog(String newModelSetName) {
         log.info(String.format("ModelSet %s is copied successfully with ModelConfig.json in %s folder.",
                 newModelSetName, newModelSetName));
@@ -624,6 +624,8 @@ public class ShifuCLI {
         Option opt_norm = OptionBuilder.hasArg().create(NORM);
         Option opt_eval = OptionBuilder.hasArg(false).create(EVAL_CMD);
         Option opt_init = OptionBuilder.hasArg(false).create(INIT_CMD);
+        Option opt_nosort = OptionBuilder.hasArg(false).create(NOSORT);
+        Option opt_ref = OptionBuilder.hasArg(true).create(REF);
 
         // options for variable re-binning
         Option opt_rebin = OptionBuilder.hasArg(false).create(REBIN);
@@ -646,6 +648,8 @@ public class ShifuCLI {
         opts.addOption(opt_debug);
         opts.addOption(opt_model);
         opts.addOption(opt_concise);
+        opts.addOption(opt_nosort);
+        opts.addOption(opt_ref);
 
         opts.addOption(opt_reset);
         opts.addOption(opt_filter_auto);
@@ -701,6 +705,7 @@ public class ShifuCLI {
         System.out.println(
                 "\tvarselect/varsel -autofilter            Auto filter variables by MissingRate, KS/IV, and Correlation.");
         System.out.println("\tvarselect/varsel -recoverauto           Recover those variables that are auto-filtered.");
+        System.out.println("\tvarselect/varsel -r                     Run variable selection recursively.");
         System.out.println("\tnormalize/norm/transform [-shuffle]     Normalize the columns with finalSelect as true.");
         System.out.println("\ttrain [-dry] [-shuffle]                 Train the model with the normalized data.");
         System.out.println("\tposttrain                               Post-process data after training models.");
@@ -709,7 +714,7 @@ public class ShifuCLI {
         System.out.println("\teval -new     <EvalSetName>             Create a new eval set.");
         System.out.println("\teval -delete  <EvalSetName>             Delete an eval set.");
         System.out.println("\teval -run     <EvalSetName>             Run eval set evaluation.");
-        System.out.println("\teval -score   <EvalSetName>             Scoring evaluation dataset.");
+        System.out.println("\teval -score   <EvalSetName> [-nosort]   Scoring evaluation dataset.");
         System.out.println("\teval -norm    <EvalSetName>             Normalize evaluation dataset.");
         System.out.println("\teval -confmat <EvalSetName>             Compute the TP/FP/TN/FN based on scoring");
         System.out
@@ -723,6 +728,8 @@ public class ShifuCLI {
         System.out.println("\tcombo -init                             Generate sub-models.");
         System.out.println("\tcombo -run [-shuffle] [-resume]         Run Combo-Model train.");
         System.out.println("\tcombo -eval [-resume]                   Evaluate Combo-Model performance.");
+        System.out.println("\tencode -run [TDS|EvalSetNames] [-ref encode_ref_model]");
+        System.out.println("\t                                        Run encode on training or evaluation datasets and set them to encode_ref_model.");
         System.out.println("\tversion|v|-v|-version                   Print version of current package.");
         System.out.println("\thelp|h|-h|-help                         Help message.");
     }

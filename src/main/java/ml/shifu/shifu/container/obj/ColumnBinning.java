@@ -15,9 +15,11 @@
  */
 package ml.shifu.shifu.container.obj;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 import java.util.List;
+import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
  * ColumnBinning class represents the information of BINNING. Usually the BINNING information will be used to calculate
@@ -41,6 +43,12 @@ public class ColumnBinning {
      * Works for categorical feature, it is all categories of such column
      */
     private List<String> binCategory;
+
+    /**
+     * A map version of {@link #binCategory},
+     */
+    @JsonIgnore
+    private Map<String, Integer> binCateMap;
 
     /**
      * Count of negative records in bins
@@ -182,6 +190,16 @@ public class ColumnBinning {
      */
     public void setBinWeightedWoe(List<Double> binWeightedWoe) {
         this.binWeightedWoe = binWeightedWoe;
+    }
+
+    @JsonIgnore
+    public Map<String, Integer> getBinCateMap() {
+        return binCateMap;
+    }
+
+    @JsonIgnore
+    public void setBinCateMap(Map<String, Integer> binCateMap) {
+        this.binCateMap = binCateMap;
     }
 
 }

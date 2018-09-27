@@ -15,8 +15,6 @@
  */
 package ml.shifu.shifu.util;
 
-import java.text.DecimalFormat;
-
 import org.apache.commons.jexl2.Expression;
 import org.apache.commons.jexl2.JexlContext;
 import org.apache.commons.jexl2.JexlEngine;
@@ -24,6 +22,8 @@ import org.apache.commons.jexl2.MapContext;
 import org.apache.commons.lang.math.NumberUtils;
 import org.testng.Assert;
 import org.testng.annotations.Test;
+
+import java.text.DecimalFormat;
 
 /**
  * JexlTest class
@@ -237,6 +237,20 @@ public class JexlTest {
         System.out.println((result instanceof Integer));
         System.out.println((result instanceof Double));
         System.out.println(result.toString());
+    }
+
+    @Test
+    public void testJavaCompare() {
+        JexlEngine jexl = new JexlEngine();
+        String jexlExp = "time_window == 'DEV' and live_xm_send_amount <= 10000.0";
+
+        Expression e = jexl.createExpression(jexlExp);
+
+        JexlContext jc = new MapContext();
+        jc.set("time_window", "DEV");
+        jc.set("live_xm_send_amount", "50");
+
+        Assert.assertEquals(Boolean.TRUE, e.evaluate(jc));
     }
 
     @Test

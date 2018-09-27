@@ -364,9 +364,11 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
         int featureInputsCnt = DTrainUtils.getFeatureInputsCnt(modelConfig, columnConfigList, this.subFeatures);
 
+        String outputActivationFunc = (String)validParams.get(CommonConstants.OUTPUT_ACTIVATION_FUNC);
+
         this.network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers, actFunc,
                 hiddenNodeList, false, this.dropoutRate, this.wgtInit,
-                CommonUtils.isLinearTarget(modelConfig, columnConfigList));
+                CommonUtils.isLinearTarget(modelConfig, columnConfigList), outputActivationFunc);
         ((BasicFloatNetwork) this.network).setFeatureSet(this.subFeatures);
 
         // register here to save models

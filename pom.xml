@@ -14,8 +14,9 @@
 		<rpmDisabled>true</rpmDisabled>
 		<maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
 		<powermock.version>1.5.1</powermock.version>
-		<guagua.version>0.7.7</guagua.version>
+		<guagua.version>0.8.0-SNAPSHOT</guagua.version>
 	</properties>
+
 	<url>https://github.com/ShifuML/shifu/</url>
 	<licenses>
 		<license>
@@ -72,6 +73,11 @@
 		</developer>
 		<developer>
 			<name>Wu Devin</name>
+			<organization>PayPal</organization>
+			<organizationUrl>http://www.paypal.com</organizationUrl>
+		</developer>
+		<developer>
+			<name>Bai Fred</name>
 			<organization>PayPal</organization>
 			<organizationUrl>http://www.paypal.com</organizationUrl>
 		</developer>
@@ -222,11 +228,11 @@
 			<artifactId>commons-lang3</artifactId>
 			<version>3.3.2</version>
 		</dependency>
-        <dependency>
-            <groupId>org.apache.pig</groupId>
-            <artifactId>piggybank</artifactId>
-            <version>0.14.0</version>
-        </dependency>
+		<dependency>
+			<groupId>org.apache.pig</groupId>
+			<artifactId>piggybank</artifactId>
+			<version>0.14.0</version>
+		</dependency>
 	</dependencies>
 	<build>
 		<resources>
@@ -654,6 +660,7 @@
 			<properties>
 				<platform.version>hdp-yarn</platform.version>
 			</properties>
+
 			<build>
 				<plugins>
 					<plugin>
@@ -738,17 +745,17 @@
 					</exclusions>
 					<classifier>h2</classifier>
 				</dependency>
-                <dependency>
-                    <groupId>org.apache.pig</groupId>
-                    <artifactId>piggybank</artifactId>
-                    <version>0.14.0</version>
-                    <exclusions>
-                        <exclusion>
-                            <groupId>*</groupId>
-                            <artifactId>*</artifactId>
-                        </exclusion>
-                    </exclusions>
-                </dependency>
+				<dependency>
+					<groupId>org.apache.pig</groupId>
+					<artifactId>piggybank</artifactId>
+					<version>0.14.0</version>
+					<exclusions>
+						<exclusion>
+							<groupId>*</groupId>
+							<artifactId>*</artifactId>
+						</exclusion>
+					</exclusions>
+				</dependency>
 				<dependency>
 					<groupId>dk.brics.automaton</groupId>
 					<artifactId>automaton</artifactId>

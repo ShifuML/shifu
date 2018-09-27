@@ -31,7 +31,7 @@ import java.util.Map;
 /**
  * {@link PathFinder} is used to obtain all files which can be used in our framework. Some are used for training,
  * evaling, performance ...
- * 
+ *
  * <p>
  * {@link #modelConfig} should be passed as parameter in constructor
  */
@@ -54,7 +54,7 @@ public class PathFinder {
 
     /**
      * Constructor with valid parameter modelConfig
-     * 
+     *
      * @param modelConfig
      *            the model config
      * @throws IllegalArgumentException
@@ -69,7 +69,7 @@ public class PathFinder {
 
     /**
      * Constructor with valid parameter modelConfig
-     * 
+     *
      * @param modelConfig
      *            - modelConfig to find
      * @param otherConfigs
@@ -86,7 +86,7 @@ public class PathFinder {
      * Get absolute path with SHIFU_HOME env.
      * - if the path is already absolute path, just return
      * - or assume it is relative path to SHIFU_HOME
-     * 
+     *
      * @param path
      *            the given path
      * @return absolute path the absolute path
@@ -123,7 +123,7 @@ public class PathFinder {
     /**
      * Get project jar file path name.
      * - Since the Jar Path is only used in pig code compiling, just return local path
-     * 
+     *
      * @return path of SHIFU dependent jars
      */
     public String getJarPath() {
@@ -144,7 +144,7 @@ public class PathFinder {
     /**
      * Get reason code path name.
      * - Reason code file may be used in MapReduce job, so it should have hdfs path
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of reason code file
@@ -163,7 +163,7 @@ public class PathFinder {
 
     /**
      * Get the file path of ModelConfig
-     * 
+     *
      * @return path to ModelConfig
      */
     public String getModelConfigPath() {
@@ -172,7 +172,7 @@ public class PathFinder {
 
     /**
      * Get the file path of ModelConfig
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path to ModelConfig
@@ -183,7 +183,7 @@ public class PathFinder {
 
     /**
      * Get the file path of ColumnConfig
-     * 
+     *
      * @return path to ColumnConfig
      */
     public String getColumnConfigPath() {
@@ -192,7 +192,7 @@ public class PathFinder {
 
     /**
      * Get the file path of ColumnConfig
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of ColumnConfig
@@ -210,7 +210,7 @@ public class PathFinder {
 
     /**
      * Get pre-traing stats path.
-     * 
+     *
      * @return path of pre-training stats file
      */
     public String getPreTrainingStatsPath() {
@@ -219,7 +219,7 @@ public class PathFinder {
 
     /**
      * Get pre-traing stats path.
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of pre-training stats file
@@ -241,7 +241,7 @@ public class PathFinder {
 
     /**
      * Get stats small bins path
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of stats small-bin file
@@ -252,7 +252,7 @@ public class PathFinder {
 
     /**
      * Get post train out put path
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of pre-training stats file
@@ -270,7 +270,7 @@ public class PathFinder {
 
     /**
      * Get auto type distinct count file path.
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of auto type folder name
@@ -288,7 +288,7 @@ public class PathFinder {
 
     /**
      * Get correlation result file path.
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of auto type folder name
@@ -306,7 +306,7 @@ public class PathFinder {
 
     /**
      * Get the path for select raw data
-     * 
+     *
      * @return path of selected raw data
      */
     public String getSelectedRawDataPath() {
@@ -315,7 +315,7 @@ public class PathFinder {
 
     /**
      * Get the path for select raw data
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of selected raw data
@@ -333,7 +333,7 @@ public class PathFinder {
 
     /**
      * Get the path of normalized data
-     * 
+     *
      * @return path of normalized data
      */
     public String getNormalizedDataPath() {
@@ -342,7 +342,7 @@ public class PathFinder {
 
     /**
      * Get the path of normalized cross validation data
-     * 
+     *
      * @return path of normalized cross validation data
      */
     public String getNormalizedValidationDataPath() {
@@ -351,7 +351,7 @@ public class PathFinder {
 
     /**
      * Get the path of normalized data
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of normalized data
@@ -373,7 +373,7 @@ public class PathFinder {
 
     /**
      * Clean and filter raw data set for RF/GBT model inputs
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of normalized data
@@ -395,7 +395,7 @@ public class PathFinder {
 
     /**
      * Clean and filter raw validation data set for RF/GBT model inputs
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of normalized data
@@ -413,7 +413,7 @@ public class PathFinder {
 
     /**
      * Get the path of validation normalized data
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of normalized data
@@ -431,7 +431,7 @@ public class PathFinder {
 
     /**
      * Get the path of varselect MSE stats path.
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of var select MSE stats path
@@ -449,7 +449,7 @@ public class PathFinder {
 
     /**
      * Get the path of varselect MSE stats path.
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of var select MSE stats path
@@ -482,7 +482,7 @@ public class PathFinder {
 
     /**
      * Get the path of models
-     * 
+     *
      * @return path of models
      */
     public String getModelsPath() {
@@ -491,7 +491,7 @@ public class PathFinder {
 
     /**
      * Get the path of models
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of models
@@ -502,7 +502,7 @@ public class PathFinder {
 
     /**
      * Get the path of one bagging model
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of models
@@ -513,7 +513,7 @@ public class PathFinder {
 
     /**
      * Get the path ofnn binary models
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of models
@@ -528,7 +528,7 @@ public class PathFinder {
 
     /**
      * Get the path of models
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of models
@@ -556,7 +556,7 @@ public class PathFinder {
 
     /**
      * Get the path of average score for each bin
-     * 
+     *
      * @return path of bin average score
      */
     public String getBinAvgScorePath() {
@@ -565,7 +565,7 @@ public class PathFinder {
 
     /**
      * Get the path of average score for each bin
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of bin average score
@@ -583,7 +583,7 @@ public class PathFinder {
 
     /**
      * Get the path of train score
-     * 
+     *
      * @return path of train score
      */
     public String getTrainScoresPath() {
@@ -592,7 +592,7 @@ public class PathFinder {
 
     /**
      * Get the path of train score
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of train score
@@ -610,7 +610,7 @@ public class PathFinder {
 
     /**
      * Get the evaluation root path according the source type
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return path of evaluation root
@@ -622,7 +622,7 @@ public class PathFinder {
 
     /**
      * Get evaluation set home directory
-     * 
+     *
      * @param evalConfig
      *            - EvalConfig to find
      * @return path of evaluation set home directory
@@ -633,7 +633,7 @@ public class PathFinder {
 
     /**
      * Get evaluation set home directory, something like Model/eval/evalName)
-     * 
+     *
      * @param evalConfig
      *            - EvalConfig to find
      * @param sourceType
@@ -646,7 +646,7 @@ public class PathFinder {
 
     /**
      * Get evaluation set home directory, something like eval name
-     * 
+     *
      * @param evalName
      *            - evalset name to find
      * @param sourceType
@@ -659,7 +659,7 @@ public class PathFinder {
 
     /**
      * Get the path of evaluation normalized data
-     * 
+     *
      * @param evalConfig
      *            - EvalConfig to find
      * @return path of evaluation normalized data
@@ -670,7 +670,7 @@ public class PathFinder {
 
     /**
      * Get the path of evaluation normalized data
-     * 
+     *
      * @param evalConfig
      *            - EvalConfig to find
      * @param sourceType
@@ -683,7 +683,7 @@ public class PathFinder {
 
     /**
      * Get the path of evaluation score
-     * 
+     *
      * @param evalConfig
      *            - EvalConfig to find
      * @return path of evaluation score
@@ -694,7 +694,7 @@ public class PathFinder {
 
     /**
      * Get the path of evaluation score
-     * 
+     *
      * @param evalConfig
      *            - EvalConfig to find
      * @param metaColumn
@@ -716,7 +716,7 @@ public class PathFinder {
 
     /**
      * Get the path of evaluation score
-     * 
+     *
      * @param evalConfig
      *            - EvalConfig to find
      * @param sourceType
@@ -743,7 +743,7 @@ public class PathFinder {
 
     /**
      * Get the header path of evaluation score
-     * 
+     *
      * @param evalConfig
      *            - EvalConfig to find
      * @return path of evaluation score header
@@ -754,7 +754,7 @@ public class PathFinder {
 
     /**
      * Get the header path of evaluation score
-     * 
+     *
      * @param evalConfig
      *            - EvalConfig to find
      * @param sourceType
@@ -768,7 +768,7 @@ public class PathFinder {
 
     /**
      * Get the path of evaluation set performance for EvalMetaScore column
-     * 
+     *
      * @param evalConfig
      *            - EvalConfig to find
      * @param metaColumn
@@ -789,7 +789,7 @@ public class PathFinder {
 
     /**
      * Get the path of evaluation set performance
-     * 
+     *
      * @param evalConfig
      *            - EvalConfig to find
      * @return path of evaluation set performance
@@ -800,7 +800,7 @@ public class PathFinder {
 
     /**
      * Get the path of evaluation set performance
-     * 
+     *
      * @param evalConfig
      *            - EvalConfig to find
      * @param sourceType
@@ -827,7 +827,7 @@ public class PathFinder {
 
     /**
      * Get the file path for specified name under evaluation set home directory
-     * 
+     *
      * @param evalName
      *            - evalset name to find
      * @param specifiedFileName
@@ -859,7 +859,7 @@ public class PathFinder {
 
     /**
      * Get the local home directory for Model
-     * 
+     *
      * @return - the Path of local home directory
      */
     private Path getModelSetLocalPath() {
@@ -870,7 +870,7 @@ public class PathFinder {
 
     /**
      * Get the HDFS home directory for Model
-     * 
+     *
      * @return - the Path of HDFS home directory
      */
     private Path getModelSetHdfsPath() {
@@ -882,7 +882,7 @@ public class PathFinder {
 
     /**
      * Get the relative path to model home directory by source type
-     * 
+     *
      * @param path
      *            - the path to find
      * @param sourceType
@@ -904,7 +904,7 @@ public class PathFinder {
 
     /**
      * Get the relative path to model home directory by source type
-     * 
+     *
      * @param path
      *            - the path to find
      * @param sourceType
@@ -917,7 +917,7 @@ public class PathFinder {
 
     /**
      * Return local correlation csv path
-     * 
+     *
      * @return the local correlation csv path
      */
     public String getLocalCorrelationCsvPath() {
@@ -928,7 +928,7 @@ public class PathFinder {
      * Get the prefer path for files. Prefer path means:
      * - if the user set the path in customPaths, try to use it
      * - or return null
-     * 
+     *
      * @param customPaths
      *            - map of customer setting path
      * @param key
@@ -960,7 +960,7 @@ public class PathFinder {
 
     /**
      * Get the train data path for assemble model
-     * 
+     *
      * @return - train data path for assemble model
      */
     public String getSubModelsAssembleTrainData() {
@@ -970,7 +970,7 @@ public class PathFinder {
 
     /**
      * Get the eval data path for assemble model
-     * 
+     *
      * @param evalName
      *            - evalset name
      * @param sourceType
@@ -983,7 +983,7 @@ public class PathFinder {
 
     /**
      * Get the shuffle data path
-     * 
+     *
      * @return - the shuffle data path
      */
     public String getShuffleDataPath() {
@@ -992,7 +992,7 @@ public class PathFinder {
 
     /**
      * Get the shuffle data path according SourceType
-     * 
+     *
      * @param sourceType
      *            - Local/HDFS
      * @return - the shuffle data path
@@ -1003,7 +1003,7 @@ public class PathFinder {
 
     /**
      * Get the backup ColumnConfig
-     * 
+     *
      * @return - the ColumnConfig.json path for backup
      */
     public String getBackupColumnConfig() {
@@ -1023,7 +1023,7 @@ public class PathFinder {
 
     /**
      * Get the varsel auto filter history to let user have the opportunity to change
-     * 
+     *
      * @return - the varsel.history path for variable auto filter
      */
     public String getVarSelHistory() {
@@ -1032,7 +1032,7 @@ public class PathFinder {
 
     /**
      * Get the correlation export path
-     * 
+     *
      * @return - the correlation path for export
      */
     public String getCorrExportPath() {
@@ -1041,7 +1041,7 @@ public class PathFinder {
 
     /**
      * Get the ColumnConfig.json history by index
-     * 
+     *
      * @return - ColumnConfig.json path for variable selection history
      */
     public String getVarSelDir() {
@@ -1050,7 +1050,7 @@ public class PathFinder {
 
     /**
      * Get the ColumnConfig.json history by index
-     * 
+     *
      * @param index
      *            - the iteration of variable selection
      * @return - ColumnConfig.json path for variable selection history
@@ -1062,7 +1062,7 @@ public class PathFinder {
 
     /**
      * Get the SE history by index
-     * 
+     *
      * @param index
      *            - the iteration of variable selection
      * @return - se path for variable selection history
@@ -1079,5 +1079,14 @@ public class PathFinder {
      */
     public String getColumnConfigUnitStatsPath() {
         return getPathBySourceType(new Path(Constants.TMP, Constants.CC_UNIT_STATS_PATH), SourceType.LOCAL);
+    }
+
+    public String getEncodeDataPath(EvalConfig evalConfig) {
+        if ( evalConfig == null ) {
+            return getPathBySourceType(new Path(Constants.TMP, Constants.TRAIN_DATA_ENCODE_PATH), SourceType.HDFS);
+        } else {
+            return getPathBySourceType(new Path(Constants.TMP,
+                    Constants.EVAL_DATA_ENCODE_PREFIX + StringUtils.capitalize(evalConfig.getName())), SourceType.HDFS);
+        }
     }
 }

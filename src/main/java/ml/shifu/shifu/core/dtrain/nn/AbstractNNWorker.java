@@ -583,9 +583,10 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
+        String outputActivationFunc = (String)validParams.get(CommonConstants.OUTPUT_ACTIVATION_FUNC);
         BasicNetwork network = DTrainUtils.generateNetwork(this.featureInputsCnt, this.outputNodeCount, numLayers,
                 actFunc, hiddenNodeList, false, this.dropoutRate, this.wgtInit,
-                CommonUtils.isLinearTarget(modelConfig, columnConfigList));
+                CommonUtils.isLinearTarget(modelConfig, columnConfigList), outputActivationFunc);
         // use the weights from master
         network.getFlat().setWeights(weights);
 

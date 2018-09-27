@@ -18,11 +18,8 @@ package ml.shifu.shifu.udf;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.SortedMap;
 
 import ml.shifu.shifu.util.MultiClsTagPredictor;
 import org.apache.commons.collections.CollectionUtils;
@@ -57,7 +54,7 @@ import ml.shifu.shifu.util.Environment;
 /**
  * Calculate the score for each evaluation data
  */
-public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
+public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
 
     private static final String SHIFU_EVAL_SCORE_MULTITHREAD = "shifu.eval.score.multithread";
 
@@ -67,7 +64,6 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
     private static final String SCHEMA_PREFIX = "shifu::";
 
-    private EvalConfig evalConfig;
     private ModelRunner modelRunner;
     private String[] headers;
 
@@ -120,10 +116,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
     @SuppressWarnings("unchecked")
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName,
             String scale) throws IOException {
-        super(source, pathModelConfig, pathColumnConfig);
-
-        evalConfig = modelConfig.getEvalConfigByName(evalSetName);
-
+        super(source, pathModelConfig, pathColumnConfig, evalSetName);
         if(evalConfig.getModelsPath() != null) {
             // renew columnConfig
             this.columnConfigList = ShifuFileUtils.searchColumnConfig(evalConfig, columnConfigList);

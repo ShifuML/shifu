@@ -50,6 +50,7 @@ More details about shifu can be found in our [wiki pages](https://github.com/Shi
  - Sharma Nitin (nsharma1@paypal.com)
  - Wayne Zhu (wzhu1@paypal.com)
  - Devin Wu (haifwu@paypal.com)
+ - Fred Bai (webai@paypal.com)
 
 ## Google Group
 

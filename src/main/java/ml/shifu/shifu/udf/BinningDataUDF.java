@@ -66,7 +66,8 @@ public class BinningDataUDF extends AbstractTrainerUDF<Tuple> {
         ColumnConfig columnConfig = super.columnConfigList.get(columnId);
         AbstractBinning<?> binning = null;
         if(columnConfig.isCategorical()) {
-            binning = new CategoricalBinning(-1, this.maxCategorySize);
+            binning = new CategoricalBinning(-1, super.modelConfig.getMissingOrInvalidValues(),
+                    this.maxCategorySize);
         } else {
             if(super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)) {
                 binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin());

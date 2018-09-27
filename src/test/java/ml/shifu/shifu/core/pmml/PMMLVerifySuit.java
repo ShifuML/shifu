@@ -118,7 +118,7 @@ public class PMMLVerifySuit {
         FileUtils.copyDirectory(modelsDir, tmpModelsDir);
 
         // run evaluation set
-        ShifuCLI.runEvalScore(this.evalSetName);
+        ShifuCLI.runEvalScore(this.evalSetName, null);
         File evalScore = new File("evals" + File.separator + this.evalSetName + File.separator + "EvalScore");
 
         Map<String, Object> params = new HashMap<String, Object>();
