@@ -30,7 +30,7 @@ import org.dmg.pmml.FieldName;
 import org.dmg.pmml.LinearNorm;
 import org.dmg.pmml.NormContinuous;
 import org.dmg.pmml.OpType;
-import org.dmg.pmml.OutlierTreatmentMethodType;
+import org.dmg.pmml.OutlierTreatmentMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,16 +71,18 @@ public class WoeZscoreLocalTransformCreator extends WoeLocalTransformCreator {
         double[] meanAndStdDev = Normalizer.calculateWoeMeanAndStdDev(config, isWeightedNorm);
 
         // added capping logic to linearNorm
-        LinearNorm from = new LinearNorm().withOrig(meanAndStdDev[0] - meanAndStdDev[1] * cutoff).withNorm(-cutoff);
-        LinearNorm to = new LinearNorm().withOrig(meanAndStdDev[0] + meanAndStdDev[1] * cutoff).withNorm(cutoff);
-        NormContinuous normContinuous = new NormContinuous(FieldName.create(derivedField.getName().getValue()))
-                .withLinearNorms(from, to).withMapMissingTo(0.0)
-                .withOutliers(OutlierTreatmentMethodType.AS_EXTREME_VALUES);
+        LinearNorm from = new LinearNorm().setOrig(meanAndStdDev[0] - meanAndStdDev[1] * cutoff).setNorm(-cutoff);
+        LinearNorm to = new LinearNorm().setOrig(meanAndStdDev[0] + meanAndStdDev[1] * cutoff).setNorm(cutoff);
+        NormContinuous normContinuous = new NormContinuous();
+        normContinuous.setField(FieldName.create(derivedField.getName().getValue()));
+        normContinuous.addLinearNorms(from, to);
+        normContinuous.setMapMissingTo(0.0);
+        normContinuous.setOutliers(OutlierTreatmentMethod.AS_EXTREME_VALUES);
 
         // derived field name is consisted of FieldName and "_zscl"
         derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE)
-                .withName(FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config.getColumnName()), normType)))
-                .withExpression(normContinuous));
+                .setName(FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config.getColumnName()), normType)))
+                .setExpression(normContinuous));
 
         return derivedFields;
     }
@@ -102,16 +104,18 @@ public class WoeZscoreLocalTransformCreator extends WoeLocalTransformCreator {
         double[] meanAndStdDev = Normalizer.calculateWoeMeanAndStdDev(config, isWeightedNorm);
 
         // added capping logic to linearNorm
-        LinearNorm from = new LinearNorm().withOrig(meanAndStdDev[0] - meanAndStdDev[1] * cutoff).withNorm(-cutoff);
-        LinearNorm to = new LinearNorm().withOrig(meanAndStdDev[0] + meanAndStdDev[1] * cutoff).withNorm(cutoff);
-        NormContinuous normContinuous = new NormContinuous(FieldName.create(derivedField.getName().getValue()))
-                .withLinearNorms(from, to).withMapMissingTo(0.0)
-                .withOutliers(OutlierTreatmentMethodType.AS_EXTREME_VALUES);
+        LinearNorm from = new LinearNorm().setOrig(meanAndStdDev[0] - meanAndStdDev[1] * cutoff).setNorm(-cutoff);
+        LinearNorm to = new LinearNorm().setOrig(meanAndStdDev[0] + meanAndStdDev[1] * cutoff).setNorm(cutoff);
+        NormContinuous normContinuous = new NormContinuous();
+        normContinuous.setField(FieldName.create(derivedField.getName().getValue()));
+        normContinuous.addLinearNorms(from, to);
+        normContinuous.setMapMissingTo(0.0);
+        normContinuous.setOutliers(OutlierTreatmentMethod.AS_EXTREME_VALUES);
 
         // derived field name is consisted of FieldName and "_zscl"
         derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE)
-                .withName(FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config.getColumnName()), normType)))
-                .withExpression(normContinuous));
+                .setName(FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config.getColumnName()), normType)))
+                .setExpression(normContinuous));
 
         return derivedFields;
     }
