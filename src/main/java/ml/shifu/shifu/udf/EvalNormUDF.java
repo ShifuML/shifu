@@ -37,7 +37,6 @@ import org.encog.ml.BasicML;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.core.ModelRunner;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;

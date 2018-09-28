@@ -19,13 +19,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 
-import ml.shifu.shifu.column.NSColumn;
-import ml.shifu.shifu.container.obj.EvalConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,6 +30,11 @@ import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
 import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
+
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 
 /**
  * To project only useful columns used in eval sorting. Meta, target, weight and score columns should be included.

@@ -45,6 +45,7 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> implements
 
     private Integer columnId =  null;
     private ColumnConfig columnConfig = null;
+    @SuppressWarnings("rawtypes")
     private AbstractBinning binning = null;
 
     public GenSmallBinningInfoUDF(String source, String pathModelConfig, String pathColumnConfig,

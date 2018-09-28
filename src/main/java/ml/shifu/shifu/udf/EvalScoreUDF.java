@@ -18,10 +18,12 @@ package ml.shifu.shifu.udf;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.SortedMap;
 
-import ml.shifu.shifu.util.MultiClsTagPredictor;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
@@ -39,7 +41,6 @@ import org.encog.ml.BasicML;
 
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
-import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ModelRunner;
 import ml.shifu.shifu.core.Scorer;
@@ -50,6 +51,7 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.MultiClsTagPredictor;
 
 /**
  * Calculate the score for each evaluation data

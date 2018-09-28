@@ -21,6 +21,7 @@ import java.util.Random;
  * limitations under the License.
  **/
 
+@SuppressWarnings("unused")
 public class GBTBuilder extends TreeBuilder {
 
     /**
