@@ -18,19 +18,31 @@ package ml.shifu.shifu.core.pmml;
 import java.util.HashMap;
 import java.util.List;
 
-import org.dmg.pmml.*;
+import org.dmg.pmml.DerivedField;
+import org.dmg.pmml.Discretize;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.LocalTransformations;
+import org.dmg.pmml.MapValues;
+import org.dmg.pmml.MiningField;
+import org.dmg.pmml.MiningField.UsageType;
+import org.dmg.pmml.MiningFunction;
+import org.dmg.pmml.NormContinuous;
+import org.dmg.pmml.regression.NumericPredictor;
+import org.dmg.pmml.regression.RegressionModel;
+import org.dmg.pmml.regression.RegressionModel.NormalizationMethod;
+import org.dmg.pmml.regression.RegressionTable;
 
 /**
  * The class that converts an LR model to a PMML RegressionModel.
  * This class extends the abstract class
  * PMMLModelBuilder(pmml.RegressionModel,LR).
  */
-public class PMMLLRModelBuilder implements PMMLModelBuilder<org.dmg.pmml.RegressionModel, ml.shifu.shifu.core.LR> {
+public class PMMLLRModelBuilder implements PMMLModelBuilder<RegressionModel, ml.shifu.shifu.core.LR> {
 
-    public org.dmg.pmml.RegressionModel adaptMLModelToPMML(ml.shifu.shifu.core.LR lr,
-            org.dmg.pmml.RegressionModel pmmlModel) {
-        pmmlModel.setNormalizationMethod(RegressionNormalizationMethodType.LOGIT);
-        pmmlModel.setFunctionName(MiningFunctionType.REGRESSION);
+    public RegressionModel adaptMLModelToPMML(ml.shifu.shifu.core.LR lr,
+            RegressionModel pmmlModel) {
+        pmmlModel.setNormalizationMethod(NormalizationMethod.LOGIT);
+        pmmlModel.setMiningFunction(MiningFunction.REGRESSION);
         RegressionTable table = new RegressionTable();
         table.setIntercept(lr.getBias());
         LocalTransformations lt = pmmlModel.getLocalTransformations();
@@ -55,7 +67,7 @@ public class PMMLLRModelBuilder implements PMMLModelBuilder<org.dmg.pmml.Regress
         int index = 0;
         for(int i = 0; i < miningList.size(); i++) {
             MiningField mField = miningList.get(i);
-            if(mField.getUsageType() != FieldUsageType.ACTIVE)
+            if(mField.getUsageType() != UsageType.ACTIVE)
                 continue;
             FieldName mFieldName = mField.getName();
             FieldName fName = mFieldName;
@@ -66,10 +78,10 @@ public class PMMLLRModelBuilder implements PMMLModelBuilder<org.dmg.pmml.Regress
             NumericPredictor np = new NumericPredictor();
             np.setName(fName);
             np.setCoefficient(lr.getWeights()[index++]);
-            table.withNumericPredictors(np);
+            table.addNumericPredictors(np);
         }
 
-        pmmlModel.withRegressionTables(table);
+        pmmlModel.addRegressionTables(table);
         return pmmlModel;
     }
 }

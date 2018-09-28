@@ -65,37 +65,37 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
 
             if(i == 0) {
                 if(binBoundaryList.size() == 1) {
-                    interval.withClosure(Interval.Closure.OPEN_OPEN).withLeftMargin(Double.NEGATIVE_INFINITY)
-                            .withRightMargin(Double.POSITIVE_INFINITY);
+                    interval.setClosure(Interval.Closure.OPEN_OPEN).setLeftMargin(Double.NEGATIVE_INFINITY)
+                            .setRightMargin(Double.POSITIVE_INFINITY);
                 } else {
-                    interval.withClosure(Interval.Closure.OPEN_OPEN).withRightMargin(binBoundaryList.get(i + 1));
+                    interval.setClosure(Interval.Closure.OPEN_OPEN).setRightMargin(binBoundaryList.get(i + 1));
                 }
             } else if(i == binBoundaryList.size() - 1) {
-                interval.withClosure(Interval.Closure.CLOSED_OPEN).withLeftMargin(binBoundaryList.get(i));
+                interval.setClosure(Interval.Closure.CLOSED_OPEN).setLeftMargin(binBoundaryList.get(i));
             } else {
-                interval.withClosure(Interval.Closure.CLOSED_OPEN).withLeftMargin(binBoundaryList.get(i))
-                        .withRightMargin(binBoundaryList.get(i + 1));
+                interval.setClosure(Interval.Closure.CLOSED_OPEN).setLeftMargin(binBoundaryList.get(i))
+                        .setRightMargin(binBoundaryList.get(i + 1));
             }
 
-            discretizeBin.withInterval(interval).withBinValue(Double.toString(binWoeList.get(i)));
+            discretizeBin.setInterval(interval).setBinValue(Double.toString(binWoeList.get(i)));
             discretizeBinList.add(discretizeBin);
         }
 
         Discretize discretize = new Discretize();
         discretize
-                .withDataType(DataType.DOUBLE)
-                .withField(
+                .setDataType(DataType.DOUBLE)
+                .setField(
                         FieldName.create(CommonUtils.getSimpleColumnName(config, columnConfigList, segmentExpansions,
                                 datasetHeaders)))
-                .withMapMissingTo(Normalizer.normalize(config, null, cutoff, normType).get(0).toString())
-                .withDefaultValue(Normalizer.normalize(config, null, cutoff, normType).get(0).toString())
-                .withDiscretizeBins(discretizeBinList);
+                .setMapMissingTo(Normalizer.normalize(config, null, cutoff, normType).get(0).toString())
+                .setDefaultValue(Normalizer.normalize(config, null, cutoff, normType).get(0).toString())
+                .addDiscretizeBins(discretizeBinList.toArray(new DiscretizeBin[discretizeBinList.size()]));
 
         // derived field name is consisted of FieldName and "_zscl"
         List<DerivedField> derivedFields = new ArrayList<DerivedField>();
-        derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
+        derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).setName(
                 FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config.getColumnName()), normType)))
-                .withExpression(discretize));
+                .setExpression(discretize));
         return derivedFields;
     }
 }
