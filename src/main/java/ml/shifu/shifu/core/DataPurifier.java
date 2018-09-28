@@ -113,8 +113,8 @@ public class DataPurifier {
 
         for(int i = 0; i < fields.length; i++) {
             NSColumn nsColumn = new NSColumn(headers[i]);
-            jc.set(headers[i], ((fields[i] == null) ? "" : fields[i].toString()));
-            jc.set(nsColumn.getSimpleName(), ((fields[i] == null) ? "" : fields[i].toString()));
+            jc.set(headers[i], (fields[i] == null ? "" : fields[i]));
+            jc.set(nsColumn.getSimpleName(), (fields[i] == null ? "" : fields[i]));
         }
 
         Boolean result = Boolean.FALSE;

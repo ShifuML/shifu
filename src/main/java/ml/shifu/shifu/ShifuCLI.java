@@ -74,6 +74,7 @@ public class ShifuCLI {
     private static final String CMD_EXPORT = "export";
     private static final String CMD_COMBO = "combo";
     private static final String CMD_ENCODE = "encode";
+    private static final String CMD_TEST = "test";
 
     // options for stats
     private static final String CORRELATION = "correlation";
@@ -109,6 +110,9 @@ public class ShifuCLI {
 
     private static final String SHUFFLE = "shuffle";
     private static final String RESUME = "resume";
+
+    // for test function
+    private static final String FILTER = "filter";
 
     static private final Logger log = LoggerFactory.getLogger(ShifuCLI.class);
 
@@ -365,6 +369,17 @@ public class ShifuCLI {
                     } else {
                         log.warn("Fail to export models/columnstats/corr, please check or report issue.");
                     }
+                } else if(cleanedArgs[0].equals(CMD_TEST)) {
+                    Map<String, Object> params = new HashMap<String, Object>();
+                    params.put(ShifuTestProcessor.IS_TO_TEST_FILTER, cmd.hasOption(FILTER));
+                    params.put(ShifuTestProcessor.TEST_TARGET, cmd.getOptionValue(FILTER));
+                    params.put(ShifuTestProcessor.TEST_RECORD_CNT, cmd.getOptionValue(N));
+                    status = runShifuTest(params);
+                    if(status == 0) {
+                        log.info("Run test for Shifu Successfully.");
+                    } else {
+                        log.warn("Fail to run Shifu test.");
+                    }
                 } else {
                     log.error("Invalid command, please check help message.");
                     printUsage();
@@ -566,6 +581,11 @@ public class ShifuCLI {
         return processor.run();
     }
 
+    private static int runShifuTest(Map<String,Object> params) {
+        ShifuTestProcessor processor = new ShifuTestProcessor(params);
+        return processor.run();
+    }
+
     private static void printModelSetCopiedSuccessfulLog(String newModelSetName) {
         log.info(String.format("ModelSet %s is copied successfully with ModelConfig.json in %s folder.",
                 newModelSetName, newModelSetName));
@@ -626,6 +646,7 @@ public class ShifuCLI {
         Option opt_init = OptionBuilder.hasArg(false).create(INIT_CMD);
         Option opt_nosort = OptionBuilder.hasArg(false).create(NOSORT);
         Option opt_ref = OptionBuilder.hasArg(true).create(REF);
+        Option opt_filter = OptionBuilder.hasOptionalArg().create(FILTER);
 
         // options for variable re-binning
         Option opt_rebin = OptionBuilder.hasArg(false).create(REBIN);
@@ -650,6 +671,7 @@ public class ShifuCLI {
         opts.addOption(opt_concise);
         opts.addOption(opt_nosort);
         opts.addOption(opt_ref);
+        opts.addOption(opt_filter);
 
         opts.addOption(opt_reset);
         opts.addOption(opt_filter_auto);
@@ -730,6 +752,7 @@ public class ShifuCLI {
         System.out.println("\tcombo -eval [-resume]                   Evaluate Combo-Model performance.");
         System.out.println("\tencode -run [TDS|EvalSetNames] [-ref encode_ref_model]");
         System.out.println("\t                                        Run encode on training or evaluation datasets and set them to encode_ref_model.");
+        System.out.println("\ttest [-filter [EvalSetNames]] [-n]      Run testing for Shifu to detect error early.");
         System.out.println("\tversion|v|-v|-version                   Print version of current package.");
         System.out.println("\thelp|h|-h|-help                         Help message.");
     }
