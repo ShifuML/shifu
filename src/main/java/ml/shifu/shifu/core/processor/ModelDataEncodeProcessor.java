@@ -207,6 +207,7 @@ public class ModelDataEncodeProcessor extends BasicModelProcessor {
         }
     }
 
+    @SuppressWarnings("deprecation")
     private int encodeModelData(EvalConfig evalConfig) throws IOException {
         int status = 0;
 

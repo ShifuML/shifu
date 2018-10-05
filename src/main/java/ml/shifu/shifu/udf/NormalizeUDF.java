@@ -312,7 +312,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
             for(int i = 0; i < input.size(); i++) {
                 ColumnConfig config = columnConfigList.get(i);
-                String val = (input.get(i) == null) ? "" : input.get(i).toString().trim();
+                String val = (input.get(i) == null) ? "" : input.get(i).toString();
                 // load variables for weight calculating.
                 if(weightExpr != null) {
                     weightContext.set(new NSColumn(config.getColumnName()).getSimpleName(), val);
@@ -438,7 +438,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             for(int i = 0; i < this.columnConfigList.size(); i++) {
                 ColumnConfig config = this.columnConfigList.get(i);
                 int newIndex = i >= rawSize ? i % rawSize : i;
-                String val = (input.get(newIndex) == null) ? "" : input.get(newIndex).toString().trim();
+                String val = (input.get(newIndex) == null) ? "" : input.get(newIndex).toString();
 
                 // for target column
                 if(config.isTarget()) {

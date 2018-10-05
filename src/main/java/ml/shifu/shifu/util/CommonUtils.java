@@ -1612,13 +1612,7 @@ public final class CommonUtils {
      *             if str is not a valid list str.
      */
     public static List<String> stringToStringList(String str) {
-        List<String> list = checkAndReturnSplitCollections(str);
-        return Lists.transform(list, new Function<String, String>() {
-            @Override
-            public String apply(String input) {
-                return input.trim();
-            }
-        });
+        return checkAndReturnSplitCollections(str);
     }
 
     /**
@@ -1633,13 +1627,7 @@ public final class CommonUtils {
      *             if str is not a valid list str.
      */
     public static List<String> stringToStringList(String str, char separator) {
-        List<String> list = checkAndReturnSplitCollections(str, separator);
-        return Lists.transform(list, new Function<String, String>() {
-            @Override
-            public String apply(String input) {
-                return input.trim();
-            }
-        });
+        return checkAndReturnSplitCollections(str, separator);
     }
 
     /*
@@ -2512,15 +2500,19 @@ public final class CommonUtils {
 
     /**
      * Check whether to normalize one variable or not
-     * @param columnConfig - ColumnConfig to check
-     * @param hasCandidate - Are candidates set or not
-     * @param isBinaryClassification - Is it binary classification?
+     * 
+     * @param columnConfig
+     *            - ColumnConfig to check
+     * @param hasCandidate
+     *            - Are candidates set or not
+     * @param isBinaryClassification
+     *            - Is it binary classification?
      * @return
-     *      true - should normalize
-     *              The variable is finalSelected and it is good variable
-     *           Or
-     *              It's a good candidate
-     *      false - don't normalize
+     *         true - should normalize
+     *         The variable is finalSelected and it is good variable
+     *         Or
+     *         It's a good candidate
+     *         false - don't normalize
      */
     public static boolean isToNormVariable(ColumnConfig columnConfig, boolean hasCandidate,
             boolean isBinaryClassification) {
@@ -2533,12 +2525,16 @@ public final class CommonUtils {
 
     /**
      * Check the variable is good candidate or not
-     * @param columnConfig - ColumnConfig to check
-     * @param hasCandidate - Are candidates set or not
-     * @param isBinaryClassification - Is it binary classification?
+     * 
+     * @param columnConfig
+     *            - ColumnConfig to check
+     * @param hasCandidate
+     *            - Are candidates set or not
+     * @param isBinaryClassification
+     *            - Is it binary classification?
      * @return
-     *      true - is good candidate
-     *      false - bad candidate
+     *         true - is good candidate
+     *         false - bad candidate
      */
     public static boolean isGoodCandidate(ColumnConfig columnConfig, boolean hasCandidate,
             boolean isBinaryClassification) {
@@ -2556,11 +2552,14 @@ public final class CommonUtils {
 
     /**
      * Check the variable is good candidate or not
-     * @param columnConfig - ColumnConfig to check
-     * @param hasCandidate - Are candidates set or not
+     * 
+     * @param columnConfig
+     *            - ColumnConfig to check
+     * @param hasCandidate
+     *            - Are candidates set or not
      * @return
-     *      true - is good candidate
-     *      false - bad candidate
+     *         true - is good candidate
+     *         false - bad candidate
      */
     public static boolean isGoodCandidate(ColumnConfig columnConfig, boolean hasCandidate) {
         if(columnConfig == null) {
@@ -2571,25 +2570,25 @@ public final class CommonUtils {
     }
 
     /**
-     *  Check whether a variable is good or bad
-     * @param columnConfig - ColumnConfig to check
-     * @param isBinaryClassification - Is it binary classification?
+     * Check whether a variable is good or bad
+     * 
+     * @param columnConfig
+     *            - ColumnConfig to check
+     * @param isBinaryClassification
+     *            - Is it binary classification?
      * @return
-     *      true - is good variable
-     *      false - bad variable
+     *         true - is good variable
+     *         false - bad variable
      */
     public static boolean isGoodVariable(ColumnConfig columnConfig, boolean isBinaryClassification) {
-        boolean varCondition =
-                ( columnConfig.getMean() != null
-                &&  columnConfig.getStdDev() != null
+        boolean varCondition = (columnConfig.getMean() != null && columnConfig.getStdDev() != null
                 && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
                         && columnConfig.getBinCategory().size() > 0)
-                 || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
-                        && columnConfig.getBinBoundary().size() > 0)));
-        if (isBinaryClassification) {
-            varCondition = varCondition
-                    && (columnConfig.getKs() != null && columnConfig.getKs() > 0
-                    &&  columnConfig.getIv() != null && columnConfig.getIv() > 0 );
+                        || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
+                                && columnConfig.getBinBoundary().size() > 0)));
+        if(isBinaryClassification) {
+            varCondition = varCondition && (columnConfig.getKs() != null && columnConfig.getKs() > 0
+                    && columnConfig.getIv() != null && columnConfig.getIv() > 0);
         }
         return varCondition;
     }
