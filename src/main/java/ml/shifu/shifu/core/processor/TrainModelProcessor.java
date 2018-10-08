@@ -500,10 +500,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 Path bModelPath = fileSystem
                         .makeQualified(new Path(super.getPathFinder().getNNBinaryModelsPath(sourceType), modelName));
 
-                // check if job is continunous training, this can be set multiple times and we only get last one
-                boolean isContinous = false;
+                // check if job is continuous training, this can be set multiple times and we only get last one
+                boolean isContinuous = false;
                 if(gs.hasHyperParam()) {
-                    isContinous = false;
+                    isContinuous = false;
                 } else {
                     int intContinuous = checkContinuousTraining(fileSystem, localArgs, modelPath,
                             modelConfig.getTrain().getParams());
@@ -513,16 +513,16 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                                 i);
                         continue;
                     } else {
-                        isContinous = (intContinuous == 1);
+                        isContinuous = (intContinuous == 1);
                     }
                 }
 
                 // of course gs not support continuous model training, k-fold cross validation is not continuous model
                 // training
                 if(gs.hasHyperParam() || isKFoldCV) {
-                    isContinous = false;
+                    isContinuous = false;
                 }
-                if(!isContinous && !isOneJobNotContinuous) {
+                if(!isContinuous && !isOneJobNotContinuous) {
                     isOneJobNotContinuous = true;
                     // delete all old models if not continuous
                     String srcModelPath = super.getPathFinder().getModelsPath(sourceType);
@@ -557,7 +557,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     }
 
                     Set<Integer> subFeatures = null;
-                    if(isContinous) {
+                    if(isContinuous) {
                         BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils.getBasicNetwork(CommonUtils
                                 .loadModel(modelConfig, modelPath, ShifuFileUtils
                                         .getFileSystemBySourceType(this.modelConfig.getDataSet().getSource())));
