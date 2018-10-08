@@ -22,6 +22,7 @@ import java.util.jar.Manifest;
 
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
+import ml.shifu.shifu.core.pmml.builder.impl.MiningModelPmmlCreator;
 import ml.shifu.shifu.core.pmml.builder.impl.NNPmmlModelCreator;
 
 import org.apache.pig.impl.util.JarManager;
@@ -125,10 +126,15 @@ public class PMMLTranslator {
 
             miningModel.setTargets(((NNPmmlModelCreator) this.modelCreator).createTargets());
 
+            AbstractSpecifCreator minningModelCreator = new MiningModelPmmlCreator(
+                    this.specifCreator.getModelConfig(),
+                    this.specifCreator.getColumnConfigList());
+            minningModelCreator.build(null, miningModel);
+
             Segmentation seg = new Segmentation();
             miningModel.setSegmentation(seg);
 
-            seg.setMultipleModelMethod(MultipleModelMethod.fromValue("weightedAverage"));
+            seg.setMultipleModelMethod(MultipleModelMethod.AVERAGE);
             List<Segment> list = seg.getSegments();
             int idCount = 0;
             for(BasicML basicML: basicMLs) {
@@ -142,12 +148,7 @@ public class PMMLTranslator {
                 tmpmodel.setLocalTransformations(this.localTransformationsCreator.build(basicML));
                 this.specifCreator.build(basicML, tmpmodel, idCount);
 
-                tmpmodel.setModelName(String.valueOf(idCount));
                 Segment segment = new Segment();
-
-                // TODO, using scale here or 1d???
-                segment.setWeight(1000d);
-
                 segment.setId("Segement" + String.valueOf(idCount));
                 segment.setPredicate(new True());
                 segment.setModel(tmpmodel);

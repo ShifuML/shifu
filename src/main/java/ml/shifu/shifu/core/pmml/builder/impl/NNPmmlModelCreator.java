@@ -69,7 +69,7 @@ public class NNPmmlModelCreator extends AbstractPmmlElementCreator<Model> {
         } else {
             Target target = new Target();
 
-        target.setOpType(OpType.CATEGORICAL);
+        target.setOpType(OpType.CONTINUOUS);
         target.setField(new FieldName(modelConfig.getTargetColumnName()));
 
         List<TargetValue> targetValueList = new ArrayList<TargetValue>();

@@ -1,7 +1,11 @@
 package ml.shifu.shifu.core.pmml;
 
+import ml.shifu.shifu.ShifuCLI;
 import ml.shifu.shifu.combo.CsvFile;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
+import ml.shifu.shifu.core.processor.EvalModelProcessor;
+import ml.shifu.shifu.core.processor.ExportModelProcessor;
+import org.apache.commons.io.FileUtils;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.PMML;
 import org.jpmml.evaluator.*;
@@ -9,6 +13,7 @@ import org.jpmml.evaluator.mining.MiningModelEvaluator;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import java.io.File;
 import java.util.*;
 
 /**
@@ -18,38 +23,79 @@ public class PMMLScoreGenTest {
 
     public static final double EPS = 1e-6;
 
-    //@Test
-    public void testBaggingPmml() throws Exception {
-        verifyPmml("/Users/zhanhu/temp/TestNN/pmmls/TestNN.pmml",
-                "/Users/zhanhu/temp/TestNN/evals/Eval1/EvalScore",
-                "|", "mean");
+    @Test public void testBaggingPmml() throws Exception {
+        verifyPmml("TestNN", "src/test/resources/example/bagging-pmml/ModelConfig.json",
+                "src/test/resources/example/bagging-pmml/ColumnConfig.json",
+                "src/test/resources/example/bagging-pmml/columns",
+                "src/test/resources/example/bagging-pmml/models",
+                "src/test/resources/example/bagging-pmml/EvalSet1/eval.data.csv",
+                "Eval1", "|");
     }
 
-    private void verifyPmml(String pmmlPath, String evalDataPath, String delimiter, String scoreField)
+    private void verifyPmml(String modelName, String modelConfPath, String columnConfPath, String columnsPath,
+            String modelsPath, String evalDataSet, String evalSetName, String delimiter) throws Exception {
+        File tmpModel = new File("ModelConfig.json");
+        FileUtils.copyFile(new File(modelConfPath), tmpModel);
+
+        File tmpColumn = new File("ColumnConfig.json");
+        FileUtils.copyFile(new File(columnConfPath), tmpColumn);
+
+        File tmpNames = new File("columns");
+        FileUtils.copyDirectory(new File(columnsPath), tmpNames);
+
+        File tmpModels = new File("models");
+        FileUtils.copyDirectory(new File(modelsPath), tmpModels);
+
+        Map<String, Object> params = new HashMap<String, Object>();
+        params.put(EvalModelProcessor.NOSORT, true);
+        ShifuCLI.runEvalScore(evalSetName, params);
+
+        genPMMLAndCompareScore(modelName, evalDataSet, evalSetName, delimiter);
+
+        FileUtils.deleteQuietly(tmpModel);
+        FileUtils.deleteQuietly(tmpColumn);
+        FileUtils.deleteDirectory(tmpNames);
+        FileUtils.deleteDirectory(tmpModels);
+        FileUtils.deleteQuietly(new File("evals"));
+        FileUtils.deleteQuietly(new File("pmmls"));
+    }
+
+    private void genPMMLAndCompareScore(String modelName, String evalDataSet, String evalSetName, String delimiter)
             throws Exception {
-        CsvFile csvFile = new CsvFile(evalDataPath, delimiter, true);
-        PMML pmml = PMMLUtils.loadPMML(pmmlPath);
-        MiningModelEvaluator evaluator = new MiningModelEvaluator(pmml);
+        Map<String, Object> params = new HashMap<String, Object>();
+        params.put(ExportModelProcessor.IS_CONCISE, true);
+        ShifuCLI.exportModel(ExportModelProcessor.ONE_BAGGING_PMML_MODEL, params);
 
         int totalRecordCnt = 0;
         int matchRecordCnt = 0;
 
-        Iterator<Map<String, String>> iterator = csvFile.iterator();
-        while(iterator.hasNext()) {
+        CsvFile evalScoreFile = new CsvFile(
+                "evals" + File.separator + evalSetName + File.separator + "EvalScore",
+                "|", true);
+        Iterator<Map<String, String>> scoreIterator = evalScoreFile.iterator();
+        scoreIterator.next(); // skip first line
+
+        CsvFile evalData = new CsvFile(evalDataSet, delimiter, true);
+        PMML pmml = PMMLUtils.loadPMML("pmmls" + File.separator + modelName + ".pmml");
+        MiningModelEvaluator evaluator = new MiningModelEvaluator(pmml);
+        Iterator<Map<String, String>> iterator = evalData.iterator();
+        while(iterator.hasNext() && scoreIterator.hasNext()) {
             Map<String, String> rawInput = iterator.next();
-            boolean match = scoreAndMatch(evaluator, rawInput, scoreField);
+            double pmmlScore = score(evaluator, rawInput, "FinalResult");
+
+            Map<String, String> scoreInput = scoreIterator.next();
+            double evalScore = Double.parseDouble(scoreInput.get("mean"));
+
             totalRecordCnt++;
-            if(match) {
+            if(Math.abs(evalScore - pmmlScore) < EPS) {
                 matchRecordCnt++;
             }
         }
 
-        String result = (matchRecordCnt == totalRecordCnt) ? "SUCCESS" : "FAIL";
-        System.out.println(result + "! " + matchRecordCnt + " out of " + totalRecordCnt + " are matched.");
         Assert.assertTrue(matchRecordCnt == totalRecordCnt);
     }
 
-    private boolean scoreAndMatch(MiningModelEvaluator evaluator, Map<String, String> rawInput, String scoreName) {
+    private double score(MiningModelEvaluator evaluator, Map<String, String> rawInput, String scoreName) {
         List<TargetField> targetFields = evaluator.getTargetFields();
         Map<FieldName, FieldValue> maps = convertRawIntoInput(evaluator, rawInput);
         List<Double> scores = new ArrayList<Double>();
@@ -58,7 +104,7 @@ public class PMMLScoreGenTest {
             case REGRESSION:
                 if(targetFields.size() == 1) {
                     Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(maps);
-                    scores.add(regressionTerm.get(evaluator.getTargetField().getName()));
+                    scores.add(regressionTerm.get(new FieldName(AbstractSpecifCreator.FINAL_RESULT)));
                 } else {
                     Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(maps);
                     List<FieldName> outputFieldList = new ArrayList<FieldName>(regressionTerm.keySet());
@@ -76,8 +122,8 @@ public class PMMLScoreGenTest {
                 }
                 break;
             case CLASSIFICATION:
-                Map<FieldName, Classification<Double>> classificationTerm = (Map<FieldName, Classification<Double>>) evaluator
-                        .evaluate(maps);
+                Map<FieldName, Classification<Double>> classificationTerm =
+                        (Map<FieldName, Classification<Double>>) evaluator.evaluate(maps);
                 for(Classification<Double> cMap : classificationTerm.values())
                     for(Map.Entry<String, Value<Double>> entry : cMap.getValues().entrySet())
                         System.out.println(entry.getValue().getValue() * 1000);
@@ -86,8 +132,7 @@ public class PMMLScoreGenTest {
                 break;
         }
 
-        double expectScore = Double.parseDouble(rawInput.get(scoreName));
-        return Math.abs(expectScore - scores.get(0)) < EPS;
+        return scores.get(0);
     }
 
     private Map<FieldName, FieldValue> convertRawIntoInput(MiningModelEvaluator evaluator,
