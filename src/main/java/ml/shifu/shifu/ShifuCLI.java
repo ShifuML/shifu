@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,6 +25,7 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
+import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
 import ml.shifu.shifu.core.processor.*;
 import ml.shifu.shifu.core.processor.EvalModelProcessor.EvalStep;
 import ml.shifu.shifu.core.processor.ManageModelProcessor.ModelAction;
@@ -31,6 +33,7 @@ import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 
+import ml.shifu.shifu.util.IndependentTreeModelUtils;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -75,6 +78,7 @@ public class ShifuCLI {
     private static final String CMD_COMBO = "combo";
     private static final String CMD_ENCODE = "encode";
     private static final String CMD_TEST = "test";
+    private static final String CMD_CONVERT = "convert";
 
     // options for stats
     private static final String CORRELATION = "correlation";
@@ -113,6 +117,9 @@ public class ShifuCLI {
 
     // for test function
     private static final String FILTER = "filter";
+    // for model spec convert
+    private static final String TO_ZIPB = "tozipb";
+    private static final String TO_TREEB = "totreeb";
 
     static private final Logger log = LoggerFactory.getLogger(ShifuCLI.class);
 
@@ -380,6 +387,27 @@ public class ShifuCLI {
                     } else {
                         log.warn("Fail to run Shifu test.");
                     }
+                } else if(cleanedArgs[0].equals(CMD_CONVERT)) {
+                    int optType = -1;
+                    if ( cmd.hasOption(TO_ZIPB) ) {
+                        optType = 1;
+                    } else if(cmd.hasOption(TO_TREEB)) {
+                        optType = 2;
+                    }
+
+                    String[] convertArgs = new String[2];
+                    int j = 0;
+                    for ( int i = 1; i < cleanedArgs.length; i ++ ) {
+                        if ( !cleanedArgs[i].startsWith("-") ) {
+                            convertArgs[j++] = cleanedArgs[i];
+                        }
+                    }
+
+                    if (optType < 0 || StringUtils.isBlank(convertArgs[0]) || StringUtils.isBlank(convertArgs[1])) {
+                        printUsage();
+                    } else {
+                        status = runShifuConvert(optType, convertArgs[0], convertArgs[1]);
+                    }
                 } else {
                     log.error("Invalid command, please check help message.");
                     printUsage();
@@ -586,6 +614,17 @@ public class ShifuCLI {
         return processor.run();
     }
 
+    public static int runShifuConvert(int optType, String fromFilePath, String toFilePath) {
+        IndependentTreeModelUtils modelUtils = new IndependentTreeModelUtils();
+        boolean status = false;
+        if (optType == 1) {
+            status = modelUtils.convertBinaryToZipSpec(new File(fromFilePath), new File(toFilePath));
+        } else if(optType == 2) {
+            status = modelUtils.convertZipSpecToBinary(new File(fromFilePath), new File(toFilePath));
+        }
+        return (status ? 0 : 1);
+    }
+
     private static void printModelSetCopiedSuccessfulLog(String newModelSetName) {
         log.info(String.format("ModelSet %s is copied successfully with ModelConfig.json in %s folder.",
                 newModelSetName, newModelSetName));
@@ -659,6 +698,9 @@ public class ShifuCLI {
         Option opt_switch = OptionBuilder.hasArg(false).withDescription("switch model").create(SWITCH);
         Option opt_eval_model = OptionBuilder.hasArg().withDescription("").create(EVAL_MODEL);
 
+        Option opt_tozipb = OptionBuilder.hasArg(false).create(TO_ZIPB);
+        Option opt_totreeb = OptionBuilder.hasArg(false).create(TO_TREEB);
+
         opts.addOption(opt_cmt);
         opts.addOption(opt_new);
         opts.addOption(opt_type);
@@ -700,6 +742,9 @@ public class ShifuCLI {
         opts.addOption(opt_n);
         opts.addOption(opt_ivr);
         opts.addOption(opt_bic);
+
+        opts.addOption(opt_tozipb);
+        opts.addOption(opt_totreeb);
 
         return opts;
     }
