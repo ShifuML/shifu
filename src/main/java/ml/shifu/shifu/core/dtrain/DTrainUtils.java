@@ -28,7 +28,9 @@ import ml.shifu.shifu.core.dtrain.dataset.FloatNeuralStructure;
 import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
 import ml.shifu.shifu.core.dtrain.nn.BasicDropoutLayer;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
-import ml.shifu.shifu.core.dtrain.random.XaiverRandomizer;
+import ml.shifu.shifu.core.dtrain.random.HeWeightRandomizer;
+import ml.shifu.shifu.core.dtrain.random.LecunWeightRandomizer;
+import ml.shifu.shifu.core.dtrain.random.XavierWeightRandomizer;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
@@ -63,6 +65,10 @@ public final class DTrainUtils {
     public static final String WGT_INIT_DEFAULT = "default";
 
     public static final String WGT_INIT_XAVIER = "xavier";
+    
+    public static final String WGT_INIT_HE = "he";
+    
+    public static final String WGT_INIT_LECUN = "lecun";
 
     /**
      * The POSITIVE ETA value. This is specified by the resilient propagation algorithm. This is the percentage by which
@@ -316,7 +322,11 @@ public final class DTrainUtils {
             } else if(wgtInit.equalsIgnoreCase(WGT_INIT_GAUSSIAN)) {
                 new GaussianRandomizer(0, 1).randomize(network);
             } else if(wgtInit.equalsIgnoreCase(WGT_INIT_XAVIER)) {
-                new XaiverRandomizer().randomize(network);
+                new XavierWeightRandomizer().randomize(network);
+            } else if(wgtInit.equalsIgnoreCase(WGT_INIT_HE)) {
+                new HeWeightRandomizer().randomize(network);
+            } else if(wgtInit.equalsIgnoreCase(WGT_INIT_LECUN)) {
+                new LecunWeightRandomizer().randomize(network);
             } else if(wgtInit.equalsIgnoreCase(WGT_INIT_DEFAULT)) {
                 // default randomization
                 network.reset();

@@ -33,27 +33,27 @@ import org.encog.neural.networks.BasicNetwork;
 /**
  * Copied from https://github.com/encog/encog-java-core/.
  */
-public class XaiverRandomizer implements Randomizer {
+public abstract class AbstractWeightRandomizer implements Randomizer {
 
     /**
      * The y2 value.
      */
     @SuppressWarnings("unused")
-    private double y2;
+    protected double y2;
 
     /**
      * Should we use the last value.
      */
     @SuppressWarnings("unused")
-    private boolean useLast = false;
+    protected boolean useLast = false;
 
-    private GenerateRandom rnd;
+    protected GenerateRandom rnd;
 
-    public XaiverRandomizer() {
+    public AbstractWeightRandomizer() {
         this(System.currentTimeMillis());
     }
 
-    public XaiverRandomizer(long seed) {
+    public AbstractWeightRandomizer(long seed) {
         this.rnd = new MersenneTwisterGenerateRandom(seed);
     }
 
@@ -76,31 +76,7 @@ public class XaiverRandomizer implements Randomizer {
      * @param fromLayer
      *            The from level to randomize.
      */
-    public void randomize(final BasicNetwork network, final int fromLayer) {
-        final int fromCount = network.getLayerNeuronCount(fromLayer);
-        final int toCount = network.getLayerNeuronCount(fromLayer + 1);
-
-        for(int fromNeuron = 0; fromNeuron < fromCount; fromNeuron++) {
-            // biases
-            for(int toNeuron = 0; toNeuron < toCount; toNeuron++) {
-                network.setWeight(fromLayer, fromCount, toNeuron, 0);
-            }
-
-            // weights
-            for(int toNeuron = 0; toNeuron < toCount; toNeuron++) {
-                double d;
-
-                if(network.getActivation(fromLayer) instanceof ActivationReLU) {
-                    d = 2 / Math.sqrt(fromCount);
-                } else {
-                    d = 2 / Math.sqrt((fromCount + toCount));
-                }
-
-                double w = this.rnd.nextDouble(-d, d);
-                network.setWeight(fromLayer, fromNeuron, toNeuron, w);
-            }
-        }
-    }
+    public abstract void randomize(final BasicNetwork network, final int fromLayer);
 
     /**
      * Randomize the synapses and biases in the basic network based on an array,

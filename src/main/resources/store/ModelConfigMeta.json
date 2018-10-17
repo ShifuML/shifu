@@ -616,7 +616,9 @@
                         "options": [
                             {"label": "Default", "value":"default"},
                             {"label": "Gaussian", "value":"gaussian"},
-                            {"label": "Xavier", "value":"Xavier"}
+                            {"label": "Xavier", "value":"Xavier"},
+                            {"label": "He", "value":"He"},
+                            {"label": "Lecun", "value":"Lecun"}
                         ]
                     }, {
                         "name" : "L1orL2",
