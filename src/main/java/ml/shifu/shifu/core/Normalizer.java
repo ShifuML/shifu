@@ -195,10 +195,10 @@ public class Normalizer {
             Double value = null;
             if(raw instanceof Double) {
                 value = (Double) raw;
-            } else if (raw instanceof Integer) {
-                value = ((Integer)raw).doubleValue();
+            } else if(raw instanceof Integer) {
+                value = ((Integer) raw).doubleValue();
             } else {
-                value = Double.parseDouble((String)raw);
+                value = Double.parseDouble((String) raw);
             }
             return new Double[] { (value - config.getColumnStats().getMin())
                     / (config.getColumnStats().getMax() - config.getColumnStats().getMin()) };
@@ -265,16 +265,16 @@ public class Normalizer {
     }
 
     private static List<Double> asIsNormalize(ColumnConfig config, Object raw, boolean toUseWoe) {
-        if ( config.isNumerical() ) {
+        if(config.isNumerical()) {
             Double values[] = new Double[1];
-            if (raw instanceof Double) {
+            if(raw instanceof Double) {
                 values[0] = (Double) raw;
-            } else if (raw instanceof Integer) {
-                values[0] = ((Integer)raw).doubleValue();
+            } else if(raw instanceof Integer) {
+                values[0] = ((Integer) raw).doubleValue();
             } else {
                 try {
                     values[0] = Double.parseDouble(raw.toString());
-                } catch ( Exception e ) {
+                } catch (Exception e) {
                     log.warn("Illegal numerical value - {}, use mean instead.", raw);
                     values[0] = config.getMean();
                 }
@@ -291,11 +291,11 @@ public class Normalizer {
     }
 
     private static List<Double> OneHotNormalize(ColumnConfig config, Object raw) {
-        Double[] normData = (config.isNumerical() ?
-                new Double[config.getBinBoundary().size() + 1] : new Double[config.getBinCategory().size() + 1]);
+        Double[] normData = (config.isNumerical() ? new Double[config.getBinBoundary().size() + 1]
+                : new Double[config.getBinCategory().size() + 1]);
         Arrays.fill(normData, 0.0d);
         int binNum = BinUtils.getBinNum(config, raw);
-        if ( binNum < 0 ) {
+        if(binNum < 0) {
             binNum = normData.length - 1;
         }
         normData[binNum] = 1.0d;
@@ -439,7 +439,7 @@ public class Normalizer {
             categoryMissingNormType = CategoryMissingNormType.POSRATE;
         }
         double value = 0.0;
-        if (raw == null || StringUtils.isBlank(raw.toString())) {
+        if(raw == null || StringUtils.isBlank(raw.toString())) {
             log.debug("Not decimal format but null, using default!");
             if(config.isCategorical()) {
                 value = fillDefaultValue(config, categoryMissingNormType);
@@ -448,12 +448,10 @@ public class Normalizer {
             }
             return value;
         }
-        
-        if (raw instanceof Double) {
-            value = (Double) raw;
-        } else if (raw instanceof Integer) {
-            value = ((Integer)raw).doubleValue();
-        } else if(config.isCategorical()) {
+
+        if(config.isCategorical()) {
+            // for categorical variable, no need convert to double but double should be in treated as String in
+            // categorical variables
             int index = BinUtils.getBinNum(config, raw);
             if(index == -1) {
                 value = fillDefaultValue(config, categoryMissingNormType);
@@ -466,15 +464,23 @@ public class Normalizer {
                 }
             }
         } else {
-            try {
-                // if raw is NaN, it won't throw Exception. The value will be Double.NaN
-                value = Double.parseDouble(raw.toString());
-            } catch (Exception e) {
-                log.debug("Not decimal format " + raw + ", using default!");
-                value = defaultMissingValue(config);
+            // for numerical value, if double or int, no need parse again.
+            if(raw instanceof Double) {
+                value = (Double) raw;
+            } else if(raw instanceof Integer) {
+                value = ((Integer) raw).doubleValue();
+            } else if(raw instanceof Float) {
+                value = ((Float) raw).doubleValue();
+            } else {
+                try {
+                    // if raw is NaN, it won't throw Exception. The value will be Double.NaN
+                    value = Double.parseDouble(raw.toString());
+                } catch (Exception e) {
+                    log.debug("Not decimal format " + raw + ", using default!");
+                    value = defaultMissingValue(config);
+                }
             }
-
-            if ( Double.isInfinite(value) || Double.isNaN(value) ) {
+            if(Double.isInfinite(value) || Double.isNaN(value)) {
                 // if the value is Infinite or NaN, treat it as missing value
                 // should treat Infinite as missing value?
                 value = defaultMissingValue(config);
@@ -496,10 +502,10 @@ public class Normalizer {
                 value = defaultMissingValue(config);
                 break;
         }
-        
+
         return value;
     }
-    
+
     /**
      * Get the default value for missing data.
      * 
@@ -528,13 +534,13 @@ public class Normalizer {
         List<Double> woeBins = isWeightedNorm ? config.getBinWeightedWoe() : config.getBinCountWoe();
         int binIndex = 0;
         if(config.isHybrid()) {
-            if (raw == null) {
+            if(raw == null) {
                 binIndex = -1;
             } else {
                 binIndex = BinUtils.getCategoicalBinIndex(config, raw.toString());
             }
 
-            if (binIndex != -1) {
+            if(binIndex != -1) {
                 binIndex = binIndex + config.getBinBoundary().size(); // append the first numerical bins
             } else {
                 double douVal = BinUtils.parseNumber(raw);
