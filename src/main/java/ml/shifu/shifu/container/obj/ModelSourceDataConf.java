@@ -18,8 +18,10 @@ package ml.shifu.shifu.container.obj;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * ModelSourceDataConf class
@@ -28,6 +30,25 @@ import java.util.ArrayList;
 public class ModelSourceDataConf extends RawSourceData {
 
     private String categoricalColumnNameFile;
+
+    /**
+     * Validation data path which is used in train step for validation data. Such data should have the same schema like
+     * {@link #dataPath}. If {@link #validationDataPath} is not empty, specified validation data is enabled and all
+     * other sampling parameters have no effect. If empty (by default), such feature is not enabled.
+     */
+    private String validationDataPath;
+
+    /**
+     * Filter expression on validation data path, this is helpful to filter some data not in original
+     * data. Example like 'column_a > 10'
+     */
+    private String validationFilterExpressions = "";
+
+    /**
+     * Missing or invalid values.
+     */
+    private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "?" });
+    // private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "*", "#", "?", "null", "none" });
 
     private String hybridColumnNameFile;
 
@@ -39,6 +60,30 @@ public class ModelSourceDataConf extends RawSourceData {
 
     public void setCategoricalColumnNameFile(String categoricalColumnNameFile) {
         this.categoricalColumnNameFile = categoricalColumnNameFile;
+    }
+
+    public String getValidationDataPath() {
+        return validationDataPath;
+    }
+
+    public void setValidationDataPath(String validationDataPath) {
+        this.validationDataPath = validationDataPath;
+    }
+
+    public String getValidationFilterExpressions() {
+        return validationFilterExpressions;
+    }
+
+    public void setValidationFilterExpressions(String validationFilterExpressions) {
+        this.validationFilterExpressions = validationFilterExpressions;
+    }
+
+    public List<String> getMissingOrInvalidValues() {
+        return missingOrInvalidValues;
+    }
+
+    public void setMissingOrInvalidValues(List<String> missingOrInvalidValues) {
+        this.missingOrInvalidValues = missingOrInvalidValues;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -78,6 +123,9 @@ public class ModelSourceDataConf extends RawSourceData {
         other.setTargetColumnName(this.getTargetColumnName());
         other.setPosTags(new ArrayList<String>(this.getPosTags()));
         other.setNegTags(new ArrayList<String>(this.getNegTags()));
+
+        other.setValidationDataPath(this.validationDataPath);
+        other.setValidationFilterExpressions(this.validationFilterExpressions);
         other.setMissingOrInvalidValues(this.getMissingOrInvalidValues());
 
         other.setCategoricalColumnNameFile(categoricalColumnNameFile);

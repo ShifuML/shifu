@@ -44,14 +44,16 @@ public class DataPurifier {
     private ShifuMapContext jc = new ShifuMapContext();
     private JexlEngine jexl;
 
-    public DataPurifier(ModelConfig modelConfig) throws IOException {
-        if(StringUtils.isNotBlank(modelConfig.getFilterExpressions())) {
+    public DataPurifier(ModelConfig modelConfig, boolean isForValidationDataSet) throws IOException {
+        String filterExpression = (isForValidationDataSet ?
+                modelConfig.getDataSet().getValidationFilterExpressions() : modelConfig.getFilterExpressions());
+        if(StringUtils.isNotBlank(filterExpression)) {
             jexl = new JexlEngine();
             try {
-                dataFilterExpr = jexl.createExpression(modelConfig.getFilterExpressions());
+                dataFilterExpr = jexl.createExpression(filterExpression);
             } catch (JexlException e) {
-                log.error("The expression is " + modelConfig.getFilterExpressions()
-                        + "is invalid, please use correct expression.", e);
+                log.error("The expression `{}` is invalid, please use correct expression.", filterExpression, e);
+                log.error("Please note the expression won't take effect!");
                 dataFilterExpr = null;
             }
             this.headers = CommonUtils.getFinalHeaders(modelConfig);

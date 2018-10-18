@@ -170,7 +170,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         this.dataSetDelimiter = this.modelConfig.getDataSetDelimiter();
 
-        this.dataPurifier = new DataPurifier(this.modelConfig);
+        this.dataPurifier = new DataPurifier(this.modelConfig, false);
 
         String filterExpressions = context.getConfiguration().get(Constants.SHIFU_STATS_FILTER_EXPRESSIONS);
         if(StringUtils.isNotBlank(filterExpressions)) {

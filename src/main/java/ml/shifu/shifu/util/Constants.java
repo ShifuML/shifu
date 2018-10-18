@@ -63,6 +63,7 @@ public interface Constants {
     public static final String PATH_RAW_DATA = "path_raw_data";
     public static final String PATH_JAR = "path_jar";
     public static final String IS_COMPRESS = "is_compress";
+    public static final String IS_VALIDATION_DATASET = "is_validation_dataset";
     public static final String IS_NORM_FOR_CLEAN = "is_norm_for_clean";
 
     public static final String STATS_SAMPLE_RATE = "statsSampleRate";

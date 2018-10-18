@@ -2,10 +2,12 @@ package ml.shifu.shifu.core.processor;
 
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelSourceDataConf;
 import ml.shifu.shifu.container.obj.RawSourceData;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.core.validator.ModelInspector;
-import ml.shifu.shifu.util.HdfsPartFile;
+import ml.shifu.shifu.util.HdfsGlobalFile;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,15 +81,27 @@ public class ShifuTestProcessor extends BasicModelProcessor {
     }
 
     private int runFilterTest(ModelConfig modelConfig) throws IOException {
-        RawSourceData dataset = modelConfig.getDataSet();
+        ModelSourceDataConf dataset = modelConfig.getDataSet();
 
         if(StringUtils.isBlank(dataset.getFilterExpressions())) {
             LOG.warn("No filter expression set in train dataset. Skip it!");
             return 0;
         }
 
-        DataPurifier dataPurifier = new DataPurifier(modelConfig);
-        return doFilterTest(dataPurifier, dataset);
+        LOG.info("Start to test the filter against the training dataset.");
+        DataPurifier dataPurifier = new DataPurifier(modelConfig, false);
+        int status = doFilterTest(dataPurifier, dataset.getDataPath(), dataset.getSource());
+        if ( status > 0 ) {
+            return status;
+        }
+
+        if(StringUtils.isNotBlank(dataset.getValidationFilterExpressions())) {
+            LOG.info("Start to test the filter against the validation dataset.");
+            dataPurifier = new DataPurifier(modelConfig, true);
+            status = doFilterTest(dataPurifier, dataset.getValidationDataPath(), dataset.getSource());
+        }
+
+        return status;
     }
 
     private int runFilterTest(EvalConfig evalConfig) throws IOException {
@@ -97,12 +111,13 @@ public class ShifuTestProcessor extends BasicModelProcessor {
             return 0;
         }
 
+        LOG.info("Start to test the filter against eval `{}` dataset.", evalConfig.getName());
         DataPurifier dataPurifier = new DataPurifier(evalConfig);
-        return doFilterTest(dataPurifier, dataset);
+        return doFilterTest(dataPurifier, dataset.getDataPath(), dataset.getSource());
     }
 
-    private int doFilterTest(DataPurifier dataPurifier, RawSourceData dataset) throws IOException {
-        HdfsPartFile hdfsPartFile = new HdfsPartFile(dataset.getDataPath(), dataset.getSource());
+    private int doFilterTest(DataPurifier dataPurifier, String dataPath, SourceType sourceType) throws IOException {
+        HdfsGlobalFile hdfsPartFile = new HdfsGlobalFile(dataPath, sourceType);
         int totalLineCnt = 0;
         int matchLineCnt = 0;
         int testRecordCnt = getTestRecordCnt();
@@ -122,6 +137,9 @@ public class ShifuTestProcessor extends BasicModelProcessor {
 
         LOG.info("Filter Result:");
         LOG.info("\t {} out of {} records are matched by the filter expression.", matchLineCnt, totalLineCnt);
+
+        hdfsPartFile.close();
+
         return 0;
     }
 
