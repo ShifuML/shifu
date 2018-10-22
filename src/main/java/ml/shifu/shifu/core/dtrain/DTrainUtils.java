@@ -25,6 +25,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.FloatNeuralStructure;
+import ml.shifu.shifu.core.dtrain.nn.ActivationLeakyReLU;
 import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
 import ml.shifu.shifu.core.dtrain.nn.BasicDropoutLayer;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
@@ -294,6 +295,8 @@ public final class DTrainUtils {
                 network.addLayer(new BasicDropoutLayer(new ActivationSIN(), true, numHiddenNode, dropoutRate));
             } else if(func.equalsIgnoreCase(NNConstants.NN_RELU)) {
                 network.addLayer(new BasicDropoutLayer(new ActivationReLU(), true, numHiddenNode, dropoutRate));
+            } else if (func.equalsIgnoreCase(NNConstants.NN_LEAKY_RELU)) {
+                network.addLayer(new BasicDropoutLayer(new ActivationLeakyReLU(), true, numHiddenNode, dropoutRate));
             } else {
                 network.addLayer(new BasicDropoutLayer(new ActivationSigmoid(), true, numHiddenNode, dropoutRate));
             }
@@ -302,6 +305,8 @@ public final class DTrainUtils {
         if(isLinearTarget) {
             if (NNConstants.NN_RELU.equalsIgnoreCase(outputActivationFunc)) {
                 network.addLayer(new BasicLayer(new ActivationReLU(), true, out));
+            } else if (NNConstants.NN_LEAKY_RELU.equalsIgnoreCase(outputActivationFunc)) {
+                network.addLayer(new BasicLayer(new ActivationLeakyReLU(), true, out));
             } else {
                 network.addLayer(new BasicLayer(new ActivationLinear(), true, out));
             }

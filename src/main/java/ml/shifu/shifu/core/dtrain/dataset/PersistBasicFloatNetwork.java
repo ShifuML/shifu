@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import ml.shifu.shifu.core.dtrain.nn.ActivationLeakyReLU;
 import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
 
 import org.apache.commons.lang.StringUtils;
@@ -113,6 +114,8 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
                     String name = "org.encog.engine.network.activation." + cols.get(0);
                     if(cols.get(0).equals("ActivationReLU")) {
                         name = "ml.shifu.shifu.core.dtrain.nn.ActivationReLU";
+                    } else if (cols.get(0).equals("ActivationLeakyReLU")) {
+                        name = "ml.shifu.shifu.core.dtrain.nn.ActivationLeakyReLU";
                     }
                     try {
                         final Class<?> clazz = Class.forName(name);
@@ -243,6 +246,8 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
             String name = ml.shifu.shifu.core.dtrain.StringUtils.readString(in);
             if(name.equals("ActivationReLU")) {
                 name = ActivationReLU.class.getName();
+            } else if (name.equals("ActivationLeakyReLU")) {
+                name = ActivationLeakyReLU.class.getName();
             } else {
                 name = "org.encog.engine.network.activation." + name;
             }

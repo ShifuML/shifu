@@ -23,8 +23,6 @@
  */
 package ml.shifu.shifu.core.dtrain.random;
 
-import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
-
 import org.encog.mathutil.matrices.Matrix;
 import org.encog.mathutil.randomize.Randomizer;
 import org.encog.ml.MLMethod;
