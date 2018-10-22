@@ -808,7 +808,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // force-selected variables
         for(ColumnConfig columnConfig: this.columnConfigList) {
             if(columnConfig.isFinalSelect()) {
-                columnConfig.setFinalSelect(false);
+                columnConfig.setFinalSelect(true);
             }
         }
 
