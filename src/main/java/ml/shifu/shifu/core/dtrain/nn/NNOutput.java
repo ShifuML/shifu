@@ -139,7 +139,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     private Path bModel;
 
     /**
-     * Weight initializer, can be 'default', 'gaussian' or 'xavier'.
+     * Weight initializer, can be 'default', 'gaussian', 'xavier', 'He' or 'Lecun'.
      */
     private String wgtInit;
 
