@@ -1985,7 +1985,23 @@ public final class CommonUtils {
         } else {
             normalizeValue = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType());
         }
+
+        if ( CollectionUtils.isNotEmpty(normalizeValue) ) {
+            for ( int i = 0; i < normalizeValue.size(); i ++ ) {
+                Double nval = normalizeValue.get(i);
+                if(Double.isInfinite(nval) || Double.isNaN(nval)) {
+                    // if the value is Infinite or NaN, treat it as missing value
+                    // should treat Infinite as missing value also?
+                    normalizeValue.set(i, defaultMissingValue(config));
+                }
+            }
+        }
         return normalizeValue;
+    }
+
+    public static double defaultMissingValue(ColumnConfig config) {
+        // TODO return 0 when mean == null. Is it correct or reasonable?
+        return config.getMean() == null ? 0 : config.getMean().doubleValue();
     }
 
     public static boolean isTreeModel(String alg) {
