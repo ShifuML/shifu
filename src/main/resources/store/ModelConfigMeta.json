@@ -566,7 +566,8 @@
                                     {"label": "Log", "value":"Log"},
                                     {"label": "Sin", "value":"Sin"},
                                     {"label": "Linear", "value":"Linear"},
-                                    {"label": "ReLU", "value":"ReLU"}
+                                    {"label": "ReLU", "value":"ReLU"},
+                                    {"label": "LeakyReLU", "value":"LeakyReLU"}
                                 ]
                             }                            
                          ]
