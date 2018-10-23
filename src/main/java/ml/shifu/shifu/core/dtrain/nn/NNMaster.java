@@ -156,7 +156,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
     private boolean isAfterVarSelect;
 
     /**
-     * Weight initializer, can be 'default', 'gaussian' or 'xavier'.
+     * Weight initializer, can be 'default', 'gaussian' or 'xavier', 'He' or 'Lecun'.
      */
     private String wgtInit;
 

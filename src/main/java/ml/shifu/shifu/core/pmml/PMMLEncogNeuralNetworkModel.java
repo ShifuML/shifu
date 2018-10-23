@@ -103,12 +103,17 @@ public class PMMLEncogNeuralNetworkModel implements
                 put("ActivationLinear", ActivationFunction.IDENTITY);
                 put("ActivationTANH", ActivationFunction.TANH);
                 put("ActivationReLU", ActivationFunction.RECTIFIER);
+                //put("ActivationLeakyReLU", ActivationFunction.RECTIFIER);
             }
         };
         for(int i = 0; i < funLen; i++) {
             String trimS = functions[i].getClass().getName();
             String[] functionS = trimS.split("\\.");
-            functionType[i] = functionMap.get(functionS[functionS.length - 1]);
+            if (functionMap.containsKey(functionS[functionS.length - 1])) {
+                functionType[i] = functionMap.get(functionS[functionS.length - 1]);
+            } else {
+                throw new RuntimeException("PMML does not support activation function: " + functionS[functionS.length - 1]);
+            }
         }
         return functionType;
     }

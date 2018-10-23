@@ -269,7 +269,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     private String lossStr;
 
     /**
-     * Weight initializer, can be 'default', 'gaussian' or 'xavier'.
+     * Weight initializer, can be 'default', 'gaussian' or 'xavier', 'He' or 'Lecun'.
      */
     private String wgtInit;
 
