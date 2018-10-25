@@ -18,6 +18,7 @@ package ml.shifu.shifu.core.pmml.builder.impl;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.MiningFunction;
 import org.dmg.pmml.Model;
@@ -62,35 +63,39 @@ public class NNPmmlModelCreator extends AbstractPmmlElementCreator<Model> {
     public Targets createTargets() {
         Targets targets = new Targets();
 
-        if ( modelConfig.isClassification() &&
-                ModelTrainConf.MultipleClassification.NATIVE.equals(modelConfig.getTrain().getMultiClassifyMethod()) ) {
+        if(modelConfig.isClassification() && ModelTrainConf.MultipleClassification.NATIVE
+                .equals(modelConfig.getTrain().getMultiClassifyMethod())) {
             List<Target> targetList = createMultiClassTargets();
             targets.addTargets(targetList.toArray(new Target[targetList.size()]));
         } else {
             Target target = new Target();
 
-        target.setOpType(OpType.CONTINUOUS);
-        target.setField(new FieldName(modelConfig.getTargetColumnName()));
+            target.setOpType(OpType.CONTINUOUS);
+            target.setField(new FieldName(modelConfig.getTargetColumnName()));
 
-        List<TargetValue> targetValueList = new ArrayList<TargetValue>();
+            List<TargetValue> targetValueList = new ArrayList<TargetValue>();
 
-        for(String posTagValue: modelConfig.getPosTags()) {
-            TargetValue pos = new TargetValue();
-            pos.setValue(posTagValue);
-            pos.setDisplayValue("Positive");
+            if(CollectionUtils.isNotEmpty(modelConfig.getPosTags())) {
+                for(String posTagValue : modelConfig.getPosTags()) {
+                    TargetValue pos = new TargetValue();
+                    pos.setValue(posTagValue);
+                    pos.setDisplayValue("Positive");
 
-            targetValueList.add(pos);
-        }
+                    targetValueList.add(pos);
+                }
+            }
 
-        for(String negTagValue: modelConfig.getNegTags()) {
-            TargetValue neg = new TargetValue();
-            neg.setValue(negTagValue);
-            neg.setDisplayValue("Negative");
+            if(CollectionUtils.isNotEmpty(modelConfig.getNegTags())) {
+                for(String negTagValue : modelConfig.getNegTags()) {
+                    TargetValue neg = new TargetValue();
+                    neg.setValue(negTagValue);
+                    neg.setDisplayValue("Negative");
 
-            targetValueList.add(neg);
-        }
+                    targetValueList.add(neg);
+                }
+            }
 
-        target.addTargetValues(targetValueList.toArray(new TargetValue[targetValueList.size()]));
+            target.addTargetValues(targetValueList.toArray(new TargetValue[targetValueList.size()]));
 
             targets.addTargets(target);
         }
