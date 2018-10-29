@@ -157,7 +157,9 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
     protected double getWeightColumnVal(Tuple input) {
         double weight = 1.0;
         if(this.weightColumnId != INVALID_INDEX) {
+            String weightText = null;
             try {
+                weightText = input.get(this.weightColumnId).toString();
                 weight = Double.parseDouble(input.get(this.weightColumnId).toString());
                 if(weight < 0d) {
                     LOG.warn("weight column is less than 0.");
@@ -167,7 +169,9 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
                     }
                 }
             } catch (Exception e) {
-                LOG.warn("weight column is not numerical or null.");
+                if ( random.nextInt() % 100 == 0 ) { // only print 1% warn log
+                    LOG.warn("value:{}, weight column is not numerical or null.", weightText);
+                }
                 if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_WEIGHT_RECORDS")) {
                     PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_WEIGHT_RECORDS")
                             .increment(1);

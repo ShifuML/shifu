@@ -15,14 +15,14 @@
  */
 package ml.shifu.shifu.util;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import com.google.common.base.Splitter;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 
-import com.google.common.base.Splitter;
-
-import ml.shifu.shifu.container.obj.ColumnConfig;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * {@link BinUtils} is used to for almost all kinds of utility function in this framework.
@@ -34,8 +34,6 @@ public final class BinUtils {
      */
     private BinUtils() {
     }
-
-    // private static final Logger log = LoggerFactory.getLogger(BinUtils.class);
 
     /**
      * Given a column value, return bin list index. Return 0 for Category because of index 0 is started from
@@ -54,7 +52,11 @@ public final class BinUtils {
      */
     public static int getBinNum(ColumnConfig columnConfig, Object columnVal) {
         if(columnConfig.isCategorical()) {
-            return getCategoicalBinIndex(columnConfig.getBinCategory(), (String) columnVal);
+            if(columnVal == null) {
+                return -1;
+            } else {
+                return getCategoicalBinIndex(columnConfig, columnVal.toString());
+            }
         } else {
             return getNumericalBinIndex(columnConfig.getBinBoundary(), columnVal);
         }
@@ -70,24 +72,56 @@ public final class BinUtils {
      * @return bin index, -1 if invalid values
      */
     public static int getNumericalBinIndex(List<Double> binBoundaries, Object columnVal) {
-        if (columnVal == null) {
+        if(columnVal == null) {
             return -1;
         }
 
         double dval = 0.0;
-        
+
         if(columnVal instanceof Double) {
             dval = (Double) columnVal;
-        } else if (columnVal instanceof Integer) {
-            dval = ((Integer)columnVal).doubleValue();
+        } else if(columnVal instanceof Integer) {
+            dval = ((Integer) columnVal).doubleValue();
         } else {
             try {
-                dval = Double.parseDouble((String) columnVal);
+                dval = Double.parseDouble(columnVal.toString());
             } catch (Exception e) {
                 return -1;
             }
         }
         return getBinIndex(binBoundaries, dval);
+    }
+
+    /**
+     * Get categorical bin index according to string column value.
+     * 
+     * @param columnConfig
+     *            the column config
+     * @param columnVal
+     *            the column value
+     * @return bin index, -1 if invalid values
+     */
+    public static int getCategoicalBinIndex(ColumnConfig columnConfig, String columnVal) {
+        if(StringUtils.isBlank(columnVal)) {
+            return -1;
+        }
+
+        if(columnConfig.getColumnBinning().getBinCateMap() != null) {
+            Map<String, Integer> binCateMap = columnConfig.getColumnBinning().getBinCateMap();
+            Integer intIndex = binCateMap.get(columnVal);
+            if(intIndex == null || intIndex < 0) {
+                intIndex = -1;
+            }
+            return intIndex;
+        } else {
+            List<String> binCategories = columnConfig.getColumnBinning().getBinCategory();
+            for(int i = 0; i < binCategories.size(); i++) {
+                if(isCategoricalBinValue(binCategories.get(i), columnVal)) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 
     /**
@@ -100,7 +134,7 @@ public final class BinUtils {
      * @return bin index, -1 if invalid values
      */
     public static int getCategoicalBinIndex(List<String> binCategories, String columnVal) {
-        if(StringUtils.isBlank(columnVal)) {
+        if(StringUtils.isBlank(columnVal) || CollectionUtils.isEmpty(binCategories)) {
             return -1;
         }
         for(int i = 0; i < binCategories.size(); i++) {
@@ -184,14 +218,14 @@ public final class BinUtils {
      * @return double after parsing
      */
     public static double parseNumber(Object valStr) {
-        if (valStr == null) {
+        if(valStr == null) {
             return Double.NaN;
         }
-        
-        if (valStr instanceof Double) {
+
+        if(valStr instanceof Double) {
             return (Double) valStr;
-        } else if (valStr instanceof Integer) {
-            return ((Integer)valStr).doubleValue();
+        } else if(valStr instanceof Integer) {
+            return ((Integer) valStr).doubleValue();
         } else {
             try {
                 return Double.parseDouble((String) valStr);

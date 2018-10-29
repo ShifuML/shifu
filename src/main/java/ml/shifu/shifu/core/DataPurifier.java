@@ -126,7 +126,7 @@ public class DataPurifier {
             if(this.jexl.isStrict()) {
                 throw new RuntimeException(e);
             } else {
-                log.error("Error occurred when trying to evaluate" + dataFilterExpr.toString(), e);
+                log.error("Error occurred when trying to evaluate " + dataFilterExpr.toString(), e);
             }
         }
 
@@ -164,7 +164,7 @@ public class DataPurifier {
             if(this.jexl.isStrict()) {
                 throw new RuntimeException(e);
             } else {
-                log.warn("Error occurred when trying to evaluate" + dataFilterExpr.toString(), e);
+                log.warn("Error occurred when trying to evaluate " + dataFilterExpr.toString(), e);
             }
         }
 

@@ -110,16 +110,16 @@ public class DataDictionaryCreator extends AbstractPmmlElementCreator<DataDictio
             }
         }
 
-        dict.withDataFields(fields);
-        dict.withNumberOfFields(fields.size());
+        dict.addDataFields(fields.toArray(new DataField[fields.size()]));
+        dict.setNumberOfFields(fields.size());
         return dict;
     }
 
     private DataField convertColumnToDataField(ColumnConfig columnConfig) {
         DataField field = new DataField();
         field.setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig.getColumnName())));
-        field.setOptype(getOptype(columnConfig));
-        field.setDataType(getDataType(field.getOptype()));
+        field.setOpType(getOptype(columnConfig));
+        field.setDataType(getDataType(field.getOpType()));
         return field;
     }
 

@@ -15,6 +15,29 @@
  */
 package ml.shifu.shifu.core.processor;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Scanner;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.Path;
+import org.apache.pig.tools.pigstats.JobStats;
+import org.apache.pig.tools.pigstats.PigStats;
+import org.encog.ml.BasicML;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -36,20 +59,6 @@ import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.Path;
-import org.apache.pig.tools.pigstats.JobStats;
-import org.apache.pig.tools.pigstats.PigStats;
-import org.encog.ml.BasicML;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.CountDownLatch;
 
 /**
  * EvalModelProcessor class
@@ -67,6 +76,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     public enum EvalStep {
         LIST, NEW, DELETE, RUN, PERF, SCORE, CONFMAT, NORM, GAINCHART;
     }
+
+    public static final String NOSORT = "NOSORT";
 
     private String evalName = null;
 
@@ -102,6 +113,21 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     public EvalModelProcessor(EvalStep step, String name) {
         this.evalName = name;
         this.evalStep = step;
+    }
+
+    /**
+     * Constructor
+     *
+     * @param step
+     *            the evaluation step
+     * @param name
+     *            the evaluation name
+     * @param params
+     *            the command params
+     */
+    public EvalModelProcessor(EvalStep step, String name, Map<String, Object> params) {
+        this(step, name);
+        this.params = params;
     }
 
     /**
@@ -402,7 +428,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 "tmp" + File.separator + "maxmin_score_" + System.currentTimeMillis() + "_" + RANDOM.nextLong()))
                 .toString();
         confMap.put(Constants.SHIFU_EVAL_MAXMIN_SCORE_OUTPUT, maxMinScoreFolder);
-        if(modelConfig.isClassification()) {
+        if(modelConfig.isClassification() || (isNoSort() && EvalStep.SCORE.equals(this.evalStep))) {
             pigScript = "scripts/EvalScore.pig";
         }
         try {
@@ -435,6 +461,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                     .getCounter(Constants.COUNTER_WPOSTAGS) / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
             double pigNegWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.COUNTER_WNEGTAGS) / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
+
+            LOG.info("Total positive record count is : {}", pigPosTags);
+            LOG.info("Total negative record count is : {}", pigNegTags);
+            LOG.info("Total weighted positive record count is : {}", pigPosWeightTags);
+            LOG.info("Total weighted negative record count is : {}", pigNegWeightTags);
 
             long totalRunTime = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.TOTAL_MODEL_RUNTIME);
@@ -872,12 +903,12 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
 
         // 1. Get challenge model performance
-        PerformanceResult challendgeModelPerformance = runConfusionMatrix(evalConfig, ss,
+        PerformanceResult challengeModelPerformance = runConfusionMatrix(evalConfig, ss,
                 pathFinder.getEvalScorePath(evalConfig), pathFinder.getEvalPerformancePath(evalConfig), false, false,
                 isGBTNotConvertToProb(evalConfig));
 
         List<PerformanceResult> prList = new ArrayList<PerformanceResult>();
-        prList.add(challendgeModelPerformance);
+        prList.add(challengeModelPerformance);
 
         // 2. Get all champion model performance
         List<String> names = new ArrayList<String>();
@@ -1181,6 +1212,14 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runConfusionMatrix(EvalConfig config) throws IOException {
         runConfusionMatrix(config, null, false);
+    }
+
+    /**
+     * Check "-nosort" is specified or not
+     * @return true if nosort is specified, or false
+     */
+    private boolean isNoSort() {
+        return getBooleanParam(this.params, NOSORT);
     }
 
     private static class ScoreStatus {

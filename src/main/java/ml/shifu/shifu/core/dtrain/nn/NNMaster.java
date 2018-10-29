@@ -156,7 +156,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
     private boolean isAfterVarSelect;
 
     /**
-     * Weight initializer, can be 'default', 'gaussian' or 'xavier'.
+     * Weight initializer, can be 'default', 'gaussian' or 'xavier', 'He' or 'Lecun'.
      */
     private String wgtInit;
 
@@ -371,9 +371,10 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
+        String outputActivationFunc = (String)validParams.get(CommonConstants.OUTPUT_ACTIVATION_FUNC);
         BasicNetwork network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers, actFunc,
                 hiddenNodeList, true, this.dropoutRate, this.wgtInit,
-                CommonUtils.isLinearTarget(modelConfig, columnConfigList));
+                CommonUtils.isLinearTarget(modelConfig, columnConfigList), outputActivationFunc);
 
         this.flatNetwork = (FloatFlatNetwork) network.getFlat();
         
@@ -546,7 +547,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
 	
 	/**
 	 * User's input fixed layer ID is different from ours. we need to use hiddenLayerNum to do transformation. 
-	 * For examaple, when user what to fix first hidden layer, 2 -> his.hiddenLayerNum - 2 + 1
+	 * For example, when user what to fix first hidden layer, 2 -> his.hiddenLayerNum - 2 + 1
 	 * 
 	 * fixed layer cannot be output layer and input layer, which does not have meanings
 	 * @param fixedLayers

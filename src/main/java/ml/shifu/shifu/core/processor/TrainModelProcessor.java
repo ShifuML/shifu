@@ -15,19 +15,10 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import java.io.*;
-import java.lang.Thread.UncaughtExceptionHandler;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Scanner;
-import java.util.Set;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Splitter;
 import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
@@ -46,24 +37,10 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.FeatureSubsetStrategy;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
-import ml.shifu.shifu.core.dtrain.dt.DTMaster;
-import ml.shifu.shifu.core.dtrain.dt.DTMasterParams;
-import ml.shifu.shifu.core.dtrain.dt.DTOutput;
-import ml.shifu.shifu.core.dtrain.dt.DTWorker;
-import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams;
+import ml.shifu.shifu.core.dtrain.dt.*;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
-import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
-import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionMaster;
-import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionOutput;
-import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionParams;
-import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionWorker;
-import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
-import ml.shifu.shifu.core.dtrain.nn.NNMaster;
-import ml.shifu.shifu.core.dtrain.nn.NNOutput;
-import ml.shifu.shifu.core.dtrain.nn.NNParams;
-import ml.shifu.shifu.core.dtrain.nn.NNParquetWorker;
-import ml.shifu.shifu.core.dtrain.nn.NNWorker;
+import ml.shifu.shifu.core.dtrain.lr.*;
+import ml.shifu.shifu.core.dtrain.nn.*;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -72,7 +49,6 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.guagua.GuaguaParquetMapReduceClient;
 import ml.shifu.shifu.guagua.ShifuInputFormat;
 import ml.shifu.shifu.util.*;
-
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
@@ -93,12 +69,7 @@ import org.apache.pig.impl.PigContext;
 import org.apache.pig.impl.util.JarManager;
 import org.apache.pig.impl.util.ObjectSerializer;
 import org.apache.zookeeper.ZooKeeper;
-import org.encog.engine.network.activation.ActivationFunction;
-import org.encog.engine.network.activation.ActivationLOG;
-import org.encog.engine.network.activation.ActivationLinear;
-import org.encog.engine.network.activation.ActivationSIN;
-import org.encog.engine.network.activation.ActivationSigmoid;
-import org.encog.engine.network.activation.ActivationTANH;
+import org.encog.engine.network.activation.*;
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLDataSet;
 import org.jboss.netty.bootstrap.ServerBootstrap;
@@ -106,7 +77,6 @@ import org.joda.time.ReadableInstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xerial.snappy.Snappy;
-
 import parquet.ParquetRuntimeException;
 import parquet.column.ParquetProperties;
 import parquet.column.values.bitpacking.Packer;
@@ -115,10 +85,10 @@ import parquet.format.PageType;
 import parquet.hadoop.ParquetRecordReader;
 import parquet.org.codehaus.jackson.Base64Variant;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Splitter;
+import java.io.*;
+import java.lang.Thread.UncaughtExceptionHandler;
+import java.nio.charset.Charset;
+import java.util.*;
 
 /**
  * Train processor, produce model based on the normalized dataset
@@ -162,12 +132,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Constructor
-     * 
-     * @param isDryTrain
-     *            dryTrain flag, if it's true, the trainer would start training
-     * @param isDebug
-     *            debug flag, if it's true, shifu will create log file to record
-     *            each training status
+     *
+     * @param isDryTrain dryTrain flag, if it's true, the trainer would start training
+     * @param isDebug    debug flag, if it's true, shifu will create log file to record
+     *                   each training status
      */
     public TrainModelProcessor(boolean isDryTrain, boolean isDebug) {
         super();
@@ -181,8 +149,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     /**
      * Training process entry point.
      */
-    @Override
-    public int run() throws Exception {
+    @Override public int run() throws Exception {
         int status = 0;
 
         if(!this.isForVarSelect()) {
@@ -233,9 +200,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * run training process with number of bags
-     * 
-     * @param numBags
-     *            number of bags, it decide how much trainer will start training
+     *
+     * @param numBags number of bags, it decide how much trainer will start training
      * @throws IOException
      */
     private void runAkkaTrain(int numBags) throws IOException {
@@ -264,20 +230,20 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(modelConfig.getAlgorithm().equalsIgnoreCase("DT")) {
             LOG.info("Raw Data: " + pathFinder.getNormalizedDataPath());
             try {
-                scanners = ShifuFileUtils.getDataScanners(modelConfig.getDataSetRawPath(),
-                        modelConfig.getDataSet().getSource());
+                scanners = ShifuFileUtils
+                        .getDataScanners(modelConfig.getDataSetRawPath(), modelConfig.getDataSet().getSource());
             } catch (IOException e) {
                 throw new ShifuException(ShifuErrorCode.ERROR_INPUT_NOT_FOUND, e, pathFinder.getNormalizedDataPath());
             }
             if(CollectionUtils.isNotEmpty(scanners)) {
-                AkkaSystemExecutor.getExecutor().submitDecisionTreeTrainJob(modelConfig, columnConfigList, scanners,
-                        trainers);
+                AkkaSystemExecutor.getExecutor()
+                        .submitDecisionTreeTrainJob(modelConfig, columnConfigList, scanners, trainers);
             }
         } else {
             LOG.info("Normalized Data: " + pathFinder.getNormalizedDataPath());
             try {
-                scanners = ShifuFileUtils.getDataScanners(pathFinder.getNormalizedDataPath(),
-                        modelConfig.getDataSet().getSource());
+                scanners = ShifuFileUtils
+                        .getDataScanners(pathFinder.getNormalizedDataPath(), modelConfig.getDataSet().getSource());
             } catch (IOException e) {
                 throw new ShifuException(ShifuErrorCode.ERROR_INPUT_NOT_FOUND, e, pathFinder.getNormalizedDataPath());
             }
@@ -292,7 +258,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Get the trainer list
-     * 
+     *
      * @return the trainer list
      */
     public List<AbstractTrainer> getTrainers() {
@@ -301,9 +267,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Get the trainer
-     * 
-     * @param index
-     *            the index of trainer
+     *
+     * @param index the index of trainer
      * @return the trainer
      */
     public AbstractTrainer getTrainer(int index) {
@@ -321,8 +286,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     "Currently we only support NN, LR, RF(RandomForest) and GBDT(Gradient Boost Desicion Tree) distributed training.");
         }
 
-        if((LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)
-                || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg)) && modelConfig.isClassification()
+        if((LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBT_ALG_NAME
+                .equalsIgnoreCase(alg)) && modelConfig.isClassification()
                 && modelConfig.getTrain().getMultiClassifyMethod() == MultipleClassification.NATIVE) {
             throw new IllegalArgumentException(
                     "Distributed LR, GBDT(Gradient Boost Desicion Tree) only support binary classification, native multiple classification is not supported.");
@@ -346,20 +311,19 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 .getFileSystemBySourceType(super.getModelConfig().getDataSet().getSource())
                 .exists(new Path(super.getPathFinder().getNormalizedDataPath(), "_common_metadata"));
         if(super.modelConfig.getNormalize().getIsParquet() && !isParquetMetaFileExist) {
-            throw new IllegalArgumentException("Your normlized input in "
-                    + super.getPathFinder().getNormalizedDataPath()
-                    + " is not parquet format. Please keep isParquet and re-run norm again and then run training step or change isParquet to false.");
+            throw new IllegalArgumentException(
+                    "Your normlized input in " + super.getPathFinder().getNormalizedDataPath()
+                            + " is not parquet format. Please keep isParquet and re-run norm again and then run training step or change isParquet to false.");
         } else if(!super.modelConfig.getNormalize().getIsParquet() && isParquetMetaFileExist) {
-            throw new IllegalArgumentException("Your normlized input in "
-                    + super.getPathFinder().getNormalizedDataPath()
-                    + " is parquet format. Please keep isParquet and re-run norm again or change isParquet directly to true.");
+            throw new IllegalArgumentException(
+                    "Your normlized input in " + super.getPathFinder().getNormalizedDataPath()
+                            + " is parquet format. Please keep isParquet and re-run norm again or change isParquet directly to true.");
         }
 
         GridSearch gridSearch = new GridSearch(modelConfig.getTrain().getParams(),
                 modelConfig.getTrain().getGridConfigFileContent());
-        if(!LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)
-                && !NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) && !CommonUtils.isTreeModel(alg)
-                && gridSearch.hasHyperParam()) {
+        if(!LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) && !NNConstants.NN_ALG_NAME
+                .equalsIgnoreCase(alg) && !CommonUtils.isTreeModel(alg) && gridSearch.hasHyperParam()) {
             // if grid search but not NN, not RF, not GBT, not LR
             throw new IllegalArgumentException("Grid search only supports NN, GBT and RF algorithms");
         }
@@ -432,8 +396,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 .booleanValue();
         GuaguaMapReduceClient guaguaClient;
 
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
-                this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils
+                .getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
         int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         int candidateCount = inputOutputIndex[2];
 
@@ -447,22 +411,25 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             // set required field list to make sure we only load selected columns.
             RequiredFieldList requiredFieldList = new RequiredFieldList();
             boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
-            for(ColumnConfig columnConfig: super.columnConfigList) {
+            for(ColumnConfig columnConfig : super.columnConfigList) {
                 if(columnConfig.isTarget()) {
-                    requiredFieldList.add(new RequiredField(columnConfig.getColumnName(), columnConfig.getColumnNum(),
-                            null, DataType.FLOAT));
+                    requiredFieldList
+                            .add(new RequiredField(columnConfig.getColumnName(), columnConfig.getColumnNum(), null,
+                                    DataType.FLOAT));
                 } else {
                     if(inputNodeCount == candidateCount) {
                         // no any variables are selected
-                        if(!columnConfig.isMeta() && !columnConfig.isTarget()
-                                && CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
-                            requiredFieldList.add(new RequiredField(columnConfig.getColumnName(),
-                                    columnConfig.getColumnNum(), null, DataType.FLOAT));
+                        if(!columnConfig.isMeta() && !columnConfig.isTarget() && CommonUtils
+                                .isGoodCandidate(columnConfig, hasCandidates)) {
+                            requiredFieldList
+                                    .add(new RequiredField(columnConfig.getColumnName(), columnConfig.getColumnNum(),
+                                            null, DataType.FLOAT));
                         }
                     } else {
                         if(!columnConfig.isMeta() && !columnConfig.isTarget() && columnConfig.isFinalSelect()) {
-                            requiredFieldList.add(new RequiredField(columnConfig.getColumnName(),
-                                    columnConfig.getColumnNum(), null, DataType.FLOAT));
+                            requiredFieldList
+                                    .add(new RequiredField(columnConfig.getColumnName(), columnConfig.getColumnNum(),
+                                            null, DataType.FLOAT));
                         }
                     }
                 }
@@ -482,9 +449,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 .parseInt(Environment.getProperty(CommonConstants.SHIFU_TRAIN_BAGGING_INPARALLEL, "5"));
         int parallelGroups = 1;
         if(gs.hasHyperParam()) {
-            parallelGroups = (gs.getFlattenParams().size() % parallelNum == 0
-                    ? gs.getFlattenParams().size() / parallelNum
-                    : gs.getFlattenParams().size() / parallelNum + 1);
+            parallelGroups = (gs.getFlattenParams().size() % parallelNum == 0 ?
+                    gs.getFlattenParams().size() / parallelNum :
+                    gs.getFlattenParams().size() / parallelNum + 1);
             baggingNum = gs.getFlattenParams().size();
             LOG.warn("'train:baggingNum' is set to {} because of grid search enabled by settings in 'train#params'.",
                     gs.getFlattenParams().size());
@@ -500,8 +467,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             int currBags = baggingNum;
             if(gs.hasHyperParam()) {
                 if(j == parallelGroups - 1) {
-                    currBags = gs.getFlattenParams().size() % parallelNum == 0 ? parallelNum
-                            : gs.getFlattenParams().size() % parallelNum;
+                    currBags = gs.getFlattenParams().size() % parallelNum == 0 ?
+                            parallelNum :
+                            gs.getFlattenParams().size() % parallelNum;
                 } else {
                     currBags = parallelNum;
                 }
@@ -562,14 +530,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     LOG.info("Old model path has been moved to {}", mvModelPath);
                     fileSystem.rename(new Path(srcModelPath), new Path(mvModelPath));
                     fileSystem.mkdirs(new Path(srcModelPath));
-                    FileSystem.getLocal(conf).delete(new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL)),
-                            true);
+                    FileSystem.getLocal(conf)
+                            .delete(new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL)), true);
                 }
 
                 if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
                     // tree related parameters initialization
-                    Map<String, Object> params = gs.hasHyperParam() ? gs.getParams(i)
-                            : this.modelConfig.getTrain().getParams();
+                    Map<String, Object> params = gs.hasHyperParam() ?
+                            gs.getParams(i) :
+                            this.modelConfig.getTrain().getParams();
                     Object fssObj = params.get("FeatureSubsetStrategy");
                     FeatureSubsetStrategy featureSubsetStrategy = null;
                     double featureSubsetRate = 0d;
@@ -589,25 +558,29 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
                     Set<Integer> subFeatures = null;
                     if(isContinous) {
-                        BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils
-                                .getBasicNetwork(CommonUtils.loadModel(modelConfig, modelPath, ShifuFileUtils
+                        BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils.getBasicNetwork(CommonUtils
+                                .loadModel(modelConfig, modelPath, ShifuFileUtils
                                         .getFileSystemBySourceType(this.modelConfig.getDataSet().getSource())));
                         if(existingModel == null) {
-                            subFeatures = new HashSet<Integer>(getSubsamplingFeatures(allFeatures,
-                                    featureSubsetStrategy, featureSubsetRate, inputNodeCount));
+                            subFeatures = new HashSet<Integer>(
+                                    getSubsamplingFeatures(allFeatures, featureSubsetStrategy, featureSubsetRate,
+                                            inputNodeCount));
                         } else {
                             subFeatures = existingModel.getFeatureSet();
                         }
                     } else {
-                        subFeatures = new HashSet<Integer>(getSubsamplingFeatures(allFeatures, featureSubsetStrategy,
-                                featureSubsetRate, inputNodeCount));
+                        subFeatures = new HashSet<Integer>(
+                                getSubsamplingFeatures(allFeatures, featureSubsetStrategy, featureSubsetRate,
+                                        inputNodeCount));
                     }
                     if(subFeatures == null || subFeatures.size() == 0) {
-                        localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                                CommonConstants.SHIFU_NN_FEATURE_SUBSET, ""));
+                        localArgs.add(String
+                                .format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_NN_FEATURE_SUBSET,
+                                        ""));
                     } else {
-                        localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                                CommonConstants.SHIFU_NN_FEATURE_SUBSET, StringUtils.join(subFeatures, ',')));
+                        localArgs.add(String
+                                .format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_NN_FEATURE_SUBSET,
+                                        StringUtils.join(subFeatures, ',')));
                         LOG.debug("Size: {}, list: {}.", subFeatures.size(), StringUtils.join(subFeatures, ','));
                     }
                 }
@@ -615,22 +588,25 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.GUAGUA_OUTPUT,
                         modelPath.toString()));
 
-                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                        Constants.SHIFU_NN_BINARY_MODEL_PATH, bModelPath.toString()));
+                localArgs.add(String
+                        .format(CommonConstants.MAPREDUCE_PARAM_FORMAT, Constants.SHIFU_NN_BINARY_MODEL_PATH,
+                                bModelPath.toString()));
 
                 if(gs.hasHyperParam() || isKFoldCV) {
                     // k-fold cv need val error
                     Path valErrPath = fileSystem.makeQualified(
                             new Path(super.getPathFinder().getValErrorPath(sourceType), "val_error_" + i));
-                    localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                            CommonConstants.GS_VALIDATION_ERROR, valErrPath.toString()));
+                    localArgs.add(String
+                            .format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.GS_VALIDATION_ERROR,
+                                    valErrPath.toString()));
                 }
                 localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_TRAINER_ID,
                         String.valueOf(i)));
                 final String progressLogFile = getProgressLogFile(i);
                 progressLogList.add(progressLogFile);
-                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                        CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE, progressLogFile));
+                localArgs.add(String
+                        .format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE,
+                                progressLogFile));
                 String hdpVersion = HDPUtils.getHdpVersionForHDP224();
                 if(StringUtils.isNotBlank(hdpVersion)) {
                     localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, "hdp.version", hdpVersion));
@@ -644,14 +620,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     guaguaClient.addJob(localArgs.toArray(new String[0]));
                 } else {
                     TailThread tailThread = startTailThread(new String[] { progressLogFile });
-                    guaguaClient.createJob(localArgs.toArray(new String[0])).waitForCompletion(true);
+                    boolean ret = guaguaClient.createJob(localArgs.toArray(new String[0])).waitForCompletion(true);
+                    status += (ret ? 0 : 1);
                     stopTailThread(tailThread);
                 }
             }
 
             if(isParallel) {
                 TailThread tailThread = startTailThread(progressLogList.toArray(new String[0]));
-                guaguaClient.run();
+                status += guaguaClient.run();
                 stopTailThread(tailThread);
             }
         }
@@ -667,13 +644,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 } else {
                     LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
                             modelPath.toString());
-                    status = 1;
+                    status += 1;
                 }
             }
 
             List<Double> valErrs = readAllValidationErrors(sourceType, fileSystem, kCrossValidation);
             double sum = 0d;
-            for(Double err: valErrs) {
+            for(Double err : valErrs) {
                 sum += err;
             }
             LOG.info("Average validation error for current k-fold cross validation is {}.", sum / valErrs.size());
@@ -688,12 +665,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 String modelName = getModelName(i);
                 Path modelPath = fileSystem
                         .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
-                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
+                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath) && (status == 0)) {
                     copyModelToLocal(modelName, modelPath, sourceType);
                 } else {
                     LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
                             modelPath.toString());
-                    status = 1;
                 }
             }
             LOG.info("The best parameters in grid search is {}", params);
@@ -706,12 +682,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     String modelName = getModelName(i);
                     Path modelPath = fileSystem
                             .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
-                    if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
+                    if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath) && (status == 0)) {
                         copyModelToLocal(modelName, modelPath, sourceType);
                     } else {
                         LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
                                 modelPath.toString());
-                        status = 1;
                     }
                 }
 
@@ -759,12 +734,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             FileStatus[] fss = fs.listStatus(new Path(localFsFolder));
             if(fss != null && fss.length > 0) {
                 Arrays.sort(fss, new Comparator<FileStatus>() {
-                    @Override
-                    public int compare(FileStatus o1, FileStatus o2) {
+                    @Override public int compare(FileStatus o1, FileStatus o2) {
                         return o2.getPath().toString().compareTo(o1.getPath().toString());
                     }
                 });
-                for(FileStatus fileStatus: fss) {
+                for(FileStatus fileStatus : fss) {
                     String strPath = fileStatus.getPath().getName();
                     if(strPath.endsWith(PathFinder.FEATURE_IMPORTANCE_FILE)) {
                         fs.rename(fileStatus.getPath(), new Path(fileStatus.getPath() + ".1"));
@@ -915,25 +889,24 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         return finalContinuous;
     }
 
-    @SuppressWarnings("unchecked")
-    private boolean inputOutputModelCheckSuccess(FileSystem fileSystem, Path modelPath, Map<String, Object> modelParams)
-            throws IOException {
+    @SuppressWarnings("unchecked") private boolean inputOutputModelCheckSuccess(FileSystem fileSystem, Path modelPath,
+            Map<String, Object> modelParams) throws IOException {
         BasicML basicML = CommonUtils.loadModel(this.modelConfig, modelPath, fileSystem);
         BasicFloatNetwork model = (BasicFloatNetwork) CommonUtils.getBasicNetwork(basicML);
 
-        int[] outputCandidateCounts = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
-                getColumnConfigList());
+        int[] outputCandidateCounts = DTrainUtils
+                .getInputOutputCandidateCounts(modelConfig.getNormalizeType(), getColumnConfigList());
         int inputs = outputCandidateCounts[0] == 0 ? outputCandidateCounts[2] : outputCandidateCounts[0];
-        boolean isInputOutConsistent = model.getInputCount() == inputs
-                && model.getOutputCount() == outputCandidateCounts[1];
+        boolean isInputOutConsistent =
+                model.getInputCount() == inputs && model.getOutputCount() == outputCandidateCounts[1];
 
         if(!isInputOutConsistent) {
             return false;
         }
 
         // same hidden layer ?
-        boolean isHasSameHidderLayer = (model.getLayerCount() - 2) == (Integer) modelParams
-                .get(CommonConstants.NUM_HIDDEN_LAYERS);
+        boolean isHasSameHidderLayer =
+                (model.getLayerCount() - 2) == (Integer) modelParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         if(!isHasSameHidderLayer) {
             return false;
         }
@@ -969,6 +942,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 isHasSameHiddenActiviation = ActivationSIN.class == activation.getClass();
             } else if(actFunc.get(i).equalsIgnoreCase(NNConstants.NN_RELU)) {
                 isHasSameHiddenActiviation = ActivationReLU.class == activation.getClass();
+            } else if(actFunc.get(i).equalsIgnoreCase(NNConstants.NN_LEAKY_RELU)) {
+                isHasSameHiddenActiviation = ActivationLeakyReLU.class == activation.getClass();
             } else {
                 isHasSameHiddenActiviation = ActivationSigmoid.class == activation.getClass();
             }
@@ -1005,8 +980,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         thread.setName("Training Progress");
         thread.setDaemon(true);
         thread.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-            @Override
-            public void uncaughtException(Thread t, Throwable e) {
+            @Override public void uncaughtException(Thread t, Throwable e) {
                 LOG.warn(String.format("Error in thread %s: %s", t.getName(), e.getMessage()));
             }
         });
@@ -1021,8 +995,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 Path localTmpModelsFolder = new Path(Constants.MODELS_TMP);
                 HDFSUtils.getLocalFS().delete(localTmpModelsFolder, true);
                 HDFSUtils.getLocalFS().mkdirs(localTmpModelsFolder);
-                ShifuFileUtils.getFileSystemBySourceType(sourceType).copyToLocalFile(tmpModelsDir,
-                        localTmpModelsFolder);
+                ShifuFileUtils.getFileSystemBySourceType(sourceType)
+                        .copyToLocalFile(tmpModelsDir, localTmpModelsFolder);
             }
         }
     }
@@ -1165,8 +1139,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_POISON_SAMPLER,
                 Environment.getProperty(NNConstants.NN_POISON_SAMPLER, "true")));
         // hard code set computation threshold for 50s. Can be changed in shifuconfig file
-        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD, 60 * 1000L));
+        args.add(
+                String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_COMPUTATION_TIME_THRESHOLD,
+                        60 * 1000L));
         setHeapSizeAndSplitSize(args);
 
         // set default embedded zookeeper to client to avoid mapper oom: master mapper embeded zookeeper will use
@@ -1180,8 +1155,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         // one can set guagua conf in shifuconfig
         CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
-            @Override
-            public void inject(Object key, Object value) {
+            @Override public void inject(Object key, Object value) {
                 args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, key.toString(), value.toString()));
             }
         });
@@ -1192,8 +1166,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         String vcoreStr = Environment.getProperty(CommonConstants.MAPREDUCE_MAP_CPU_VCORES);
         int vcores = 1;
         if(vcoreStr == null) {
-            vcores = modelConfig.getTrain().getWorkerThreadCount() == null ? 1
-                    : modelConfig.getTrain().getWorkerThreadCount();
+            vcores = modelConfig.getTrain().getWorkerThreadCount() == null ?
+                    1 :
+                    modelConfig.getTrain().getWorkerThreadCount();
         } else {
             try {
                 vcores = Integer.parseInt(vcoreStr);
@@ -1314,8 +1289,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         // in shifuconfig; by default it is 200M, consider in some cases user selects only a half of features, this
         // number should be 400m
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
-                this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils
+                .getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
         int candidateCount = (inputOutputIndex[2] == 0 ? inputOutputIndex[0] : inputOutputIndex[2]);
         // 1. set benchmark
         long maxCombineSize = CommonUtils.isTreeModel(modelConfig.getAlgorithm()) ? 209715200L : 168435456L;
@@ -1429,11 +1404,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     /**
      * For RF/GBT model, no need do normalizing, but clean and filter data is needed. Before real training, we have to
      * clean and filter data.
-     * 
-     * @param isToShuffle
-     *            if shuffle data before training
-     * @throws IOException
-     *             the io exception
+     *
+     * @param isToShuffle if shuffle data before training
+     * @throws IOException the io exception
      */
     protected void checkAndCleanDataForTreeModels(boolean isToShuffle) throws IOException {
         String alg = this.getModelConfig().getTrain().getAlgorithm();
@@ -1443,7 +1416,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         // check if binBoundaries and binCategories are good and log error
-        for(ColumnConfig columnConfig: columnConfigList) {
+        for(ColumnConfig columnConfig : columnConfigList) {
             if(columnConfig.isFinalSelect() && !columnConfig.isTarget() && !columnConfig.isMeta()) {
                 if(columnConfig.isNumerical() && columnConfig.getBinBoundary() == null) {
                     throw new IllegalArgumentException("Final select " + columnConfig.getColumnName()
@@ -1478,10 +1451,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // 2. if cleanedDataPath does not exist, generate clean data for tree ensemble model training
         // 3. if validationDataPath is not blank and cleanedValidationDataPath does not exist, generate clean data for
         // tree ensemble model training
-        if(Boolean.TRUE.toString().equalsIgnoreCase(needReGen)
-                || !ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)
-                || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())
-                        && !ShifuFileUtils.isFileExists(pathFinder.getCleanedValidationDataPath(), sourceType))) {
+        if(Boolean.TRUE.toString().equalsIgnoreCase(needReGen) || !ShifuFileUtils
+                .isFileExists(cleanedDataPath, sourceType) || (
+                StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath()) && !ShifuFileUtils
+                        .isFileExists(pathFinder.getCleanedValidationDataPath(), sourceType))) {
             runDataClean(isToShuffle);
         } else {
             // no need regen data
@@ -1492,9 +1465,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * Get model name
-     * 
-     * @param i
-     *            index for model name
+     *
+     * @param i index for model name
      * @return the ith model name
      */
     public String getModelName(int i) {
@@ -1532,8 +1504,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
-     * @param isForVarSelect
-     *            the isForVarSelect to set
+     * @param isForVarSelect the isForVarSelect to set
      */
     public void setForVarSelect(boolean isForVarSelect) {
         this.isForVarSelect = isForVarSelect;
@@ -1541,6 +1512,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * set the train log file prefix
+     *
      * @param trainLogFile - file to save train log
      */
     public void setTrainLogFile(String trainLogFile) {
@@ -1557,7 +1529,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         public TailThread(String[] progressLogs) {
             this.progressLogs = progressLogs;
             this.offset = new long[this.progressLogs.length];
-            for(String progressLog: progressLogs) {
+            for(String progressLog : progressLogs) {
                 try {
                     // delete it firstly, it will be updated from master
                     HDFSUtils.getFS().delete(new Path(progressLog), true);
@@ -1614,7 +1586,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 IOUtils.copyBytes(in, out, HDFSUtils.getFS().getConf(), false);
                 String msgs = new String(out.toByteArray(), Charset.forName("UTF-8")).trim();
                 if(StringUtils.isNotEmpty(msgs)) {
-                    for(String msg: Splitter.on('\n').split(msgs)) {
+                    for(String msg : Splitter.on('\n').split(msgs)) {
                         LOG.info(msg.trim());
                     }
                 }
@@ -1633,11 +1605,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         public void deleteProgressFiles(String trainLogFile) throws IOException {
-            if ( StringUtils.isNotBlank(trainLogFile) ) {
+            if(StringUtils.isNotBlank(trainLogFile)) {
                 BufferedWriter writer = null;
                 try {
                     writer = new BufferedWriter(new FileWriter(trainLogFile));
-                    for (String progressFile : this.progressLogs) {
+                    for(String progressFile : this.progressLogs) {
                         Reader reader = ShifuFileUtils.getReader(progressFile, SourceType.HDFS);
                         org.apache.commons.io.IOUtils.copy(reader, writer);
                         org.apache.commons.io.IOUtils.closeQuietly(reader);
@@ -1649,7 +1621,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 }
             }
 
-            for(String progressFile: this.progressLogs) {
+            for(String progressFile : this.progressLogs) {
                 HDFSUtils.getFS().delete(new Path(progressFile), true);
             }
         }

@@ -16,8 +16,10 @@
 package ml.shifu.shifu.util;
 
 import org.dmg.pmml.*;
-import org.jpmml.model.ImportFilter;
+import org.dmg.pmml.MiningField.UsageType;
+import org.dmg.pmml.neural_network.NeuralNetwork;
 import org.jpmml.model.JAXBUtil;
+import org.jpmml.model.filters.ImportFilter;
 import org.xml.sax.InputSource;
 
 import javax.xml.transform.sax.SAXSource;
@@ -171,7 +173,7 @@ public class PmmlUtils {
 
         Integer cnt = 0;
         for(MiningField miningField: miningSchema.getMiningFields()) {
-            if(miningField.getUsageType().equals(FieldUsageType.ACTIVE)) {
+            if(miningField.getUsageType().equals(UsageType.ACTIVE)) {
                 cnt += 1;
             }
         }
@@ -183,7 +185,7 @@ public class PmmlUtils {
 
         Integer cnt = 0;
         for(MiningField miningField: miningSchema.getMiningFields()) {
-            if(miningField.getUsageType().equals(FieldUsageType.TARGET)) {
+            if(miningField.getUsageType().equals(UsageType.TARGET)) {
                 cnt += 1;
             }
         }

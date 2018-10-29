@@ -23,7 +23,7 @@ import java.util.Map.Entry;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.PMML;
 import org.jpmml.evaluator.FieldValue;
-import org.jpmml.evaluator.NeuralNetworkEvaluator;
+import org.jpmml.evaluator.neural_network.NeuralNetworkEvaluator;
 import org.junit.Test;
 
 public class GolfPmmlTest {
@@ -38,9 +38,9 @@ public class GolfPmmlTest {
 
         for(Map<FieldName, FieldValue> map: input) {
             Map<String, Object> newMap = new HashMap<String, Object>();
-            Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(map);
-            double pmmlScore = 0d;
-            for(Map.Entry<FieldName, Double> entry: regressionTerm.entrySet()) {
+            Map<FieldName, Object> regressionTerm = (Map<FieldName, Object>) evaluator.evaluate(map);
+            Object pmmlScore = 0d;
+            for(Map.Entry<FieldName, Object> entry: regressionTerm.entrySet()) {
                 pmmlScore = entry.getValue();
             }
             for(Entry<FieldName, FieldValue> entry: map.entrySet()) {
@@ -73,9 +73,9 @@ public class GolfPmmlTest {
 
         for(Map<FieldName, FieldValue> map: input) {
             Map<String, Object> newMap = new HashMap<String, Object>();
-            Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(map);
-            double pmmlScore = 0d;
-            for(Map.Entry<FieldName, Double> entry: regressionTerm.entrySet()) {
+            Map<FieldName, Object> regressionTerm = (Map<FieldName, Object>) evaluator.evaluate(map);
+            Object pmmlScore = 0d;
+            for(Map.Entry<FieldName, Object> entry: regressionTerm.entrySet()) {
                 pmmlScore = entry.getValue();
             }
             for(Entry<FieldName, FieldValue> entry: map.entrySet()) {

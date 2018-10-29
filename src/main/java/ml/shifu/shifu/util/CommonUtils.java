@@ -15,10 +15,6 @@
  */
 package ml.shifu.shifu.util;
 
-import com.google.common.base.Function;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -30,7 +26,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -46,6 +41,36 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.zip.GZIPInputStream;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.Predicate;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.pig.backend.executionengine.ExecException;
+import org.apache.pig.data.Tuple;
+import org.encog.ml.BasicML;
+import org.encog.ml.data.MLDataPair;
+import org.encog.ml.data.basic.BasicMLData;
+import org.encog.ml.data.basic.BasicMLDataPair;
+import org.encog.neural.networks.BasicNetwork;
+import org.encog.persist.EncogDirectoryPersistence;
+import org.encog.persist.PersistorRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Function;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
 
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
@@ -73,31 +98,6 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.Predicate;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.math.NumberUtils;
-import org.apache.commons.lang3.tuple.MutablePair;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.pig.backend.executionengine.ExecException;
-import org.apache.pig.data.Tuple;
-import org.encog.ml.BasicML;
-import org.encog.ml.data.MLDataPair;
-import org.encog.ml.data.basic.BasicMLData;
-import org.encog.ml.data.basic.BasicMLDataPair;
-import org.encog.neural.networks.BasicNetwork;
-import org.encog.persist.EncogDirectoryPersistence;
-import org.encog.persist.PersistorRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.*;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.zip.GZIPInputStream;
 
 /**
  * {@link CommonUtils} is used to for almost all kinds of utility function in this framework.
@@ -420,8 +420,30 @@ public final class CommonUtils {
         ColumnConfig[] configList = loadJSON(path, sourceType, ColumnConfig[].class);
         List<ColumnConfig> columnConfigList = new ArrayList<ColumnConfig>();
         for(ColumnConfig columnConfig: configList) {
+            // reset sample values to null to save memory
             if(nullSampleValues) {
                 columnConfig.setSampleValues(null);
+            }
+
+            // construct Category Index map for fast query.
+            if(columnConfig.isCategorical() && columnConfig.getColumnBinning() != null
+                    && columnConfig.getColumnBinning().getBinCategory() != null) {
+                List<String> categories = columnConfig.getColumnBinning().getBinCategory();
+                Map<String, Integer> categoryIndexMapping = new HashMap<String, Integer>();
+                for(int i = 0; i < categories.size(); i++) {
+                    String category = categories.get(i);
+                    if(category.contains(Constants.CATEGORICAL_GROUP_VAL_DELIMITER)) {
+                        // merged category should be flatten, use split function this class to avoid depending on guava
+                        String[] splits = ml.shifu.shifu.core.dtrain.StringUtils.split(category,
+                                Constants.CATEGORICAL_GROUP_VAL_DELIMITER);
+                        for(String str: splits) {
+                            categoryIndexMapping.put(str, i);
+                        }
+                    } else {
+                        categoryIndexMapping.put(category, i);
+                    }
+                }
+                columnConfig.getColumnBinning().setBinCateMap(categoryIndexMapping);
             }
             columnConfigList.add(columnConfig);
         }
@@ -1658,13 +1680,7 @@ public final class CommonUtils {
      *             if str is not a valid list str.
      */
     public static List<String> stringToStringList(String str) {
-        List<String> list = checkAndReturnSplitCollections(str);
-        return Lists.transform(list, new Function<String, String>() {
-            @Override
-            public String apply(String input) {
-                return input.trim();
-            }
-        });
+        return checkAndReturnSplitCollections(str);
     }
 
     /**
@@ -1679,13 +1695,7 @@ public final class CommonUtils {
      *             if str is not a valid list str.
      */
     public static List<String> stringToStringList(String str, char separator) {
-        List<String> list = checkAndReturnSplitCollections(str, separator);
-        return Lists.transform(list, new Function<String, String>() {
-            @Override
-            public String apply(String input) {
-                return input.trim();
-            }
-        });
+        return checkAndReturnSplitCollections(str, separator);
     }
 
     /*
@@ -1991,7 +2001,7 @@ public final class CommonUtils {
                 if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
                     // only select numerical feature with getBinBoundary().size() larger than 1
                     // or categorical feature with getBinCategory().size() larger than 0
-                    if((config.isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 1)
+                    if((config.isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 0)
                             || (config.isCategorical() && config.getBinCategory() != null
                                     && config.getBinCategory().size() > 0)) {
                         features.add(config.getColumnNum());
@@ -2001,7 +2011,7 @@ public final class CommonUtils {
                 if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config, hasCandidate)) {
                     // only select numerical feature with getBinBoundary().size() larger than 1
                     // or categorical feature with getBinCategory().size() larger than 0
-                    if((config.isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 1)
+                    if((config.isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 0)
                             || (config.isCategorical() && config.getBinCategory() != null
                                     && config.getBinCategory().size() > 0)) {
                         features.add(config.getColumnNum());
@@ -2526,7 +2536,6 @@ public final class CommonUtils {
      * @throws ExecException
      *             - throw exception when operating tuple
      */
-
     public static Map<NSColumn, String> convertDataIntoNsMap(Tuple tuple, String[] header, int segFilterSize)
             throws ExecException {
         if(tuple == null || tuple.size() == 0 || tuple.size() != header.length) {
@@ -2557,14 +2566,44 @@ public final class CommonUtils {
         return rawDataNsMap;
     }
 
+    /**
+     * Check whether to normalize one variable or not
+     * 
+     * @param columnConfig
+     *            - ColumnConfig to check
+     * @param hasCandidate
+     *            - Are candidates set or not
+     * @param isBinaryClassification
+     *            - Is it binary classification?
+     * @return
+     *         true - should normalize
+     *         The variable is finalSelected and it is good variable
+     *         Or
+     *         It's a good candidate
+     *         false - don't normalize
+     */
     public static boolean isToNormVariable(ColumnConfig columnConfig, boolean hasCandidate,
             boolean isBinaryClassification) {
         if(columnConfig == null) {
             return false;
         }
-        return columnConfig.isFinalSelect() || isGoodCandidate(columnConfig, hasCandidate, isBinaryClassification);
+        return (columnConfig.isFinalSelect() && isGoodVariable(columnConfig, isBinaryClassification))
+                || isGoodCandidate(columnConfig, hasCandidate, isBinaryClassification);
     }
 
+    /**
+     * Check the variable is good candidate or not
+     * 
+     * @param columnConfig
+     *            - ColumnConfig to check
+     * @param hasCandidate
+     *            - Are candidates set or not
+     * @param isBinaryClassification
+     *            - Is it binary classification?
+     * @return
+     *         true - is good candidate
+     *         false - bad candidate
+     */
     public static boolean isGoodCandidate(ColumnConfig columnConfig, boolean hasCandidate,
             boolean isBinaryClassification) {
         if(columnConfig == null) {
@@ -2575,41 +2614,51 @@ public final class CommonUtils {
             return isGoodCandidate(columnConfig, hasCandidate);
         } else {
             // multiple classification
-            return columnConfig.isCandidate(hasCandidate)
-                    && (columnConfig.getMean() != null && columnConfig.getStdDev() != null
-                            && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
-                                    && columnConfig.getBinCategory().size() > 0)
-                                    || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
-                                            && columnConfig.getBinBoundary().size() > 0)));
+            return columnConfig.isCandidate(hasCandidate) && isGoodVariable(columnConfig, isBinaryClassification);
         }
     }
 
-    /*
-     * public static boolean isGoodCandidate(ColumnConfig columnConfig) {
-     * if(columnConfig == null) {
-     * return false;
-     * }
-     * return columnConfig.isCandidate()
-     * && (columnConfig.getKs() != null && columnConfig.getKs() > 0 && columnConfig.getIv() != null
-     * && columnConfig.getIv() > 0 && columnConfig.getMean() != null
-     * && columnConfig.getStdDev() != null && ((columnConfig.isCategorical()
-     * && columnConfig.getBinCategory() != null && columnConfig.getBinCategory().size() > 0) || (columnConfig
-     * .isNumerical() && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 0)));
-     * }
+    /**
+     * Check the variable is good candidate or not
+     * 
+     * @param columnConfig
+     *            - ColumnConfig to check
+     * @param hasCandidate
+     *            - Are candidates set or not
+     * @return
+     *         true - is good candidate
+     *         false - bad candidate
      */
-
     public static boolean isGoodCandidate(ColumnConfig columnConfig, boolean hasCandidate) {
         if(columnConfig == null) {
             return false;
         }
 
-        return columnConfig.isCandidate(hasCandidate) && (columnConfig.getKs() != null && columnConfig.getKs() > 0
-                && columnConfig.getIv() != null && columnConfig.getIv() > 0 && columnConfig.getMean() != null
-                && columnConfig.getStdDev() != null
+        return columnConfig.isCandidate(hasCandidate) && isGoodVariable(columnConfig, true);
+    }
+
+    /**
+     * Check whether a variable is good or bad
+     * 
+     * @param columnConfig
+     *            - ColumnConfig to check
+     * @param isBinaryClassification
+     *            - Is it binary classification?
+     * @return
+     *         true - is good variable
+     *         false - bad variable
+     */
+    public static boolean isGoodVariable(ColumnConfig columnConfig, boolean isBinaryClassification) {
+        boolean varCondition = (columnConfig.getMean() != null && columnConfig.getStdDev() != null
                 && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
                         && columnConfig.getBinCategory().size() > 0)
                         || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
                                 && columnConfig.getBinBoundary().size() > 0)));
+        if(isBinaryClassification) {
+            varCondition = varCondition && (columnConfig.getKs() != null && columnConfig.getKs() > 0
+                    && columnConfig.getIv() != null && columnConfig.getIv() > 0);
+        }
+        return varCondition;
     }
 
     /**

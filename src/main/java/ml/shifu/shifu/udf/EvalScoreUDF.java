@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.SortedMap;
 
-import ml.shifu.shifu.util.MultiClsTagPredictor;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
@@ -42,7 +41,6 @@ import org.encog.ml.BasicML;
 
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
-import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ModelRunner;
 import ml.shifu.shifu.core.Scorer;
@@ -53,11 +51,12 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.MultiClsTagPredictor;
 
 /**
  * Calculate the score for each evaluation data
  */
-public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
+public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
 
     private static final String SHIFU_EVAL_SCORE_MULTITHREAD = "shifu.eval.score.multithread";
 
@@ -67,7 +66,6 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
 
     private static final String SCHEMA_PREFIX = "shifu::";
 
-    private EvalConfig evalConfig;
     private ModelRunner modelRunner;
     private String[] headers;
 
@@ -120,10 +118,7 @@ public class EvalScoreUDF extends AbstractTrainerUDF<Tuple> {
     @SuppressWarnings("unchecked")
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName,
             String scale) throws IOException {
-        super(source, pathModelConfig, pathColumnConfig);
-
-        evalConfig = modelConfig.getEvalConfigByName(evalSetName);
-
+        super(source, pathModelConfig, pathColumnConfig, evalSetName);
         if(evalConfig.getModelsPath() != null) {
             // renew columnConfig
             this.columnConfigList = ShifuFileUtils.searchColumnConfig(evalConfig, columnConfigList);

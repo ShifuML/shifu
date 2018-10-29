@@ -15,13 +15,12 @@
  */
 package ml.shifu.shifu;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.Arrays;
-
+import ml.shifu.guagua.util.NumberFormatUtils;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
 import org.powermock.api.easymock.PowerMock;
@@ -33,11 +32,8 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
+import java.io.*;
+import java.util.Arrays;
 
 /**
  * ManagerTest class
@@ -335,5 +331,15 @@ public class ShifuCLITest {
         String text = "aa^bb^cc";
         Assert.assertEquals(2, text.lastIndexOf("^", 4));
         Assert.assertEquals(-1, text.lastIndexOf("~", 4));
+
+        double a = Double.parseDouble("NaN");
+        System.out.println(a);
+
+        float t = NumberFormatUtils.getFloat("1", 0f);
+        Assert.assertTrue(isPositive(t));
+    }
+
+    protected boolean isPositive(float value) {
+        return Float.compare(1f, value) == 0 ? true : false;
     }
 }

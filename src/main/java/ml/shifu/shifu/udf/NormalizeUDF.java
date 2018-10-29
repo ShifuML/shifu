@@ -277,7 +277,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         // data sampling only for normalization, for data cleaning, shouldn't do data sampling
-        if(!isLinearTarget && !this.isForClean) {
+        //if(!isLinearTarget && !this.isForClean) {
+        if(!isLinearTarget) {
             // do data sampling. Unselected data or data with invalid tag will be filtered out.
             boolean isNotSampled = DataSampler.isNotSampled(modelConfig.isRegression(), super.tagSet, super.posTagSet,
                     super.negTagSet, modelConfig.getNormalizeSampleRate(), modelConfig.isNormalizeSampleNegOnly(),
@@ -311,7 +312,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
             for(int i = 0; i < input.size(); i++) {
                 ColumnConfig config = columnConfigList.get(i);
-                String val = (input.get(i) == null) ? "" : input.get(i).toString().trim();
+                String val = (input.get(i) == null) ? "" : input.get(i).toString();
                 // load variables for weight calculating.
                 if(weightExpr != null) {
                     weightContext.set(new NSColumn(config.getColumnName()).getSimpleName(), val);
@@ -437,7 +438,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             for(int i = 0; i < this.columnConfigList.size(); i++) {
                 ColumnConfig config = this.columnConfigList.get(i);
                 int newIndex = i >= rawSize ? i % rawSize : i;
-                String val = (input.get(newIndex) == null) ? "" : input.get(newIndex).toString().trim();
+                String val = (input.get(newIndex) == null) ? "" : input.get(newIndex).toString();
 
                 // for target column
                 if(config.isTarget()) {

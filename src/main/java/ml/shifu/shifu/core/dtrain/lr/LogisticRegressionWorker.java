@@ -26,6 +26,8 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.collect.Lists;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.io.LongWritable;
@@ -425,13 +427,17 @@ public class LogisticRegressionWorker extends
         double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
         boolean hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
 
-        for(String unit: splitter.split(line)) {
+        String[] fields = Lists.newArrayList(this.splitter.split(line)).toArray(new String[0]);
+        int pos = 0;
+
+        for (pos = 0; pos < fields.length; ) {
+            String unit = fields[pos];
             // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
             float floatValue = unit.length() == 0 ? 0f : NumberFormatUtils.getFloat(unit, 0f);
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
             floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
 
-            if(index == this.columnConfigList.size()) {
+            if(pos == fields.length - 1) {
                 // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
                 // weight, how to process???
                 if(StringUtils.isBlank(modelConfig.getWeightColumnName())) {
@@ -454,6 +460,7 @@ public class LogisticRegressionWorker extends
                 ColumnConfig columnConfig = this.columnConfigList.get(index);
                 if(columnConfig != null && columnConfig.isTarget()) {
                     outputData[outputIndex++] = floatValue;
+                    pos ++;
                 } else {
                     if(this.inputNum == this.candidateNum) {
                         // no variable selected, good candidate but not meta and not target choosed
@@ -462,19 +469,67 @@ public class LogisticRegressionWorker extends
                             inputData[inputIndex++] = floatValue;
                             hashcode = hashcode * 31 + Float.valueOf(floatValue).hashCode();
                         }
+                        pos ++;
                     } else {
-                        // final select some variables but meta and target are not included
-                        if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
-                                && columnConfig.isFinalSelect()) {
-                            inputData[inputIndex++] = floatValue;
-                            // only fixInitialInput=true, hashcode is effective. Remove Arrays.hashcode to avoid one
-                            // iteration for the input columns. Last weight column should be excluded.
-                            hashcode = hashcode * 31 + Float.valueOf(floatValue).hashCode();
+                        if ( columnConfig.isFinalSelect() ) {
+                            if ( columnConfig.isNumerical()
+                                    && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT) ) {
+                                for(int k = 0; k < columnConfig.getBinBoundary().size() + 1; k++) {
+                                    String tval = fields[pos];
+                                    // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+                                    float fval = tval.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
+                                    // no idea about why NaN in input data, we should process it as missing value TODO ,
+                                    // according to norm type
+                                    fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? 0f : fval;
+                                    inputData[inputIndex++] = fval;
+                                    pos++;
+                                }
+                            } else if(columnConfig.isCategorical()
+                                    && (modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
+                                    || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))) {
+                                for(int k = 0; k < columnConfig.getBinCategory().size() + 1; k++) {
+                                    String tval = fields[pos];
+                                    // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+                                    float fval = tval.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
+                                    // no idea about why NaN in input data, we should process it as missing value TODO ,
+                                    // according to norm type
+                                    fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? 0f : fval;
+                                    inputData[inputIndex++] = fval;
+                                    pos++;
+                                }
+                            } else {
+                                inputData[inputIndex++] = floatValue;
+                                pos++;
+                            }
+
+                            hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
+                        } else {
+                            if ( columnConfig.isMeta() || columnConfig.isForceRemove() ) {
+                                pos += 1;
+                            } else if ( columnConfig.isNumerical()
+                                    && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)
+                                    && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1) {
+                                pos += (columnConfig.getBinBoundary().size() + 1);
+                            } else if(columnConfig.isCategorical()
+                                    && (modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
+                                    || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))
+                                    && columnConfig.getBinCategory().size() > 1) {
+                                pos += (columnConfig.getBinCategory().size() + 1);
+                            } else {
+                                pos += 1;
+                            }
                         }
                     }
                 }
             }
             index += 1;
+        }
+
+        if ( index != this.columnConfigList.size() || pos != fields.length - 1 ) {
+            throw new RuntimeException("Wrong data indexing. ColumnConfig index = " + index
+                    + ", while it should be " + columnConfigList.size() + ". "
+                    + "Data Pos = " + pos
+                    + ", while it should be " + (fields.length - 1));
         }
 
         // output delimiter in norm can be set by user now and if user set a special one later changed, this exception

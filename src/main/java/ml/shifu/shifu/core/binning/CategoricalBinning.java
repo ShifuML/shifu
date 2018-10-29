@@ -69,7 +69,7 @@ public class CategoricalBinning extends AbstractBinning<String> {
      */
     @Override
     public void addData(String val) {
-        String fval = StringUtils.trimToEmpty(val);
+        String fval = (val == null ? "" : val);
         if(!isMissingVal(fval)) {
             if(isValid) {
                 categoricalVals.add(fval);

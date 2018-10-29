@@ -49,6 +49,7 @@ mapreduce.map.java.opts=-Xms1700m -Xmx1700m -server -XX:MaxPermSize=64m -XX:Perm
 ## specified reduce memory to avoid default memory too big or too small
 mapreduce.reduce.memory.mb=2048
 mapreduce.reduce.java.opts=-Xms1700m -Xmx1700m -server -XX:MaxPermSize=64m -XX:PermSize=64m
+mapreduce.reduce.shuffle.input.buffer.percent=0.2
 
 ## set io buffer in mapper to 400mb to avoid too many memory consumption in mapper heap
 mapreduce.task.io.sort.mb=400

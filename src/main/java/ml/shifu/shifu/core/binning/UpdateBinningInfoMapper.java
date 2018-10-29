@@ -110,7 +110,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     /**
      * Bin boundary list splitter.
      */
-    private static Splitter BIN_BOUNDARY_SPLITTER = Splitter.on(Constants.BIN_BOUNDRY_DELIMITER).trimResults();
+    private static Splitter BIN_BOUNDARY_SPLITTER = Splitter.on(Constants.BIN_BOUNDRY_DELIMITER);
 
     /**
      * Output key cache to avoid new operation.
@@ -225,7 +225,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             while(line != null && line.length() != 0) {
                 LOG.debug("line is {}", line);
                 // here just use String.split for just two columns
-                String[] cols = Lists.newArrayList(this.splitter.split(line.trim())).toArray(new String[0]);
+                String[] cols = Lists.newArrayList(this.splitter.split(line)).toArray(new String[0]);
                 if(cols != null && cols.length >= 2) {
                     Integer rawColumnNum = Integer.parseInt(cols[0]);
                     BinningInfoWritable binningInfo = new BinningInfoWritable();
@@ -447,7 +447,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             if(units[columnIndex] == null || missingOrInvalidValues.contains(units[columnIndex].toLowerCase())) {
                 isMissingValue = true;
             }
-            String str = StringUtils.trim(units[columnIndex]);
+            String str = units[columnIndex];
             double douVal = BinUtils.parseNumber(str);
 
             Double hybridThreshold = columnConfig.getHybridThreshold();
@@ -510,7 +510,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             if(units[columnIndex] == null || missingOrInvalidValues.contains(units[columnIndex].toLowerCase())) {
                 isMissingValue = true;
             } else {
-                String str = StringUtils.trim(units[columnIndex]);
+                String str = units[columnIndex];
                 binNum = quickLocateCategoricalBin(this.categoricalBinMap.get(newCCIndex), str);
                 if(binNum < 0) {
                     isInvalidValue = true;

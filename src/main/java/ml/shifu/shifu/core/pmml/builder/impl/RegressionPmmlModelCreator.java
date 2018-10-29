@@ -18,7 +18,7 @@ package ml.shifu.shifu.core.pmml.builder.impl;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import org.dmg.pmml.Model;
-import org.dmg.pmml.RegressionModel;
+import org.dmg.pmml.regression.RegressionModel;
 import org.encog.ml.BasicML;
 
 import java.util.List;

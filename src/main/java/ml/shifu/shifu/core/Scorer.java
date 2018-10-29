@@ -182,6 +182,10 @@ public class Scorer {
                 selectedColumnConfigList.add(columnConfig);
             }
         }
+        if ( CollectionUtils.isEmpty(selectedColumnConfigList) ) {
+            // no final-selected ColumnConfigs, add all to check
+            selectedColumnConfigList.addAll(this.columnConfigList);
+        }
     }
 
     /**

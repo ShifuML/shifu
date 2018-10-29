@@ -37,7 +37,6 @@ import org.encog.ml.BasicML;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.core.ModelRunner;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
@@ -49,13 +48,12 @@ import ml.shifu.shifu.util.Environment;
 /**
  * Calculate the score for each evaluation data
  */
-public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
+public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
 
     @SuppressWarnings("unused")
     private static final String SCHEMA_PREFIX = "eval::";
     private static final String ORIG_POSTFIX = "_orig";
 
-    private EvalConfig evalConfig;
     private String[] headers;
     private List<String> outputNames;
 
@@ -94,9 +92,7 @@ public class EvalNormUDF extends AbstractTrainerUDF<Tuple> {
 
     public EvalNormUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName, String scale)
             throws IOException {
-        super(source, pathModelConfig, pathColumnConfig);
-
-        evalConfig = modelConfig.getEvalConfigByName(evalSetName);
+        super(source, pathModelConfig, pathColumnConfig, evalSetName);
 
         if(!evalConfig.getNormAllColumns()) {
             // log such un compactiable

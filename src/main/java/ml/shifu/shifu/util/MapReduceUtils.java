@@ -28,6 +28,6 @@ public class MapReduceUtils {
             delimiter = Constants.DEFAULT_DELIMITER;
         }
         LOG.info("The delimiter of normalization data is - {}", delimiter);
-        return Splitter.on(delimiter).trimResults();
+        return Splitter.on(delimiter);
     }
 }
