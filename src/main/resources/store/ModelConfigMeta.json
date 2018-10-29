@@ -532,7 +532,8 @@
                     {"label": "Support Vector Machine", "value":"SVM"},
                     {"label": "Decision Tree", "value":"DT"},
                     {"label": "Random Forest", "value":"RF"},
-                    {"label": "Gradient Boost Decision Tree", "value":"GBT"}
+                    {"label": "Gradient Boost Decision Tree", "value":"GBT"},
+                    {"label": "Tensorflow", "value":"Tensorflow"}
                 ]
             }, {
                 "name": "gridConfigFile",
