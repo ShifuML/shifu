@@ -78,9 +78,12 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.GenericModelConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.Computable;
+import ml.shifu.shifu.core.GenericModel;
 import ml.shifu.shifu.core.LR;
 import ml.shifu.shifu.core.NNModel;
 import ml.shifu.shifu.core.Normalizer;
@@ -900,7 +903,44 @@ public final class CommonUtils {
             boolean gbtConvertToProb, String gbtScoreConvertStrategy) throws IOException {
         List<BasicML> models = new ArrayList<BasicML>();
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
-
+        List<FileStatus> genericModelConfigs = findGenericModels(modelConfig, evalConfig, sourceType);
+        if(!genericModelConfigs.isEmpty()) {
+            for(FileStatus f : genericModelConfigs) {
+                GenericModelConfig gmc = loadJSON(f.getPath().toString(), sourceType, GenericModelConfig.class);
+                
+                if(SourceType.HDFS.equals(sourceType)) {
+                    
+                    FileSystem hdfs = HDFSUtils.getFS();
+                    PathFinder pathFinder = new PathFinder(modelConfig);
+                    String alg = (String)gmc.getProperties().get("algorithm");
+                    String src = pathFinder.getModelsPath(sourceType);
+                    hdfs.copyToLocalFile(false, new Path(src), new Path(System.getProperty("user.dir")), true);
+                    gmc.getProperties().put("modelpath", System.getProperty("user.dir") + "/models");
+                    File file = new File(System.getProperty("user.dir") + "/models");
+                    for(String str : file.list()) {
+                        log.error("list file in " + file.getAbsolutePath() + " : " + str);
+                    }
+                    log.error("gmc model path is : " + gmc.getProperties().get("modelpath"));
+                    if("tensorflow".equals(alg)) {
+                        
+                        try {
+                            Class c = Class.forName("ml.shifu.shifu.tensorflow.TensorflowModel");
+                            Computable computable = (Computable)c.newInstance();
+                            computable.init(gmc);
+                            GenericModel genericModel = new GenericModel(computable, gmc.getProperties());
+                            models.add(genericModel);
+                            log.error("load generic model");
+                        } catch (Exception e) {
+                            log.error("", e);
+                            throw new RuntimeException("Get real model fail");
+                        }
+                    }
+                }
+            }
+            log.error("return generic model " + models.size());
+            return models;
+        }
+        
         List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
             for(FileStatus f: modelFileStats) {
@@ -926,6 +966,7 @@ public final class CommonUtils {
         if(CollectionUtils.isEmpty(listStatus)) {
             // throw new ShifuException(ShifuErrorCode.ERROR_MODEL_FILE_NOT_FOUND);
             // disable exception, since we there maybe sub-models
+            listStatus = findGenericModels(modelConfig, evalConfig, sourceType);
             return listStatus;
         }
 
@@ -1183,6 +1224,33 @@ public final class CommonUtils {
 
         return fileList;
     }
+    
+    public static List<FileStatus> findGenericModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
+            throws IOException {
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+        PathFinder pathFinder = new PathFinder(modelConfig);
+
+        // If the algorithm in ModelConfig is NN, we only load NN models
+        // the same as SVM, LR
+        String modelSuffix = ".json";
+
+        List<FileStatus> fileList = new ArrayList<FileStatus>();
+        if(null == evalConfig || StringUtils.isBlank(evalConfig.getModelsPath())) {
+            Path path = new Path(pathFinder.getModelsPath(sourceType));
+            fileList.addAll(Arrays.asList(fs.listStatus(path, new FileSuffixPathFilter(modelSuffix))));
+        } else {
+            String modelsPath = evalConfig.getModelsPath();
+            FileStatus[] expandedPaths = fs.globStatus(new Path(modelsPath));
+            if(ArrayUtils.isNotEmpty(expandedPaths)) {
+                for(FileStatus epath: expandedPaths) {
+                    fileList.addAll(
+                            Arrays.asList(fs.listStatus(epath.getPath(), new FileSuffixPathFilter(modelSuffix))));
+                }
+            }
+        }
+
+        return fileList;
+    }
 
     public static List<ModelSpec> loadSubModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             EvalConfig evalConfig, SourceType sourceType, Boolean gbtConvertToProb) {
@@ -1420,7 +1488,7 @@ public final class CommonUtils {
             throw new IOException(String.format("Failed to list files in %s", modelsPathDir.getAbsolutePath()));
         }
     }
-
+    
     /**
      * Return one HashMap Object contains keys in the first parameter, values in the second parameter. Before calling
      * this method, you should be aware that headers should be unique.
