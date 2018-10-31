@@ -335,9 +335,9 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             BasicML basicML = CommonUtils.loadModel(modelConfig, modelPath,
                     ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
-            
+
             params = initWeights();
-            
+
             BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils.getBasicNetwork(basicML);
             if (existingModel != null) {
             	LOG.info("Starting to train model from existing model {}.", modelPath);
@@ -377,7 +377,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
                 CommonUtils.isLinearTarget(modelConfig, columnConfigList), outputActivationFunc);
 
         this.flatNetwork = (FloatFlatNetwork) network.getFlat();
-        
+
         params.setTrainError(0);
         params.setTestError(0);
         // prevent null point
@@ -481,13 +481,13 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.fixedLayers = (List<Integer>) fixedLayers2O;
         }
         LOG.info("Fixed layers in master is :{}", this.fixedLayers.toString());
-        
+
         Object hiddenLayerNumObj = validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         if (hiddenLayerNumObj != null && StringUtils.isNumeric(hiddenLayerNumObj.toString())) {
             this.hiddenLayerNum = Integer.valueOf(hiddenLayerNumObj.toString());
         }
         LOG.info("hiddenLayerNum in master is :{}", this.hiddenLayerNum);
-        
+
         // check if variables are set final selected
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         this.isAfterVarSelect = (inputOutputIndex[3] == 1);
@@ -544,45 +544,37 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
 				Arrays.toString(droppedNodeIndices.toArray(new Integer[droppedNodeIndices.size()])));
 		return droppedNodeIndices;
 	}
-	
-	/**
-	 * User's input fixed layer ID is different from ours. we need to use hiddenLayerNum to do transformation. 
-	 * For example, when user what to fix first hidden layer, 2 -> his.hiddenLayerNum - 2 + 1
-	 * 
-	 * fixed layer cannot be output layer and input layer, which does not have meanings
-	 * @param fixedLayers
-	 * @return
-	 */
-	private Set<Integer> getFixedWights(List<Integer> fixedLayers) {
-	    Set<Integer> fixedWeight = new HashSet<Integer>();
-        
-	    for (int fixedLayer : fixedLayers) {
-	        int realLayer = this.hiddenLayerNum - fixedLayer + 1;
-	        int inputIndex = this.flatNetwork.getLayerIndex()[realLayer + 1];
-	        int outputIndex = this.flatNetwork.getLayerIndex()[realLayer];
-	        int inputSize = this.flatNetwork.getLayerCounts()[realLayer + 1];
-	        int outputSize = this.flatNetwork.getLayerFeedCounts()[realLayer];
-	        
-	        int index = this.flatNetwork.getWeightIndex()[realLayer];
-	        int limitX = outputIndex + outputSize;
-	        int limitY = inputIndex + inputSize;
-	        
-	        LOG.info("fixedLayer:{}; realLayer{}; inputIndex:{}; outputIndex:{}; inputSize{}; outputSize{}; index{}; limitX{};limitY{}", 
-	                fixedLayer, realLayer, inputIndex, outputIndex, inputSize, outputSize, index, limitX, limitY);
-	        
-	        // weight values
-	        for (int x = outputIndex; x < limitX; x++) {
-	            for (int y = inputIndex; y < limitY; y++) {
-	                fixedWeight.add(index++);
-	            }
-	        }
-	        
-	        // add constant weight, output layer does not have constant node, so skip
-	        if (fixedLayer != (hiddenLayerNum+1)) {
-	            fixedWeight.add(index++);
-	        }
-	    }
-	    
-	    return fixedWeight;
-	}
+
+    /**
+     * User's input fixed layer ID is different from ours. we need to use hiddenLayerNum to do transformation.
+     * For example, when user what to fix first hidden layer, 2 -> his.hiddenLayerNum - 2 + 1
+     * <p>
+     * fixed layer id represent the weights between neural network layers. See below
+     * <p>
+     *      input      hidden    output
+     *      o
+     *      o          o
+     *      o (layer1) o (layer2) o
+     *      o          o
+     *      o
+     * <p>
+     * fixed layer cannot be output layer and input layer, which does not have meanings
+     *
+     * @param fixedLayers
+     * @return
+     */
+    private Set<Integer> getFixedWights(List<Integer> fixedLayers) {
+        Set<Integer> fixedWeight = new HashSet<Integer>();
+
+        for(int fixedLayer : fixedLayers) {
+            int realLayer = this.hiddenLayerNum - fixedLayer + 1;
+            int fromWeightIndex = this.flatNetwork.getWeightIndex()[realLayer];
+            int toWeightIndex = this.flatNetwork.getWeightIndex()[realLayer + 1];
+            for(int index = fromWeightIndex; index < toWeightIndex; index++) {
+                fixedWeight.add(index);
+            }
+        }
+
+        return fixedWeight;
+    }
 }
