@@ -377,6 +377,14 @@ public class Scorer {
                         log.error("error in model evaluation", e);
                     }
                 }
+            } else if(model instanceof GenericModel) {
+                modelResults.add(new Callable<MLData>() {
+                    @Override
+                    public MLData call() {
+                        MLData md = pair.getInput();
+                        return ((GenericModel) model).compute(pair.getInput());
+                    }
+                }.call());
             } else {
                 throw new RuntimeException("unsupport models");
             }
@@ -470,6 +478,8 @@ public class Scorer {
                     if(!tm.isClassfication() && !tm.isGBDT()) {
                         rfTreeSizeList.add(tm.getTrees().size());
                     }
+                } else if(model instanceof GenericModel) {
+                    scores.add(toScore(score.getData(0)));
                 } else {
                     throw new RuntimeException("unsupport models");
                 }
