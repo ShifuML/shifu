@@ -855,7 +855,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 // TODO hidden layer size and activation functions should also be validated
                 finalContinuous = 0;
                 LOG.warn(
-                        "Model training parameters like hidden nodes, activiation and others  are not consistent with settings, model training will start from scratch.");
+                        "!!! Model training parameters like hidden nodes, activation and others  are not consistent with settings, model training will start from scratch.");
             } else if(CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
                 TreeModel model = (TreeModel) CommonUtils.loadModel(this.modelConfig, modelPath, fileSystem);
 
@@ -898,61 +898,56 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 .getInputOutputCandidateCounts(modelConfig.getNormalizeType(), getColumnConfigList());
         int inputs = outputCandidateCounts[0] == 0 ? outputCandidateCounts[2] : outputCandidateCounts[0];
         boolean isInputOutConsistent =
-                model.getInputCount() == inputs && model.getOutputCount() == outputCandidateCounts[1];
+                model.getInputCount() <= inputs && model.getOutputCount() == outputCandidateCounts[1];
 
         if(!isInputOutConsistent) {
             return false;
         }
 
         // same hidden layer ?
-        boolean isHasSameHidderLayer =
-                (model.getLayerCount() - 2) == (Integer) modelParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
-        if(!isHasSameHidderLayer) {
+        boolean isHasSameHiddenLayer =
+                (model.getLayerCount() - 2) <= (Integer) modelParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
+        if(!isHasSameHiddenLayer) {
             return false;
         }
 
         // same hidden nodes ?
         boolean isHasSameHiddenNodes = true;
+        // same activations ?
+        boolean isHasSameHiddenActivation = true;
         List<Integer> hiddenNodeList = (List<Integer>) modelParams.get(CommonConstants.NUM_HIDDEN_NODES);
-        for(int i = 0; i < hiddenNodeList.size(); i++) {
-            if(model.getLayerNeuronCount(i + 1) != hiddenNodeList.get(i)) {
+        List<String> actFuncList = (List<String>) modelParams.get(CommonConstants.ACTIVATION_FUNC);
+        for ( int i = 1; i < model.getLayerCount() - 1; i ++ ) {
+            if ( model.getLayerNeuronCount(i) > hiddenNodeList.get(i - 1) ) {
                 isHasSameHiddenNodes = false;
                 break;
             }
-        }
 
-        if(!isHasSameHiddenNodes) {
-            return false;
-        }
-
-        // same activiations ?
-        boolean isHasSameHiddenActiviation = true;
-        List<String> actFunc = (List<String>) modelParams.get(CommonConstants.ACTIVATION_FUNC);
-        for(int i = 0; i < actFunc.size(); i++) {
-            ActivationFunction activation = model.getActivation(i + 1);
-            if(actFunc.get(i).equalsIgnoreCase(NNConstants.NN_LINEAR)) {
-                isHasSameHiddenActiviation = ActivationLinear.class == activation.getClass();
-            } else if(actFunc.get(i).equalsIgnoreCase(NNConstants.NN_SIGMOID)) {
-                isHasSameHiddenActiviation = ActivationSigmoid.class == activation.getClass();
-            } else if(actFunc.get(i).equalsIgnoreCase(NNConstants.NN_TANH)) {
-                isHasSameHiddenActiviation = ActivationTANH.class == activation.getClass();
-            } else if(actFunc.get(i).equalsIgnoreCase(NNConstants.NN_LOG)) {
-                isHasSameHiddenActiviation = ActivationLOG.class == activation.getClass();
-            } else if(actFunc.get(i).equalsIgnoreCase(NNConstants.NN_SIN)) {
-                isHasSameHiddenActiviation = ActivationSIN.class == activation.getClass();
-            } else if(actFunc.get(i).equalsIgnoreCase(NNConstants.NN_RELU)) {
-                isHasSameHiddenActiviation = ActivationReLU.class == activation.getClass();
-            } else if(actFunc.get(i).equalsIgnoreCase(NNConstants.NN_LEAKY_RELU)) {
-                isHasSameHiddenActiviation = ActivationLeakyReLU.class == activation.getClass();
+            ActivationFunction activation = model.getActivation(i);
+            String actFunc = actFuncList.get(i - 1);
+            if(actFunc.equalsIgnoreCase(NNConstants.NN_LINEAR)) {
+                isHasSameHiddenActivation = ActivationLinear.class == activation.getClass();
+            } else if(actFunc.equalsIgnoreCase(NNConstants.NN_SIGMOID)) {
+                isHasSameHiddenActivation = ActivationSigmoid.class == activation.getClass();
+            } else if(actFunc.equalsIgnoreCase(NNConstants.NN_TANH)) {
+                isHasSameHiddenActivation = ActivationTANH.class == activation.getClass();
+            } else if(actFunc.equalsIgnoreCase(NNConstants.NN_LOG)) {
+                isHasSameHiddenActivation = ActivationLOG.class == activation.getClass();
+            } else if(actFunc.equalsIgnoreCase(NNConstants.NN_SIN)) {
+                isHasSameHiddenActivation = ActivationSIN.class == activation.getClass();
+            } else if(actFunc.equalsIgnoreCase(NNConstants.NN_RELU)) {
+                isHasSameHiddenActivation = ActivationReLU.class == activation.getClass();
+            } else if(actFunc.equalsIgnoreCase(NNConstants.NN_LEAKY_RELU)) {
+                isHasSameHiddenActivation = ActivationLeakyReLU.class == activation.getClass();
             } else {
-                isHasSameHiddenActiviation = ActivationSigmoid.class == activation.getClass();
+                isHasSameHiddenActivation = ActivationSigmoid.class == activation.getClass();
             }
-            if(!isHasSameHiddenActiviation) {
+            if(!isHasSameHiddenActivation) {
                 break;
             }
-        }
 
-        if(!isHasSameHiddenActiviation) {
+        }
+        if(!isHasSameHiddenNodes || !isHasSameHiddenActivation) {
             return false;
         }
 
