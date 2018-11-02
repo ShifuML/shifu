@@ -1,5 +1,6 @@
 package ml.shifu.shifu.core.binning;
 
+import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.nn.NNMaster;
 import ml.shifu.shifu.core.dtrain.nn.NNStructureComparator;
 import org.encog.ml.BasicML;
@@ -7,6 +8,7 @@ import org.encog.neural.flat.FlatNetwork;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.persist.EncogDirectoryPersistence;
 import org.encog.persist.EncogPersistor;
+import org.encog.persist.PersistorRegistry;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import org.testng.collections.CollectionUtils;
@@ -135,4 +137,29 @@ public class NNModelSpecTest {
         Assert.assertEquals(new NNStructureComparator().compare(flatNetwork, deepFlatNetwork), -1);
 
     }
+
+    @Test
+    public void testModelFitIn() {
+        PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
+
+        BasicML basicML = BasicML.class.cast(
+                EncogDirectoryPersistence.loadObject(new File("src/test/resources/model/model5.nn")));
+        BasicNetwork basicNetwork = (BasicNetwork) basicML;
+        FlatNetwork flatNetwork = basicNetwork.getFlat();
+
+        BasicML extendedBasicML = BasicML.class.cast(
+                EncogDirectoryPersistence.loadObject(new File("src/test/resources/model/model6.nn")));
+        BasicNetwork extendedBasicNetwork = (BasicNetwork) extendedBasicML;
+        FlatNetwork extendedFlatNetwork = extendedBasicNetwork.getFlat();
+
+        NNMaster master = new NNMaster();
+        Set<Integer> fixedWeightIndexSet =
+                master.fitExistingModelIn(flatNetwork, extendedFlatNetwork, Arrays.asList(new Integer[]{1, 2, 3}));
+        Assert.assertEquals(fixedWeightIndexSet.size(), 931);
+
+        fixedWeightIndexSet =
+                master.fitExistingModelIn(flatNetwork, extendedFlatNetwork, Arrays.asList(new Integer[]{1, 2, 3}), false);
+        Assert.assertEquals(fixedWeightIndexSet.size(), 910);
+    }
+
 }

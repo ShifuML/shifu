@@ -624,10 +624,11 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             int fromLayerOutputCnt = fromFlatNetwork.getLayerFeedCounts()[layer - 1];
             int fromLayerInputCnt = fromFlatNetwork.getLayerCounts()[layer];
 
-            int toLayerInputCnt = toFlatNetwork.getLayerCounts()[layer];
+            int toLayer = toFlatNetwork.getLayerIndex().length - (fromFlatNetwork.getLayerIndex().length - layer);
+            int toLayerInputCnt = toFlatNetwork.getLayerCounts()[toLayer];
 
             int fromIndexPos = fromFlatNetwork.getWeightIndex()[layer - 1];
-            int toIndexPos = toFlatNetwork.getWeightIndex()[layer - 1];
+            int toIndexPos = toFlatNetwork.getWeightIndex()[toLayer - 1];
 
             int realLayer = (fromFlatNetwork.getLayerIndex().length - layer);
             boolean isFixedLayer = (CollectionUtils.isNotEmpty(fixedLayers) && fixedLayers.contains(realLayer));
