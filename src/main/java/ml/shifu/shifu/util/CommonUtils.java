@@ -79,6 +79,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.GenericModelConfig;
+import ml.shifu.shifu.container.obj.GenericModelConfig.ComputeImplClass;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -903,42 +904,43 @@ public final class CommonUtils {
             boolean gbtConvertToProb, String gbtScoreConvertStrategy) throws IOException {
         List<BasicML> models = new ArrayList<BasicML>();
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
-        List<FileStatus> genericModelConfigs = findGenericModels(modelConfig, evalConfig, sourceType);
-        if(!genericModelConfigs.isEmpty()) {
-            for(FileStatus f : genericModelConfigs) {
-                GenericModelConfig gmc = loadJSON(f.getPath().toString(), sourceType, GenericModelConfig.class);
-                
-                if(SourceType.HDFS.equals(sourceType)) {
-                    
-                    FileSystem hdfs = HDFSUtils.getFS();
-                    PathFinder pathFinder = new PathFinder(modelConfig);
-                    String alg = (String)gmc.getProperties().get("algorithm");
-                    String src = pathFinder.getModelsPath(sourceType);
-                    hdfs.copyToLocalFile(false, new Path(src), new Path(System.getProperty("user.dir")), true);
-                    gmc.getProperties().put("modelpath", System.getProperty("user.dir") + "/models");
-                    File file = new File(System.getProperty("user.dir") + "/models");
-                    for(String str : file.list()) {
-                        log.error("list file in " + file.getAbsolutePath() + " : " + str);
-                    }
-                    log.error("gmc model path is : " + gmc.getProperties().get("modelpath"));
-                    if("tensorflow".equals(alg)) {
-                        
-                        try {
-                            Class c = Class.forName("ml.shifu.shifu.tensorflow.TensorflowModel");
-                            Computable computable = (Computable)c.newInstance();
-                            computable.init(gmc);
-                            GenericModel genericModel = new GenericModel(computable, gmc.getProperties());
-                            models.add(genericModel);
-                            log.error("load generic model");
-                        } catch (Exception e) {
-                            log.error("", e);
-                            throw new RuntimeException("Get real model fail");
+        //check if eval generic model
+        if(Constants.GENERIC.equals(modelConfig.getAlgorithm())) {
+            List<FileStatus> genericModelConfigs = findGenericModels(modelConfig, evalConfig, sourceType);
+            if(!genericModelConfigs.isEmpty()) {
+                for(FileStatus fst : genericModelConfigs) {
+                    GenericModelConfig gmc = loadJSON(fst.getPath().toString(), sourceType, GenericModelConfig.class);                  
+                    if(SourceType.HDFS.equals(sourceType)) {
+                        FileSystem hdfs = HDFSUtils.getFS();
+                        PathFinder pathFinder = new PathFinder(modelConfig);
+                        String alg = (String)gmc.getProperties().get(Constants.GENERIC_ALGORITHM);
+                        String src = pathFinder.getModelsPath(sourceType);
+                        hdfs.copyToLocalFile(false, new Path(src), new Path(System.getProperty(Constants.USER_DIR)), true);
+                        gmc.getProperties().put(Constants.GENERIC_MODEL_PATH, System.getProperty(Constants.USER_DIR) + File.separator + Constants.MODELS);
+                        File file = new File(System.getProperty(Constants.USER_DIR) + File.separator + Constants.MODELS);
+                        if(log.isInfoEnabled()) {
+                            log.info("gmc model path is : {}", gmc.getProperties().get(Constants.GENERIC_MODEL_PATH));
+                        }
+                        if(Constants.TENSORFLOW.equals(alg)) {
+                            try {
+                                Class c = Class.forName(ComputeImplClass.Tensorflow.getClassName());
+                                Computable computable = (Computable)c.newInstance();
+                                computable.init(gmc);
+                                GenericModel genericModel = new GenericModel(computable, gmc.getProperties());
+                                models.add(genericModel);
+                            } catch (Exception e) {
+                                throw new RuntimeException("Get real model fail");
+                            }
+                        } else {
+                            throw new RuntimeException("alg not supported in generic model yet");
                         }
                     }
                 }
+                if(log.isInfoEnabled()) {
+                    log.info("return generic model {}", models.size());
+                }
+                return models;
             }
-            log.error("return generic model " + models.size());
-            return models;
         }
         
         List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);

@@ -49,4 +49,16 @@ public class GenericModelConfig {
        this.inputnames = inputnames;
    }
 
+   public static enum ComputeImplClass {
+       Tensorflow("ml.shifu.shifu.tensorflow.TensorflowModel");
+       private String className;
+       
+       ComputeImplClass(String className) {
+           this.className = className;
+       }
+       
+       public String getClassName() {
+           return className;
+       }
+   }
 }
