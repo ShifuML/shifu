@@ -102,4 +102,6 @@ public interface CommonConstants {
     public static final String SHIFU_UPDATEBINNING_REDUCER = "shifu.updatebinning.reducer";
     
     public static final String FIXED_LAYERS = "FixedLayers";
+
+    public static final String FIXED_BIAS = "FixedBias";
 }

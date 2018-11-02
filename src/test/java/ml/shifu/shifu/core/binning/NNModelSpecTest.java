@@ -95,6 +95,11 @@ public class NNModelSpecTest {
         indexList = new ArrayList<Integer>(fixedWeightIndexSet);
         Collections.sort(indexList);
         Assert.assertEquals(indexList.size(), 930);
+
+        fixedWeightIndexSet = master.fitExistingModelIn(flatNetwork, extendedFlatNetwork, Arrays.asList(new Integer[]{1}), false);
+        indexList = new ArrayList<Integer>(fixedWeightIndexSet);
+        Collections.sort(indexList);
+        Assert.assertEquals(indexList.size(), 900);
     }
 
     @Test
