@@ -38,11 +38,20 @@ public class NNStructureComparator implements Comparator<FlatNetwork> {
         }
     }
 
+    /**
+     * Compare the two integer array from End -> Begin
+     *     if fromArray is not superset of toArray, return false, else true
+     * @param fromArray  - the larger array
+     * @param toArray - the smaller array
+     * @return
+     *      true - if fromArray could contain toArray
+     *      or false
+     */
     private boolean isLargeOrEqualArr(int[] fromArray, int[] toArray) {
         boolean result = true;
         if ( fromArray != null && toArray != null && fromArray.length >= toArray.length ) {
-            for ( int i = 0; i < toArray.length; i ++ ) {
-                if ( fromArray[i] < toArray[i]) {
+            for ( int i = toArray.length - 1; i > 0 ; i -- ) {
+                if ( fromArray[fromArray.length - (toArray.length - i)] < toArray[i]) {
                     result = false;
                     break;
                 }
