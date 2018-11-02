@@ -563,6 +563,8 @@ public class DTWorker extends
             return new DTWorkerParams();
         }
 
+        LOG.info("Start to work: todoNodes size is {}", todoNodes.size());
+
         Map<Integer, NodeStats> statistics = initTodoNodeStats(todoNodes);
 
         double trainError = 0d, validationError = 0d;

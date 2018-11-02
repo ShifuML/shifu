@@ -129,7 +129,7 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
 
         this.dataSetDelimiter = modelConfig.getDataSetDelimiter();
 
-        this.dataPurifier = new DataPurifier(modelConfig);
+        this.dataPurifier = new DataPurifier(modelConfig, false);
 
         this.isComputeAll = Boolean
                 .valueOf(context.getConfiguration().get(Constants.SHIFU_CORRELATION_COMPUTE_ALL, "false"));

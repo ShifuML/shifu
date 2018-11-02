@@ -633,7 +633,7 @@ public class ModelConfig {
                 return new ArrayList<String>();
             }
         }
-        return CommonUtils.readConfFileIntoList(metaColumnNameFile, SourceType.LOCAL, delimiter);
+        return CommonUtils.readConfNamesAsList(metaColumnNameFile, SourceType.LOCAL, delimiter);
     }
 
     @JsonIgnore
@@ -657,7 +657,7 @@ public class ModelConfig {
                 return new ArrayList<String>();
             }
         }
-        return CommonUtils.readConfFileIntoList(categoricalColumnNameFile, SourceType.LOCAL, delimiter);
+        return CommonUtils.readConfNamesAsList(categoricalColumnNameFile, SourceType.LOCAL, delimiter);
     }
 
     @JsonIgnore
@@ -675,8 +675,9 @@ public class ModelConfig {
                 return new ArrayList<String>();
             }
         }
-        return CommonUtils.readConfFileIntoList(expressionFile, SourceType.LOCAL,
-                Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
+
+        // the segment filter must be one line each
+        return CommonUtils.readConfFileIntoList(expressionFile, SourceType.LOCAL);
     }
 
     @JsonIgnore
@@ -714,7 +715,7 @@ public class ModelConfig {
                 return new HashMap<String, Double>();
             }
         }
-        List<String> list = CommonUtils.readConfFileIntoList(hybridColumnNameFile, SourceType.LOCAL, delimiter);
+        List<String> list = CommonUtils.readConfNamesAsList(hybridColumnNameFile, SourceType.LOCAL, delimiter);
         Map<String, Double> map = new HashMap<String, Double>();
         for(String string: list) {
             if(string.contains(Constants.DEFAULT_DELIMITER)) {
@@ -800,7 +801,7 @@ public class ModelConfig {
                 return new ArrayList<String>();
             }
         }
-        return CommonUtils.readConfFileIntoList(candidateColumnNameFile, SourceType.LOCAL, delimiter);
+        return CommonUtils.readConfNamesAsList(candidateColumnNameFile, SourceType.LOCAL, delimiter);
     }
 
     @JsonIgnore
@@ -824,7 +825,7 @@ public class ModelConfig {
                 return new ArrayList<String>();
             }
         }
-        return CommonUtils.readConfFileIntoList(forceRemoveColumnNameFile, SourceType.LOCAL, delimiter);
+        return CommonUtils.readConfNamesAsList(forceRemoveColumnNameFile, SourceType.LOCAL, delimiter);
     }
 
     @JsonIgnore
@@ -849,7 +850,7 @@ public class ModelConfig {
             }
         }
 
-        return CommonUtils.readConfFileIntoList(forceSelectColumnNameFile, SourceType.LOCAL, delimiter);
+        return CommonUtils.readConfNamesAsList(forceSelectColumnNameFile, SourceType.LOCAL, delimiter);
     }
 
     @JsonIgnore

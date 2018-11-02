@@ -24,6 +24,7 @@ import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.dmg.pmml.DataDictionary;
 import org.dmg.pmml.DataField;
+import org.dmg.pmml.DataType;
 import org.dmg.pmml.FieldName;
 import org.encog.ml.BasicML;
 
@@ -119,7 +120,8 @@ public class DataDictionaryCreator extends AbstractPmmlElementCreator<DataDictio
         DataField field = new DataField();
         field.setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig.getColumnName())));
         field.setOpType(getOptype(columnConfig));
-        field.setDataType(getDataType(field.getOpType()));
+        field.setDataType((columnConfig.isTarget() && modelConfig.isRegression())
+                ? DataType.DOUBLE : getDataType(field.getOpType()));
         return field;
     }
 

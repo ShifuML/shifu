@@ -48,7 +48,7 @@ public class DataFilterWorker extends AbstractWorkerActor {
             ActorRef parentActorRef,
             ActorRef nextActorRef) throws IOException {
         super(modelConfig, columnConfigList, parentActorRef, nextActorRef);
-        dataPurifier = new DataPurifier(modelConfig);
+        dataPurifier = new DataPurifier(modelConfig, false);
     }
 
     public DataFilterWorker(

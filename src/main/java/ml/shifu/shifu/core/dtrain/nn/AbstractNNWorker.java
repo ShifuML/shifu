@@ -283,7 +283,15 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      */
     protected Splitter splitter;
 
+    /**
+     * The models is linear model or not
+     */
     protected boolean isLinearTarget = false;
+
+    /**
+     * The model set candidate variables or not
+     */
+    protected boolean hasCandidates = false;
 
     protected boolean isUpSampleEnabled() {
         // only enabled in regression
@@ -305,6 +313,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             this.columnConfigList = CommonUtils
                     .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
             this.isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
+            this.hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

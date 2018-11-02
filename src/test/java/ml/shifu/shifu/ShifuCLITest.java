@@ -342,4 +342,9 @@ public class ShifuCLITest {
     protected boolean isPositive(float value) {
         return Float.compare(1f, value) == 0 ? true : false;
     }
+
+    @Test
+    public void testConvert() {
+        ShifuCLI.runShifuConvert(1, "src/test/resources/example/readablespec/model0.gbt", "/tmp/model0_1.zip");
+    }
 }

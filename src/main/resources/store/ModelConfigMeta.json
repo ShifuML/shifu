@@ -90,6 +90,10 @@
                 "type": "text",
                 "directive": "input"
             }, {
+                "name": "validationFilterExpressions",
+                "type": "text",
+                "directive": "input"
+            }, {
                 "name": "weightColumnName",
                 "type": "text",
                 "directive": "input"
@@ -770,6 +774,11 @@
                                 "directive": "input"
                             }                            
                          ]
+                    }, {
+                        "name" : "FixedBias",
+                        "type": "boolean",
+                        "directive": "checkbox",
+                        "defval": true
                     }, {
                         "name": "OutputActivationFunc",
                         "type": "text",

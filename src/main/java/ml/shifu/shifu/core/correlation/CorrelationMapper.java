@@ -119,7 +119,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
 
         this.dataSetDelimiter = modelConfig.getDataSetDelimiter();
 
-        this.dataPurifier = new DataPurifier(modelConfig);
+        this.dataPurifier = new DataPurifier(modelConfig, false);
 
         this.isComputeAll = Boolean
                 .valueOf(context.getConfiguration().get(Constants.SHIFU_CORRELATION_COMPUTE_ALL, "false"));

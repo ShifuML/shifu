@@ -63,6 +63,7 @@ public interface Constants {
     public static final String PATH_RAW_DATA = "path_raw_data";
     public static final String PATH_JAR = "path_jar";
     public static final String IS_COMPRESS = "is_compress";
+    public static final String IS_VALIDATION_DATASET = "is_validation_dataset";
     public static final String IS_NORM_FOR_CLEAN = "is_norm_for_clean";
 
     public static final String STATS_SAMPLE_RATE = "statsSampleRate";
@@ -285,6 +286,7 @@ public interface Constants {
      * Experience value from modeler
      */
     public static final int MAX_CATEGORICAL_BINC_COUNT = 10000;
+    public static final int MAX_CATEGORICAL_VAL_LENGTH = 10000;
 
     public static final String SHIFU_MAX_CATEGORY_SIZE = "shifu.max.category.size";
 

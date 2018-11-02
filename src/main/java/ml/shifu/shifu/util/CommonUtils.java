@@ -2053,7 +2053,23 @@ public final class CommonUtils {
         } else {
             normalizeValue = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType());
         }
+
+        if ( CollectionUtils.isNotEmpty(normalizeValue) ) {
+            for ( int i = 0; i < normalizeValue.size(); i ++ ) {
+                Double nval = normalizeValue.get(i);
+                if(Double.isInfinite(nval) || Double.isNaN(nval)) {
+                    // if the value is Infinite or NaN, treat it as missing value
+                    // should treat Infinite as missing value also?
+                    normalizeValue.set(i, defaultMissingValue(config));
+                }
+            }
+        }
         return normalizeValue;
+    }
+
+    public static double defaultMissingValue(ColumnConfig config) {
+        // TODO return 0 when mean == null. Is it correct or reasonable?
+        return config.getMean() == null ? 0 : config.getMean().doubleValue();
     }
 
     public static boolean isTreeModel(String alg) {
@@ -2367,40 +2383,55 @@ public final class CommonUtils {
         return buf.toString();
     }
 
-    public static List<String> readConfFileIntoList(String columnConfFile, SourceType sourceType, String delimiter)
+    public static List<String> readConfNamesAsList(String columnConfFile, SourceType sourceType, String delimiter)
             throws IOException {
         List<String> columnNameList = new ArrayList<String>();
 
-        if(StringUtils.isBlank(columnConfFile) || !ShifuFileUtils.isFileExists(columnConfFile, sourceType)) {
-            return columnNameList;
+        List<String> fileLines = readConfFileIntoList(columnConfFile, sourceType);
+        if(CollectionUtils.isEmpty(fileLines)) {
+            return fileLines;
+        }
+
+        for(String line : fileLines) {
+            for(String str : Splitter.on(delimiter).split(line)) {
+                // String column = CommonUtils.getRelativePigHeaderColumnName(str);
+                if(StringUtils.isNotBlank(str)) {
+                    str = StringUtils.trim(str);
+                    str = normColumnName(str);
+                    columnNameList.add(str);
+                }
+            }
+        }
+
+        return columnNameList;
+    }
+
+    public static List<String> readConfFileIntoList(String configFile, SourceType sourceType) throws IOException {
+        List<String> fileLines = new ArrayList<String>();
+
+        if(StringUtils.isBlank(configFile) || !ShifuFileUtils.isFileExists(configFile, sourceType)) {
+            return fileLines;
         }
 
         List<String> strList = null;
-        Reader reader = ShifuFileUtils.getReader(columnConfFile, sourceType);
+        Reader reader = null;
         try {
+            reader = ShifuFileUtils.getReader(configFile, sourceType);
             strList = IOUtils.readLines(reader);
         } finally {
             IOUtils.closeQuietly(reader);
         }
 
         if(CollectionUtils.isNotEmpty(strList)) {
-            for(String line: strList) {
-                if(line.trim().equals("") || line.trim().startsWith("#")) {
+            for(String line: strList) { // skip empty line and line start with "#"
+                if(StringUtils.isBlank(line) || line.trim().startsWith("#")) {
                     continue;
                 }
-
-                for(String str: Splitter.on(delimiter).split(line)) {
-                    // String column = CommonUtils.getRelativePigHeaderColumnName(str);
-                    if(StringUtils.isNotBlank(str)) {
-                        str = str.trim();
-                        str = normColumnName(str);
-                        columnNameList.add(str);
-                    }
-                }
+                fileLines.add(StringUtils.trim(line));
             }
         }
 
-        return columnNameList;
+        return fileLines;
     }
 
     public static Map<String, Integer> generateColumnSeatMap(List<ColumnConfig> columnConfigList) {
@@ -2652,8 +2683,8 @@ public final class CommonUtils {
         boolean varCondition = (columnConfig.getMean() != null && columnConfig.getStdDev() != null
                 && ((columnConfig.isCategorical() && columnConfig.getBinCategory() != null
                         && columnConfig.getBinCategory().size() > 0)
-                        || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
-                                && columnConfig.getBinBoundary().size() > 0)));
+                    || (columnConfig.isNumerical() && columnConfig.getBinBoundary() != null
+                        && columnConfig.getBinBoundary().size() > 0)));
         if(isBinaryClassification) {
             varCondition = varCondition && (columnConfig.getKs() != null && columnConfig.getKs() > 0
                     && columnConfig.getIv() != null && columnConfig.getIv() > 0);
