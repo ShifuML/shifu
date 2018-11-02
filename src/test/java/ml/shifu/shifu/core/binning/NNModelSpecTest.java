@@ -127,5 +127,12 @@ public class NNModelSpecTest {
         Assert.assertEquals(new NNStructureComparator().compare(extendedFlatNetwork, diffFlatNetwork), 1);
         Assert.assertEquals(new NNStructureComparator().compare(diffFlatNetwork, extendedFlatNetwork), -1);
 
+        BasicML deepBasicML = BasicML.class.cast(
+                EncogDirectoryPersistence.loadObject(new File("src/test/resources/model/model3.nn")));
+        BasicNetwork deppBasicNetwork = (BasicNetwork) deepBasicML;
+        FlatNetwork deepFlatNetwork = deppBasicNetwork.getFlat();
+        Assert.assertEquals(new NNStructureComparator().compare(deepFlatNetwork, flatNetwork), 1);
+        Assert.assertEquals(new NNStructureComparator().compare(flatNetwork, deepFlatNetwork), -1);
+
     }
 }
