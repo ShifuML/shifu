@@ -19,6 +19,13 @@ import ml.shifu.shifu.container.obj.GenericModelConfig;
 import org.encog.ml.data.MLData;
 import java.util.Map;
 
+/**
+ * 
+ * @author minizhuwei
+ * This interface is used to extend shifu evaluation capability.
+ * The foreign formated model evaluator should implement this interface
+ * with single process evaluation logic in compute method
+ */
 public interface Computable {
 
     public void init(GenericModelConfig config);

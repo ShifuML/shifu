@@ -22,7 +22,12 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
+/**
+ * 
+ * @author minizhuwei
+ * Generic model is used for extend shifu evaluation capability.
+ * The GenericModelConfig holds all config information for model formats other than shifu binary.
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class GenericModelConfig {
     
