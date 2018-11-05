@@ -22,7 +22,6 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.google.common.collect.Lists;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class GenericModelConfig {

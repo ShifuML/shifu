@@ -1230,8 +1230,7 @@ public final class CommonUtils {
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         PathFinder pathFinder = new PathFinder(modelConfig);
 
-        // If the algorithm in ModelConfig is NN, we only load NN models
-        // the same as SVM, LR
+        // If the algorithm in ModelConfig is NN, we only load NN models the same as SVM, LR
         String modelSuffix = ".json";
 
         List<FileStatus> fileList = new ArrayList<FileStatus>();
