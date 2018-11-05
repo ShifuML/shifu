@@ -18,6 +18,7 @@ package ml.shifu.shifu.core.dtrain;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -115,7 +116,7 @@ public class Weight {
     private double momentum = 0.5;
 
     /**
-     * Layer IDs which are not updated at all (used for fine tunning)
+     * Layer IDs which are not updated at all (used for fine tuning)
      */
     private Set<Integer> fixedWeights = new HashSet<Integer>();
     
@@ -131,7 +132,9 @@ public class Weight {
     public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl, String propagation, double momentum, double learningDecay, double adamBeta1,
             double adamBeta2, Set<Integer> fixedWeights) {
         this(numWeight, numTrainSize, rate, algorithm, reg, rl, propagation, momentum,learningDecay, adamBeta1,adamBeta2);
-        this.fixedWeights = fixedWeights;
+        if ( CollectionUtils.isNotEmpty(fixedWeights) ) {
+            this.fixedWeights = fixedWeights;
+        }
     }
     
     public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl, String propagation, double momentum, double learningDecay, double adamBeta1,

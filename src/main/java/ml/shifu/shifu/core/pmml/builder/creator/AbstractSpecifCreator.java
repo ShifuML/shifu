@@ -45,6 +45,14 @@ public abstract class AbstractSpecifCreator {
 
     public abstract boolean build(BasicML basicML, Model model, int id);
 
+    public ModelConfig getModelConfig() {
+        return modelConfig;
+    }
+
+    public List<ColumnConfig> getColumnConfigList() {
+        return columnConfigList;
+    }
+
     /**
      * Create the normalized output for model, since the final score should be 0 ~ 1000, instead of 0.o ~ 1.0
      * 
@@ -88,10 +96,10 @@ public abstract class AbstractSpecifCreator {
         Output output = new Output();
 
         output.addOutputFields(createOutputField(RAW_RESULT + "_" + id, OpType.CONTINUOUS, DataType.DOUBLE,
-                new FieldName(modelConfig.getTargetColumnName() + "_" + id), ResultFeature.PREDICTED_VALUE));
+                new FieldName(modelConfig.getTargetColumnName()), ResultFeature.PREDICTED_VALUE));
 
         OutputField finalResult = createOutputField(FINAL_RESULT + "_" + id, OpType.CONTINUOUS, DataType.DOUBLE,
-                new FieldName(modelConfig.getTargetColumnName() + "_" + id), ResultFeature.TRANSFORMED_VALUE);
+                new FieldName(modelConfig.getTargetColumnName()), ResultFeature.TRANSFORMED_VALUE);
         finalResult.setExpression(createNormExpr(id));
 
         output.addOutputFields(finalResult);

@@ -15,20 +15,20 @@
  */
 package ml.shifu.shifu.core.dtrain.dt;
 
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UTFDataFormatException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
+import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.StringUtils;
+import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * {@link IndependentTreeModel} depends no other classes which is easy to deploy model in production.
@@ -1193,4 +1193,83 @@ public class IndependentTreeModel {
         return gbtScoreConvertStrategy;
     }
 
+    public IndependentTreeModel() {
+        // for Json converter
+    }
+
+    public boolean saveToInputStream(OutputStream outputStream) throws IOException{
+        DataOutputStream fos = new DataOutputStream(new GZIPOutputStream(outputStream));
+        // version
+        fos.writeInt(CommonConstants.TREE_FORMAT_VERSION);
+        fos.writeUTF(this.algorithm);
+        fos.writeUTF(this.lossStr);
+        fos.writeBoolean(this.isClassification);
+        fos.writeBoolean(false); // make this.isClassification to do final decision
+        fos.writeInt(this.inputNode);
+
+        Map<Integer, String> columnIndexNameMapping = this.numNameMapping;
+        Map<Integer, List<String>> columnIndexCategoricalListMapping = this.categoricalColumnNameNames;
+        Map<Integer, Double> numericalMeanMapping = this.numericalMeanMapping;
+
+        // serialize numericalMeanMapping
+        fos.writeInt(numericalMeanMapping.size());
+        for(Entry<Integer, Double> entry : numericalMeanMapping.entrySet()) {
+            fos.writeInt(entry.getKey());
+            // for some feature, it is null mean value, it is not selected, just set to 0d to avoid NPE
+            fos.writeDouble(entry.getValue() == null ? 0d : entry.getValue());
+        }
+        // serialize columnIndexNameMapping
+        fos.writeInt(columnIndexNameMapping.size());
+        for(Entry<Integer, String> entry : columnIndexNameMapping.entrySet()) {
+            fos.writeInt(entry.getKey());
+            fos.writeUTF(entry.getValue());
+        }
+        // serialize columnIndexCategoricalListMapping
+        fos.writeInt(columnIndexCategoricalListMapping.size());
+        for(Entry<Integer, List<String>> entry : columnIndexCategoricalListMapping.entrySet()) {
+            List<String> categories = entry.getValue();
+            if(categories != null) {
+                fos.writeInt(entry.getKey());
+                fos.writeInt(categories.size());
+                for(String category : categories) {
+                    // There is 16k limitation when using writeUTF() function.
+                    // if the category value is larger than 10k, write a marker -1 and write bytes instead of
+                    // writeUTF;
+                    // in read part logic should be changed also to readByte not readUTF according to the marker
+                    if(category.length() < Constants.MAX_CATEGORICAL_VAL_LEN) {
+                        fos.writeUTF(category);
+                    } else {
+                        fos.writeShort(BinaryDTSerializer.UTF_BYTES_MARKER); // marker here
+                        byte[] bytes = category.getBytes("UTF-8");
+                        fos.writeInt(bytes.length);
+                        for(int i = 0; i < bytes.length; i++) {
+                            fos.writeByte(bytes[i]);
+                        }
+                    }
+                }
+            }
+        }
+
+        Map<Integer, Integer> columnMapping = this.columnNumIndexMapping;
+        fos.writeInt(columnMapping.size());
+        for(Entry<Integer, Integer> entry : columnMapping.entrySet()) {
+            fos.writeInt(entry.getKey());
+            fos.writeInt(entry.getValue());
+        }
+
+        // after model version 4 (>=4), IndependentTreeModel support bagging, here write a default RF/GBT size 1
+        fos.writeInt(trees.size());
+        for(int i = 0; i < trees.size(); i++) {
+            List<TreeNode> forest = trees.get(i);
+            int treeLength = forest.size();
+            fos.writeInt(treeLength);
+            for(TreeNode treeNode : forest) {
+                treeNode.write(fos);
+            }
+        }
+
+        fos.close();
+
+        return true;
+    }
 }

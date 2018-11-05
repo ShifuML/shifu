@@ -248,6 +248,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
             if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
                 ShifuFileUtils.deleteFile(pathFinder.getNormalizedValidationDataPath(), sourceType);
                 paramsMap.put(Constants.IS_COMPRESS, "false");
+                paramsMap.put(Constants.IS_VALIDATION_DATASET, "true");
                 paramsMap.put(Constants.PATH_RAW_DATA, modelConfig.getValidationDataSetRawPath());
                 paramsMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedValidationDataPath());
                 PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap);

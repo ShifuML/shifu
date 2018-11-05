@@ -18,6 +18,7 @@ package ml.shifu.shifu.core.dtrain.nn;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -167,16 +168,16 @@ public class NNWorker extends AbstractNNWorker<Text> {
                         }
                         hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
                     } else {
-                        if ( columnConfig.isMeta() || columnConfig.isForceRemove() ) {
+                        if ( !CommonUtils.isToNormVariable(columnConfig, hasCandidates, modelConfig.isRegression()) ) {
                             pos += 1;
                         } else if ( columnConfig.isNumerical()
                                 && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)
-                                && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1) {
+                                && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 0) {
                             pos += (columnConfig.getBinBoundary().size() + 1);
                         } else if(columnConfig.isCategorical()
                                 && (modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
                                         || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))
-                                && columnConfig.getBinCategory().size() > 1) {
+                                && columnConfig.getBinCategory().size() > 0) {
                             pos += (columnConfig.getBinCategory().size() + 1);
                         } else {
                             pos += 1;

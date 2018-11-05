@@ -221,6 +221,11 @@ public class LogisticRegressionWorker extends
      */
     private boolean isKFoldCV;
 
+    /**
+     * The model set candidate variables or not
+     */
+    protected boolean hasCandidates = false;
+
     protected boolean isUpSampleEnabled() {
         return this.upSampleRng != null;
     }
@@ -504,16 +509,16 @@ public class LogisticRegressionWorker extends
 
                             hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
                         } else {
-                            if ( columnConfig.isMeta() || columnConfig.isForceRemove() ) {
+                            if ( !CommonUtils.isToNormVariable(columnConfig, hasCandidates, modelConfig.isRegression()) ) {
                                 pos += 1;
                             } else if ( columnConfig.isNumerical()
                                     && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)
-                                    && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 1) {
+                                    && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 0) {
                                 pos += (columnConfig.getBinBoundary().size() + 1);
                             } else if(columnConfig.isCategorical()
                                     && (modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
                                     || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))
-                                    && columnConfig.getBinCategory().size() > 1) {
+                                    && columnConfig.getBinCategory().size() > 0) {
                                 pos += (columnConfig.getBinCategory().size() + 1);
                             } else {
                                 pos += 1;
@@ -659,6 +664,7 @@ public class LogisticRegressionWorker extends
                     sourceType);
             this.columnConfigList = CommonUtils
                     .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

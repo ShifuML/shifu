@@ -144,7 +144,7 @@ public class EvalConfig {
 
                         String delimiter = StringUtils.isBlank(dataSet.getHeaderDelimiter()) ? dataSet
                                 .getDataDelimiter() : dataSet.getHeaderDelimiter();
-                        scoreMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(), delimiter);
+                        scoreMetaColumns = CommonUtils.readConfNamesAsList(path, dataSet.getSource(), delimiter);
                     }
 
                     if(this.scoreMetaColumns == null) {
@@ -177,7 +177,7 @@ public class EvalConfig {
 
                         String delimiter = StringUtils.isBlank(dataSet.getHeaderDelimiter()) ? dataSet
                                 .getDataDelimiter() : dataSet.getHeaderDelimiter();
-                        List<String> rawMetaColumns = CommonUtils.readConfFileIntoList(path, dataSet.getSource(),
+                        List<String> rawMetaColumns = CommonUtils.readConfNamesAsList(path, dataSet.getSource(),
                                 delimiter);
                         if(CollectionUtils.isNotEmpty(metaColumns)) {
                             for(String column: rawMetaColumns) {
