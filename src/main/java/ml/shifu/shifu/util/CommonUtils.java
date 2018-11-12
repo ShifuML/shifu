@@ -902,7 +902,7 @@ public final class CommonUtils {
             boolean gbtConvertToProb, String gbtScoreConvertStrategy) throws IOException {
         List<BasicML> models = new ArrayList<BasicML>();
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
-        // check if eval generic model
+        // check if eval generic model, if so bypass the shifu model loader procedure
         if(Constants.GENERIC.equals(modelConfig.getAlgorithm())) {
             List<FileStatus> genericModelConfigs = findGenericModels(modelConfig, evalConfig, sourceType);
             if(genericModelConfigs.isEmpty()) {
@@ -915,14 +915,17 @@ public final class CommonUtils {
 
         List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
-            for(FileStatus f: modelFileStats) {
-                models.add(loadModel(modelConfig, f.getPath(), fs, gbtConvertToProb, gbtScoreConvertStrategy));
+            for(FileStatus fst: modelFileStats) {
+                models.add(loadModel(modelConfig, fst.getPath(), fs, gbtConvertToProb, gbtScoreConvertStrategy));
             }
         }
 
         return models;
     }
     
+    /**
+     * Load generic model from local or hdfs storage and initialize.
+     */
     public static void loadGenericModels(ModelConfig modelConfig, List<FileStatus> genericModelConfigs, SourceType sourceType,
             List<BasicML> models) throws IOException {
         for(FileStatus fst: genericModelConfigs) {
@@ -941,6 +944,7 @@ public final class CommonUtils {
             log.info("Generic model path is : {}.", gmc.getProperties().get(Constants.GENERIC_MODEL_PATH));
             if(Constants.TENSORFLOW.equals(alg)) {
                 try {
+                    //Initiate a evaluator class instance which used for evaluation
                     Class clazz = Class.forName(ComputeImplClass.Tensorflow.getClassName());
                     Computable computable = (Computable) clazz.newInstance();
                     computable.init(gmc);
@@ -950,7 +954,7 @@ public final class CommonUtils {
                     throw new RuntimeException("Get model fail.");
                 }
             } else {
-                throw new RuntimeException("Algorithm: " + alg + " is not supported in generic model yet");
+                throw new RuntimeException("Algorithm: " + alg + " is not supported in generic model yet.");
             }
         }
     }
@@ -1229,11 +1233,15 @@ public final class CommonUtils {
         return fileList;
     }
 
+    /**
+     * Load the generic model config and parse it to java object. Similar as {@link findModels}
+     */
     public static List<FileStatus> findGenericModels(ModelConfig modelConfig, EvalConfig evalConfig,
             SourceType sourceType) throws IOException {
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         PathFinder pathFinder = new PathFinder(modelConfig);
 
+        //Find generic model config file with suffix .json
         String modelSuffix = ".json";
 
         List<FileStatus> fileList = new ArrayList<FileStatus>();
