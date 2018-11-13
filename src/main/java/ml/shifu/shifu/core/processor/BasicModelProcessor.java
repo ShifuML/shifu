@@ -493,7 +493,7 @@ public class BasicModelProcessor {
                 modelConfig.getTrain().setNumTrainEpochs(10000);
                 saveModelConfig();
             }
-        } else if("tensorflow".equalsIgnoreCase(alg)) {
+        } else if(Constants.GENERIC.equalsIgnoreCase(alg)) {
             //do nothing
         } else {
             throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_ALG);
