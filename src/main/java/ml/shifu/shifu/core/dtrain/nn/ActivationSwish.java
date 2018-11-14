@@ -33,10 +33,6 @@ import org.encog.engine.network.activation.ActivationFunction;
 public class ActivationSwish implements ActivationFunction {
 
     /**
-     * The ramp low threshold parameter.
-     */
-
-    /**
      * The serial ID.
      */
     private static final long serialVersionUID = 6336245112244386239L;
@@ -46,13 +42,8 @@ public class ActivationSwish implements ActivationFunction {
      */
     private final double[] params;
 
-    /**
-     * Default constructor.
-     */
+    public ActivationSwish() { this.params = new double[0]; }
 
-    public ActivationSwish() {
-        this.params = new double[0];
-    }
     /**
      * {@inheritDoc}
      */
@@ -83,10 +74,6 @@ public class ActivationSwish implements ActivationFunction {
     }
 
     /**
-     * @return the low
-     */
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -103,16 +90,16 @@ public class ActivationSwish implements ActivationFunction {
         return this.params;
     }
 
-
     /**
      * @return True, as this function does have a derivative.
      */
     @Override
-    public final boolean hasDerivative() {
-        return true;
-    }
+    public final boolean hasDerivative() { return true; }
 
-
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public final void setParam(final int index, final double value) {
         this.params[index] = value;
     }
