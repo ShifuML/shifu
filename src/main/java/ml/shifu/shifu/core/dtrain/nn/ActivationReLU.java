@@ -57,7 +57,9 @@ public class ActivationReLU implements ActivationFunction {
     /**
      * Default constructor.
      */
-    public ActivationReLU() {this(0, 0);}
+    public ActivationReLU() {
+        this(0, 0);
+    }
 
     /**
      * Construct a ramp activation function.

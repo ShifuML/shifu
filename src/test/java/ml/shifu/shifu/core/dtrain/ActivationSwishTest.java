@@ -11,7 +11,7 @@ public class ActivationSwishTest {
         ActivationSwish swish = new ActivationSwish();
 
 
-//Test activtion function
+        //Test activtion function
         double[] swishInputValue = {-1d,0,1d};
         double[] truth = {-1/(1+Math.exp(1)),0,1/(1+Math.exp(-1))};
         double error=0;
@@ -22,7 +22,7 @@ public class ActivationSwishTest {
         }
         Assert.assertTrue(error<1E-6);
 
-//Test derivative function
+        //Test derivative function
         double d0 = swish.derivativeFunction(0.0, 0.0);
         Assert.assertTrue(Math.abs(d0 - 0.5) < 1E-6);
 

@@ -26,11 +26,9 @@ package ml.shifu.shifu.core.dtrain.nn;
 import org.encog.engine.network.activation.ActivationFunction;
 
 /**
- * A ramp activation function. This function has a high and low threshold. If the high threshold is exceeded a fixed
- * value is returned. Likewise, if the low value is exceeded another fixed value is returned.
- *
- * <p>
- * Copied from Encog 3.4 to avoid upgrading our encog 3.0.
+ * Swish activation function is proposed by google researcher in paper - https://arxiv.org/pdf/1710.05941.pdf
+ * It is defined as f(x) = x* sigmoid(x)
+ * The comparison to Relu is available at https://medium.com/@jaiyamsharma/swish-in-depth-a-comparison-of-swish-relu-on-cifar-10-1c798e70ee08
  */
 public class ActivationSwish implements ActivationFunction {
 
