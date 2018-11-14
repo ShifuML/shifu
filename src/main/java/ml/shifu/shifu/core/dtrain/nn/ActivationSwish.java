@@ -16,8 +16,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *   
- * For more information on Heaton Research copyrights, licenses 
+ *
+ * For more information on Heaton Research copyrights, licenses
  * and trademarks visit:
  * http://www.heatonresearch.com/copyright
  */
@@ -28,26 +28,20 @@ import org.encog.engine.network.activation.ActivationFunction;
 /**
  * A ramp activation function. This function has a high and low threshold. If the high threshold is exceeded a fixed
  * value is returned. Likewise, if the low value is exceeded another fixed value is returned.
- * 
+ *
  * <p>
  * Copied from Encog 3.4 to avoid upgrading our encog 3.0.
  */
-public class ActivationReLU implements ActivationFunction {
+public class ActivationSwish implements ActivationFunction {
 
     /**
      * The ramp low threshold parameter.
      */
-    public static final int PARAM_RELU_LOW_THRESHOLD = 0;
-
-    /**
-     * The ramp low parameter.
-     */
-    public static final int PARAM_RELU_LOW = 0;
 
     /**
      * The serial ID.
      */
-    private static final long serialVersionUID = 6336245112244386279L;
+    private static final long serialVersionUID = 6336245112244386239L;
 
     /**
      * The parameters.
@@ -57,43 +51,28 @@ public class ActivationReLU implements ActivationFunction {
     /**
      * Default constructor.
      */
-    public ActivationReLU() {this(0, 0);}
 
-    /**
-     * Construct a ramp activation function.
-     * 
-     * @param thresholdLow
-     *            The low threshold value.
-     * @param low
-     *            The low value, replaced if the low threshold is exceeded.
-     */
-    public ActivationReLU(final double thresholdLow, final double low) {
-        this.params = new double[2];
-        this.params[ActivationReLU.PARAM_RELU_LOW_THRESHOLD] = thresholdLow;
-        this.params[ActivationReLU.PARAM_RELU_LOW] = low;
+    public ActivationSwish() {
+        this.params = new double[0];
     }
-
     /**
      * {@inheritDoc}
      */
     @Override
     public final void activationFunction(final double[] x, final int start, final int size) {
         for(int i = start; i < start + size; i++) {
-            if(x[i] <= this.params[ActivationReLU.PARAM_RELU_LOW_THRESHOLD]) {
-                x[i] = this.params[ActivationReLU.PARAM_RELU_LOW];
-            }
+            x[i] = x[i] * (1/ (Math.exp(-1* x[i]) +1 )) ;
         }
     }
 
     /**
      * Clone the object.
-     * 
+     *
      * @return The cloned object.
      */
     @Override
     public final ActivationFunction clone() {
-        return new ActivationReLU(this.params[ActivationReLU.PARAM_RELU_LOW_THRESHOLD],
-                this.params[ActivationReLU.PARAM_RELU_LOW]);
+        return new ActivationSwish();
     }
 
     /**
@@ -101,25 +80,20 @@ public class ActivationReLU implements ActivationFunction {
      */
     @Override
     public final double derivativeFunction(final double b, final double a) {
-        if(b <= this.params[ActivationReLU.PARAM_RELU_LOW_THRESHOLD]) {
-            return 0;
-        }
-        return 1.0;
+        double sigmoid = 1 / (1.0 + Math.exp(-b));
+        return sigmoid + b * sigmoid * (1 - sigmoid);
     }
 
     /**
      * @return the low
      */
-    public final double getLow() {
-        return this.params[ActivationReLU.PARAM_RELU_LOW];
-    }
 
     /**
      * {@inheritDoc}
      */
     @Override
     public final String[] getParamNames() {
-        final String[] result = { "thresholdLow", "low" };
+        final String[] result = { };
         return result;
     }
 
@@ -131,12 +105,6 @@ public class ActivationReLU implements ActivationFunction {
         return this.params;
     }
 
-    /**
-     * @return the thresholdLow
-     */
-    public final double getThresholdLow() {
-        return this.params[ActivationReLU.PARAM_RELU_LOW_THRESHOLD];
-    }
 
     /**
      * @return True, as this function does have a derivative.
@@ -146,32 +114,9 @@ public class ActivationReLU implements ActivationFunction {
         return true;
     }
 
-    /**
-     * Set the low value.
-     * 
-     * @param d
-     *            The low value.
-     */
-    public final void setLow(final double d) {
-        setParam(ActivationReLU.PARAM_RELU_LOW, d);
-    }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public final void setParam(final int index, final double value) {
         this.params[index] = value;
-    }
-
-    /**
-     * Set the threshold low.
-     * 
-     * @param d
-     *            The threshold low.
-     */
-    public final void setThresholdLow(final double d) {
-        setParam(ActivationReLU.PARAM_RELU_LOW_THRESHOLD, d);
     }
 
 }

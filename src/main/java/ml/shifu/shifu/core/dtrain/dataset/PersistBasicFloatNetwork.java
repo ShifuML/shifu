@@ -15,33 +15,20 @@
  */
 package ml.shifu.shifu.core.dtrain.dataset;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
 import ml.shifu.shifu.core.dtrain.nn.ActivationLeakyReLU;
 import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
-
+import ml.shifu.shifu.core.dtrain.nn.ActivationSwish;
 import org.apache.commons.lang.StringUtils;
 import org.encog.engine.network.activation.ActivationFunction;
 import org.encog.neural.flat.FlatNetwork;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.PersistBasicNetwork;
-import org.encog.persist.EncogFileSection;
-import org.encog.persist.EncogPersistor;
-import org.encog.persist.EncogReadHelper;
-import org.encog.persist.EncogWriteHelper;
-import org.encog.persist.PersistConst;
-import org.encog.persist.PersistError;
+import org.encog.persist.*;
 import org.encog.util.csv.CSVFormat;
+
+import java.io.*;
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * Support {@link BasicFloatNetwork} serialization and de-serialization. This is copied from {@link PersistBasicNetwork}
@@ -116,6 +103,8 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
                         name = "ml.shifu.shifu.core.dtrain.nn.ActivationReLU";
                     } else if (cols.get(0).equals("ActivationLeakyReLU")) {
                         name = "ml.shifu.shifu.core.dtrain.nn.ActivationLeakyReLU";
+                    } else if (cols.get(0).equals("ActivationSwish")){
+                        name = "ml.shifu.shifu.core.dtrain.nn.ActivationSwish";
                     }
                     try {
                         final Class<?> clazz = Class.forName(name);
@@ -248,6 +237,8 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
                 name = ActivationReLU.class.getName();
             } else if (name.equals("ActivationLeakyReLU")) {
                 name = ActivationLeakyReLU.class.getName();
+            } else if (name.equals("ActivationSwish")) {
+                name = ActivationSwish.class.getName();
             } else {
                 name = "org.encog.engine.network.activation." + name;
             }
