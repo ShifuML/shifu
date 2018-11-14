@@ -189,7 +189,7 @@ public class LogisticRegressionMaster extends
                 context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
         LOG.info("continuousEnabled: {}", this.isContinuousEnabled);
 
-        // not initialized and not first iteration, should be fault tolerence, recover state in LogisticRegressionMaster
+        // not initialized and not first iteration, should be fault tolerance, recover state in LogisticRegressionMaster
         if(!context.isFirstIteration()) {
             LogisticRegressionParams lastMasterResult = context.getMasterResult();
             if(lastMasterResult != null && lastMasterResult.getParameters() != null) {

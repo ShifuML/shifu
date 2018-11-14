@@ -1066,7 +1066,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         String zkServers = Environment.getProperty(Environment.ZOO_KEEPER_SERVERS);
         if(StringUtils.isEmpty(zkServers)) {
             LOG.warn(
-                    "No specified zookeeper settings from zookeeperServers in shifuConfig file, Guagua will set embeded zookeeper server in client process or master node. For fail-over zookeeper applications, specified zookeeper servers are strongly recommended.");
+                    "No specified zookeeper settings from zookeeperServers in shifuConfig file, Guagua will set embedded zookeeper server in client process or master node. For fail-over zookeeper applications, specified zookeeper servers are strongly recommended.");
         } else {
             args.add("-z");
             args.add(zkServers);
