@@ -17,6 +17,10 @@ package ml.shifu.shifu.container.obj;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -27,7 +31,6 @@ import java.util.List;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ColumnStats {
-
     /**
      * Max value of such column
      */
@@ -383,5 +386,77 @@ public class ColumnStats {
      */
     public void setValidNumCount(Long validNumCount) {
         this.validNumCount = validNumCount;
+    }
+
+    /**
+     * Write columnStatus to output stream
+     * @param output output stream
+     */
+    public void write(DataOutputStream output) throws IOException {
+        output.writeDouble(max);
+        output.writeDouble(min);
+        output.writeDouble(mean);
+        output.writeDouble(median);
+        output.writeDouble(p25th);
+        output.writeDouble(p75th);
+        output.writeLong(totalCount);
+        output.writeLong(distinctCount);
+        output.writeLong(missingCount);
+        output.writeLong(validNumCount);
+        output.writeDouble(stdDev);
+        output.writeDouble(missingPercentage);
+        output.writeDouble(woe);
+        output.writeDouble(ks);
+        output.writeDouble(iv);
+        output.writeDouble(weightedKs);
+        output.writeDouble(weightedIv);
+        output.writeDouble(weightedWoe);
+        output.writeDouble(skewness);
+        output.writeDouble(kurtosis);
+        if (psi == null) output.writeDouble(Double.NaN);
+        else output.writeDouble(psi);
+        if (unitStats == null || unitStats.isEmpty()) {
+            output.writeInt(0);
+        } else {
+            output.writeInt(unitStats.size());
+            for (String unitStat : unitStats) {
+                output.writeUTF(unitStat);
+            }
+        }
+    }
+
+    /**
+     * Read columnstats from input stream
+     * @param input input stream
+     */
+    public void read(DataInputStream input) throws IOException {
+        max = input.readDouble();
+        min = input.readDouble();
+        mean = input.readDouble();
+        median = input.readDouble();
+        p25th = input.readDouble();
+        p75th = input.readDouble();
+        totalCount = input.readLong();
+        distinctCount = input.readLong();
+        missingCount = input.readLong();
+        validNumCount = input.readLong();
+        stdDev = input.readDouble();
+        missingPercentage = input.readDouble();
+        woe = input.readDouble();
+        ks = input.readDouble();
+        iv = input.readDouble();
+        weightedKs = input.readDouble();
+        weightedIv = input.readDouble();
+        weightedWoe = input.readDouble();
+        skewness = input.readDouble();
+        kurtosis = input.readDouble();
+        psi = input.readDouble();
+        int unitNum = input.readInt();
+        if (unitNum != 0) {
+            unitStats = new ArrayList<String>();
+            for (int i = 0; i < unitNum; i++) {
+                unitStats.add(input.readUTF());
+            }
+        }
     }
 }
