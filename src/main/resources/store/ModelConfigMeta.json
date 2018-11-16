@@ -572,7 +572,8 @@
                                     {"label": "Sin", "value":"Sin"},
                                     {"label": "Linear", "value":"Linear"},
                                     {"label": "ReLU", "value":"ReLU"},
-                                    {"label": "LeakyReLU", "value":"LeakyReLU"}
+                                    {"label": "LeakyReLU", "value":"LeakyReLU"},
+                                    {"label": "Swish", "value":"Swish"}
                                 ]
                             }                            
                          ]
