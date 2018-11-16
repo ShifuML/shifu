@@ -319,6 +319,7 @@ public class ColumnBinning {
     /**
      * Read columnbinning from input stream
      * @param input input stream
+     * @throws IOException io exception
      */
     public void read(DataInputStream input) throws IOException {
         length = input.readInt();
@@ -369,18 +370,6 @@ public class ColumnBinning {
         binWeightedNeg = new ArrayList<Double>();
         for (int i = 0; i < size; i++) {
             binWeightedNeg.add(input.readDouble());
-        }
-
-        size = input.readInt();
-        binWeightedPos = new ArrayList<Double>();
-        for (int i = 0; i < size; i++) {
-            binWeightedPos.add(input.readDouble());
-        }
-
-        size = input.readInt();
-        binCountWoe = new ArrayList<Double>();
-        for (int i = 0; i < size; i++) {
-            binCountWoe.add(input.readDouble());
         }
 
         size = input.readInt();

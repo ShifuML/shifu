@@ -391,30 +391,30 @@ public class ColumnStats {
     /**
      * Write columnStatus to output stream
      * @param output output stream
+     * @throws IOException io exception
      */
     public void write(DataOutputStream output) throws IOException {
-        output.writeDouble(max);
-        output.writeDouble(min);
-        output.writeDouble(mean);
-        output.writeDouble(median);
-        output.writeDouble(p25th);
-        output.writeDouble(p75th);
-        output.writeLong(totalCount);
-        output.writeLong(distinctCount);
-        output.writeLong(missingCount);
-        output.writeLong(validNumCount);
-        output.writeDouble(stdDev);
-        output.writeDouble(missingPercentage);
-        output.writeDouble(woe);
-        output.writeDouble(ks);
-        output.writeDouble(iv);
-        output.writeDouble(weightedKs);
-        output.writeDouble(weightedIv);
-        output.writeDouble(weightedWoe);
-        output.writeDouble(skewness);
-        output.writeDouble(kurtosis);
-        if (psi == null) output.writeDouble(Double.NaN);
-        else output.writeDouble(psi);
+        writeWrapperValue(output, max);
+        writeWrapperValue(output, min);
+        writeWrapperValue(output, mean);
+        writeWrapperValue(output, median);
+        writeWrapperValue(output, p25th);
+        writeWrapperValue(output, p75th);
+        writeWrapperValue(output, totalCount);
+        writeWrapperValue(output, distinctCount);
+        writeWrapperValue(output, missingCount);
+        writeWrapperValue(output, validNumCount);
+        writeWrapperValue(output, stdDev);
+        writeWrapperValue(output, missingPercentage);
+        writeWrapperValue(output, woe);
+        writeWrapperValue(output, ks);
+        writeWrapperValue(output, iv);
+        writeWrapperValue(output, weightedKs);
+        writeWrapperValue(output, weightedIv);
+        writeWrapperValue(output, weightedWoe);
+        writeWrapperValue(output, skewness);
+        writeWrapperValue(output, kurtosis);
+        writeWrapperValue(output, psi);
         if (unitStats == null || unitStats.isEmpty()) {
             output.writeInt(0);
         } else {
@@ -428,35 +428,71 @@ public class ColumnStats {
     /**
      * Read columnstats from input stream
      * @param input input stream
+     * @throws IOException io exception
      */
     public void read(DataInputStream input) throws IOException {
-        max = input.readDouble();
-        min = input.readDouble();
-        mean = input.readDouble();
-        median = input.readDouble();
-        p25th = input.readDouble();
-        p75th = input.readDouble();
-        totalCount = input.readLong();
-        distinctCount = input.readLong();
-        missingCount = input.readLong();
-        validNumCount = input.readLong();
-        stdDev = input.readDouble();
-        missingPercentage = input.readDouble();
-        woe = input.readDouble();
-        ks = input.readDouble();
-        iv = input.readDouble();
-        weightedKs = input.readDouble();
-        weightedIv = input.readDouble();
-        weightedWoe = input.readDouble();
-        skewness = input.readDouble();
-        kurtosis = input.readDouble();
-        psi = input.readDouble();
+        max = readWrapperValue(input, Double.class);
+        min = readWrapperValue(input, Double.class);
+        mean = readWrapperValue(input, Double.class);
+        median = readWrapperValue(input, Double.class);
+        p25th = readWrapperValue(input, Double.class);
+        p75th = readWrapperValue(input, Double.class);
+        totalCount = readWrapperValue(input, Long.class);
+        distinctCount = readWrapperValue(input, Long.class);
+        missingCount = readWrapperValue(input, Long.class);
+        validNumCount = readWrapperValue(input, Long.class);
+        stdDev = readWrapperValue(input, Double.class);
+        missingPercentage = readWrapperValue(input, Double.class);
+        woe = readWrapperValue(input, Double.class);
+        ks = readWrapperValue(input, Double.class);
+        iv = readWrapperValue(input, Double.class);
+        weightedKs = readWrapperValue(input, Double.class);
+        weightedIv = readWrapperValue(input, Double.class);
+        weightedWoe = readWrapperValue(input, Double.class);
+        skewness = readWrapperValue(input, Double.class);
+        kurtosis = readWrapperValue(input, Double.class);
+        psi = readWrapperValue(input, Double.class);
         int unitNum = input.readInt();
         if (unitNum != 0) {
             unitStats = new ArrayList<String>();
             for (int i = 0; i < unitNum; i++) {
                 unitStats.add(input.readUTF());
             }
+        }
+    }
+
+    /***
+     * @param output output stream
+     * @param field object value
+     * @throws IOException io exception
+     */
+    private void writeWrapperValue(DataOutputStream output, Number field) throws IOException {
+        if (field == null) {
+            output.writeBoolean(true);
+        } else {
+            output.writeBoolean(false);
+            if (field instanceof Double) {
+                output.writeDouble(field.doubleValue());
+            } else if (field instanceof Long) {
+                output.writeLong(field.longValue());
+            }
+        }
+    }
+
+    /**
+     * @param input input stream
+     * @param clazz Numeric type
+     * @param <T> return type
+     * @return object value
+     * @throws IOException io exception
+     */
+    private <T extends Number>T readWrapperValue(DataInputStream input, Class<T> clazz) throws IOException {
+        boolean nullFlag = input.readBoolean();
+        if (nullFlag) return null;
+        else if (clazz == Double.class){
+            return clazz.cast(input.readDouble());
+        } else {
+            return clazz.cast(input.readLong());
         }
     }
 }

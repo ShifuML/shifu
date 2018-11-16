@@ -522,6 +522,7 @@ public class ColumnConfig {
     /**
      * Write columnconfig to output stream
      * @param output output stream
+     * @throws IOException io exception
      */
     public void write(DataOutputStream output) throws IOException {
         output.writeInt(columnNum);
@@ -546,6 +547,7 @@ public class ColumnConfig {
     /**
      * Read columnstats from input stream
      * @param input input stream
+     * @throws IOException io exception
      */
     public void read(DataInputStream input) throws IOException {
         columnNum = input.readInt();
