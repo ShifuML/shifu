@@ -219,21 +219,21 @@ public class SubGradient implements Callable<double[]> {
      * @param ideal
      *            The ideal values.
      * @param s
-     *            The significance.
+     *            The significance. 
      */
-    private void process(final float[] input, final float[] ideal, double s) {   	
+    private void process(final float[] input, final float[] ideal, double s) {
         // have to copy float ideal array to double array, since ideal array is small, it's ok to copy an array
         this.doubleIdeal = CommonUtils.floatToDouble(ideal);
-    	
-    	((FloatFlatNetwork) this.getNetwork()).compute(input, this.actual);
+        
+        ((FloatFlatNetwork) this.getNetwork()).compute(input, this.actual);
 
         // cal error for log printing
         this.errorCalculation.updateError(this.actual, doubleIdeal, s);
         
-       	// if there is no dropout node set in master, we consider this computation is normal forward propragation  
-    	if (this.dropoutNodes != null) {
-    		((FloatFlatNetwork) this.getNetwork()).compute(input, this.actual, this.dropoutNodes);
-    	} 
+           // if there is no dropout node set in master, we consider this computation is normal forward propragation  
+        if (this.dropoutNodes != null) {
+            ((FloatFlatNetwork) this.getNetwork()).compute(input, this.actual, this.dropoutNodes);
+        } 
 
         this.errorFunction.calculateError(doubleIdeal, actual, this.getLayerDelta());
 
@@ -263,52 +263,52 @@ public class SubGradient implements Callable<double[]> {
      * @param currentLevel
      *            The current level.
      */
-	private void processLevel(final int currentLevel) {
-		final int fromLayerIndex = this.layerIndex[currentLevel + 1];
-		final int toLayerIndex = this.layerIndex[currentLevel];
-		final int fromLayerSize = this.layerCounts[currentLevel + 1];
-		final int toLayerSize = this.layerFeedCounts[currentLevel];
-		double nonDropoutRate = 1.0d;
-		if (this.layerDropoutRates.length > currentLevel + 1 && this.layerDropoutRates[currentLevel + 1] != 0) {
-			nonDropoutRate = 1.0d - this.layerDropoutRates[currentLevel + 1];
-		}
+    private void processLevel(final int currentLevel) {
+        final int fromLayerIndex = this.layerIndex[currentLevel + 1];
+        final int toLayerIndex = this.layerIndex[currentLevel];
+        final int fromLayerSize = this.layerCounts[currentLevel + 1];
+        final int toLayerSize = this.layerFeedCounts[currentLevel];
+        double nonDropoutRate = 1.0d;
+        if (this.layerDropoutRates.length > currentLevel + 1 && this.layerDropoutRates[currentLevel + 1] != 0) {
+            nonDropoutRate = 1.0d - this.layerDropoutRates[currentLevel + 1];
+        }
 
-		final int index = this.weightIndex[currentLevel];
-		final ActivationFunction activation = this.getNetwork().getActivationFunctions()[currentLevel + 1];
-		final double currentFlatSpot = this.flatSpot[currentLevel + 1];
+        final int index = this.weightIndex[currentLevel];
+        final ActivationFunction activation = this.getNetwork().getActivationFunctions()[currentLevel + 1];
+        final double currentFlatSpot = this.flatSpot[currentLevel + 1];
 
-		// handle weights
-		int yi = fromLayerIndex;
-		for (int y = 0; y < fromLayerSize; y++) {
-			final double output = this.layerOutput[yi];
-			double sum = 0;
-			int wi = index + y;
-			int xi = toLayerIndex;
-			for (int x = 0; x < toLayerSize; x++) {
-				this.gradients[wi] += output * this.getLayerDelta()[xi];
+        // handle weights
+        int yi = fromLayerIndex;
+        for (int y = 0; y < fromLayerSize; y++) {
+            final double output = this.layerOutput[yi];
+            double sum = 0;
+            int wi = index + y;
+            int xi = toLayerIndex;
+            for (int x = 0; x < toLayerSize; x++) {
+                this.gradients[wi] += output * this.getLayerDelta()[xi];
 
-				sum += this.weights[wi] * this.getLayerDelta()[xi];
-				wi += fromLayerSize;
-				xi++;
-			}
-			
-			if (Double.compare(nonDropoutRate, 1.0d) == 0 || this.dropoutNodes == null) {
-				this.getLayerDelta()[yi] = sum
-						* (activation.derivativeFunction(this.layerSums[yi], this.layerOutput[yi])
-								+ currentFlatSpot);
-			} else {
-				if (this.dropoutNodes.contains(yi)) {
-					this.getLayerDelta()[yi] = 0d;
-				} else {
-					this.getLayerDelta()[yi] = (sum / nonDropoutRate)
-							* (activation.derivativeFunction(this.layerSums[yi], this.layerOutput[yi] * nonDropoutRate)
-									+ currentFlatSpot);
-				}
-			}
+                sum += this.weights[wi] * this.getLayerDelta()[xi];
+                wi += fromLayerSize;
+                xi++;
+            }
+            
+            if (Double.compare(nonDropoutRate, 1.0d) == 0 || this.dropoutNodes == null) {
+                this.getLayerDelta()[yi] = sum
+                        * (activation.derivativeFunction(this.layerSums[yi], this.layerOutput[yi])
+                                + currentFlatSpot);
+            } else {
+                if (this.dropoutNodes.contains(yi)) {
+                    this.getLayerDelta()[yi] = 0d;
+                } else {
+                    this.getLayerDelta()[yi] = (sum / nonDropoutRate)
+                            * (activation.derivativeFunction(this.layerSums[yi], this.layerOutput[yi] * nonDropoutRate)
+                                    + currentFlatSpot);
+                }
+            }
 
-			yi++;
-		}
-	}
+            yi++;
+        }
+    }
 
     /**
      * Perform the gradient calculation
@@ -486,12 +486,12 @@ public class SubGradient implements Callable<double[]> {
         this.weights = this.network.getWeights();
     }
 
-	public Set<Integer> getDropoutNodes() {
-		return dropoutNodes;
-	}
+    public Set<Integer> getDropoutNodes() {
+        return dropoutNodes;
+    }
 
-	public void setDropoutNodes(Set<Integer> dropoutNodes) {
-		this.dropoutNodes = dropoutNodes;
-	}
+    public void setDropoutNodes(Set<Integer> dropoutNodes) {
+        this.dropoutNodes = dropoutNodes;
+    }
 
 }
