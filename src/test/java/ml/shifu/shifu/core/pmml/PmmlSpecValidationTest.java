@@ -51,7 +51,8 @@ public class PmmlSpecValidationTest {
         Assert.assertTrue(result);
     }
 
-     private boolean doValidation(String pmmlPath, String DataPath, String delimiter, String scoreName) throws Exception {
+     @SuppressWarnings("unchecked")
+    private boolean doValidation(String pmmlPath, String DataPath, String delimiter, String scoreName) throws Exception {
         PMML pmml = PMMLUtils.loadPMML(pmmlPath);
         NeuralNetworkEvaluator evaluator = new NeuralNetworkEvaluator(pmml);
 
@@ -82,7 +83,6 @@ public class PmmlSpecValidationTest {
                                 return a.getValue().compareTo(b.getValue());
                             }
                         });
-                        int j = 0;
                         for (int i = 0; i < outputFieldList.size(); i ++ ) {
                             FieldName fieldName = outputFieldList.get(i);
                             if ( fieldName.getValue().startsWith(AbstractSpecifCreator.FINAL_RESULT) ) {

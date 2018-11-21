@@ -15,9 +15,9 @@
  */
 package ml.shifu.shifu.core;
 
-import ml.shifu.shifu.container.obj.GenericModelConfig;
 import org.encog.ml.data.MLData;
-import java.util.Map;
+
+import ml.shifu.shifu.container.obj.GenericModelConfig;
 
 /**
  * This interface is used to extend shifu evaluation capability. The foreign formated model evaluator should implement

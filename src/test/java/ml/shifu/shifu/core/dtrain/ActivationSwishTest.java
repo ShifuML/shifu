@@ -34,8 +34,4 @@ public class ActivationSwishTest {
         double dn11 = 1/Math.pow(1+Math.exp(1),2);
         Assert.assertTrue(Math.abs(dn1 - dn11) < 1E-6);
     }
-
-    private double sigmoid(double x){
-        return 1/(1+Math.exp(-x));
-    }
 }

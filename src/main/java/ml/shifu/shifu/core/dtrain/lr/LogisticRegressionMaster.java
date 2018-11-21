@@ -115,7 +115,7 @@ public class LogisticRegressionMaster extends
     /**
      * Propagation type for lr model setting: Q, B, R, C
      */
-    private String propagation = "Q";
+    private String propagation = "R";
 
     /**
      * Whether some configurations are initialized
@@ -180,7 +180,7 @@ public class LogisticRegressionMaster extends
         LOG.info("Convergence threshold in master is :{}", this.convergenceThreshold);
 
         Object pObject = validParams.get(CommonConstants.PROPAGATION);
-        this.propagation = pObject == null ? "Q" : (String) pObject;
+        this.propagation = pObject == null ? "R" : (String) pObject;
 
         Object rconstant = validParams.get(CommonConstants.LR_REGULARIZED_CONSTANT);
         this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);

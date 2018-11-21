@@ -940,12 +940,11 @@ public final class CommonUtils {
             hdfs.copyToLocalFile(false, new Path(src), new Path(System.getProperty(Constants.USER_DIR)), true);
             String genericModelPath = System.getProperty(Constants.USER_DIR) + File.separator + Constants.MODELS;
             gmc.getProperties().put(Constants.GENERIC_MODEL_PATH, genericModelPath);
-            File file = new File(genericModelPath);
             log.info("Generic model path is : {}.", gmc.getProperties().get(Constants.GENERIC_MODEL_PATH));
             if(Constants.TENSORFLOW.equals(alg)) {
                 try {
                     //Initiate a evaluator class instance which used for evaluation
-                    Class clazz = Class.forName(ComputeImplClass.Tensorflow.getClassName());
+                    Class<?> clazz = Class.forName(ComputeImplClass.Tensorflow.getClassName());
                     Computable computable = (Computable) clazz.newInstance();
                     computable.init(gmc);
                     GenericModel genericModel = new GenericModel(computable, gmc.getProperties());
