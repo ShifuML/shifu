@@ -537,6 +537,7 @@
                     {"label": "Decision Tree", "value":"DT"},
                     {"label": "Random Forest", "value":"RF"},
                     {"label": "Gradient Boost Decision Tree", "value":"GBT"},
+                    {"label": "Tensorflow Deep Neural Network", "value":"TF_DNN"},
                     {"label": "Generic", "value":"generic"}
                 ]
             }, {
@@ -594,7 +595,17 @@
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.1
-                     }, {
+                    }, {
+                    	"name" : "TF.optimizer",
+                    	"type" : "text",
+                    	"directive" : "input",
+                    	"defval" : "Adam"
+                    }, {
+                    	"name" : "TF.loss",
+                    	"type" : "text",
+                    	"directive" : "input",
+                    	"defval" : "entropy"
+                    }, {
                         "name" : "Momentum",
                         "type" : "number",
                         "directive": "input",

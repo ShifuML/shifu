@@ -37,12 +37,12 @@ public class ModelTrainConf {
 
     /**
      * Different training algorithms supported in Shifu. SVM actuall is not implemented well. DT is replaced by RF and
-     * GBT.
+     * GBT. TF_DNN is used for tensorflow dnn training, TENSORFLOW is used for generic tensorflow model evaluation.
      * 
      * @author Zhang David (pengzhang@paypal.com)
      */
     public static enum ALGORITHM {
-        NN, LR, SVM, DT, RF, GBT
+        NN, LR, SVM, DT, RF, GBT,TF_DNN, TENSORFLOW
     }
 
     /**
@@ -163,7 +163,7 @@ public class ModelTrainConf {
     private Double upSampleWeight = Double.valueOf(1d);
 
     /**
-     * Algorithm: LR, NN, RF, GBT
+     * Algorithm: LR, NN, RF, GBT, TF-DNN
      */
     private String algorithm = "NN";
 
@@ -571,6 +571,20 @@ public class ModelTrainConf {
             params.put(LogisticRegressionTrainer.LEARNING_RATE, 0.1);
             params.put("RegularizedConstant", 0.0);
             params.put("L1orL2", "NONE");
+        } else if(ALGORITHM.TF_DNN.equals(alg)) {
+            params.put(CommonConstants.LEARNING_RATE, 0.1);
+            params.put(CommonConstants.NUM_HIDDEN_LAYERS, 1);
+
+            List<Integer> nodes = new ArrayList<Integer>();
+            nodes.add(50);
+            params.put(CommonConstants.NUM_HIDDEN_NODES, nodes);
+
+            List<String> func = new ArrayList<String>();
+            func.add("relu");
+            params.put(CommonConstants.ACTIVATION_FUNC, func);
+            params.put(CommonConstants.TF_OPTIMIZER, "Adam");
+            params.put(CommonConstants.TF_LOSS, "entropy");
+
         }
         return params;
     }

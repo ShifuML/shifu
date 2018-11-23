@@ -88,6 +88,7 @@ public interface Constants {
     public static final String NN = "nn";
     public static final String GBT = "GBT";
     public static final String GENERIC = "generic";
+    public static final String TENSORFLOW_DNN = "tf_dnn";
     public static final String TENSORFLOW = "tensorflow";
 
     public static final String BZ2_SUFFIX = ".bz2";
