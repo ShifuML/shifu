@@ -461,11 +461,6 @@ public class ColumnStats {
         }
     }
 
-    /***
-     * @param output output stream
-     * @param field object value
-     * @throws IOException io exception
-     */
     private void writeWrapperValue(DataOutputStream output, Number field) throws IOException {
         if (field == null) {
             output.writeBoolean(true);
@@ -479,13 +474,6 @@ public class ColumnStats {
         }
     }
 
-    /**
-     * @param input input stream
-     * @param clazz Numeric type
-     * @param <T> return type
-     * @return object value
-     * @throws IOException io exception
-     */
     private <T extends Number>T readWrapperValue(DataInputStream input, Class<T> clazz) throws IOException {
         boolean nullFlag = input.readBoolean();
         if (nullFlag) return null;
