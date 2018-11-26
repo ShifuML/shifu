@@ -112,7 +112,8 @@ public class ColumnProjector extends AbstractEvalUDF<Tuple> {
     @Override
     public Tuple exec(Tuple input) throws IOException {
         Tuple tuple = TupleFactory.getInstance().newTuple(3);
-        String tag = CommonUtils.trimTag(input.get(targetColumnIndex).toString());
+        Object tval = input.get(targetColumnIndex);
+        String tag = CommonUtils.trimTag((tval == null) ? "" : tval.toString());
         tuple.set(0, tag);
         double score = 0;
         try {

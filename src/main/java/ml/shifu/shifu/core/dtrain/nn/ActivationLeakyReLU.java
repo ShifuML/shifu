@@ -49,7 +49,7 @@ public class ActivationLeakyReLU implements ActivationFunction {
      * The alpha parameter. Default alpha is 0.01
      */
     public static final int PARAM_LEAKY_RELU_ALPHA = 1;
-    
+
     /**
      * The parameters.
      */
