@@ -628,7 +628,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
             if(isParallel) {
                 TailThread tailThread = startTailThread(progressLogList.toArray(new String[0]));
-                guaguaClient.run();
+                status += guaguaClient.run();
                 stopTailThread(tailThread);
             }
         }
