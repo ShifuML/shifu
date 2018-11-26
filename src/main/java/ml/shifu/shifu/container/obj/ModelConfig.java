@@ -278,7 +278,7 @@ public class ModelConfig {
             trainConf.setNumTrainEpochs(20000);
         } else if(ALGORITHM.LR.equals(alg)) {
             trainConf.setNumTrainEpochs(100);
-        } else if(ALGORITHM.TF_DNN.equals(alg)) {
+        } else if(ALGORITHM.TENSORFLOW.equals(alg)) {
             trainConf.setNumTrainEpochs(100);
         }
         trainConf.setBaggingWithReplacement(false);

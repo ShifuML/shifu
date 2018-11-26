@@ -42,7 +42,7 @@ public class ModelTrainConf {
      * @author Zhang David (pengzhang@paypal.com)
      */
     public static enum ALGORITHM {
-        NN, LR, SVM, DT, RF, GBT,TF_DNN, TENSORFLOW
+        NN, LR, SVM, DT, RF, GBT, TENSORFLOW
     }
 
     /**
@@ -571,10 +571,10 @@ public class ModelTrainConf {
             params.put(LogisticRegressionTrainer.LEARNING_RATE, 0.1);
             params.put("RegularizedConstant", 0.0);
             params.put("L1orL2", "NONE");
-        } else if(ALGORITHM.TF_DNN.equals(alg)) {
+        } else if(ALGORITHM.TENSORFLOW.equals(alg)) {
             params.put(CommonConstants.LEARNING_RATE, 0.1);
             params.put(CommonConstants.NUM_HIDDEN_LAYERS, 1);
-
+            params.put(CommonConstants.TF_ALG, "DNN");
             List<Integer> nodes = new ArrayList<Integer>();
             nodes.add(50);
             params.put(CommonConstants.NUM_HIDDEN_NODES, nodes);

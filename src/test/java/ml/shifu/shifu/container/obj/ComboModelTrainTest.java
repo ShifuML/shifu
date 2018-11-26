@@ -109,7 +109,7 @@ public class ComboModelTrainTest {
             trainConf.setNumTrainEpochs(20000);
         } else if(ModelTrainConf.ALGORITHM.LR.equals(alg)) {
             trainConf.setNumTrainEpochs(100);
-        } else if(ALGORITHM.TF_DNN.equals(alg)) {
+        } else if(ALGORITHM.TENSORFLOW.equals(alg)) {
             trainConf.setNumTrainEpochs(100);
         }
         trainConf.setBaggingWithReplacement(true);

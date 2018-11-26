@@ -537,7 +537,7 @@
                     {"label": "Decision Tree", "value":"DT"},
                     {"label": "Random Forest", "value":"RF"},
                     {"label": "Gradient Boost Decision Tree", "value":"GBT"},
-                    {"label": "Tensorflow Deep Neural Network", "value":"TF_DNN"},
+                    {"label": "Tensorflow", "value":"Tensorflow"},
                     {"label": "Generic", "value":"generic"}
                 ]
             }, {
@@ -555,6 +555,11 @@
                         "type" : "integer",
                         "directive": "input",
                         "defval" : 2
+                    }, {
+                      "name" : "TF.alg",
+                      "type" : "text",
+                      "directive": "input",
+                      "defval" : "dnn"
                     }, {
                         "name" : "ActivationFunc",
                         "type" : "list",

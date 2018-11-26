@@ -493,7 +493,7 @@ public class BasicModelProcessor {
                 modelConfig.getTrain().setNumTrainEpochs(10000);
                 saveModelConfig();
             }
-        } else if(Constants.TENSORFLOW_DNN.equalsIgnoreCase(alg)) {
+        } else if(Constants.TENSORFLOW.equalsIgnoreCase(alg)) {
             // do nothing
         }else if(Constants.GENERIC.equalsIgnoreCase(alg)) {
             //do nothing

@@ -200,11 +200,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private void runLocalTrain() throws IOException {
-        if(Constants.TENSORFLOW_DNN.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+        if(Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
             runTensorflowLocalTrain();
             return;
+        } else {
+            runAkkaTrain(isForVarSelect ? 1 : modelConfig.getBaggingNum());
         }
-        runAkkaTrain(isForVarSelect ? 1 : modelConfig.getBaggingNum());
     }
 
     private void runTensorflowLocalTrain() throws IOException {
