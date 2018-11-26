@@ -537,7 +537,7 @@
                     {"label": "Decision Tree", "value":"DT"},
                     {"label": "Random Forest", "value":"RF"},
                     {"label": "Gradient Boost Decision Tree", "value":"GBT"},
-                    {"label": "Tensorflow", "value":"Tensorflow"}
+                    {"label": "Generic", "value":"generic"}
                 ]
             }, {
                 "name": "gridConfigFile",
@@ -572,7 +572,8 @@
                                     {"label": "Sin", "value":"Sin"},
                                     {"label": "Linear", "value":"Linear"},
                                     {"label": "ReLU", "value":"ReLU"},
-                                    {"label": "LeakyReLU", "value":"LeakyReLU"}
+                                    {"label": "LeakyReLU", "value":"LeakyReLU"},
+                                    {"label": "Swish", "value":"Swish"}
                                 ]
                             }                            
                          ]

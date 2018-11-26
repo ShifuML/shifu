@@ -95,6 +95,7 @@ public class PMMLScoreGenTest {
         Assert.assertTrue(matchRecordCnt == totalRecordCnt);
     }
 
+    @SuppressWarnings("unchecked")
     private double score(MiningModelEvaluator evaluator, Map<String, String> rawInput, String scoreName) {
         List<TargetField> targetFields = evaluator.getTargetFields();
         Map<FieldName, FieldValue> maps = convertRawIntoInput(evaluator, rawInput);

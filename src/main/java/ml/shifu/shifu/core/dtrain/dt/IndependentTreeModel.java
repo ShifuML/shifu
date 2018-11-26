@@ -15,20 +15,29 @@
  */
 package ml.shifu.shifu.core.dtrain.dt;
 
-import java.io.*;
-import java.util.*;
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UTFDataFormatException;
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.StringUtils;
-import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.hadoop.io.IOUtils;
 
 /**
  * {@link IndependentTreeModel} depends no other classes which is easy to deploy model in production.

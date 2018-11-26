@@ -15,15 +15,34 @@
  */
 package ml.shifu.shifu.core;
 
-import ml.shifu.shifu.container.obj.GenericModelConfig;
 import org.encog.ml.data.MLData;
-import java.util.Map;
 
+import ml.shifu.shifu.container.obj.GenericModelConfig;
+
+/**
+ * This interface is used to extend shifu evaluation capability. The foreign formated model evaluator should implement
+ * this interface with single process evaluation logic in compute method.
+ * 
+ * @author minizhuwei
+ */
 public interface Computable {
 
+    /**
+     * Init the evaluator
+     * 
+     * @param config generic model config which contains all meta data of the model and evaluator.
+     */
     public void init(GenericModelConfig config);
 
-    public double compute(MLData input); 
+    /**
+     * Compute the model score.
+     * @param input model input data which use shifu normalized data output.
+     * @return the model score
+     */
+    public double compute(MLData input);
 
+    /**
+     * The destruction procedure of the evaluator.
+     */
     public void releaseResource();
 }

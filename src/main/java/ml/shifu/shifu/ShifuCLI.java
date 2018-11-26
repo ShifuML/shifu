@@ -24,16 +24,6 @@ import java.util.Map;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
-import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
-import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
-import ml.shifu.shifu.core.processor.*;
-import ml.shifu.shifu.core.processor.EvalModelProcessor.EvalStep;
-import ml.shifu.shifu.core.processor.ManageModelProcessor.ModelAction;
-import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-
-import ml.shifu.shifu.util.IndependentTreeModelUtils;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -45,6 +35,29 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.pig.impl.util.JarManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
+import ml.shifu.shifu.core.processor.BasicModelProcessor;
+import ml.shifu.shifu.core.processor.ComboModelProcessor;
+import ml.shifu.shifu.core.processor.CreateModelProcessor;
+import ml.shifu.shifu.core.processor.EvalModelProcessor;
+import ml.shifu.shifu.core.processor.EvalModelProcessor.EvalStep;
+import ml.shifu.shifu.core.processor.ExportModelProcessor;
+import ml.shifu.shifu.core.processor.InitModelProcessor;
+import ml.shifu.shifu.core.processor.ManageModelProcessor;
+import ml.shifu.shifu.core.processor.ManageModelProcessor.ModelAction;
+import ml.shifu.shifu.core.processor.ModelDataEncodeProcessor;
+import ml.shifu.shifu.core.processor.NormalizeModelProcessor;
+import ml.shifu.shifu.core.processor.PostTrainModelProcessor;
+import ml.shifu.shifu.core.processor.Processor;
+import ml.shifu.shifu.core.processor.ShifuTestProcessor;
+import ml.shifu.shifu.core.processor.StatsModelProcessor;
+import ml.shifu.shifu.core.processor.TrainModelProcessor;
+import ml.shifu.shifu.core.processor.VarSelectModelProcessor;
+import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.IndependentTreeModelUtils;
 
 /**
  * ShifuCLI class is the MAIN class for whole project
