@@ -537,6 +537,7 @@
                     {"label": "Decision Tree", "value":"DT"},
                     {"label": "Random Forest", "value":"RF"},
                     {"label": "Gradient Boost Decision Tree", "value":"GBT"},
+                    {"label": "Tensorflow", "value":"Tensorflow"},
                     {"label": "Generic", "value":"generic"}
                 ]
             }, {
@@ -554,6 +555,11 @@
                         "type" : "integer",
                         "directive": "input",
                         "defval" : 2
+                    }, {
+                      "name" : "TF.alg",
+                      "type" : "text",
+                      "directive": "input",
+                      "defval" : "dnn"
                     }, {
                         "name" : "ActivationFunc",
                         "type" : "list",
@@ -595,7 +601,17 @@
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.1
-                     }, {
+                    }, {
+                    	"name" : "TF.optimizer",
+                    	"type" : "text",
+                    	"directive" : "input",
+                    	"defval" : "Adam"
+                    }, {
+                    	"name" : "TF.loss",
+                    	"type" : "text",
+                    	"directive" : "input",
+                    	"defval" : "entropy"
+                    }, {
                         "name" : "Momentum",
                         "type" : "number",
                         "directive": "input",
