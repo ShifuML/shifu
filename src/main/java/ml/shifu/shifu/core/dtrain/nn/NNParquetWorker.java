@@ -60,6 +60,8 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
         // init field list for later read
         this.initFieldList();
 
+        LOG.info("subFeatureSet size: {} ; subFeatureSet: {}", subFeatureSet.size(), subFeatureSet);
+        
         super.count += 1;
         if((super.count) % 5000 == 0) {
             LOG.info("Read {} records.", super.count);
@@ -167,7 +169,7 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                             }
                         }
                     } else {
-                        if(subFeatureSet.contains(index)) {
+                        if(subFeatureSet.contains(columnIndex)) {
                             inputs[inputsIndex++] = floatValue;
                             hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
                         }

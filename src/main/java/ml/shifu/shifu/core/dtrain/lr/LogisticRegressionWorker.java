@@ -356,7 +356,7 @@ public class LogisticRegressionWorker extends
     }
 
     /**
-     * Derived function for simmoid function.
+     * Derived function for sigmoid function.
      */
     private double derivedFunction(double result) {
         return result * (1d - result);

@@ -568,6 +568,7 @@ public class ModelTrainConf {
             params.put(CommonConstants.LEARNING_RATE, 0.05);
             params.put("Loss", "squared");
         } else if(ALGORITHM.LR.equals(alg)) {
+            params.put(CommonConstants.PROPAGATION, "R");
             params.put(LogisticRegressionTrainer.LEARNING_RATE, 0.1);
             params.put("RegularizedConstant", 0.0);
             params.put("L1orL2", "NONE");

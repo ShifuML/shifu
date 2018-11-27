@@ -2010,6 +2010,7 @@ public final class CommonUtils {
         boolean hasCandidate = hasCandidateColumns(columnConfigList);
 
         List<Integer> features = new ArrayList<Integer>();
+        List<String> wrongFeatures = new ArrayList<String>();
         for(ColumnConfig config: columnConfigList) {
             if(isAfterVarSelect) {
                 if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
@@ -2019,6 +2020,11 @@ public final class CommonUtils {
                             || (config.isCategorical() && config.getBinCategory() != null
                                     && config.getBinCategory().size() > 0)) {
                         features.add(config.getColumnNum());
+                    } else if ((config.isNumerical() 
+                                    && (config.getBinBoundary() == null || config.getBinBoundary().size() <= 0))
+                            || (config.isCategorical() 
+                                    && (config.getBinCategory() == null || config.getBinCategory().size() <= 0))) {
+                        wrongFeatures.add(config.getColumnName());
                     }
                 }
             } else {
@@ -2029,10 +2035,21 @@ public final class CommonUtils {
                             || (config.isCategorical() && config.getBinCategory() != null
                                     && config.getBinCategory().size() > 0)) {
                         features.add(config.getColumnNum());
+                    } else if ((config.isNumerical() 
+                                    && (config.getBinBoundary() == null || config.getBinBoundary().size() <= 0))
+                            || (config.isCategorical() 
+                                    && (config.getBinCategory() == null || config.getBinCategory().size() <= 0))){
+                        wrongFeatures.add(config.getColumnName());
                     }
                 }
             }
         }
+        
+        if (!wrongFeatures.isEmpty()) {
+            throw new IllegalStateException("Some columns config should not be selected due to bin issue: " + 
+                    wrongFeatures.toString());
+        }
+        
         return features;
     }
 
