@@ -61,11 +61,11 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
         this.initFieldList();
 
         super.count += 1;
-        if((super.count) % 2000 == 0) {
+        if((super.count) % 5000 == 0) {
             LOG.info("Read {} records.", super.count);
         }
 
-        float[] inputs = new float[super.subFeatures.size()];
+        float[] inputs = new float[super.featureInputsCnt];
         float[] ideal = new float[super.outputNodeCount];
 
         if(super.isDry) {
@@ -148,15 +148,22 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
                         if(modelConfig.isRegression()) {
                             ideal[outputIndex++] = floatValue;
                         } else {
-                            if(modelConfig.getTags().size() == 2) {
-                                // if only 2 classes, output node is 1 node. if target = 0 means 0 is the index for
-                                // positive prediction, set positive to 1 and negative to 0
-                                int ideaIndex = (int) floatValue;
-                                ideal[0] = ideaIndex == 0 ? 1f : 0f;
+                            if(modelConfig.getTrain().isOneVsAll()) {
+                                // if one vs all, set correlated idea value according to trainerId which means in
+                                // trainer with id 0, target 0 is treated with 1, other are 0. Such target value are set
+                                // to index of tags like [0, 1, 2, 3] compared with ["a", "b", "c", "d"]
+                                ideal[outputIndex++] = Float.compare(floatValue, trainerId) == 0 ? 1f : 0f;
                             } else {
-                                // for multiple classification
-                                int ideaIndex = (int) floatValue;
-                                ideal[ideaIndex] = 1f;
+                                if(modelConfig.getTags().size() == 2) {
+                                    // if only 2 classes, output node is 1 node. if target = 0 means 0 is the index for
+                                    // positive prediction, set positive to 1 and negative to 0
+                                    int ideaIndex = (int) floatValue;
+                                    ideal[0] = ideaIndex == 0 ? 1f : 0f;
+                                } else {
+                                    // for multiple classification
+                                    int ideaIndex = (int) floatValue;
+                                    ideal[ideaIndex] = 1f;
+                                }
                             }
                         }
                     } else {
