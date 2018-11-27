@@ -17,6 +17,10 @@ package ml.shifu.shifu.container.obj;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -27,7 +31,6 @@ import java.util.List;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ColumnStats {
-
     /**
      * Max value of such column
      */
@@ -383,5 +386,101 @@ public class ColumnStats {
      */
     public void setValidNumCount(Long validNumCount) {
         this.validNumCount = validNumCount;
+    }
+
+    /**
+     * Write columnStatus to output stream
+     * @param output output stream
+     * @throws IOException io exception
+     */
+    public void write(DataOutputStream output) throws IOException {
+        writeWrapperValue(output, max);
+        writeWrapperValue(output, min);
+        writeWrapperValue(output, mean);
+        writeWrapperValue(output, median);
+        writeWrapperValue(output, p25th);
+        writeWrapperValue(output, p75th);
+        writeWrapperValue(output, totalCount);
+        writeWrapperValue(output, distinctCount);
+        writeWrapperValue(output, missingCount);
+        writeWrapperValue(output, validNumCount);
+        writeWrapperValue(output, stdDev);
+        writeWrapperValue(output, missingPercentage);
+        writeWrapperValue(output, woe);
+        writeWrapperValue(output, ks);
+        writeWrapperValue(output, iv);
+        writeWrapperValue(output, weightedKs);
+        writeWrapperValue(output, weightedIv);
+        writeWrapperValue(output, weightedWoe);
+        writeWrapperValue(output, skewness);
+        writeWrapperValue(output, kurtosis);
+        writeWrapperValue(output, psi);
+        if (unitStats == null || unitStats.isEmpty()) {
+            output.writeInt(0);
+        } else {
+            output.writeInt(unitStats.size());
+            for (String unitStat : unitStats) {
+                output.writeUTF(unitStat);
+            }
+        }
+    }
+
+    /**
+     * Read columnstats from input stream
+     * @param input input stream
+     * @throws IOException io exception
+     */
+    public void read(DataInputStream input) throws IOException {
+        max = readWrapperValue(input, Double.class);
+        min = readWrapperValue(input, Double.class);
+        mean = readWrapperValue(input, Double.class);
+        median = readWrapperValue(input, Double.class);
+        p25th = readWrapperValue(input, Double.class);
+        p75th = readWrapperValue(input, Double.class);
+        totalCount = readWrapperValue(input, Long.class);
+        distinctCount = readWrapperValue(input, Long.class);
+        missingCount = readWrapperValue(input, Long.class);
+        validNumCount = readWrapperValue(input, Long.class);
+        stdDev = readWrapperValue(input, Double.class);
+        missingPercentage = readWrapperValue(input, Double.class);
+        woe = readWrapperValue(input, Double.class);
+        ks = readWrapperValue(input, Double.class);
+        iv = readWrapperValue(input, Double.class);
+        weightedKs = readWrapperValue(input, Double.class);
+        weightedIv = readWrapperValue(input, Double.class);
+        weightedWoe = readWrapperValue(input, Double.class);
+        skewness = readWrapperValue(input, Double.class);
+        kurtosis = readWrapperValue(input, Double.class);
+        psi = readWrapperValue(input, Double.class);
+        int unitNum = input.readInt();
+        if (unitNum != 0) {
+            unitStats = new ArrayList<String>();
+            for (int i = 0; i < unitNum; i++) {
+                unitStats.add(input.readUTF());
+            }
+        }
+    }
+
+    private void writeWrapperValue(DataOutputStream output, Number field) throws IOException {
+        if (field == null) {
+            output.writeBoolean(true);
+        } else {
+            output.writeBoolean(false);
+            if (field instanceof Double) {
+                output.writeDouble(field.doubleValue());
+            } else if (field instanceof Long) {
+                output.writeLong(field.longValue());
+            }
+        }
+    }
+
+    private <T extends Number>T readWrapperValue(DataInputStream input, Class<T> clazz) throws IOException {
+        boolean nullFlag = input.readBoolean();
+        if (nullFlag) return null;
+        else if (clazz == Double.class){
+            return clazz.cast(input.readDouble());
+        } else {
+            return clazz.cast(input.readLong());
+        }
     }
 }
