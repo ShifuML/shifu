@@ -260,7 +260,7 @@ Changes for Shifu-0.2.4
         c) If do variable selection again after a model, current work flow no need do normalize step, after variable selection then do training step.
     * https://github.com/ShifuML/shifu/issues/49: Add distributed sensitivity analysis variable selection.
         a) 'varSelect.wrapperEnabled=true' and 'wrapperBy=SE' in ModelConfig.json#varSelect part to enable sensitivity variable selection.
-        b) 'wrapperRatio' in ModelConfig.json#varSelect part is a percent to set how many variables will be removed.
+        b) 'filterOutRatio' in ModelConfig.json#varSelect part is a percent to set how many variables will be removed.
         c) To continue variable selection by sensitivity method, run 'shifu varselect' again. 
         d) With 20 million of records and 1600 variables, 70 minutes (45 minutes for 200 epoch training and 25 minutes for sensitivity variable selection).
     * https://github.com/ShifuML/shifu/issues/38: Improve scalability in stats step.

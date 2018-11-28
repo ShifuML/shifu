@@ -694,7 +694,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 // by default copy tmp models to local
                 boolean copyTmpModelsToLocal = Boolean.TRUE.toString()
                         .equalsIgnoreCase(Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "true"));
-                if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
+                // Shifu does not support using transfered model to compute feature importance yet
+                if(CommonUtils.isTreeModel(modelConfig.getAlgorithm()) && !isTransferLearning()) {
                     copyTmpModelsToLocal = Boolean.TRUE.toString()
                             .equalsIgnoreCase(Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "false"));
                     List<BasicML> models = CommonUtils.loadBasicModels(this.modelConfig, this.columnConfigList, null);
@@ -722,6 +723,17 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         return status;
     }
 
+    private boolean isTransferLearning() {
+        @SuppressWarnings("unchecked")
+        List<String> baseModels = (List<String>) this.modelConfig
+                .getTrain().getParams().get(CommonConstants.GBDT_BASE_MODEL_PATHS);
+        if (CollectionUtils.isEmpty(baseModels)) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+    
     /**
      * Rollup feature importance file to keep latest one and old ones.
      */

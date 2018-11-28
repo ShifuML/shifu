@@ -87,10 +87,12 @@ import ml.shifu.shifu.core.GenericModel;
 import ml.shifu.shifu.core.LR;
 import ml.shifu.shifu.core.NNModel;
 import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.core.TransferLearningTreeModel;
 import ml.shifu.shifu.core.TreeModel;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
 import ml.shifu.shifu.core.model.ModelSpec;
@@ -829,15 +831,31 @@ public final class CommonUtils {
     public static List<BasicML> loadBasicModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
             throws IOException {
         List<BasicML> models = new ArrayList<BasicML>();
+        List<BasicML> tmpModels = new ArrayList<BasicML>();
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
 
         List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
             for(FileStatus f: modelFileStats) {
-                models.add(loadModel(modelConfig, f.getPath(), fs));
+                tmpModels.add(loadModel(modelConfig, f.getPath(), fs));
             }
         }
 
+        List<String> baseModelPaths = 
+                (List<String>) modelConfig.getTrain().getParams().get(CommonConstants.GBDT_BASE_MODEL_PATHS);
+        if (!CollectionUtils.isEmpty(baseModelPaths)) {
+            // if there config base model in traning config, it means user want to eval transfer-learning model
+            List<IndependentTreeModel> baseModels = loadGBDTBaseModels(baseModelPaths);
+            for (BasicML tmpModel : tmpModels) {
+                if (tmpModel instanceof TreeModel) {
+                    models.add(new TransferLearningTreeModel(((TreeModel)tmpModel).getIndependentTreeModel(),
+                            baseModels));
+                }
+            }
+        } else {
+            models = tmpModels;
+        }
+        
         return models;
     }
 
@@ -902,6 +920,7 @@ public final class CommonUtils {
     public static List<BasicML> loadBasicModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType,
             boolean gbtConvertToProb, String gbtScoreConvertStrategy) throws IOException {
         List<BasicML> models = new ArrayList<BasicML>();
+        List<BasicML> tmpModels = new ArrayList<BasicML>();
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         List<FileStatus> genericModelConfigs = findGenericModels(modelConfig, evalConfig, sourceType);
         if(!genericModelConfigs.isEmpty()) {
@@ -922,7 +941,6 @@ public final class CommonUtils {
                     }
                     log.error("gmc model path is : " + gmc.getProperties().get("modelpath"));
                     if("tensorflow".equals(alg)) {
-                        
                         try {
                             Class c = Class.forName("ml.shifu.shifu.tensorflow.TensorflowModel");
                             Computable computable = (Computable)c.newInstance();
@@ -944,10 +962,25 @@ public final class CommonUtils {
         List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
             for(FileStatus f: modelFileStats) {
-                models.add(loadModel(modelConfig, f.getPath(), fs, gbtConvertToProb, gbtScoreConvertStrategy));
+                tmpModels.add(loadModel(modelConfig, f.getPath(), fs, gbtConvertToProb, gbtScoreConvertStrategy));
             }
         }
-
+ 
+        List<String> baseModelPaths = 
+                (List<String>) modelConfig.getTrain().getParams().get(CommonConstants.GBDT_BASE_MODEL_PATHS);
+        if (!CollectionUtils.isEmpty(baseModelPaths)) {
+            // if there config base model in traning config, it means user want to eval transfer-learning model
+            List<IndependentTreeModel> baseModels = loadGBDTBaseModels(baseModelPaths);
+            for (BasicML tmpModel : tmpModels) {
+                if (tmpModel instanceof TreeModel) {
+                    models.add(new TransferLearningTreeModel(((TreeModel)tmpModel).getIndependentTreeModel(),
+                            baseModels));
+                }
+            }
+        } else {
+            models = tmpModels;
+        }
+        
         return models;
     }
 
@@ -1000,7 +1033,7 @@ public final class CommonUtils {
         listStatus = listStatus.size() <= baggingModelSize ? listStatus : listStatus.subList(0, baggingModelSize);
         return listStatus;
     }
-
+    
     public static BasicML loadModel(ModelConfig modelConfig, Path modelPath, FileSystem fs) throws IOException {
         return loadModel(modelConfig, modelPath, fs, false, Constants.GBT_SCORE_RAW_CONVETER);
     }
@@ -1044,8 +1077,8 @@ public final class CommonUtils {
      * @throws IOException
      *             if loading file for any IOException
      */
-    public static BasicML loadModel(ModelConfig modelConfig, Path modelPath, FileSystem fs, boolean gbtConvertToProb,
-            String gbtScoreConvertStrategy) throws IOException {
+    public static BasicML loadModel(ModelConfig modelConfig, Path modelPath, 
+            FileSystem fs, boolean gbtConvertToProb, String gbtScoreConvertStrategy) throws IOException {
         if(!fs.exists(modelPath)) {
             // no such existing model, return null.
             return null;
@@ -1208,6 +1241,7 @@ public final class CommonUtils {
         String modelSuffix = "." + modelConfig.getAlgorithm().toLowerCase();
 
         List<FileStatus> fileList = new ArrayList<FileStatus>();
+      
         if(null == evalConfig || StringUtils.isBlank(evalConfig.getModelsPath())) {
             Path path = new Path(pathFinder.getModelsPath(sourceType));
             fileList.addAll(Arrays.asList(fs.listStatus(path, new FileSuffixPathFilter(modelSuffix))));
@@ -2831,6 +2865,11 @@ public final class CommonUtils {
     public static Map<Integer, MutablePair<String, Double>> computeTreeModelFeatureImportance(List<BasicML> models) {
         List<Map<Integer, MutablePair<String, Double>>> importanceList = new ArrayList<Map<Integer, MutablePair<String, Double>>>();
         for(BasicML basicModel: models) {
+            if (basicModel instanceof TransferLearningTreeModel) {
+                throw new IllegalStateException("We cannot use transfer learning model to do feature select, "
+                        + "Please update your training part of ModelConfig");
+            }
+            
             if(basicModel instanceof TreeModel) {
                 TreeModel model = (TreeModel) basicModel;
                 Map<Integer, MutablePair<String, Double>> importances = model.getFeatureImportances();
@@ -3049,5 +3088,44 @@ public final class CommonUtils {
         return key.startsWith("nn") || key.startsWith("guagua") || key.startsWith("shifu") || key.startsWith("mapred")
                 || key.startsWith("io") || key.startsWith("hadoop") || key.startsWith("yarn") || key.startsWith("pig")
                 || key.startsWith("hive") || key.startsWith("job");
+    }
+    
+    /**
+     * Merge two one-dimension matrix into one with add operation
+     * @param a
+     * @param b
+     * @return
+     */
+    public static double[] merge(double[] a, double[] b) {
+        if (a == null || b == null || a.length != b.length) {
+            throw new RuntimeException("Input is invalid. a is " + Arrays.toString(a) + 
+                    " and b is " + Arrays.toString(b) );
+        }
+        
+        double[] res = new double[a.length];
+        
+        for (int i = 0; i < a.length; i++) {
+            res[i] = a[i] + b[i];
+        }
+        
+        return res;
+    }
+    
+    public static List<IndependentTreeModel> loadGBDTBaseModels(List<String> baseModelPaths) {
+        List<IndependentTreeModel> baseModels = new ArrayList<IndependentTreeModel>();
+        for (String baseModelPath : baseModelPaths) {
+            if (!baseModelPath.endsWith(CommonConstants.GBT_ALG_NAME.toLowerCase())) {
+                throw new RuntimeException("Config non-GBT Model for transfer learning which is not supported yet");
+            }
+            try {
+                TreeModel currentModel = (TreeModel) CommonUtils.loadModel(null, new Path(baseModelPath), 
+                        ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS), false, Constants.GBT_SCORE_RAW_CONVETER);
+                baseModels.add(currentModel.getIndependentTreeModel());
+            } catch (IOException e) {
+                throw new RuntimeException("Error when loading base GBT model while transfer learning", e);
+            }
+        }
+        
+        return baseModels;
     }
 }

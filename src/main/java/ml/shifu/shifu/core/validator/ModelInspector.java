@@ -22,6 +22,7 @@ import java.util.Map;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +46,7 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.HDFSUtils;
 
 /**
  * ModelInspector class is to do Safety Testing for model.
@@ -605,10 +607,28 @@ public class ModelInspector {
                     List<Integer> fixedLayers = (List<Integer>) fixedLayersObj;
                     for (int layer : fixedLayers) {
                         if (layer <= 0 || layer > (layerCnt+1)) {
-                            ValidateResult tmpResult = new ValidateResult(true);
-                            tmpResult.setStatus(false);
+                            ValidateResult tmpResult = new ValidateResult(false);
                             tmpResult.getCauses().add("Fixed layer id " + layer +
                                     " is invaild. It should be between 0 and hidden layer cnt +  output layer:" + (layerCnt + 1));
+                            result = ValidateResult.mergeResult(result, tmpResult);
+                        }
+                    }
+                }
+                
+                Object gbtBaseModelPathsObj = params.get(CommonConstants.GBDT_BASE_MODEL_PATHS);
+                if (gbtBaseModelPathsObj != null) {
+                    List<String> gbtBaseModelPaths = (List<String>) gbtBaseModelPathsObj;
+                    for (String gbtBaseModelPath : gbtBaseModelPaths) {
+                        try {
+                            if (!HDFSUtils.getFS().exists(new Path(gbtBaseModelPath))) {
+                                ValidateResult tmpResult = new ValidateResult(false);
+                                tmpResult.getCauses().add("Base GBDT model does not exist on HDFS, we cannot do transfer learning. Given model path is " + 
+                                        gbtBaseModelPath);
+                                result = ValidateResult.mergeResult(result, tmpResult);
+                            }
+                        } catch (Exception e) {
+                            ValidateResult tmpResult = new ValidateResult(false);
+                            tmpResult.getCauses().add("Error of using HDFS file IO." + e.getMessage() + e.getCause().getMessage());
                             result = ValidateResult.mergeResult(result, tmpResult);
                         }
                     }

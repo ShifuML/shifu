@@ -591,6 +591,18 @@
                         "directive": "input",
                         "defval" : 0.1
                      }, {
+                        "name" : "GBDTBaseModelPaths",
+                        "type" : "list",
+                        "directive": "input",
+                        "elementType" : "text",
+                        "element": [
+                        	{
+                        	    "name": "dummy",
+                                "type": "text",
+                                "directive": "input"
+                        	}
+                        ]
+                     }, {
                         "name" : "Momentum",
                         "type" : "number",
                         "directive": "input",

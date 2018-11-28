@@ -92,7 +92,7 @@ import java.util.*;
  * Selection variable based on the wrapper training processor.
  * 
  * <p>
- * For sensitive variable selection, each time wrapperRatio percent of variables will be removed. If continue do
+ * For sensitive variable selection, each time filterOutRatio percent of variables will be removed. If continue do
  * variable selection, continue to run varselect command. Current design will do variable selection continuously.
  */
 public class VarSelectModelProcessor extends BasicModelProcessor implements Processor {
@@ -365,6 +365,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_SE) || filterBy.equalsIgnoreCase(Constants.FILTER_BY_ST)) {
             validateSEParameters();
             validateNormalize();
+        }
+        
+        List<String> basePaths = (List<String>) super.getModelConfig().getTrain().getParams().get(CommonConstants.GBDT_BASE_MODEL_PATHS);
+        if (!CollectionUtils.isEmpty(basePaths)) {
+            throw new IllegalArgumentException(
+                    "we do not support using transfer learning model to do variable selection. please remove GBDTBaseModelPaths in ModelConfig");
+
         }
     }
 
@@ -762,7 +769,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
 
         if(filterOutRatio.compareTo(Float.valueOf(1.0f)) >= 0) {
-            throw new IllegalArgumentException("WrapperRatio should be in (0, 1).");
+            throw new IllegalArgumentException("filterOutRatio should be in (0, 1).");
         }
         conf.setFloat(Constants.SHIFU_VARSELECT_FILTEROUT_RATIO, filterOutRatio);
         conf.setInt(Constants.SHIFU_VARSELECT_FILTER_NUM, this.modelConfig.getVarSelectFilterNum());
