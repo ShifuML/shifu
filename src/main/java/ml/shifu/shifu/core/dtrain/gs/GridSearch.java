@@ -175,7 +175,8 @@ public class GridSearch {
 
         // stats on hyper parameters
         for(Entry<String, Object> entry: sortedMap.entrySet()) {
-            if(entry.getKey().equals("ActivationFunc") || entry.getKey().equals("NumHiddenNodes") || entry.getKey().equals("FixedLayers")) {
+            if(entry.getKey().equals("ActivationFunc") || entry.getKey().equals("NumHiddenNodes")
+                    || entry.getKey().equals("FixedLayers")  || entry.getKey().equals("GBDTBaseModelPaths")) {
                 if(entry.getValue() instanceof List) {
                     if(((List) (entry.getValue())).size() > 0 && ((List) (entry.getValue())).get(0) instanceof List) {
                         // ActivationFunc and NumHiddenNodes in NN is already List, so as hyper parameter they should be

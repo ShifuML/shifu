@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -332,6 +333,11 @@ public class DTWorker extends
      */
     private Random sampelNegOnlyRandom = new Random(System.currentTimeMillis() + 1000L);
 
+    /**
+     * Used for transfer learning, model will be init in preload method
+     */
+    private List<IndependentTreeModel> baseModels = null;
+    
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
@@ -623,7 +629,7 @@ public class DTWorker extends
                                 double predict = predictNode.getPredict().getPredict();
                                 // first tree logic, master must set it to first tree even second tree with ROOT is
                                 // sending
-                                if(context.getLastMasterResult().isFirstTree()) {
+                                if(context.getLastMasterResult().isFirstTree() && !isTransferLearning()) {
                                     data.predict = (float) predict;
                                 } else {
                                     // random drop
@@ -665,7 +671,8 @@ public class DTWorker extends
                         }
                     }
 
-                    if(context.getLastMasterResult().isFirstTree() && !lastMasterResult.isSwitchToNextTree()) {
+                    if(context.getLastMasterResult().isFirstTree() && !lastMasterResult.isSwitchToNextTree()
+                            && !isTransferLearning()) {
                         Node currTree = trees.get(currTreeIndex).getNode();
                         Node predictNode = predictNodeIndex(currTree, data, true);
                         if(predictNode.getPredict() != null) {
@@ -720,7 +727,7 @@ public class DTWorker extends
                                 Node predictNode = predictNodeIndex(node, data, false);
                                 if(predictNode.getPredict() != null) {
                                     double predict = predictNode.getPredict().getPredict();
-                                    if(context.getLastMasterResult().isFirstTree()) {
+                                    if(context.getLastMasterResult().isFirstTree() && !isTransferLearning()) {
                                         data.predict = (float) predict;
                                     } else {
                                         data.predict += (float) (this.learningRate * predict);
@@ -729,7 +736,8 @@ public class DTWorker extends
                                 }
                             }
                         }
-                        if(context.getLastMasterResult().isFirstTree() && !lastMasterResult.isSwitchToNextTree()) {
+                        if(context.getLastMasterResult().isFirstTree() && !lastMasterResult.isSwitchToNextTree()
+                                && !isTransferLearning()) {
                             Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data, true);
                             if(predictNode.getPredict() != null) {
                                 validationError += data.significance * loss
@@ -1090,7 +1098,21 @@ public class DTWorker extends
         }
         return predictNodeIndex(nextNode, data, isForErr);
     }
-
+    
+    @Override
+    /**
+     * Preload GBDT base model for transfer learning
+     */
+    public void preLoad(WorkerContext<DTMasterParams, DTWorkerParams> context) {
+        List<String> baseModelPaths = (List<String>) this.modelConfig.getTrain().getParams().get(CommonConstants.GBDT_BASE_MODEL_PATHS);
+        
+        if (!this.isGBDT || baseModelPaths == null || baseModelPaths.isEmpty()) {
+            return;
+        }
+        
+        this.baseModels = CommonUtils.loadGBDTBaseModels(baseModelPaths);
+    }
+    
     @Override
     public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue,
             WorkerContext<DTMasterParams, DTWorkerParams> context) {
@@ -1098,7 +1120,7 @@ public class DTWorker extends
         if((this.count) % 5000 == 0) {
             LOG.info("Read {} records.", this.count);
         }
-
+        
         // hashcode for fixed input split in train and validation
         long hashcode = 0;
 
@@ -1110,6 +1132,8 @@ public class DTWorker extends
         // the function in akka mode.
         int index = 0, inputIndex = 0;
         boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
+        Map<String, Object> baseModelInput = new HashMap<String, Object>();
+        
         for(String input: this.splitter.split(currentValue.getWritable().toString())) {
             if(index == this.columnConfigList.size()) {
                 // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
@@ -1133,6 +1157,11 @@ public class DTWorker extends
                 if(columnConfig != null && columnConfig.isTarget()) {
                     ideal = getFloatValue(input);
                 } else {
+                    // put header and value into baseModelInput for transfer learning only
+                    if (this.isTransferLearning()) {
+                        baseModelInput.put(columnConfig.getColumnName(), input);
+                    }
+                    
                     if(!isAfterVarSelect) {
                         // no variable selected, good candidate but not meta and not target chose
                         if(!columnConfig.isMeta() && !columnConfig.isTarget()
@@ -1226,7 +1255,18 @@ public class DTWorker extends
             throw new RuntimeException("Input length is inconsistent with parsing size. Input original size: "
                     + inputs.length + ", parsing size:" + inputIndex + ", delimiter:" + delimiter + ".");
         }
-
+        
+        // calculate new label by inputing train records (title and value)
+        float predict = ideal;
+        float output = ideal;
+        if (this.isTransferLearning()) {
+            predict = 0f;
+            for (IndependentTreeModel baseModel : this.baseModels) {
+                double[] result = baseModel.compute(baseModelInput);
+                predict += result[0];
+            }
+        }
+        
         if(this.isOneVsAll) {
             // if one vs all, update target value according to index of target
             ideal = updateOneVsAllTargetValue(ideal);
@@ -1258,8 +1298,6 @@ public class DTWorker extends
             }
         }
 
-        float output = ideal;
-        float predict = ideal;
 
         // up sampling logic, just add more weights while bagging sampling rate is still not changed
         if(modelConfig.isRegression() && isUpSampleEnabled() && Double.compare(ideal, 1d) == 0) {
@@ -1267,7 +1305,7 @@ public class DTWorker extends
             significance = significance * (this.upSampleRng.sample() + 1);
         }
 
-        Data data = new Data(inputs, predict, output, output, significance);
+        Data data = new Data(inputs, predict, output, ideal, significance);
 
         boolean isValidation = false;
         if(context.getAttachment() != null && context.getAttachment() instanceof Boolean) {
@@ -1465,7 +1503,7 @@ public class DTWorker extends
             int iterLen = isFailoverOrContinuous ? trees.size() - 1 : trees.size();
             for(int i = 0; i < iterLen; i++) {
                 TreeNode currTree = trees.get(i);
-                if(i == 0) {
+                if(i == 0 && !isTransferLearning()) {
                     double oldPredict = predictNodeIndex(currTree.getNode(), data, false).getPredict().getPredict();
                     predict = (float) oldPredict;
                     output = -1f * loss.computeGradient(predict, data.label);
@@ -1578,6 +1616,14 @@ public class DTWorker extends
         return Float.compare(ideal, trainerId) == 0 ? 1f : 0f;
     }
 
+    /**
+     * If user give valid base model which means he need us to do transfer learning
+     * @return
+     */
+    private boolean isTransferLearning() {
+        return (this.baseModels != null && !this.baseModels.isEmpty());
+    }
+    
     static class Data implements Serializable, Bytable {
 
         private static final long serialVersionUID = 903201066309036170L;

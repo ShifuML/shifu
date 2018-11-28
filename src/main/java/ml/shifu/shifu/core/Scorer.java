@@ -216,7 +216,7 @@ public class Scorer {
         return scoreNsData(pair, CommonUtils.convertRawMapToNsDataMap(rawDataMap));
     }
 
-    public ScoreObject scoreNsData(MLDataPair inputPair, Map<NSColumn, String> rawNsDataMap) {
+    public ScoreObject scoreNsData(MLDataPair inputPair, final Map<NSColumn, String> rawNsDataMap) {
         if(inputPair == null && !this.alg.equalsIgnoreCase(NNConstants.NN_ALG_NAME)) {
             inputPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
                     selectedColumnConfigList, rawNsDataMap, cutoff, alg);
@@ -377,6 +377,25 @@ public class Scorer {
                         log.error("error in model evaluation", e);
                     }
                 }
+            } else if(model instanceof TransferLearningTreeModel) {
+                final TransferLearningTreeModel tltm = (TransferLearningTreeModel) model;
+
+                Callable<MLData> callable = new Callable<MLData>() {
+                    @Override
+                    public MLData call() {
+                        MLData result = tltm.compute(rawNsDataMap);
+                        return result;
+                    }
+                };
+                if(multiThread) {
+                    tasks.add(callable);
+                } else {
+                    try {
+                        modelResults.add(callable.call());
+                    } catch (Exception e) {
+                        log.error("error in model evaluation", e);
+                    }
+                }
             } else if(model instanceof GenericModel) {
                 modelResults.add(new Callable<MLData>() {
                     @Override
@@ -476,6 +495,16 @@ public class Scorer {
                     // regression for RF
                     if(!tm.isClassfication() && !tm.isGBDT()) {
                         rfTreeSizeList.add(tm.getTrees().size());
+                    }
+                } else if (model instanceof TransferLearningTreeModel) {
+                    if(modelConfig.isClassification() && !modelConfig.getTrain().isOneVsAll()) {
+                        double[] scoreArray = score.getData();
+                        for(double sc: scoreArray) {
+                            scores.add(sc);
+                        }
+                    } else {
+                        // if one vs all multiple classification or regression
+                        scores.add(toScore(score.getData(0)));
                     }
                 } else if(model instanceof GenericModel) {
                     scores.add(toScore(score.getData(0)));

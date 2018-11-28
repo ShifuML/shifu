@@ -48,6 +48,7 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -268,6 +269,11 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
      * TreeNodes needed to be collected statistics from workers.
      */
     private Queue<TreeNode> toDoQueue;
+    
+    /** 
+     * Flag of this model is transfered from base model
+     */
+    private boolean isTransferLearning;
 
     @Override
     public DTMasterParams doCompute(MasterContext<DTMasterParams, DTWorkerParams> context) {
@@ -1012,7 +1018,10 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             // learning rate only effective in gbdt
             this.learningRate = Double.valueOf(validParams.get(CommonConstants.LEARNING_RATE).toString());
         }
-
+        this.isTransferLearning = validParams.get(CommonConstants.GBDT_BASE_MODEL_PATHS) != null;
+        if (isTransferLearning)
+            LOG.info("Config of GBDT base model is " + ((List<String>)validParams.get(CommonConstants.GBDT_BASE_MODEL_PATHS)).toString());
+        
         // initialize impurity type according to regression or classfication
         String imStr = validParams.get("Impurity").toString();
         int numClasses = 2;
@@ -1087,14 +1096,15 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                         if(existingModel == null) {
                             // null means no existing model file or model file is in wrong format
                             this.trees = new CopyOnWriteArrayList<TreeNode>();
-                            this.trees.add(new TreeNode(0, new Node(Node.ROOT_INDEX), 1d));// learning rate is 1 for 1st
+                            this.trees.add(new TreeNode(0, new Node(Node.ROOT_INDEX), 
+                                    this.isTransferLearning ? this.learningRate : 1d));// learning rate is 1 for 1st if it is not transfered
                             LOG.info("Starting to train model from scratch and existing model is empty.");
                         } else {
                             this.trees = existingModel.getTrees();
                             this.existingTreeSize = this.trees.size();
                             // starting from existing models, first tree learning rate is current learning rate
                             this.trees.add(new TreeNode(this.existingTreeSize, new Node(Node.ROOT_INDEX),
-                                    this.existingTreeSize == 0 ? 1d : this.learningRate));
+                                    (this.existingTreeSize == 0 && !this.isTransferLearning) ? 1d : this.learningRate));
                             LOG.info("Starting to train model from existing model {} with existing trees {}.",
                                     modelPath, existingTreeSize);
                         }

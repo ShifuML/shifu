@@ -108,6 +108,11 @@ public interface CommonConstants {
     public static final String SHIFU_UPDATEBINNING_REDUCER = "shifu.updatebinning.reducer";
     
     public static final String FIXED_LAYERS = "FixedLayers";
+    
+    // For GBDT Transfer learning
+    public static final String FIRST_TREE_LEARNING_RATE = "FirstTreeLearningRate";
+    
+    public static final String GBDT_BASE_MODEL_PATHS = "GBDTBaseModelPaths";
 
     public static final String FIXED_BIAS = "FixedBias";
 }
