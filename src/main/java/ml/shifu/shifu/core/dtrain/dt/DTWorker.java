@@ -630,14 +630,12 @@ public class DTWorker extends
                                 // first tree logic, master must set it to first tree even second tree with ROOT is
                                 // sending
                                 if(context.getLastMasterResult().isFirstTree() && !isTransferLearning()) {
-                                    LOG.info("Should not be here, 631");
                                     data.predict = (float) predict;
                                 } else {
                                     // random drop
                                     boolean drop = (this.dropOutRate > 0.0
                                             && dropOutRandom.nextDouble() < this.dropOutRate);
                                     if(!drop) {
-                                        LOG.info("currentTree predict result{}", predict);
                                         data.predict += (float) (this.learningRate * predict);
                                     }
                                 }
@@ -1107,7 +1105,6 @@ public class DTWorker extends
      */
     public void preLoad(WorkerContext<DTMasterParams, DTWorkerParams> context) {
         List<String> baseModelPaths = (List<String>) this.modelConfig.getTrain().getParams().get(CommonConstants.GBDT_BASE_MODEL_PATHS);
-        LOG.info("GBDT Base Model preload begin, path :{}", baseModelPaths);
         
         if (!this.isGBDT || baseModelPaths == null || baseModelPaths.isEmpty()) {
             return;
@@ -1266,10 +1263,8 @@ public class DTWorker extends
             predict = 0f;
             for (IndependentTreeModel baseModel : this.baseModels) {
                 double[] result = baseModel.compute(baseModelInput);
-                LOG.info("in load, base model score are {}", Arrays.toString(result));
                 predict += result[0];
             }
-            LOG.info("in load, all base model score sum are {}", predict);
         }
         
         if(this.isOneVsAll) {
