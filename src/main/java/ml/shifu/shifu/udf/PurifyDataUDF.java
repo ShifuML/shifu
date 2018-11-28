@@ -20,6 +20,7 @@ import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.util.Constants;
 
 import org.apache.pig.data.Tuple;
+import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
 
 import java.io.IOException;
@@ -34,14 +35,29 @@ public class PurifyDataUDF extends AbstractTrainerUDF<Boolean> {
 
     public PurifyDataUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
-        dataPurifier = new DataPurifier(modelConfig);
+
+        boolean isForValidationDataSet = false;
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            isForValidationDataSet = Boolean.TRUE.toString().equalsIgnoreCase(UDFContext.getUDFContext().getJobConf()
+                    .get(Constants.IS_VALIDATION_DATASET, Boolean.FALSE.toString()));
+        }
+
+        dataPurifier = new DataPurifier(modelConfig, isForValidationDataSet);
     }
 
     public PurifyDataUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
+
+        boolean isForValidationDataSet = false;
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            isForValidationDataSet = Boolean.TRUE.toString().equalsIgnoreCase(UDFContext.getUDFContext().getJobConf()
+                    .get(Constants.IS_VALIDATION_DATASET, Boolean.FALSE.toString()));
+        }
+
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(evalSetName);
-        dataPurifier = ((evalConfig == null) ? new DataPurifier(modelConfig) : new DataPurifier(evalConfig));
+        dataPurifier = ((evalConfig == null) ?
+                new DataPurifier(modelConfig, isForValidationDataSet) : new DataPurifier(evalConfig));
     }
 
     /*

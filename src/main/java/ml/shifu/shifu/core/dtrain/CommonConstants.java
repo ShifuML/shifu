@@ -74,6 +74,12 @@ public interface CommonConstants {
     public static final String NUM_HIDDEN_LAYERS = "NumHiddenLayers";
 
     public static final String ACTIVATION_FUNC = "ActivationFunc";
+    
+    public static final String TF_OPTIMIZER = "TF.optimizer";
+
+    public static final String TF_LOSS = "TF.loss";
+    
+    public static final String TF_ALG = "TF.alg";
 
     public static final String NUM_HIDDEN_NODES = "NumHiddenNodes";
 
@@ -107,4 +113,6 @@ public interface CommonConstants {
     public static final String FIRST_TREE_LEARNING_RATE = "FirstTreeLearningRate";
     
     public static final String GBDT_BASE_MODEL_PATHS = "GBDTBaseModelPaths";
+
+    public static final String FIXED_BIAS = "FixedBias";
 }

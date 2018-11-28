@@ -686,6 +686,42 @@ public class ShifuFileUtils {
         return fileStatsArr;
     }
 
+    public static List<FileStatus> getFileStatus(String filePath, SourceType sourceType) throws IOException {
+        List<FileStatus> fileStatusList = new ArrayList<FileStatus>();
+        FileSystem fs = getFileSystemBySourceType(sourceType);
+        FileStatus[] fileStatusArr = fs.globStatus(new Path(filePath));
+        if ( fileStatusArr != null && fileStatusArr.length > 0 ) {
+            for ( FileStatus fileStatus : fileStatusArr ) {
+                fetchFileStatus(fileStatus.getPath(), sourceType, fileStatusList);
+            }
+        }
+        return fileStatusList;
+    }
+
+    private static void fetchFileStatus(Path filePath, SourceType sourceType, List<FileStatus> fileStatusList)
+            throws IOException {
+        FileSystem fs = getFileSystemBySourceType(sourceType);
+        try {
+            FileStatus[] fileStatsArr = fs.listStatus(filePath);
+            for(FileStatus fileStatus : fileStatsArr) {
+                if(fileStatus.isDirectory()) {
+                    fetchFileStatus(fileStatus.getPath(), sourceType, fileStatusList);
+                } else {
+                    if(!isHiddenFile(fileStatus.getPath().getName())) {
+                        fileStatusList.add(fileStatus);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            log.error("Fail to fetch file status for - {}", filePath.toString());
+            throw e;
+        }
+    }
+
+    public static boolean isHiddenFile(String fileName) {
+        return StringUtils.isBlank(fileName) || fileName.startsWith(".") || fileName.startsWith("_");
+    }
+
     public static int getFilePartCount(String filePath, SourceType sourceType) throws IOException {
         FileStatus[] fileStatsArr = getFilePartStatus(filePath, sourceType);
         return fileStatsArr.length;

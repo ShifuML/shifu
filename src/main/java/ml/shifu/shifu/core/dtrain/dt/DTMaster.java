@@ -767,6 +767,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         List<Integer> depthList = new ArrayList<Integer>();
         DTMasterParams masterParams = new DTMasterParams(trees, todoNodes);
         if(isRF) {
+            long currMem = 0;
+
             // for RF, all trees should be set depth
             for(int i = 0; i < this.treeNum; i++) {
                 depthList.add(-1);
@@ -774,14 +776,20 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             for(TreeNode treeNode: trees) {
                 List<Integer> features = getSubsamplingFeatures(this.featureSubsetStrategy, this.featureSubsetRate);
                 treeNode.setFeatures(features);
-                todoNodes.put(nodeIndexInGroup, treeNode);
+
+                currMem += getStatsMem(features);
+                if ( currMem < this.maxStatsMemory ) {
+                    todoNodes.put(nodeIndexInGroup, treeNode);
+                    nodeIndexInGroup += 1;
+                } else { //over memory, just put it into queue
+                    this.toDoQueue.offer(treeNode);
+                }
                 int treeId = treeNode.getTreeId();
                 int oldDepth = depthList.get(treeId);
                 int currDepth = Node.indexToLevel(treeNode.getNode().getId());
                 if(currDepth > oldDepth) {
                     depthList.set(treeId, currDepth);
                 }
-                nodeIndexInGroup += 1;
             }
             // For RF, each time send whole trees
             masterParams.setTrees(this.trees);

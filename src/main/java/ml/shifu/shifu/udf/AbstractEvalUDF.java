@@ -1,9 +1,11 @@
 package ml.shifu.shifu.udf;
 
 import ml.shifu.shifu.container.obj.EvalConfig;
+import org.apache.commons.collections.CollectionUtils;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 
 /**
  * Copyright [2013-2018] PayPal Software Foundation
@@ -30,8 +32,18 @@ public abstract class AbstractEvalUDF<T> extends AbstractTrainerUDF<T> {
 
         this.evalConfig = modelConfig.getEvalConfigByName(evalSetName);
         if ( this.evalConfig != null ) {
-            this.posTagSet = new HashSet<String>(this.modelConfig.getPosTags(evalConfig));
-            this.negTagSet = new HashSet<String>(this.modelConfig.getNegTags(evalConfig));
+            this.posTagSet = new HashSet<String>();
+            List<String> posTags = this.modelConfig.getPosTags(evalConfig);
+            if (CollectionUtils.isNotEmpty(posTags)) {
+                this.posTagSet.addAll(posTags);
+            }
+
+            this.negTagSet = new HashSet<String>();
+            List<String> negTags = this.modelConfig.getNegTags(evalConfig);
+            if (CollectionUtils.isNotEmpty(negTags)) {
+                this.negTagSet.addAll(negTags);
+            }
+
             this.tagSet = new HashSet<String>(this.modelConfig
                     .getFlattenTags(this.modelConfig.getPosTags(evalConfig), this.modelConfig.getNegTags(evalConfig)));
         }

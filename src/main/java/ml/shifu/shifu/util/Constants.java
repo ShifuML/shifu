@@ -37,6 +37,9 @@ public interface Constants {
     public static final String MODEL_SETS = "ModelSets";
 
     public static final String TMP = "tmp";
+    public static final String GENERIC_ALGORITHM = "algorithm";
+    public static final String GENERIC_MODEL_PATH = "modelpath";
+    public static final String USER_DIR = "user.dir";
     public static final String VAR_SELECT = "varsel";
     public static final String MODELS_TMP = "modelsTmp";
 
@@ -63,6 +66,7 @@ public interface Constants {
     public static final String PATH_RAW_DATA = "path_raw_data";
     public static final String PATH_JAR = "path_jar";
     public static final String IS_COMPRESS = "is_compress";
+    public static final String IS_VALIDATION_DATASET = "is_validation_dataset";
     public static final String IS_NORM_FOR_CLEAN = "is_norm_for_clean";
 
     public static final String STATS_SAMPLE_RATE = "statsSampleRate";
@@ -83,6 +87,8 @@ public interface Constants {
     public static final String SVM = "svm";
     public static final String NN = "nn";
     public static final String GBT = "GBT";
+    public static final String GENERIC = "generic";
+    public static final String TENSORFLOW = "tensorflow";
 
     public static final String BZ2_SUFFIX = ".bz2";
     public static final String GZ_SUFFIX = ".gz";
@@ -285,6 +291,7 @@ public interface Constants {
      * Experience value from modeler
      */
     public static final int MAX_CATEGORICAL_BINC_COUNT = 10000;
+    public static final int MAX_CATEGORICAL_VAL_LENGTH = 10000;
 
     public static final String SHIFU_MAX_CATEGORY_SIZE = "shifu.max.category.size";
 

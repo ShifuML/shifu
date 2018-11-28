@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,14 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-
-import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
-import ml.shifu.shifu.core.processor.*;
-import ml.shifu.shifu.core.processor.EvalModelProcessor.EvalStep;
-import ml.shifu.shifu.core.processor.ManageModelProcessor.ModelAction;
-import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -42,6 +35,29 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.pig.impl.util.JarManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
+import ml.shifu.shifu.core.processor.BasicModelProcessor;
+import ml.shifu.shifu.core.processor.ComboModelProcessor;
+import ml.shifu.shifu.core.processor.CreateModelProcessor;
+import ml.shifu.shifu.core.processor.EvalModelProcessor;
+import ml.shifu.shifu.core.processor.EvalModelProcessor.EvalStep;
+import ml.shifu.shifu.core.processor.ExportModelProcessor;
+import ml.shifu.shifu.core.processor.InitModelProcessor;
+import ml.shifu.shifu.core.processor.ManageModelProcessor;
+import ml.shifu.shifu.core.processor.ManageModelProcessor.ModelAction;
+import ml.shifu.shifu.core.processor.ModelDataEncodeProcessor;
+import ml.shifu.shifu.core.processor.NormalizeModelProcessor;
+import ml.shifu.shifu.core.processor.PostTrainModelProcessor;
+import ml.shifu.shifu.core.processor.Processor;
+import ml.shifu.shifu.core.processor.ShifuTestProcessor;
+import ml.shifu.shifu.core.processor.StatsModelProcessor;
+import ml.shifu.shifu.core.processor.TrainModelProcessor;
+import ml.shifu.shifu.core.processor.VarSelectModelProcessor;
+import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.IndependentTreeModelUtils;
 
 /**
  * ShifuCLI class is the MAIN class for whole project
@@ -74,6 +90,8 @@ public class ShifuCLI {
     private static final String CMD_EXPORT = "export";
     private static final String CMD_COMBO = "combo";
     private static final String CMD_ENCODE = "encode";
+    private static final String CMD_TEST = "test";
+    private static final String CMD_CONVERT = "convert";
 
     // options for stats
     private static final String CORRELATION = "correlation";
@@ -109,6 +127,12 @@ public class ShifuCLI {
 
     private static final String SHUFFLE = "shuffle";
     private static final String RESUME = "resume";
+
+    // for test function
+    private static final String FILTER = "filter";
+    // for model spec convert
+    private static final String TO_ZIPB = "tozipb";
+    private static final String TO_TREEB = "totreeb";
 
     static private final Logger log = LoggerFactory.getLogger(ShifuCLI.class);
 
@@ -365,6 +389,38 @@ public class ShifuCLI {
                     } else {
                         log.warn("Fail to export models/columnstats/corr, please check or report issue.");
                     }
+                } else if(cleanedArgs[0].equals(CMD_TEST)) {
+                    Map<String, Object> params = new HashMap<String, Object>();
+                    params.put(ShifuTestProcessor.IS_TO_TEST_FILTER, cmd.hasOption(FILTER));
+                    params.put(ShifuTestProcessor.TEST_TARGET, cmd.getOptionValue(FILTER));
+                    params.put(ShifuTestProcessor.TEST_RECORD_CNT, cmd.getOptionValue(N));
+                    status = runShifuTest(params);
+                    if(status == 0) {
+                        log.info("Run test for Shifu Successfully.");
+                    } else {
+                        log.warn("Fail to run Shifu test.");
+                    }
+                } else if(cleanedArgs[0].equals(CMD_CONVERT)) {
+                    int optType = -1;
+                    if ( cmd.hasOption(TO_ZIPB) ) {
+                        optType = 1;
+                    } else if(cmd.hasOption(TO_TREEB)) {
+                        optType = 2;
+                    }
+
+                    String[] convertArgs = new String[2];
+                    int j = 0;
+                    for ( int i = 1; i < cleanedArgs.length; i ++ ) {
+                        if ( !cleanedArgs[i].startsWith("-") ) {
+                            convertArgs[j++] = cleanedArgs[i];
+                        }
+                    }
+
+                    if (optType < 0 || StringUtils.isBlank(convertArgs[0]) || StringUtils.isBlank(convertArgs[1])) {
+                        printUsage();
+                    } else {
+                        status = runShifuConvert(optType, convertArgs[0], convertArgs[1]);
+                    }
                 } else {
                     log.error("Invalid command, please check help message.");
                     printUsage();
@@ -566,6 +622,22 @@ public class ShifuCLI {
         return processor.run();
     }
 
+    private static int runShifuTest(Map<String,Object> params) {
+        ShifuTestProcessor processor = new ShifuTestProcessor(params);
+        return processor.run();
+    }
+
+    public static int runShifuConvert(int optType, String fromFilePath, String toFilePath) {
+        IndependentTreeModelUtils modelUtils = new IndependentTreeModelUtils();
+        boolean status = false;
+        if (optType == 1) {
+            status = modelUtils.convertBinaryToZipSpec(new File(fromFilePath), new File(toFilePath));
+        } else if(optType == 2) {
+            status = modelUtils.convertZipSpecToBinary(new File(fromFilePath), new File(toFilePath));
+        }
+        return (status ? 0 : 1);
+    }
+
     private static void printModelSetCopiedSuccessfulLog(String newModelSetName) {
         log.info(String.format("ModelSet %s is copied successfully with ModelConfig.json in %s folder.",
                 newModelSetName, newModelSetName));
@@ -626,6 +698,7 @@ public class ShifuCLI {
         Option opt_init = OptionBuilder.hasArg(false).create(INIT_CMD);
         Option opt_nosort = OptionBuilder.hasArg(false).create(NOSORT);
         Option opt_ref = OptionBuilder.hasArg(true).create(REF);
+        Option opt_filter = OptionBuilder.hasOptionalArg().create(FILTER);
 
         // options for variable re-binning
         Option opt_rebin = OptionBuilder.hasArg(false).create(REBIN);
@@ -637,6 +710,9 @@ public class ShifuCLI {
         Option opt_save = OptionBuilder.hasArg(false).withDescription("save model").create(SAVE);
         Option opt_switch = OptionBuilder.hasArg(false).withDescription("switch model").create(SWITCH);
         Option opt_eval_model = OptionBuilder.hasArg().withDescription("").create(EVAL_MODEL);
+
+        Option opt_tozipb = OptionBuilder.hasArg(false).create(TO_ZIPB);
+        Option opt_totreeb = OptionBuilder.hasArg(false).create(TO_TREEB);
 
         opts.addOption(opt_cmt);
         opts.addOption(opt_new);
@@ -650,6 +726,7 @@ public class ShifuCLI {
         opts.addOption(opt_concise);
         opts.addOption(opt_nosort);
         opts.addOption(opt_ref);
+        opts.addOption(opt_filter);
 
         opts.addOption(opt_reset);
         opts.addOption(opt_filter_auto);
@@ -678,6 +755,9 @@ public class ShifuCLI {
         opts.addOption(opt_n);
         opts.addOption(opt_ivr);
         opts.addOption(opt_bic);
+
+        opts.addOption(opt_tozipb);
+        opts.addOption(opt_totreeb);
 
         return opts;
     }
@@ -730,6 +810,7 @@ public class ShifuCLI {
         System.out.println("\tcombo -eval [-resume]                   Evaluate Combo-Model performance.");
         System.out.println("\tencode -run [TDS|EvalSetNames] [-ref encode_ref_model]");
         System.out.println("\t                                        Run encode on training or evaluation datasets and set them to encode_ref_model.");
+        System.out.println("\ttest [-filter [EvalSetNames]] [-n]      Run testing for Shifu to detect error early.");
         System.out.println("\tversion|v|-v|-version                   Print version of current package.");
         System.out.println("\thelp|h|-h|-help                         Help message.");
     }

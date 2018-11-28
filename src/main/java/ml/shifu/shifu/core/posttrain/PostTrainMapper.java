@@ -122,7 +122,7 @@ public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, Fea
 
         loadTagWeightNum();
 
-        this.dataPurifier = new DataPurifier(this.modelConfig);
+        this.dataPurifier = new DataPurifier(this.modelConfig, false);
 
         this.outputKey = new IntWritable();
         this.outputValue = new Text();

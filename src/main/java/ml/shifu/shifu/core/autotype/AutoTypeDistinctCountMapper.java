@@ -101,7 +101,7 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
 
-        this.dataPurifier = new DataPurifier(this.modelConfig);
+        this.dataPurifier = new DataPurifier(this.modelConfig, false);
 
         loadTagWeightNum();
 

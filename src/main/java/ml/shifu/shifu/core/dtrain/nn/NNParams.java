@@ -247,14 +247,14 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
     }
 
     public Set<Integer> getDropoutNodes() {
-		return dropoutNodes;
-	}
+        return dropoutNodes;
+    }
 
-	public void setDropoutNodes(Set<Integer> dropoutNodes) {
-		this.dropoutNodes = dropoutNodes;
-	}
+    public void setDropoutNodes(Set<Integer> dropoutNodes) {
+        this.dropoutNodes = dropoutNodes;
+    }
 
-	@Override
+    @Override
     public String toString() {
         return String.format("NNParams [testError=%s, trainError=%s, trainSize=%s, wrCount=%s, gSize=%s]",
                 this.testError, this.trainError, this.trainSize, this.getWrCount(),

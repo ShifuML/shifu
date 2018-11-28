@@ -110,7 +110,7 @@ public class FeatureImportanceMapper extends Mapper<LongWritable, Text, IntWrita
 
         loadTagWeightNum();
 
-        this.dataPurifier = new DataPurifier(this.modelConfig);
+        this.dataPurifier = new DataPurifier(this.modelConfig, false);
 
         this.outputKey = new IntWritable();
         this.outputValue = new DoubleWritable();

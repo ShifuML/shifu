@@ -400,7 +400,6 @@ public class Scorer {
                 modelResults.add(new Callable<MLData>() {
                     @Override
                     public MLData call() {
-                        MLData md = pair.getInput();
                         return ((GenericModel) model).compute(pair.getInput());
                     }
                 }.call());

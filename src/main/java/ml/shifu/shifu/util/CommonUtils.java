@@ -79,6 +79,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.GenericModelConfig;
+import ml.shifu.shifu.container.obj.GenericModelConfig.ComputeImplClass;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -922,43 +923,19 @@ public final class CommonUtils {
         List<BasicML> models = new ArrayList<BasicML>();
         List<BasicML> tmpModels = new ArrayList<BasicML>();
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
-        List<FileStatus> genericModelConfigs = findGenericModels(modelConfig, evalConfig, sourceType);
-        if(!genericModelConfigs.isEmpty()) {
-            for(FileStatus f : genericModelConfigs) {
-                GenericModelConfig gmc = loadJSON(f.getPath().toString(), sourceType, GenericModelConfig.class);
-                
-                if(SourceType.HDFS.equals(sourceType)) {
-                    
-                    FileSystem hdfs = HDFSUtils.getFS();
-                    PathFinder pathFinder = new PathFinder(modelConfig);
-                    String alg = (String)gmc.getProperties().get("algorithm");
-                    String src = pathFinder.getModelsPath(sourceType);
-                    hdfs.copyToLocalFile(false, new Path(src), new Path(System.getProperty("user.dir")), true);
-                    gmc.getProperties().put("modelpath", System.getProperty("user.dir") + "/models");
-                    File file = new File(System.getProperty("user.dir") + "/models");
-                    for(String str : file.list()) {
-                        log.error("list file in " + file.getAbsolutePath() + " : " + str);
-                    }
-                    log.error("gmc model path is : " + gmc.getProperties().get("modelpath"));
-                    if("tensorflow".equals(alg)) {
-                        try {
-                            Class c = Class.forName("ml.shifu.shifu.tensorflow.TensorflowModel");
-                            Computable computable = (Computable)c.newInstance();
-                            computable.init(gmc);
-                            GenericModel genericModel = new GenericModel(computable, gmc.getProperties());
-                            models.add(genericModel);
-                            log.error("load generic model");
-                        } catch (Exception e) {
-                            log.error("", e);
-                            throw new RuntimeException("Get real model fail");
-                        }
-                    }
-                }
+
+        // check if eval generic model, if so bypass the shifu model loader procedure
+        if(Constants.GENERIC.equals(modelConfig.getAlgorithm())) {
+            List<FileStatus> genericModelConfigs = findGenericModels(modelConfig, evalConfig, sourceType);
+            if(genericModelConfigs.isEmpty()) {
+                throw new RuntimeException("Load generic model failed.");
             }
-            log.error("return generic model " + models.size());
+            loadGenericModels(modelConfig, genericModelConfigs, sourceType, models);
+            log.debug("return generic model {}", models.size());
+
             return models;
         }
-        
+
         List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
             for(FileStatus f: modelFileStats) {
@@ -984,6 +961,41 @@ public final class CommonUtils {
         return models;
     }
 
+    /**
+     * Load generic model from local or hdfs storage and initialize.
+     */
+    public static void loadGenericModels(ModelConfig modelConfig, List<FileStatus> genericModelConfigs,
+            SourceType sourceType, List<BasicML> models) throws IOException {
+        for(FileStatus fst: genericModelConfigs) {
+            GenericModelConfig gmc = loadJSON(fst.getPath().toString(), sourceType, GenericModelConfig.class);
+            if(SourceType.HDFS.equals(sourceType)) {
+                throw new RuntimeException("Eval souce type is not supported. Only HDFS is supported.");
+            }
+            FileSystem hdfs = HDFSUtils.getFS();
+            PathFinder pathFinder = new PathFinder(modelConfig);
+            String alg = (String) gmc.getProperties().get(Constants.GENERIC_ALGORITHM);
+            String src = pathFinder.getModelsPath(sourceType);
+            hdfs.copyToLocalFile(false, new Path(src), new Path(System.getProperty(Constants.USER_DIR)), true);
+            String genericModelPath = System.getProperty(Constants.USER_DIR) + File.separator + Constants.MODELS;
+            gmc.getProperties().put(Constants.GENERIC_MODEL_PATH, genericModelPath);
+            log.info("Generic model path is : {}.", gmc.getProperties().get(Constants.GENERIC_MODEL_PATH));
+            if(Constants.TENSORFLOW.equals(alg)) {
+                try {
+                    // Initiate a evaluator class instance which used for evaluation
+                    Class<?> clazz = Class.forName(ComputeImplClass.Tensorflow.getClassName());
+                    Computable computable = (Computable) clazz.newInstance();
+                    computable.init(gmc);
+                    GenericModel genericModel = new GenericModel(computable, gmc.getProperties());
+                    models.add(genericModel);
+                } catch (Exception e) {
+                    throw new RuntimeException("Get model fail.");
+                }
+            } else {
+                throw new RuntimeException("Algorithm: " + alg + " is not supported in generic model yet.");
+            }
+        }
+    }
+
     public static int getBasicModelsCnt(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
             throws IOException {
         List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
@@ -1000,7 +1012,10 @@ public final class CommonUtils {
             // throw new ShifuException(ShifuErrorCode.ERROR_MODEL_FILE_NOT_FOUND);
             // disable exception, since we there maybe sub-models
             listStatus = findGenericModels(modelConfig, evalConfig, sourceType);
-            return listStatus;
+            // if models not found, continue which makes eval works when training is in progress.
+            if(CollectionUtils.isNotEmpty(listStatus)) {
+                return listStatus;
+            }
         }
 
         // to avoid the *unix and windows file list order
@@ -1258,14 +1273,16 @@ public final class CommonUtils {
 
         return fileList;
     }
-    
-    public static List<FileStatus> findGenericModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
-            throws IOException {
+
+    /**
+     * Load the generic model config and parse it to java object. Similar as {@link findModels}
+     */
+    public static List<FileStatus> findGenericModels(ModelConfig modelConfig, EvalConfig evalConfig,
+            SourceType sourceType) throws IOException {
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         PathFinder pathFinder = new PathFinder(modelConfig);
 
-        // If the algorithm in ModelConfig is NN, we only load NN models
-        // the same as SVM, LR
+        // Find generic model config file with suffix .json
         String modelSuffix = ".json";
 
         List<FileStatus> fileList = new ArrayList<FileStatus>();
@@ -1522,7 +1539,7 @@ public final class CommonUtils {
             throw new IOException(String.format("Failed to list files in %s", modelsPathDir.getAbsolutePath()));
         }
     }
-    
+
     /**
      * Return one HashMap Object contains keys in the first parameter, values in the second parameter. Before calling
      * this method, you should be aware that headers should be unique.
@@ -2030,6 +2047,7 @@ public final class CommonUtils {
         boolean hasCandidate = hasCandidateColumns(columnConfigList);
 
         List<Integer> features = new ArrayList<Integer>();
+        List<String> wrongFeatures = new ArrayList<String>();
         for(ColumnConfig config: columnConfigList) {
             if(isAfterVarSelect) {
                 if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
@@ -2039,6 +2057,11 @@ public final class CommonUtils {
                             || (config.isCategorical() && config.getBinCategory() != null
                                     && config.getBinCategory().size() > 0)) {
                         features.add(config.getColumnNum());
+                    } else if ((config.isNumerical() 
+                                    && (config.getBinBoundary() == null || config.getBinBoundary().size() <= 0))
+                            || (config.isCategorical() 
+                                    && (config.getBinCategory() == null || config.getBinCategory().size() <= 0))) {
+                        wrongFeatures.add(config.getColumnName());
                     }
                 }
             } else {
@@ -2049,10 +2072,21 @@ public final class CommonUtils {
                             || (config.isCategorical() && config.getBinCategory() != null
                                     && config.getBinCategory().size() > 0)) {
                         features.add(config.getColumnNum());
+                    } else if ((config.isNumerical() 
+                                    && (config.getBinBoundary() == null || config.getBinBoundary().size() <= 0))
+                            || (config.isCategorical() 
+                                    && (config.getBinCategory() == null || config.getBinCategory().size() <= 0))){
+                        wrongFeatures.add(config.getColumnName());
                     }
                 }
             }
         }
+        
+        if (!wrongFeatures.isEmpty()) {
+            throw new IllegalStateException("Some columns config should not be selected due to bin issue: " + 
+                    wrongFeatures.toString());
+        }
+        
         return features;
     }
 
@@ -2087,7 +2121,23 @@ public final class CommonUtils {
         } else {
             normalizeValue = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType());
         }
+
+        if(CollectionUtils.isNotEmpty(normalizeValue)) {
+            for(int i = 0; i < normalizeValue.size(); i++) {
+                Double nval = normalizeValue.get(i);
+                if(Double.isInfinite(nval) || Double.isNaN(nval)) {
+                    // if the value is Infinite or NaN, treat it as missing value
+                    // should treat Infinite as missing value also?
+                    normalizeValue.set(i, defaultMissingValue(config));
+                }
+            }
+        }
         return normalizeValue;
+    }
+
+    public static double defaultMissingValue(ColumnConfig config) {
+        // TODO return 0 when mean == null. Is it correct or reasonable?
+        return config.getMean() == null ? 0 : config.getMean().doubleValue();
     }
 
     public static boolean isTreeModel(String alg) {
@@ -2401,40 +2451,55 @@ public final class CommonUtils {
         return buf.toString();
     }
 
-    public static List<String> readConfFileIntoList(String columnConfFile, SourceType sourceType, String delimiter)
+    public static List<String> readConfNamesAsList(String columnConfFile, SourceType sourceType, String delimiter)
             throws IOException {
         List<String> columnNameList = new ArrayList<String>();
 
-        if(StringUtils.isBlank(columnConfFile) || !ShifuFileUtils.isFileExists(columnConfFile, sourceType)) {
-            return columnNameList;
+        List<String> fileLines = readConfFileIntoList(columnConfFile, sourceType);
+        if(CollectionUtils.isEmpty(fileLines)) {
+            return fileLines;
+        }
+
+        for(String line: fileLines) {
+            for(String str: Splitter.on(delimiter).split(line)) {
+                // String column = CommonUtils.getRelativePigHeaderColumnName(str);
+                if(StringUtils.isNotBlank(str)) {
+                    str = StringUtils.trim(str);
+                    str = normColumnName(str);
+                    columnNameList.add(str);
+                }
+            }
+        }
+
+        return columnNameList;
+    }
+
+    public static List<String> readConfFileIntoList(String configFile, SourceType sourceType) throws IOException {
+        List<String> fileLines = new ArrayList<String>();
+
+        if(StringUtils.isBlank(configFile) || !ShifuFileUtils.isFileExists(configFile, sourceType)) {
+            return fileLines;
         }
 
         List<String> strList = null;
-        Reader reader = ShifuFileUtils.getReader(columnConfFile, sourceType);
+        Reader reader = null;
         try {
+            reader = ShifuFileUtils.getReader(configFile, sourceType);
             strList = IOUtils.readLines(reader);
         } finally {
             IOUtils.closeQuietly(reader);
         }
 
         if(CollectionUtils.isNotEmpty(strList)) {
-            for(String line: strList) {
-                if(line.trim().equals("") || line.trim().startsWith("#")) {
+            for(String line: strList) { // skip empty line and line start with "#"
+                if(StringUtils.isBlank(line) || line.trim().startsWith("#")) {
                     continue;
                 }
-
-                for(String str: Splitter.on(delimiter).split(line)) {
-                    // String column = CommonUtils.getRelativePigHeaderColumnName(str);
-                    if(StringUtils.isNotBlank(str)) {
-                        str = str.trim();
-                        str = normColumnName(str);
-                        columnNameList.add(str);
-                    }
-                }
+                fileLines.add(StringUtils.trim(line));
             }
         }
 
-        return columnNameList;
+        return fileLines;
     }
 
     public static Map<String, Integer> generateColumnSeatMap(List<ColumnConfig> columnConfigList) {

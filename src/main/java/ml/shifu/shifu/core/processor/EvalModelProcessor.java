@@ -799,7 +799,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                     + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
         }
 
-        NSColumn weightColumn = new NSColumn(evalConfig.getDataSet().getTargetColumnName());
+        NSColumn weightColumn = new NSColumn(evalConfig.getDataSet().getWeightColumnName());
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName()) && !names.contains(weightColumn)
                 && !names.contains(new NSColumn(weightColumn.getSimpleName()))) {
             throw new IllegalArgumentException("Weight column " + evalConfig.getDataSet().getWeightColumnName()

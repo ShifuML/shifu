@@ -112,7 +112,7 @@ public class VarSelWorker
 
         trainingDataSet = new TrainingDataSet(normalizedColumnIdList);
         try {
-            dataPurifier = new DataPurifier(modelConfig);
+            dataPurifier = new DataPurifier(modelConfig, false);
         } catch (IOException e) {
             throw new RuntimeException("Fail to create DataPurifier", e);
         }
