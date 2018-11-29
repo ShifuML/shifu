@@ -190,7 +190,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                 continue;
             }
 
-            CorrelationWritable cw = CorrelationMultithreadedMapper.finalCorrelationMap.get(i);
+            CorrelationWritable cw = CorrelationMultithreadedMapper.finalCorrelationMap.get(columnConfig.getColumnNum());
             synchronized(cw) {
                 cw.setColumnIndex(i);
                 cw.setCount(cw.getCount() + 1d);

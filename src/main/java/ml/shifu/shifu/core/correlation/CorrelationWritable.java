@@ -20,6 +20,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -340,6 +341,17 @@ public class CorrelationWritable implements Writable {
         return this;
     }
 
+    /**
+     * CorrelationWritable should be initialized in CorrelationMapper. 
+     * If Sum array is null, it means CorrelationWritable has not need to be processed in Reducer phase
+     * 
+     * @return True if it is be initialized, False otherwise
+     */
+    public boolean isInitialized() {
+        return (!ArrayUtils.isEmpty(getXySum()) && !ArrayUtils.isEmpty(getXxSum()) && !ArrayUtils.isEmpty(getYySum()) 
+                && !ArrayUtils.isEmpty(getAdjustCount()) && !ArrayUtils.isEmpty(getAdjustSumX()) && !ArrayUtils.isEmpty(getAdjustSumY()));
+    }
+    
     /*
      * (non-Javadoc)
      * 
