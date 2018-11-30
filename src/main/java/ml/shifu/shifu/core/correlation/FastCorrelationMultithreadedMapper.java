@@ -177,8 +177,12 @@ public class FastCorrelationMultithreadedMapper extends Mapper<LongWritable, Tex
         // send to reducer with only one merged copy no matter how many threads
         synchronized(outer) {
             for(Entry<Integer, CorrelationWritable> entry: finalCorrelationMap.entrySet()) {
-                outputKey.set(entry.getKey());
-                context.write(outputKey, entry.getValue());
+                if (entry.getValue().isValid()) {   
+                    outputKey.set(entry.getKey());
+                    context.write(outputKey, entry.getValue());
+                } else {
+                    LOG.warn("Key: {} final correlation writable is not init, skip passing to reducer", entry.getKey());
+                }
             }
         }
     }

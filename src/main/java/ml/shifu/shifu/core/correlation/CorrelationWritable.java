@@ -347,9 +347,9 @@ public class CorrelationWritable implements Writable {
      * 
      * @return True if it is be initialized, False otherwise
      */
-    public boolean isInitialized() {
-        return (!ArrayUtils.isEmpty(getXySum()) && !ArrayUtils.isEmpty(getXxSum()) && !ArrayUtils.isEmpty(getYySum()) 
-                && !ArrayUtils.isEmpty(getAdjustCount()) && !ArrayUtils.isEmpty(getAdjustSumX()) && !ArrayUtils.isEmpty(getAdjustSumY()));
+    public boolean isValid() {
+        return (ArrayUtils.isNotEmpty(getXySum()) && ArrayUtils.isNotEmpty(getXxSum()) && ArrayUtils.isNotEmpty(getYySum()) 
+                && ArrayUtils.isNotEmpty(getAdjustCount()) && ArrayUtils.isNotEmpty(getAdjustSumX()) && ArrayUtils.isNotEmpty(getAdjustSumY()));
     }
     
     /*
