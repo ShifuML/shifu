@@ -137,8 +137,8 @@ public class BasicModelProcessor {
                 // if in stats but stats -c or stats -p or stats -rebin, column update should be called because of
                 // such stats steps should all be called after 'shifu stats', this is actually to call VoidUpdater
                 boolean strictCallVoidUpdate = (step == ModelStep.STATS)
-                        && (getBooleanParam(this.params, Constants.IS_COMPUTE_CORR)
-                                || getBooleanParam(this.params, Constants.IS_COMPUTE_PSI)
+                        //  && (getBooleanParam(this.params, Constants.IS_COMPUTE_CORR)
+                        && (getBooleanParam(this.params, Constants.IS_COMPUTE_PSI)
                                 || getBooleanParam(this.params, Constants.IS_REBIN));
 
                 // update ColumnConfig and save to disk
