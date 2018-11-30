@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.util.JSONUtils;
 
 import org.apache.commons.io.FileUtils;
@@ -107,6 +108,8 @@ public class ComboModelTrainTest {
         } else if(ModelTrainConf.ALGORITHM.GBT.equals(alg)) {
             trainConf.setNumTrainEpochs(20000);
         } else if(ModelTrainConf.ALGORITHM.LR.equals(alg)) {
+            trainConf.setNumTrainEpochs(100);
+        } else if(ALGORITHM.TENSORFLOW.equals(alg)) {
             trainConf.setNumTrainEpochs(100);
         }
         trainConf.setBaggingWithReplacement(true);

@@ -494,9 +494,9 @@ public final class CommonUtils {
             fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(),
                     modelConfig.getDataSet().getSource());
         } else {
-            fields = CommonUtils.takeFirstLine(
-                    modelConfig.getDataSetRawPath(), StringUtils.isBlank(modelConfig.getHeaderDelimiter())
-                            ? modelConfig.getDataSetDelimiter() : modelConfig.getHeaderDelimiter(),
+            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(),
+                    StringUtils.isBlank(modelConfig.getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter()
+                            : modelConfig.getHeaderDelimiter(),
                     modelConfig.getDataSet().getSource());
             if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
                 // if first line contains target column name, we guess it is csv format and first line is header.
@@ -527,13 +527,15 @@ public final class CommonUtils {
         boolean isSchemaProvided = true;
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
             String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter())
-                    ? evalConfig.getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
+                    ? evalConfig.getDataSet().getDataDelimiter()
+                    : evalConfig.getDataSet().getHeaderDelimiter();
             fields = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), delimiter,
                     evalConfig.getDataSet().getSource());
         } else {
             fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(),
                     StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter())
-                            ? evalConfig.getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter(),
+                            ? evalConfig.getDataSet().getDataDelimiter()
+                            : evalConfig.getDataSet().getHeaderDelimiter(),
                     evalConfig.getDataSet().getSource());
             // TODO - if there is no target column in eval, it may fail to check it is schema or not
             if(StringUtils.join(fields, "").contains(evalConfig.getDataSet().getTargetColumnName())) {
@@ -922,12 +924,12 @@ public final class CommonUtils {
 
         return models;
     }
-    
+
     /**
      * Load generic model from local or hdfs storage and initialize.
      */
-    public static void loadGenericModels(ModelConfig modelConfig, List<FileStatus> genericModelConfigs, SourceType sourceType,
-            List<BasicML> models) throws IOException {
+    public static void loadGenericModels(ModelConfig modelConfig, List<FileStatus> genericModelConfigs,
+            SourceType sourceType, List<BasicML> models) throws IOException {
         for(FileStatus fst: genericModelConfigs) {
             GenericModelConfig gmc = loadJSON(fst.getPath().toString(), sourceType, GenericModelConfig.class);
             if(SourceType.HDFS.equals(sourceType)) {
@@ -943,7 +945,7 @@ public final class CommonUtils {
             log.info("Generic model path is : {}.", gmc.getProperties().get(Constants.GENERIC_MODEL_PATH));
             if(Constants.TENSORFLOW.equals(alg)) {
                 try {
-                    //Initiate a evaluator class instance which used for evaluation
+                    // Initiate a evaluator class instance which used for evaluation
                     Class<?> clazz = Class.forName(ComputeImplClass.Tensorflow.getClassName());
                     Computable computable = (Computable) clazz.newInstance();
                     computable.init(gmc);
@@ -974,7 +976,10 @@ public final class CommonUtils {
             // throw new ShifuException(ShifuErrorCode.ERROR_MODEL_FILE_NOT_FOUND);
             // disable exception, since we there maybe sub-models
             listStatus = findGenericModels(modelConfig, evalConfig, sourceType);
-            return listStatus;
+            // if models not found, continue which makes eval works when training is in progress.
+            if(CollectionUtils.isNotEmpty(listStatus)) {
+                return listStatus;
+            }
         }
 
         // to avoid the *unix and windows file list order
@@ -1240,7 +1245,7 @@ public final class CommonUtils {
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         PathFinder pathFinder = new PathFinder(modelConfig);
 
-        //Find generic model config file with suffix .json
+        // Find generic model config file with suffix .json
         String modelSuffix = ".json";
 
         List<FileStatus> fileList = new ArrayList<FileStatus>();

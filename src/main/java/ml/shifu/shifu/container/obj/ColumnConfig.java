@@ -15,14 +15,17 @@
  */
 package ml.shifu.shifu.container.obj;
 
-import java.io.Serializable;
-import java.util.Comparator;
-import java.util.List;
-
-import ml.shifu.shifu.util.Constants;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import ml.shifu.shifu.util.Constants;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * ColumnConfig class record the basic information for column in data. Almost all information in ColumnConfig is
@@ -514,5 +517,54 @@ public class ColumnConfig {
      */
     public void setHybridThreshold(Double hybridThreshold) {
         this.hybridThreshold = hybridThreshold;
+    }
+
+    /**
+     * Write columnconfig to output stream
+     * @param output output stream
+     * @throws IOException io exception
+     */
+    public void write(DataOutputStream output) throws IOException {
+        output.writeInt(columnNum);
+        output.writeUTF(columnName);
+        output.writeUTF(version);
+        output.writeUTF(columnType.toString());
+        output.writeUTF(columnFlag.toString());
+        output.writeBoolean(finalSelect);
+        output.writeDouble(hybridThreshold);
+        columnStats.write(output);
+        columnBinning.write(output);
+        if (sampleValues == null || sampleValues.isEmpty()) {
+            output.writeInt(0);
+        } else {
+            output.writeInt(sampleValues.size());
+            for (String sampleValue : sampleValues) {
+                output.writeUTF(sampleValue);
+            }
+        }
+    }
+
+    /**
+     * Read columnstats from input stream
+     * @param input input stream
+     * @throws IOException io exception
+     */
+    public void read(DataInputStream input) throws IOException {
+        columnNum = input.readInt();
+        columnName = input.readUTF();
+        version = input.readUTF();
+        columnType = ColumnType.valueOf(input.readUTF());
+        columnFlag = ColumnFlag.valueOf(input.readUTF());
+        finalSelect = input.readBoolean();
+        hybridThreshold = input.readDouble();
+        columnStats = new ColumnStats();
+        columnStats.read(input);
+        columnBinning = new ColumnBinning();
+        columnBinning.read(input);
+        int size = input.readInt();
+        sampleValues = new ArrayList<String>();
+        for (int i = 0; i < size; i++) {
+            sampleValues.add(input.readUTF());
+        }
     }
 }

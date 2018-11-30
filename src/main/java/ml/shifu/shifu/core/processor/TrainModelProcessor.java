@@ -33,6 +33,7 @@ import ml.shifu.shifu.core.TreeModel;
 import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.alg.SVMTrainer;
+import ml.shifu.shifu.core.alg.TensorflowTrainer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.FeatureSubsetStrategy;
@@ -177,7 +178,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     break;
                 case LOCAL:
                 default:
-                    runAkkaTrain(isForVarSelect ? 1 : modelConfig.getBaggingNum());
+                    runLocalTrain();
                     break;
             }
 
@@ -196,6 +197,31 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         return status;
+    }
+
+    private void runLocalTrain() throws IOException {
+        if(Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+            runTensorflowLocalTrain();
+            return;
+        } else {
+            runAkkaTrain(isForVarSelect ? 1 : modelConfig.getBaggingNum());
+        }
+    }
+
+    private void runTensorflowLocalTrain() throws IOException {
+        List<Scanner> scanners = null;
+        TensorflowTrainer trainer = new TensorflowTrainer(modelConfig, columnConfigList);
+        LOG.info("Normalized Data: " + pathFinder.getNormalizedDataPath());
+        try {
+            scanners = ShifuFileUtils
+                    .getDataScanners(pathFinder.getNormalizedDataPath(), modelConfig.getDataSet().getSource());
+        } catch (IOException e) {
+            throw new ShifuException(ShifuErrorCode.ERROR_INPUT_NOT_FOUND, e, pathFinder.getNormalizedDataPath());
+        }
+        if(CollectionUtils.isNotEmpty(scanners)) {
+            trainer.train();
+        }
+        closeScanners(scanners);
     }
 
     /**
