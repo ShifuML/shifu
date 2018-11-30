@@ -59,6 +59,9 @@ public class TrainUpdater extends BasicUpdater {
 
     @Override
     public void updateColumnConfig(ColumnConfig columnConfig) {
+        // reset flag at first
+        columnConfig.setColumnFlag(null);
+
         String varName = columnConfig.getColumnName();
 
         if(NSColumnUtils.isColumnEqual(this.targetColumnName, varName)) {
