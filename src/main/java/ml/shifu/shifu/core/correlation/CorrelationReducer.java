@@ -95,7 +95,7 @@ public class CorrelationReducer extends Reducer<IntWritable, CorrelationWritable
         while(cwIt.hasNext()) {
             CorrelationWritable cw = cwIt.next();
             
-            if (!cw.isInitialized()) {
+            if (!cw.isValid()) {
                 // In this case, there is no need to process this one because all of inside value is null
                 LOG.warn("Such CorrelationWritable has not been inited, so we ingore it");
                 continue;
