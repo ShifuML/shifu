@@ -236,6 +236,7 @@ case ${COMMAND} in
             cd $HADOOP_ROOT/../
             BACK_HADOOP_ROOT=`pwd`
             HADOOP_HOME=`ls -al $BACK_HADOOP_ROOT | grep hadoop-client | awk '{print $NF}'`
+            export HADOOP_HOME
             cd $CURRENT_FOLDER
         fi
 
