@@ -19,10 +19,16 @@
 # same folder of regular models in 'models' folder and being evaluated in distributed shifu eval step.
 #
 
+import gzip
+from StringIO import StringIO
+
 from tensorflow.python.platform import gfile
 
 print("Hello World!")
+print(gfile.ListDirectory("hdfs://horton/user/pengzhang/ModelSets/demo/tmp/NormalizedData/"))
 
 with gfile.Open("hdfs://horton/user/pengzhang/10.txt", 'rb') as rf:
-    print(rf.readlines())
+    print(rf.readline())
 
+with gfile.Open("hdfs://horton/user/pengzhang/ModelSets/demo/tmp/NormalizedData/part-m-00000.gz", 'rb') as rf:
+    print(gzip.GzipFile(fileobj=StringIO(rf.read())).readline())
