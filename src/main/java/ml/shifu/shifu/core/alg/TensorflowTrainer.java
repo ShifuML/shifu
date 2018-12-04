@@ -74,12 +74,15 @@ public class TensorflowTrainer {
 
     private PathFinder pathFinder;
 
+    @SuppressWarnings("unused")
     private String alg;
 
     private char delimiter;
 
+    @SuppressWarnings("unused")
     private String lossFunc;
 
+    @SuppressWarnings("unused")
     private String optimizer;
 
     private int epoch = 100;
@@ -142,9 +145,12 @@ public class TensorflowTrainer {
 
         try {
             process.waitFor();
-            sc.close();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
+        } finally {
+            if(sc != null) {
+                sc.close();
+            }
         }
     }
 
