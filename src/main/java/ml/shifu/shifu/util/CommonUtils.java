@@ -932,14 +932,15 @@ public final class CommonUtils {
             SourceType sourceType, List<BasicML> models) throws IOException {
         for(FileStatus fst: genericModelConfigs) {
             GenericModelConfig gmc = loadJSON(fst.getPath().toString(), sourceType, GenericModelConfig.class);
-            if(SourceType.HDFS.equals(sourceType)) {
+            if(SourceType.LOCAL.equals(sourceType)) {
                 throw new RuntimeException("Eval souce type is not supported. Only HDFS is supported.");
             }
             FileSystem hdfs = HDFSUtils.getFS();
             PathFinder pathFinder = new PathFinder(modelConfig);
             String alg = (String) gmc.getProperties().get(Constants.GENERIC_ALGORITHM);
             String src = pathFinder.getModelsPath(sourceType);
-            hdfs.copyToLocalFile(false, new Path(src), new Path(System.getProperty(Constants.USER_DIR)), true);
+            
+            hdfs.copyToLocalFile(true, new Path(src), new Path(System.getProperty(Constants.USER_DIR)), true);
             String genericModelPath = System.getProperty(Constants.USER_DIR) + File.separator + Constants.MODELS;
             gmc.getProperties().put(Constants.GENERIC_MODEL_PATH, genericModelPath);
             log.info("Generic model path is : {}.", gmc.getProperties().get(Constants.GENERIC_MODEL_PATH));
