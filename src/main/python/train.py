@@ -33,7 +33,7 @@ import tensorflow as tf
 import numpy as np
 
 
-def load_data(valid_data_percentage=0.2):
+def load_data():
     # Use for parse Arguments
     parser = argparse.ArgumentParser("Shifu_tensorflow_training")
     parser.add_argument("-inputdaatapath", action='store', dest='inputdaatapath', help="data path used for training",
@@ -41,19 +41,23 @@ def load_data(valid_data_percentage=0.2):
     parser.add_argument("-delimiter", action='store', dest='delimiter',
                         help="delimiter of data file to seperate columns", type=str)
     parser.add_argument("-target", action='store', dest='target', help="target index in training data file", type=int)
-    parser.add_argument("-hiddenlayernodes", action='store', dest='hiddenlayernodes', help="NN hidden layer nodes",
-                        type=str)
-    parser.add_argument("-hiddenlayers", action='store', dest='hiddenlayers', help="number of hidden laers", type=int)
+    parser.add_argument("-validationrate", action='store', dest='validationrate', default=0.2, help="validation rate", type=float)
+    parser.add_argument("-hiddenlayernodes", action='store', dest='hiddenlayernodes', help="NN hidden layer nodes", nargs='+',
+                        type=int)
     parser.add_argument("-epochnums", action='store', dest='epochnums', help="", type=int)
+    parser.add_argument("-seletectedcolumnnums", action='store', dest='selectedcolumns', help="selected columns list", nargs='+', type=int)
 
     args, unknown = parser.parse_known_args()
 
     # root = "hdfs://horton/user/pengzhang/ModelSets/demo/tmp/NormalizedData/"
     root = args.inputdaatapath
     target_index = args.target
-    feature_column_nums = None
+    hidden_layers = args.hiddenlayernodes
+    feature_column_nums = args.selectedcolumns
+    valid_data_percentage = args.validationrate
+    print(feature_column_nums)
     delimiter = args.delimiter.replace('\\', "")
-    context = {"layers": [10], "batch_size": 10, "export_dir": "./models"}
+    context = {"layers": hidden_layers, "batch_size": 10, "export_dir": "./models"}
     context["epoch"] = args.epochnums
 
     train_data = []
@@ -75,8 +79,6 @@ def load_data(valid_data_percentage=0.2):
                 break
 
             columns = line.split(delimiter)
-            if feature_column_nums == None:
-                feature_column_nums = range(1, len(columns))
 
             if random.random() >= valid_data_percentage:
                 # Append training data
