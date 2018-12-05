@@ -310,6 +310,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private void validateDistributedTrain() throws IOException {
         String alg = super.getModelConfig().getTrain().getAlgorithm();
+        if(Constants.TENSORFLOW.equalsIgnoreCase(alg)) {
+            // we do not train tensorflow in dist mode currently
+            return;
+        }
         if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) // NN algorithm
                 || LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) // LR algorithm
                 || CommonUtils.isTreeModel(alg) // RF or GBT algortihm
@@ -369,9 +373,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     protected int runDistributedTrain() throws IOException, InterruptedException, ClassNotFoundException {
+        
         LOG.info("Started {} d-training.", isDryTrain ? "dry" : "");
         int status = 0;
 
+        if(Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+            runLocalTrain();
+            return status;
+        }
         Configuration conf = new Configuration();
 
         SourceType sourceType = super.getModelConfig().getDataSet().getSource();
