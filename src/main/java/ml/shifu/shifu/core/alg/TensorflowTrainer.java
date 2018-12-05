@@ -213,8 +213,6 @@ public class TensorflowTrainer {
         commands.add(String.valueOf(targetColumnNum));
         commands.add("-hiddenlayernodes");
         commands.add(hiddenLayerNodesStr);
-        commands.add("-hiddenlayers");
-        commands.add(String.valueOf(hiddenLayers));
         commands.add("-inputdaatapath");
         commands.add(inputDataPath);
         commands.add("-seletectedcolumnnums");

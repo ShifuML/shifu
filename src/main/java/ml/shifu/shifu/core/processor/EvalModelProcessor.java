@@ -783,8 +783,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 }
             }
         }
-        if(Constants.GENERIC.equals(modelConfig.getAlgorithm()) 
-                || Constants.TENSORFLOW.equals(modelConfig.getAlgorithm())) {
+        if(Constants.GENERIC.equalsIgnoreCase(modelConfig.getAlgorithm()) 
+                || Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
             // TODO correct this logic
             return;
         }
