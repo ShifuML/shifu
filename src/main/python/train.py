@@ -101,7 +101,7 @@ def load_data(valid_data_percentage=0.2):
 
 def build_graph(shifu_context):
     graph = tf.get_default_graph
-    in_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, context["feature_count"]))
+    in_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, context["feature_count"]), name="shifu_input_0")
     label_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, 1))
 
     layers = shifu_context["layers"]
@@ -122,11 +122,11 @@ def build_graph(shifu_context):
         dnn_layer.append(current_layer)
 
     weight = tf.Variable(tf.random_uniform([current_nodes, 1]))
-    out_put_layer = tf.nn.sigmoid(tf.matmul(current_layer, weight))
-    cost_func = tf.nn.l2_loss(label_placeholder - out_put_layer)
+    output_layer = tf.nn.sigmoid(tf.matmul(current_layer, weight), name="shifu_output_0")
+    cost_func = tf.nn.l2_loss(label_placeholder - output_layer)
     optimizer = tf.train.AdamOptimizer(learning_rate=0.03).minimize(cost_func)
-    validate_error = label_placeholder - out_put_layer
-    return out_put_layer, cost_func, optimizer, in_placeholder, label_placeholder, validate_error, graph
+    validate_error = label_placeholder - output_layer
+    return output_layer, cost_func, optimizer, in_placeholder, label_placeholder, validate_error, graph
 
 def simple_save(session, export_dir, inputs, outputs, legacy_init_op=None):
     signature_def_map = {
@@ -143,12 +143,12 @@ def simple_save(session, export_dir, inputs, outputs, legacy_init_op=None):
         clear_devices=True)
     b.save()
 
-def train(input_placeholder, target_placeholder, out_put_layer, cost_func, optimizer, validate_error, input_features, targets, validate_input, validate_target, session, context):
+def train(input_placeholder, target_placeholder, output_layer, cost_func, optimizer, validate_error, input_features, targets, validate_input, validate_target, session, context):
 
     session.run(tf.global_variables_initializer())
     epoch = context["epoch"]
     batch_size = context["batch_size"]
-    export_dir=context["export_dir"]
+    export_dir = context["export_dir"]
     total_batch = int(len(input_features) / batch_size)
     input_batch = np.array_split(input_features, total_batch)
     target_batch = np.array_split(targets, total_batch)
@@ -157,7 +157,7 @@ def train(input_placeholder, target_placeholder, out_put_layer, cost_func, optim
     for i in range(epoch):
         avg_cost = 0
         for j in range(total_batch):
-            o, l, c = session.run([optimizer, out_put_layer, cost_func],
+            o, l, c = session.run([optimizer, output_layer, cost_func],
                                   feed_dict={
                                       input_placeholder: input_batch[j],
                                       target_placeholder: target_batch[j],
@@ -176,8 +176,8 @@ def train(input_placeholder, target_placeholder, out_put_layer, cost_func, optim
                                inputs={
                                    "shifu_input_0": input_placeholder
                                 },
-                               outputs={
-                                   "shifu_output_0": out_put_layer
+                               outputs ={
+                                   "shifu_output_0": output_layer
                                })
     #{
     #    "inputnames": [
@@ -230,9 +230,9 @@ if __name__ == "__main__":
     #context = {"layers": [10], "feature_count": 31, "epoch": 5, "batch_size": 10, "export_dir" : "./model"}
     input_features, targets, validate_feature, validate_target, context = load_data()
 
-    out_put_layer, cost_func, optimizer, input_placeholder, target_placeholder, \
+    output_layer, cost_func, optimizer, input_placeholder, target_placeholder, \
         validate_error, graph = build_graph(shifu_context=context)
     session = tf.Session()
-    train(input_placeholder=input_placeholder, target_placeholder=target_placeholder,out_put_layer=out_put_layer,
+    train(input_placeholder=input_placeholder, target_placeholder=target_placeholder,output_layer=output_layer,
           cost_func=cost_func, optimizer=optimizer, validate_error=validate_error, input_features=input_features,
           targets=targets, validate_input=validate_feature, validate_target=validate_target, session=session, context=context)
