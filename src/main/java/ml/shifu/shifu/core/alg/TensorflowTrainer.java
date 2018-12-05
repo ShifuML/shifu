@@ -86,6 +86,8 @@ public class TensorflowTrainer {
     private String optimizer;
 
     private int epoch = 100;
+    
+    private double validateRate = 0.2;
 
     /**
      * Extract and store tensorflow training params from shifu configs.
@@ -130,6 +132,7 @@ public class TensorflowTrainer {
         lossFunc = (String) modelTrainConf.getParams().get(CommonConstants.TF_LOSS);
         optimizer = (String) modelTrainConf.getParams().get(CommonConstants.TF_OPTIMIZER);
         epoch = modelTrainConf.getNumTrainEpochs();
+        validateRate = modelTrainConf.getValidSetRate();
     }
 
     public void train() throws IOException {
@@ -215,15 +218,17 @@ public class TensorflowTrainer {
         commands.add("-inputdaatapath");
         commands.add(inputDataPath);
         commands.add("-seletectedcolumnnums");
-        commands.add("abc");
+        commands.add(seletectedColumnNumsStr);
         commands.add("-alg");
-        commands.add("123");
+        commands.add("dnn");
         commands.add("-delimiter");
         commands.add(delimiterStr);
         commands.add("-lossfunc");
         commands.add("loss");
         commands.add("-optimizer");
         commands.add("opti");
+        commands.add("-validaterate");
+        commands.add(String.valueOf(validateRate));
 
         return commands;
     }
