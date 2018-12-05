@@ -160,9 +160,11 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
                 : context.getMasterResult().getTestError());
 
         // save the weights according the error decreasing
-        if(currentError < this.minTestError) {
+        // the first iteration, the test error will be 0 and it couldn't be counted
+        if(currentError < this.minTestError && context.getCurrentIteration() > 1) {
             this.minTestError = currentError;
-            this.optimizedWeights = context.getMasterResult().getWeights();
+            this.optimizedWeights = Arrays.copyOf(context.getMasterResult().getWeights(),
+                    context.getMasterResult().getWeights().length);
         }
 
         // save tmp to hdfs according to raw trainer logic

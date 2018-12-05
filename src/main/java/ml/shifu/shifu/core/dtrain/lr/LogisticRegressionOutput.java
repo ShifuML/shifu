@@ -111,9 +111,11 @@ public class LogisticRegressionOutput extends
                 .getTrainError() : context.getMasterResult().getTestError());
 
         // save the weights according the error decreasing
-        if(currentError < this.minTestError) {
+        if(currentError < this.minTestError && context.getCurrentIteration() > 1) {
             this.minTestError = currentError;
-            this.optimizedWeights = context.getMasterResult().getParameters();
+            this.optimizedWeights = Arrays.copyOf(context.getMasterResult().getParameters(),
+                    context.getMasterResult().getParameters().length);
+            LOG.info("change minTestError to {}, and update best weights at {}-th epoch.", this.minTestError, context.getCurrentIteration());
         }
 
         // save tmp to hdfs according to raw trainer logic
@@ -134,7 +136,7 @@ public class LogisticRegressionOutput extends
                     Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
 
                     // if current iteration is the last iteration, or it is halted by early stop condition, no
-                    // need to save checkpoint model here as it is replicated with postApplicaiton.
+                    // need to save checkpoint model here as it is replicated with postApplication.
                     // There is issue here if saving the same model in this thread and another thread in
                     // postApplication, sometimes this conflict will cause model writing failed.
                     if(!isHalt && currentIteration != totalIteration) {

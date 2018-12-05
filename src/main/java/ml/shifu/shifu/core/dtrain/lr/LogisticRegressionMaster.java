@@ -35,6 +35,9 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import ml.shifu.shifu.core.dtrain.Weight;
+import ml.shifu.shifu.core.dtrain.earlystop.AbstractEarlyStopStrategy;
+import ml.shifu.shifu.core.dtrain.earlystop.ConvergeAndValidToleranceEarlyStop;
+import ml.shifu.shifu.core.dtrain.earlystop.WindowEarlyStop;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -103,16 +106,6 @@ public class LogisticRegressionMaster extends
     private List<ColumnConfig> columnConfigList;
 
     /**
-     * Convergence threshold setting by user in ModelConfig.json.
-     */
-    private double convergenceThreshold;
-
-    /**
-     * Convergence judger instance for convergence checking.
-     */
-    private ConvergeJudger judger = new ConvergeJudger();
-
-    /**
      * Propagation type for lr model setting: Q, B, R, C
      */
     private String propagation = "R";
@@ -128,11 +121,6 @@ public class LogisticRegressionMaster extends
     private boolean isContinuousEnabled = false;
 
     /**
-     * Validation tolerance which is for early stop, by default it is 0d which means early stop is not enabled.
-     */
-    private double validationTolerance = 0d;
-
-    /**
      * The best validation error for error computing
      */
     private double bestValidationError = Double.MAX_VALUE;
@@ -141,6 +129,11 @@ public class LogisticRegressionMaster extends
      * Valid params specially for grid search
      */
     private Map<String, Object> validParams;
+
+    /**
+     * The early stop strategy. If it is null, then early stop is disabled
+     */
+    private AbstractEarlyStopStrategy earlyStopStrategy;
 
     @Override
     public void init(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
@@ -155,34 +148,29 @@ public class LogisticRegressionMaster extends
             LOG.info("Start grid search master with params: {}", validParams);
         }
 
-        this.learningRate = Double.valueOf(this.validParams.get(CommonConstants.LR_LEARNING_RATE).toString());
+        this.learningRate = Double.valueOf(this.validParams.get(CommonConstants.LEARNING_RATE).toString());
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
                 this.columnConfigList);
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
 
-        Object vtObj = this.validParams.get("ValidationTolerance");
-        if(vtObj != null) {
-            try {
-                validationTolerance = Double.parseDouble(vtObj.toString());
-                LOG.warn("Validation by tolerance is enabled with value {}.", validationTolerance);
-            } catch (NumberFormatException ee) {
-                validationTolerance = 0d;
-                LOG.warn(
-                        "Validation by tolerance isn't enabled because of non numerical value of ValidationTolerance: {}.",
-                        vtObj);
+        Boolean enabledEarlyStop = DTrainUtils.getBoolean(validParams, CommonConstants.ENABLE_EARLY_STOP, Boolean.FALSE);
+        if(enabledEarlyStop) {
+            Double validTolerance = DTrainUtils.getDouble(validParams, CommonConstants.VALIDATION_TOLERANCE, null);
+            if(validTolerance == null) {
+                LOG.info("Early Stop is enabled. use WindowEarlyStop");
+                this.earlyStopStrategy = new WindowEarlyStop(20); // default, user should could adjust it
+            } else {
+                LOG.info("Early Stop is enabled. use ConvergeAndValiToleranceEarlyStop");
+                Double threshold = this.modelConfig.getTrain().getConvergenceThreshold();
+                this.earlyStopStrategy = new ConvergeAndValidToleranceEarlyStop(
+                        threshold == null ? Double.MIN_VALUE : threshold.doubleValue(), validTolerance);
             }
-        } else {
-            LOG.info("Validation by tolerance isn't enabled.");
         }
-
-        Double threshold = this.modelConfig.getTrain().getConvergenceThreshold();
-        this.convergenceThreshold = threshold == null ? 0d : threshold.doubleValue();
-        LOG.info("Convergence threshold in master is :{}", this.convergenceThreshold);
 
         Object pObject = validParams.get(CommonConstants.PROPAGATION);
         this.propagation = pObject == null ? "R" : (String) pObject;
 
-        Object rconstant = validParams.get(CommonConstants.LR_REGULARIZED_CONSTANT);
+        Object rconstant = validParams.get(CommonConstants.REGULARIZED_CONSTANT);
         this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
 
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
@@ -283,7 +271,6 @@ public class LogisticRegressionMaster extends
                 this.weightCalculator.setNumTrainSize(trainSize);
             }
 
-            double[] oldWeights = Arrays.copyOf(this.weights, this.weights.length);
             this.weights = this.weightCalculator.calculateWeights(this.weights, gradients,
                     (context.getCurrentIteration() - 1));
 
@@ -294,33 +281,18 @@ public class LogisticRegressionMaster extends
             LogisticRegressionParams lrParams = new LogisticRegressionParams(weights, finalTrainError, finalTestError,
                     trainSize, testSize);
 
-            boolean vtTriggered = false;
-            // if validationTolerance == 0d, means vt check is not enabled
-            if(validationTolerance > 0d) {
-                double weightSumSquare = 0d;
-                double diffWeightSumSquare = 0d;
-                for(int i = 0; i < weights.length; i++) {
-                    weightSumSquare += Math.pow(weights[i], 2);
-                    diffWeightSumSquare += Math.pow(weights[i] - oldWeights[i], 2);
-                }
-                if(Math.pow(diffWeightSumSquare, 0.5) < this.validationTolerance
-                        * Math.max(Math.pow(weightSumSquare, 0.5), 1d)) {
-                    LOG.info("Debug: diffWeightSumSquare {}, weightSumSquare {}, validationTolerance {}",
-                            Math.pow(diffWeightSumSquare, 0.5), Math.pow(weightSumSquare, 0.5), validationTolerance);
-                    vtTriggered = true;
-                }
-            }
-
             if(finalTestError < this.bestValidationError) {
                 this.bestValidationError = finalTestError;
             }
 
-            if(judger.judge(finalTrainError + finalTestError / 2, convergenceThreshold) || vtTriggered) {
-                LOG.info("LRMaster compute iteration {} converged !", context.getCurrentIteration());
-                lrParams.setHalt(true);
-            } else {
-                LOG.debug("LRMaster compute iteration {} not converged yet !", context.getCurrentIteration());
+            if(earlyStopStrategy != null) {
+                boolean isToStopEarly = earlyStopStrategy
+                        .shouldEarlyStop(context.getCurrentIteration(), weights, finalTrainError, finalTestError);
+                if(isToStopEarly) {
+                    lrParams.setHalt(true);
+                }
             }
+
             return lrParams;
         }
     }
