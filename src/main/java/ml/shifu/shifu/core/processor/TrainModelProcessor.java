@@ -378,6 +378,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         int status = 0;
 
         if(Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+            // we currently run lcoal tensorflow train in dist mode, because we need the sync hdfs feature to
+            // sync eval the local trained model for dist model eval
             runLocalTrain();
             return status;
         }
