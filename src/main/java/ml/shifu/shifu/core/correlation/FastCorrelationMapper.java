@@ -204,10 +204,10 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
                     || (hasCandidates && !ColumnFlag.Candidate.equals(columnConfig.getColumnFlag()))) {
                 continue;
             }
-            CorrelationWritable cw = this.correlationMap.get(i);
+            CorrelationWritable cw = this.correlationMap.get(columnConfig.getColumnNum());
             if(cw == null) {
                 cw = new CorrelationWritable();
-                this.correlationMap.put(i, cw);
+                this.correlationMap.put(columnConfig.getColumnNum(), cw);
             }
             cw.setColumnIndex(i);
             cw.setCount(cw.getCount() + 1d);
@@ -250,14 +250,11 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
                         Thread.currentThread().getName());
             }
             start = System.currentTimeMillis();
-            for(int j = 0; j < columnConfigList.size(); j++) {
+            for(int j = (this.isComputeAll ? 0 : i); j < columnConfigList.size(); j++) {
                 ColumnConfig otherColumnConfig = columnConfigList.get(j);
                 if((otherColumnConfig.getColumnFlag() != ColumnFlag.Target)
                         && ((otherColumnConfig.getColumnFlag() == ColumnFlag.Meta) || (hasCandidates
                                 && !ColumnFlag.Candidate.equals(otherColumnConfig.getColumnFlag())))) {
-                    continue;
-                }
-                if(i > j && !this.isComputeAll) {
                     continue;
                 }
 
