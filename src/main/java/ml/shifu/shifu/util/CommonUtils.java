@@ -1252,11 +1252,11 @@ public final class CommonUtils {
 
         List<FileStatus> fileList = new ArrayList<FileStatus>();
         if(null == evalConfig || StringUtils.isBlank(evalConfig.getModelsPath())) {
-            Path path = new Path(pathFinder.getModelsPath(sourceType));
+            Path path = new Path(pathFinder.getModelsPath(sourceType) + File.separator + modelConfig.getBasic().getName());
             fileList.addAll(Arrays.asList(fs.listStatus(path, new FileSuffixPathFilter(modelSuffix))));
         } else {
             String modelsPath = evalConfig.getModelsPath();
-            FileStatus[] expandedPaths = fs.globStatus(new Path(modelsPath));
+            FileStatus[] expandedPaths = fs.globStatus(new Path(modelsPath + File.separator + modelConfig.getBasic().getName()));
             if(ArrayUtils.isNotEmpty(expandedPaths)) {
                 for(FileStatus epath: expandedPaths) {
                     fileList.addAll(
