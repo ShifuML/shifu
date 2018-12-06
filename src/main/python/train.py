@@ -59,41 +59,41 @@ def load_data(context):
     for normFileName in normFileNames:
         print("Now loading " + normFileName + " Progress: " + str(count) + "/" + str(len(normFileNames)) + ".")
         count += 1
-    with gfile.Open(root + '/' + normFileName, 'rb') as f:
-        gf = gzip.GzipFile(fileobj=StringIO(f.read()))
-        while True:
-            line = gf.readline()
-            if len(line) == 0:
-                break
-            count += 1
-            columns = line.split(delimiter)
+        with gfile.Open(root + '/' + normFileName, 'rb') as f:
+            gf = gzip.GzipFile(fileobj=StringIO(f.read()))
+            while True:
+                line = gf.readline()
+                if len(line) == 0:
+                    break
+                count += 1
+                columns = line.split(delimiter)
 
-            if feature_column_nums == None:
-                feature_column_nums = range(0, len(columns))
-                feature_column_nums.remove(target_index)
+                if feature_column_nums == None:
+                    feature_column_nums = range(0, len(columns))
+                    feature_column_nums.remove(target_index)
 
-            if random.random() >= valid_data_percentage:
-                # Append training data
-                train_target.append([float(columns[target_index])])
-                if(columns[target_index] == "1"):
-                    train_pos_cnt += 1
-                else :
-                    train_neg_cnt += 1
-                single_train_data = []
-                for feature_column_num in feature_column_nums:
-                    single_train_data.append(float(columns[feature_column_num].strip('\n')))
-                train_data.append(single_train_data)
-            else:
-                # Append validation data
-                valid_target.append([float(columns[target_index])])
-                if(columns[target_index] == "1"):
-                    valid_pos_cnt += 1
+                if random.random() >= valid_data_percentage:
+                    # Append training data
+                    train_target.append([float(columns[target_index])])
+                    if(columns[target_index] == "1"):
+                        train_pos_cnt += 1
+                    else :
+                        train_neg_cnt += 1
+                    single_train_data = []
+                    for feature_column_num in feature_column_nums:
+                        single_train_data.append(float(columns[feature_column_num].strip('\n')))
+                    train_data.append(single_train_data)
                 else:
-                    valid_neg_cnt += 1
-                single_valid_data = []
-                for feature_column_num in feature_column_nums:
-                    single_valid_data.append(float(columns[feature_column_num].strip('\n')))
-                valid_data.append(single_valid_data)
+                    # Append validation data
+                    valid_target.append([float(columns[target_index])])
+                    if(columns[target_index] == "1"):
+                        valid_pos_cnt += 1
+                    else:
+                        valid_neg_cnt += 1
+                    single_valid_data = []
+                    for feature_column_num in feature_column_nums:
+                        single_valid_data.append(float(columns[feature_column_num].strip('\n')))
+                    valid_data.append(single_valid_data)
     print("Total date count: " + str(count) + ".")
     print("Train pos count: " + str(train_pos_cnt) + ".")
     print("Train neg count: " + str(train_neg_cnt) + ".")
