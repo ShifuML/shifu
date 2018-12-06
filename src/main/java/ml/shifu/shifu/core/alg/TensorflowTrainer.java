@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +34,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.util.Environment;
 
 /**
  * TensorflowTrainer enables tensorflow model training in shifu.
@@ -49,6 +51,7 @@ public class TensorflowTrainer {
 
     private String inputDataPath;
 
+    @SuppressWarnings("unused")
     private String outputModelDir;
 
     private double learningRate = 1;
@@ -63,29 +66,38 @@ public class TensorflowTrainer {
 
     private int hiddenLayers = 1;
 
+    @SuppressWarnings("unused")
     private List<ColumnConfig> ccList;
 
+    @SuppressWarnings("unused")
     private ModelConfig modelConfig;
 
     private PathFinder pathFinder;
 
+    @SuppressWarnings("unused")
     private String alg;
 
     private char delimiter;
 
+    @SuppressWarnings("unused")
     private String lossFunc;
 
+    @SuppressWarnings("unused")
     private String optimizer;
 
     private int epoch = 100;
+    
+    private double validateRate = 0.2;
+    
+    private String modelName;
 
     /**
      * Extract and store tensorflow training params from shifu configs.
      * 
      * @param modelConfig
-     *      Shifu model config.
+     *            Shifu model config.
      * @param ccList
-     *      Shifu column config. 
+     *            Shifu column config.
      */
     @SuppressWarnings("unchecked")
     public TensorflowTrainer(ModelConfig modelConfig, List<ColumnConfig> ccList) {
@@ -117,35 +129,43 @@ public class TensorflowTrainer {
         hiddenLayerNodes = (List<Integer>) modelTrainConf.getParams().get(CommonConstants.NUM_HIDDEN_NODES);
         hiddenLayers = hiddenLayerNodes.size();
         inputDataPath = pathFinder.getNormalizedDataPath();
-        alg = (String)modelConfig.getParams().get(CommonConstants.TF_ALG);
+        alg = (String) modelConfig.getParams().get(CommonConstants.TF_ALG);
         delimiter = modelConfig.getDataSetDelimiter().charAt(0);
         lossFunc = (String) modelTrainConf.getParams().get(CommonConstants.TF_LOSS);
         optimizer = (String) modelTrainConf.getParams().get(CommonConstants.TF_OPTIMIZER);
         epoch = modelTrainConf.getNumTrainEpochs();
+        validateRate = modelTrainConf.getValidSetRate();
+        modelName = modelConfig.getBasic().getName();
     }
 
     public void train() throws IOException {
         List<String> commands = buildCommands();
         ProcessBuilder pb = new ProcessBuilder(commands);
+
         pb.directory(new File("./"));
+        pb.redirectErrorStream(true);
         LOGGER.info("Start trainning sub process. Commands {}", commands.toString());
-        Process p = pb.start();
-        StreamCollector sc = new StreamCollector(p.getInputStream());
+        Process process = pb.start();
+        StreamCollector sc = new StreamCollector(process.getInputStream());
         sc.start();
+
         try {
-            p.waitFor();
-            sc.close();
+            process.waitFor();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
+        } finally {
+            if(sc != null) {
+                sc.close();
+            }
         }
     }
 
     /**
      * Build the tensorflow training script input params.
+     * 
      * @return
-     *      A list contains command all params to start python training.
+     *         A list contains command all params to start python training.
      */
-    @SuppressWarnings("unchecked")
     public List<String> buildCommands() {
         List<String> commands = new ArrayList<String>();
 
@@ -163,8 +183,29 @@ public class TensorflowTrainer {
             delimiterStr = "\\" + delimiter;
         }
 
-        commands.add("python");
-        commands.add("train.py");
+        String newGlibcPath = Environment.getProperty("glibc.path", "/x/home/website/glibc2.17");
+
+        String pythonHome = Environment.getProperty("python.home");
+        if(StringUtils.isEmpty(pythonHome)) {
+            pythonHome = Environment.getProperty("PYTHON_HOME", "/x/home/website/python2.7");
+        }
+        if(StringUtils.isEmpty(pythonHome)) {
+            throw new IllegalArgumentException(
+                    "Please check if you set python install path to shifuconfig or -Dpython.home=...");
+        }
+
+        String hadoopHome = System.getenv("HADOOP_HOME");
+        if(StringUtils.isEmpty(hadoopHome)) {
+            throw new IllegalArgumentException("Please check if system env HADOOP_HOME is set well or not.");
+        }
+
+        commands.add(pathFinder.getScriptPath("bin/pytrain.sh"));
+        commands.add(hadoopHome);
+        commands.add(newGlibcPath);
+        commands.add(System.getenv("LD_LIBRARY_PATH"));
+        commands.add(System.getenv("JAVA_HOME"));
+        commands.add(pythonHome);
+        commands.add(pathFinder.getScriptPath("scripts/train.py"));
         commands.add("-learningRate");
         commands.add(String.valueOf(learningRate));
         commands.add("-epochnums");
@@ -175,20 +216,22 @@ public class TensorflowTrainer {
         commands.add(String.valueOf(targetColumnNum));
         commands.add("-hiddenlayernodes");
         commands.add(hiddenLayerNodesStr);
-        commands.add("-hiddenlayers");
-        commands.add(String.valueOf(hiddenLayers));
         commands.add("-inputdaatapath");
         commands.add(inputDataPath);
         commands.add("-seletectedcolumnnums");
         commands.add(seletectedColumnNumsStr);
         commands.add("-alg");
-        commands.add(alg);
+        commands.add("dnn");
         commands.add("-delimiter");
         commands.add(delimiterStr);
         commands.add("-lossfunc");
-        commands.add(lossFunc);
+        commands.add("loss");
         commands.add("-optimizer");
-        commands.add(optimizer);
+        commands.add("opti");
+        commands.add("-validaterate");
+        commands.add(String.valueOf(validateRate));
+        commands.add("-modelname");
+        commands.add(modelName);
 
         return commands;
     }
@@ -198,7 +241,7 @@ public class TensorflowTrainer {
         private static final int LAST_LINES_COUNT = 100;
         /** Class logger */
         private static final Logger LOGGER = LoggerFactory.getLogger(StreamCollector.class);
-        
+
         private static final Logger PYTHON_LOGGER = LoggerFactory.getLogger("TensorflowPython");
 
         /** Buffered reader of input stream */

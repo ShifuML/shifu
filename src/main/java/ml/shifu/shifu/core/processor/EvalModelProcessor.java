@@ -783,7 +783,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 }
             }
         }
-
+        if(Constants.GENERIC.equalsIgnoreCase(modelConfig.getAlgorithm()) 
+                || Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+            // TODO correct this logic
+            return;
+        }
         List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig,
                 SourceType.LOCAL, evalConfig.getGbtConvertToProb(),
                 evalConfig.getGbtScoreConvertStrategy());

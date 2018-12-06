@@ -230,6 +230,16 @@ case ${COMMAND} in
     "train")
         sanity_check
         record_shifu_usage "$@"
+
+        if [ "${HADOOP_HOME}" == "" ]; then
+            CURRENT_FOLDER=`pwd`
+            cd $HADOOP_ROOT/../
+            BACK_HADOOP_ROOT=`pwd`
+            HADOOP_HOME=`ls -al $BACK_HADOOP_ROOT | grep hadoop-client | awk '{print $NF}'`
+            export HADOOP_HOME
+            cd $CURRENT_FOLDER
+        fi
+
         java ${JAVA_OPTIONS} -classpath ${CLASSPATH} ${CLASS} "$@"
         ;;
     "combo")

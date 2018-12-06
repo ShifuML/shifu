@@ -905,7 +905,8 @@ public final class CommonUtils {
         List<BasicML> models = new ArrayList<BasicML>();
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         // check if eval generic model, if so bypass the shifu model loader procedure
-        if(Constants.GENERIC.equals(modelConfig.getAlgorithm())) {
+        if(Constants.GENERIC.equalsIgnoreCase(modelConfig.getAlgorithm()) 
+                || Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
             List<FileStatus> genericModelConfigs = findGenericModels(modelConfig, evalConfig, sourceType);
             if(genericModelConfigs.isEmpty()) {
                 throw new RuntimeException("Load generic model failed.");
@@ -932,15 +933,16 @@ public final class CommonUtils {
             SourceType sourceType, List<BasicML> models) throws IOException {
         for(FileStatus fst: genericModelConfigs) {
             GenericModelConfig gmc = loadJSON(fst.getPath().toString(), sourceType, GenericModelConfig.class);
-            if(SourceType.HDFS.equals(sourceType)) {
-                throw new RuntimeException("Eval souce type is not supported. Only HDFS is supported.");
-            }
             FileSystem hdfs = HDFSUtils.getFS();
             PathFinder pathFinder = new PathFinder(modelConfig);
             String alg = (String) gmc.getProperties().get(Constants.GENERIC_ALGORITHM);
             String src = pathFinder.getModelsPath(sourceType);
-            hdfs.copyToLocalFile(false, new Path(src), new Path(System.getProperty(Constants.USER_DIR)), true);
-            String genericModelPath = System.getProperty(Constants.USER_DIR) + File.separator + Constants.MODELS;
+            File f = new File(System.getProperty(Constants.USER_DIR) + "/models");
+            // check if model dir is exist            
+            if(!f.exists()) {
+                hdfs.copyToLocalFile(false, new Path(src), new Path(System.getProperty(Constants.USER_DIR)), true);
+            }
+            String genericModelPath = System.getProperty(Constants.USER_DIR) + File.separator + Constants.MODELS + File.separator + modelConfig.getBasic().getName();
             gmc.getProperties().put(Constants.GENERIC_MODEL_PATH, genericModelPath);
             log.info("Generic model path is : {}.", gmc.getProperties().get(Constants.GENERIC_MODEL_PATH));
             if(Constants.TENSORFLOW.equals(alg)) {
@@ -952,7 +954,7 @@ public final class CommonUtils {
                     GenericModel genericModel = new GenericModel(computable, gmc.getProperties());
                     models.add(genericModel);
                 } catch (Exception e) {
-                    throw new RuntimeException("Get model fail.");
+                    throw new RuntimeException(e);
                 }
             } else {
                 throw new RuntimeException("Algorithm: " + alg + " is not supported in generic model yet.");
@@ -1250,11 +1252,11 @@ public final class CommonUtils {
 
         List<FileStatus> fileList = new ArrayList<FileStatus>();
         if(null == evalConfig || StringUtils.isBlank(evalConfig.getModelsPath())) {
-            Path path = new Path(pathFinder.getModelsPath(sourceType));
+            Path path = new Path(pathFinder.getModelsPath(sourceType) + File.separator + modelConfig.getBasic().getName());
             fileList.addAll(Arrays.asList(fs.listStatus(path, new FileSuffixPathFilter(modelSuffix))));
         } else {
             String modelsPath = evalConfig.getModelsPath();
-            FileStatus[] expandedPaths = fs.globStatus(new Path(modelsPath));
+            FileStatus[] expandedPaths = fs.globStatus(new Path(modelsPath + File.separator + modelConfig.getBasic().getName()));
             if(ArrayUtils.isNotEmpty(expandedPaths)) {
                 for(FileStatus epath: expandedPaths) {
                     fileList.addAll(

@@ -346,5 +346,7 @@ public interface Constants {
     public static final String SHIFU_OUTPUT_DATA_DELIMITER = "shifu.output.data.delimiter";
     
     public static final String SHIFU_NORM_PRECISION_TYPE = "shifu.norm.precision.type";
+    
+    public static final String TF_ALG_NAME = "Tensorflow";
 
 }
