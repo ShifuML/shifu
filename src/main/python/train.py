@@ -207,7 +207,7 @@ def export_generic_config(export_dir):
     config_json_str += "         \"algorithm\": \"tensorflow\",\n"
     config_json_str += "         \"tags\": [\"serve\"],\n"
     config_json_str += "         \"outputnames\": \"shifu_output_0\",\n"
-    config_json_str += "         \"normtype\": \"ZSCALE\"\n"
+    config_json_str += "         \"normtype\": \"ZSCALE\",\n"
     config_json_str += "      }\n"
     config_json_str += "}"
     f = file(export_dir + "/" + "GenericModelConfig.json", mode="w+")
@@ -256,6 +256,7 @@ if __name__ == "__main__":
     delimiter = args.delimiter.replace('\\', "")
     context = {"feature_column_nums": feature_column_nums ,"layers": hidden_layers, "batch_size": 10,
                "export_dir": "./models", "epoch": args.epochnums, "model_name": model_name, "checkpoint_interval": args.checkpointinterval}
+    os.makedirs("./models", 0777)
     input_features, targets, validate_feature, validate_target = load_data(context)
 
     output_layer, cost_func, optimizer, input_placeholder, target_placeholder, \

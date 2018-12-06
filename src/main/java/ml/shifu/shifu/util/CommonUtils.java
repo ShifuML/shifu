@@ -938,10 +938,11 @@ public final class CommonUtils {
             String alg = (String) gmc.getProperties().get(Constants.GENERIC_ALGORITHM);
             String src = pathFinder.getModelsPath(sourceType);
             File f = new File(System.getProperty(Constants.USER_DIR) + "/models");
+            // check if model dir is exist            
             if(!f.exists()) {
                 hdfs.copyToLocalFile(false, new Path(src), new Path(System.getProperty(Constants.USER_DIR)), true);
             }
-            String genericModelPath = System.getProperty(Constants.USER_DIR) + File.separator + Constants.MODELS;
+            String genericModelPath = System.getProperty(Constants.USER_DIR) + File.separator + Constants.MODELS + File.separator + modelConfig.getBasic().getName();
             gmc.getProperties().put(Constants.GENERIC_MODEL_PATH, genericModelPath);
             log.info("Generic model path is : {}.", gmc.getProperties().get(Constants.GENERIC_MODEL_PATH));
             if(Constants.TENSORFLOW.equals(alg)) {
