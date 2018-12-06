@@ -88,6 +88,8 @@ public class TensorflowTrainer {
     private int epoch = 100;
     
     private double validateRate = 0.2;
+    
+    private String modelName;
 
     /**
      * Extract and store tensorflow training params from shifu configs.
@@ -133,6 +135,7 @@ public class TensorflowTrainer {
         optimizer = (String) modelTrainConf.getParams().get(CommonConstants.TF_OPTIMIZER);
         epoch = modelTrainConf.getNumTrainEpochs();
         validateRate = modelTrainConf.getValidSetRate();
+        modelName = modelConfig.getBasic().getName();
     }
 
     public void train() throws IOException {
@@ -227,6 +230,8 @@ public class TensorflowTrainer {
         commands.add("opti");
         commands.add("-validaterate");
         commands.add(String.valueOf(validateRate));
+        commands.add("-modelname");
+        commands.add(modelName);
 
         return commands;
     }
