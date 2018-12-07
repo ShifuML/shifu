@@ -1,9 +1,4 @@
-package ml.shifu.shifu.core.dtrain.earlystop;
-
-import java.util.LinkedList;
-import java.util.List;
-
-/**
+/*
  * Copyright [2013-2018] PayPal Software Foundation
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License")
@@ -17,6 +12,7 @@ import java.util.List;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
+package ml.shifu.shifu.core.dtrain.earlystop;
 
 public class WindowEarlyStop extends AbstractEarlyStopStrategy {
 

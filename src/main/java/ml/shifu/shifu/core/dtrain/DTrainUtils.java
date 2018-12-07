@@ -441,7 +441,7 @@ public final class DTrainUtils {
      *      Double value if the key exists and value format is correct
      *      or defval
      */
-    public static Double getDouble(Map params, String key, Double defval) {
+    public static Double getDouble(Map<?, ?> params, String key, Double defval) {
         Double val = defval;
         if(MapUtils.isNotEmpty(params) && params.containsKey(key)) {
             Object obj = params.get(key);
@@ -466,7 +466,7 @@ public final class DTrainUtils {
      *      Boolean value if the key exists and value format is correct
      *      or defval
      */
-    public static Boolean getBoolean(Map params, String key, Boolean defval) {
+    public static Boolean getBoolean(Map<?, ?> params, String key, Boolean defval) {
         Boolean val = defval;
         if(MapUtils.isNotEmpty(params) && params.containsKey(key)) {
             Object obj = params.get(key);
