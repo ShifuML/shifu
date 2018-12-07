@@ -577,7 +577,7 @@ public class ModelInspector {
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
-                Object learningDecayO = params.get("LearningDecay");
+                Object learningDecayO = params.get(CommonConstants.LEARNING_DECAY);
                 if(learningDecayO != null) {
                     Double learningDecay = Double.valueOf(learningDecayO.toString());
                     if(learningDecay != null && ((learningDecay.compareTo(Double.valueOf(0)) < 0)

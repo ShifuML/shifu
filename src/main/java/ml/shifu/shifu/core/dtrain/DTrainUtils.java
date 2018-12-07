@@ -17,6 +17,7 @@ package ml.shifu.shifu.core.dtrain;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -38,6 +39,8 @@ import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
 
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.encog.Encog;
 import org.encog.engine.network.activation.ActivationLOG;
@@ -50,11 +53,15 @@ import org.encog.mathutil.randomize.NguyenWidrowRandomizer;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.layers.BasicLayer;
 import org.encog.neural.networks.structure.NeuralStructure;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Helper class for NN distributed training.
  */
 public final class DTrainUtils {
+
+    private static Logger LOG = LoggerFactory.getLogger(DTrainUtils.class);
 
     public static final String RESILIENTPROPAGATION = "R";
     public static final String SCALEDCONJUGATEGRADIENT = "S";
@@ -422,5 +429,55 @@ public final class DTrainUtils {
         } else {
             return featureSet.size();
         }
+    }
+
+    /**
+     * Get Double property value from map.
+     * If the value doesn't exist in the Map or the format is incorrect, use @defval as default
+     * @param params input Map
+     * @param key the key to look up
+     * @param defval default value, if the key is not in the map or the value format is illegal
+     * @return
+     *      Double value if the key exists and value format is correct
+     *      or defval
+     */
+    public static Double getDouble(Map params, String key, Double defval) {
+        Double val = defval;
+        if(MapUtils.isNotEmpty(params) && params.containsKey(key)) {
+            Object obj = params.get(key);
+            if(obj != null) {
+                try {
+                    val = Double.valueOf(org.apache.commons.lang3.StringUtils.trimToEmpty(obj.toString()));
+                } catch (Exception e) {
+                    LOG.warn("Export double value for {} in params, but got {}", key, obj, e);
+                }
+            }
+        }
+        return val;
+    }
+
+    /**
+     * Get Boolean property value from map.
+     * If the value doesn't exist in the Map or the format is incorrect, use @defval as default
+     * @param params input Map
+     * @param key the key to look up
+     * @param defval default value, if the key is not in the map or the value format is illegal
+     * @return
+     *      Boolean value if the key exists and value format is correct
+     *      or defval
+     */
+    public static Boolean getBoolean(Map params, String key, Boolean defval) {
+        Boolean val = defval;
+        if(MapUtils.isNotEmpty(params) && params.containsKey(key)) {
+            Object obj = params.get(key);
+            if(obj != null) {
+                try {
+                    val = Boolean.valueOf(StringUtils.trimToEmpty(obj.toString()));
+                } catch (Exception e) {
+                    LOG.warn("Export boolean value for {} in params, but got {}", key, obj, e);
+                }
+            }
+        }
+        return val;
     }
 }

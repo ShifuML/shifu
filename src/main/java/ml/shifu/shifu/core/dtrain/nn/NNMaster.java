@@ -1,12 +1,12 @@
 /**
  * Copyright [2012-2014] PayPal Software Foundation
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,9 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.nn;
 
-import java.io.IOException;
-import java.util.*;
-
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterContext;
@@ -25,18 +22,20 @@ import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.ConvergeJudger;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import ml.shifu.shifu.core.dtrain.Weight;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.FloatFlatNetwork;
+import ml.shifu.shifu.core.dtrain.earlystop.AbstractEarlyStopStrategy;
+import ml.shifu.shifu.core.dtrain.earlystop.ConvergeAndValidToleranceEarlyStop;
+import ml.shifu.shifu.core.dtrain.earlystop.WindowEarlyStop;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
-
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.encog.ml.BasicML;
@@ -45,16 +44,19 @@ import org.encog.neural.networks.BasicNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.util.*;
+
 /**
  * {@link NNMaster} is used to accumulate all workers NN parameters.
- * 
+ *
  * <p>
  * We accumulate all gradients from workers to calculate model weights. And set weights to workers. Then workers use
  * weights to set their models and train for another iteration.
- * 
+ *
  * <p>
  * This logic follows Encog multi-core implementation.
- * 
+ *
  * <p>
  * Make sure workers and master use the same initialization weights.
  */
@@ -113,24 +115,9 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
     private boolean isContinuousEnabled = false;
 
     /**
-     * Convergence threshold setting.
-     */
-    private double convergenceThreshold = Double.MIN_VALUE;
-
-    /**
-     * Convergence judger instance for convergence checking.
-     */
-    private ConvergeJudger judger = new ConvergeJudger();
-
-    /**
      * Valid params specially for grid search
      */
     private Map<String, Object> validParams;
-
-    /**
-     * Validation tolerance which is for early stop, by default it is 0d which means early stop is not enabled.
-     */
-    private double validationTolerance = 0d;
 
     /**
      * The best validation error for error computing
@@ -197,7 +184,15 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
      */
     private Set<Integer> fixedWeightIndexSet;
 
+    /**
+     * The number of hidden layers for neural network
+     */
     private Integer hiddenLayerNum = 0;
+
+    /**
+     * The early stop strategy. If it is null, then early stop is disabled
+     */
+    private AbstractEarlyStopStrategy earlyStopStrategy;
 
     @Override
     public NNParams doCompute(MasterContext<NNParams, NNParams> context) {
@@ -233,7 +228,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
 
         long totalCount = 0L;
         int totalWorkerCount = 0;
-        for(NNParams nn: context.getWorkerResults()) {
+        for(NNParams nn : context.getWorkerResults()) {
             totalTestError += nn.getTestError();
             totalTrainError += nn.getTrainError();
             this.globalNNParams.accumulateGradients(nn.getGradients());
@@ -271,8 +266,9 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
 
         // use last weights and current gradients to calculate, current iteration - 1 to remove 1st iteration for worker
         // data reading
-        double[] weights = this.weightCalculator.calculateWeights(this.globalNNParams.getWeights(),
-                this.globalNNParams.getGradients(), (context.getCurrentIteration() - 1));
+        double[] weights = this.weightCalculator
+                .calculateWeights(this.globalNNParams.getWeights(), this.globalNNParams.getGradients(),
+                        (context.getCurrentIteration() - 1));
 
         if(LOG.isDebugEnabled()) {
             logSameWeights(oldWeights, weights);
@@ -283,23 +279,6 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         // average error
         double currentTestError = totalTestError / totalWorkerCount;
         double currentTrainError = totalTrainError / totalWorkerCount;
-
-        boolean vtTriggered = false;
-        // if validationTolerance == 0d, means vt check is not enabled
-        if(validationTolerance > 0d) {
-            double weightSumSquare = 0d;
-            double diffWeightSumSquare = 0d;
-            for(int i = 0; i < weights.length; i++) {
-                weightSumSquare += Math.pow(weights[i], 2);
-                diffWeightSumSquare += Math.pow(weights[i] - oldWeights[i], 2);
-            }
-            if(Math.pow(diffWeightSumSquare, 0.5) < this.validationTolerance
-                    * Math.max(Math.pow(weightSumSquare, 0.5), 1d)) {
-                LOG.info("Debug: diffWeightSumSquare {}, weightSumSquare {}, validationTolerance {}",
-                        Math.pow(diffWeightSumSquare, 0.5), Math.pow(weightSumSquare, 0.5), validationTolerance);
-                vtTriggered = true;
-            }
-        }
 
         if(currentTestError < this.bestValidationError) {
             this.bestValidationError = currentTestError;
@@ -319,17 +298,12 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         }
         LOG.debug("master result {} in iteration {}", params, context.getCurrentIteration());
 
-        // Convergence judging part
-        double avgErr = (currentTrainError + currentTestError) / 2;
-
-        LOG.info("NNMaster compute iteration {} average error: {}, threshold: {}", context.getCurrentIteration(),
-                avgErr, convergenceThreshold);
-
-        if(judger.judge(avgErr, convergenceThreshold) || vtTriggered) {
-            LOG.info("NNMaster compute iteration {} converged !", context.getCurrentIteration());
-            params.setHalt(true);
-        } else {
-            LOG.debug("NNMaster compute iteration {} not converged yet !", context.getCurrentIteration());
+        if(earlyStopStrategy != null) {
+            boolean isToStopEarly = earlyStopStrategy
+                    .shouldEarlyStop(context.getCurrentIteration(), weights, currentTrainError, currentTestError);
+            if(isToStopEarly) {
+                params.setHalt(true);
+            }
         }
 
         return params;
@@ -383,24 +357,25 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         NNParams params = new NNParams();
         boolean isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
 
-        int[] inputAndOutput = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
-                this.columnConfigList);
-        int featureInputsCnt = DTrainUtils.getFeatureInputsCnt(modelConfig, this.columnConfigList,
-                new HashSet<Integer>(this.subFeatures));
-        @SuppressWarnings("unused")
-        int inputNodeCount = inputAndOutput[0] == 0 ? inputAndOutput[2] : inputAndOutput[0];
+        int[] inputAndOutput = DTrainUtils
+                .getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
+        int featureInputsCnt = DTrainUtils
+                .getFeatureInputsCnt(modelConfig, this.columnConfigList, new HashSet<Integer>(this.subFeatures));
+        @SuppressWarnings("unused") int inputNodeCount = inputAndOutput[0] == 0 ? inputAndOutput[2] : inputAndOutput[0];
         // if is one vs all classification, outputNodeCount is set to 1, if classes=2, outputNodeCount is also 1
         int classes = modelConfig.getTags().size();
-        int outputNodeCount = (isLinearTarget || modelConfig.isRegression()) ? inputAndOutput[1]
-                : (modelConfig.getTrain().isOneVsAll() ? inputAndOutput[1] : (classes == 2 ? 1 : classes));
+        int outputNodeCount = (isLinearTarget || modelConfig.isRegression()) ?
+                inputAndOutput[1] :
+                (modelConfig.getTrain().isOneVsAll() ? inputAndOutput[1] : (classes == 2 ? 1 : classes));
         int numLayers = (Integer) validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
         String outputActivationFunc = (String) validParams.get(CommonConstants.OUTPUT_ACTIVATION_FUNC);
-        BasicNetwork network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers, actFunc,
-                hiddenNodeList, true, this.dropoutRate, this.wgtInit,
-                CommonUtils.isLinearTarget(modelConfig, columnConfigList), outputActivationFunc);
+        BasicNetwork network = DTrainUtils
+                .generateNetwork(featureInputsCnt, outputNodeCount, numLayers, actFunc, hiddenNodeList, true,
+                        this.dropoutRate, this.wgtInit, CommonUtils.isLinearTarget(modelConfig, columnConfigList),
+                        outputActivationFunc);
 
         this.flatNetwork = (FloatFlatNetwork) network.getFlat();
 
@@ -420,8 +395,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             SourceType sourceType = SourceType
                     .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
 
-            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
-                    sourceType);
+            this.modelConfig = CommonUtils
+                    .loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG), sourceType);
 
             this.columnConfigList = CommonUtils
                     .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
@@ -438,19 +413,18 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             LOG.info("Start grid search master with params: {}", validParams);
         }
 
-        Object vtObj = validParams.get("ValidationTolerance");
-        if(vtObj != null) {
-            try {
-                validationTolerance = Double.parseDouble(vtObj.toString());
-                LOG.warn("Validation by tolerance is enabled with value {}.", validationTolerance);
-            } catch (NumberFormatException ee) {
-                validationTolerance = 0d;
-                LOG.warn(
-                        "Validation by tolerance isn't enabled because of non numerical value of ValidationTolerance: {}.",
-                        vtObj);
+        Boolean enabledEarlyStop = DTrainUtils.getBoolean(validParams, CommonConstants.ENABLE_EARLY_STOP, Boolean.FALSE);
+        if(enabledEarlyStop) {
+            Double validTolerance = DTrainUtils.getDouble(validParams, CommonConstants.VALIDATION_TOLERANCE, null);
+            if(validTolerance == null) {
+                LOG.info("Early Stop is enabled. use WindowEarlyStop");
+                this.earlyStopStrategy = new WindowEarlyStop(20); // default, user should could adjust it
+            } else {
+                LOG.info("Early Stop is enabled. use ConvergeAndValiToleranceEarlyStop");
+                Double threshold = this.modelConfig.getTrain().getConvergenceThreshold();
+                this.earlyStopStrategy = new ConvergeAndValidToleranceEarlyStop(
+                        threshold == null ? Double.MIN_VALUE : threshold.doubleValue(), validTolerance);
             }
-        } else {
-            LOG.info("Validation by tolerance isn't enabled.");
         }
 
         Object pObject = validParams.get(CommonConstants.PROPAGATION);
@@ -462,7 +436,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         }
         LOG.info("'dropoutRate' in master is : {}", this.dropoutRate);
 
-        Object learningDecayO = validParams.get("LearningDecay");
+        Object learningDecayO = validParams.get(CommonConstants.LEARNING_DECAY);
         if(learningDecayO != null) {
             this.learningDecay = Double.valueOf(learningDecayO.toString());
         }
@@ -486,10 +460,6 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         }
         LOG.info("'adamBeta2' in master is :{}", adamBeta2);
 
-        Double threshold = this.modelConfig.getTrain().getConvergenceThreshold();
-        this.convergenceThreshold = threshold == null ? Double.MIN_VALUE : threshold.doubleValue();
-        LOG.info("Convergence threshold in master is :{}", this.convergenceThreshold);
-
         this.wgtInit = "default";
         Object wgtInitObj = validParams.get("WeightInitializer");
         if(wgtInitObj != null) {
@@ -498,7 +468,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
 
         this.isContinuousEnabled = Boolean.TRUE.toString()
                 .equalsIgnoreCase(context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
-        Object rconstant = validParams.get(CommonConstants.LR_REGULARIZED_CONSTANT);
+        Object rconstant = validParams.get(CommonConstants.REGULARIZED_CONSTANT);
         this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
 
         // We do not update weight in fixed layers so that we could fine tune other layers of NN
@@ -528,7 +498,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         } else {
             String[] splits = subsetStr.split(",");
             this.subFeatures = new ArrayList<Integer>(splits.length);
-            for(String split: splits) {
+            for(String split : splits) {
                 this.subFeatures.add(Integer.parseInt(split));
             }
         }
@@ -595,7 +565,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
     private Set<Integer> getFixedWights(List<Integer> fixedLayers) {
         Set<Integer> fixedWeight = new HashSet<Integer>();
 
-        for(int fixedLayer: fixedLayers) {
+        for(int fixedLayer : fixedLayers) {
             int realLayer = this.hiddenLayerNum - fixedLayer + 1;
             int fromWeightIndex = this.flatNetwork.getWeightIndex()[realLayer];
             int toWeightIndex = this.flatNetwork.getWeightIndex()[realLayer + 1];
@@ -610,20 +580,16 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
     /**
      * Fit one FlatNetwork (fromFlatNetwork) to another FlatNetwork (toFlatNetwork), and if there is fixedLayers
      * return the weight index in the new FlatNetwork
-     *
+     * <p>
      * Please Note - the destination FlatNetwork should be larger than source FlatNetwork. Or it will generate
      * incorrect weight mapping.
-     * 
-     * @param fromFlatNetwork
-     *            - the source FlatNetwork (smaller network)
-     * @param toFlatNetwork
-     *            - the destination FlatNetwork (larger network)
-     * @param fixedLayers
-     *            - the fixed lays in source FlatNetwork
-     * @param fixedBias
-     *            - the bias is fixed, if user want to fix layer
+     *
+     * @param fromFlatNetwork - the source FlatNetwork (smaller network)
+     * @param toFlatNetwork   - the destination FlatNetwork (larger network)
+     * @param fixedLayers     - the fixed lays in source FlatNetwork
+     * @param fixedBias       - the bias is fixed, if user want to fix layer
      * @return the fixed weight index in destination FlatNetwork. If there is no fixed layers, it will return
-     *         empty set.
+     * empty set.
      */
     public Set<Integer> fitExistingModelIn(FlatNetwork fromFlatNetwork, FlatNetwork toFlatNetwork,
             List<Integer> fixedLayers, boolean fixedBias) {
