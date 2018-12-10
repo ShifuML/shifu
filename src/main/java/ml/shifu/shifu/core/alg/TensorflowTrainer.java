@@ -91,6 +91,7 @@ public class TensorflowTrainer {
     
     private String modelName;
 
+    private int weightColumnNum = -1;
     /**
      * Extract and store tensorflow training params from shifu configs.
      * 
@@ -111,6 +112,8 @@ public class TensorflowTrainer {
                 targetColumnNum = i;
             } else if(cc.isFinalSelect()) {
                 seletectedColumnNums.add(i);
+            } else if (cc.isWeight()) {
+                weightColumnNum = i;
             }
         }
         if(seletectedColumnNums.size() == 0) {
@@ -232,7 +235,9 @@ public class TensorflowTrainer {
         commands.add(String.valueOf(validateRate));
         commands.add("-modelname");
         commands.add(modelName);
-
+        commands.add("-weightcolumnnum");
+        commands.add(String.valueOf(weightColumnNum));
+        
         return commands;
     }
 
