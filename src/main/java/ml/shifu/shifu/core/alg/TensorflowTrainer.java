@@ -64,6 +64,7 @@ public class TensorflowTrainer {
 
     private List<Integer> hiddenLayerNodes = new ArrayList<Integer>();
 
+    @SuppressWarnings("unused")
     private int hiddenLayers = 1;
 
     @SuppressWarnings("unused")

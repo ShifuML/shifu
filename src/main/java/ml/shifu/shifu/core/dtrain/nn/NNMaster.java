@@ -15,6 +15,25 @@
  */
 package ml.shifu.shifu.core.dtrain.nn;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Random;
+import java.util.Set;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.Path;
+import org.encog.ml.BasicML;
+import org.encog.neural.flat.FlatNetwork;
+import org.encog.neural.networks.BasicNetwork;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterContext;
@@ -34,18 +53,6 @@ import ml.shifu.shifu.core.dtrain.earlystop.WindowEarlyStop;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.MapUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.fs.Path;
-import org.encog.ml.BasicML;
-import org.encog.neural.flat.FlatNetwork;
-import org.encog.neural.networks.BasicNetwork;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.*;
 
 /**
  * {@link NNMaster} is used to accumulate all workers NN parameters.

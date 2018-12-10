@@ -101,7 +101,7 @@ mapreduce.map.cpu.vcores=1
 # shifu.output.data.delimiter=|
 
 ## enable to use multi-thread to score evaluation set
-shifu.eval.score.multithread=true
+shifu.eval.score.multithread=false
 
 ## define the max distinct value for categorical variable
 ## if a categorical variable has mor than ${shifu.max.category.size} variables, it will be ignored
