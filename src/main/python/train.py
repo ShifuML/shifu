@@ -221,7 +221,7 @@ def export_generic_config(export_dir):
     config_json_str += "         \"algorithm\": \"tensorflow\",\n"
     config_json_str += "         \"tags\": [\"serve\"],\n"
     config_json_str += "         \"outputnames\": \"shifu_output_0\",\n"
-    config_json_str += "         \"normtype\": \"ZSCALE\",\n"
+    config_json_str += "         \"normtype\": \"ZSCALE\"\n"
     config_json_str += "      }\n"
     config_json_str += "}"
     f = file(export_dir + "/" + "GenericModelConfig.json", mode="w+")
