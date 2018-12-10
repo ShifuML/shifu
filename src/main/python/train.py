@@ -33,7 +33,7 @@ import tensorflow as tf
 import numpy as np
 import sys
 import os
-
+import datetime
 
 def load_data(context):
 
@@ -54,11 +54,21 @@ def load_data(context):
     normFileNames = filter(lambda x: not x.startswith(".") and not x.startswith("_"), allFileNames)
     print(normFileNames)
     print("Total input file count is " + str(len(normFileNames)) + ".")
+    sys.stdout.flush()
 
     count = 0
+    fCount = 0
     for normFileName in normFileNames:
-        print("Now loading " + normFileName + " Progress: " + str(count) + "/" + str(len(normFileNames)) + ".")
+        print("Current time: " + str(datetime.datetime.now()) + " and current file index:" +  str(fCount) + "; loading " + normFileName + " Progress: " + str(count) + "/" + str(len(normFileNames)) + ".")
+        sys.stdout.flush()
+        
         count += 1
+        
+        #if fCount > 2:
+        #    break
+        
+        #fCount += 1
+        
         with gfile.Open(root + '/' + normFileName, 'rb') as f:
             gf = gzip.GzipFile(fileobj=StringIO(f.read()))
             while True:
@@ -99,9 +109,9 @@ def load_data(context):
     print("Train neg count: " + str(train_neg_cnt) + ".")
     print("Valid pos count: " + str(valid_pos_cnt) + ".")
     print("Valid neg count: " + str(valid_neg_cnt) + ".")
+    sys.stdout.flush()
 
     context['feature_count'] = len(feature_column_nums)
-
     return train_data, train_target, valid_data, valid_target
 
 
@@ -160,6 +170,8 @@ def train(input_placeholder, target_placeholder, output_layer, cost_func, optimi
     export_dir = context["export_dir"] + "/" + context["model_name"]
     checkpoint_interval = context["checkpoint_interval"]
     print(checkpoint_interval)
+    sys.stdout.flush()
+    
     total_batch = int(len(input_features) / batch_size)
     input_batch = np.array_split(input_features, total_batch)
     target_batch = np.array_split(targets, total_batch)
@@ -176,6 +188,7 @@ def train(input_placeholder, target_placeholder, output_layer, cost_func, optimi
                                   })
             sum_train_error = reduce(lambda x, y: x + y, reduce(lambda x1, y1: np.append(x1, y1),  e))
         print("Epoch " + str(i) + " avg training error is " + str(sum_train_error / len(input_features)) + ".")
+        sys.stdout.flush()
 
         sum_validate_error = 0.0
         for j in range(len(validate_input)):
@@ -186,6 +199,7 @@ def train(input_placeholder, target_placeholder, output_layer, cost_func, optimi
                             })
             sum_validate_error = reduce(lambda x, y: x + y, reduce(lambda x1, y1: x1.append(y1), v))[0]
         print("Epoch " + str(i) + " avg validation error is " + str(sum_validate_error / len(validate_input)) + ".")
+        sys.stdout.flush()
 
     simple_save(session=session, export_dir=export_dir,
                                inputs={
@@ -226,8 +240,8 @@ def remove_path(path):
 
 
 if __name__ == "__main__":
-
     print("Training input arguments: " + str(sys.argv))
+    sys.stdout.flush()
     # Use for parse Arguments
     parser = argparse.ArgumentParser("Shifu_tensorflow_training")
     parser.add_argument("-inputdaatapath", action='store', dest='inputdaatapath', help="data path used for training",
