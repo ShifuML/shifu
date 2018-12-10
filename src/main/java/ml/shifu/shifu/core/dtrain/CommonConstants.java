@@ -73,6 +73,8 @@ public interface CommonConstants {
 
     public static final String NUM_HIDDEN_LAYERS = "NumHiddenLayers";
 
+    public static final String CHECKPOINT_INTERVAL = "CheckpointInterval";
+
     public static final String ACTIVATION_FUNC = "ActivationFunc";
     
     public static final String TF_OPTIMIZER = "TF.optimizer";

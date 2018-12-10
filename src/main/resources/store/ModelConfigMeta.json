@@ -584,6 +584,11 @@
                             }                            
                          ]
                     }, {
+                        "name" : "CheckpointInterval",
+                        "type" : "integer",
+                        "directive": "input",
+                        "defval" : 0
+                    }, {
                         "name" : "NumHiddenNodes",
                         "type" : "list",
                         "directive": "input",

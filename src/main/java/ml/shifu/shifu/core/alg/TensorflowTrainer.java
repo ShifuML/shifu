@@ -242,7 +242,7 @@ public class TensorflowTrainer {
         /** Class logger */
         private static final Logger LOGGER = LoggerFactory.getLogger(StreamCollector.class);
 
-        private static final Logger PYTHON_LOGGER = LoggerFactory.getLogger("TensorflowPython");
+        private static final Logger PYTHON_LOGGER = LoggerFactory.getLogger("tf.script");
 
         /** Buffered reader of input stream */
         private final BufferedReader bufferedReader;

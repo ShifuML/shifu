@@ -36,9 +36,9 @@ import os
 import datetime
 
 
-def tprint(content):
+def tprint(content, log_level="INFO"):
     systime = datetime.datetime.now()
-    print("[Shifu.Tensorflow.train] " + str(systime) + " " + str(content))
+    print(str(systime) + " " + log_level + " " + " [Shifu.Tensorflow.train] " + str(content))
 
 
 def load_data(context):
@@ -140,7 +140,7 @@ def build_graph(shifu_context):
     cost_func = tf.nn.l2_loss(label_placeholder - output_layer)
     optimizer = tf.train.AdamOptimizer(learning_rate=0.03).minimize(cost_func)
     validate_error = label_placeholder - output_layer
-    validate_error = tf.math.pow(validate_error, 2)
+    validate_error = tf.pow(validate_error, 2)
     tprint("Graph build finished.")
     return output_layer, cost_func, optimizer, in_placeholder, label_placeholder, validate_error, graph
 

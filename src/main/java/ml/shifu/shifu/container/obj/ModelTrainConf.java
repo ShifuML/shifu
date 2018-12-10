@@ -576,6 +576,7 @@ public class ModelTrainConf {
             params.put(CommonConstants.LEARNING_RATE, 0.1);
             params.put(CommonConstants.NUM_HIDDEN_LAYERS, 1);
             params.put(CommonConstants.TF_ALG, "DNN");
+            params.put(CommonConstants.CHECKPOINT_INTERVAL, 0);
             List<Integer> nodes = new ArrayList<Integer>();
             nodes.add(50);
             params.put(CommonConstants.NUM_HIDDEN_NODES, nodes);
