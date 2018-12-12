@@ -2064,14 +2064,12 @@ public final class CommonUtils {
      *         - true if use set candidate columns, or false
      */
     public static boolean hasCandidateColumns(List<ColumnConfig> columnConfigList) {
-        int candidateCnt = 0;
         for(ColumnConfig config: columnConfigList) {
             if(ColumnConfig.ColumnFlag.Candidate.equals(config.getColumnFlag())) {
-                candidateCnt++;
+                return true;
             }
         }
-
-        return (candidateCnt > 0);
+        return false;
     }
 
     private static List<Double> computeNumericNormResult(ModelConfig modelConfig, double cutoff, ColumnConfig config,
