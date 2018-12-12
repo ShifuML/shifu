@@ -34,6 +34,8 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 
 /**
@@ -134,7 +136,10 @@ public class TensorflowTrainer {
         hiddenLayers = hiddenLayerNodes.size();
         inputDataPath = pathFinder.getNormalizedDataPath();
         alg = (String) modelConfig.getParams().get(CommonConstants.TF_ALG);
-        delimiter = modelConfig.getDataSetDelimiter().charAt(0);
+        //delimiter = modelConfig.getDataSetDelimiter().charAt(0);
+        delimiter = CommonUtils.escapePigString(
+                Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER)).charAt(0);
+
         lossFunc = (String) modelTrainConf.getParams().get(CommonConstants.TF_LOSS);
         optimizer = (String) modelTrainConf.getParams().get(CommonConstants.TF_OPTIMIZER);
         epoch = modelTrainConf.getNumTrainEpochs();

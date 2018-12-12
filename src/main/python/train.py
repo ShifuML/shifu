@@ -59,11 +59,11 @@ def load_data(context):
     print("Total input file count is " + str(len(normFileNames)) + ".")
     sys.stdout.flush()
 
-    file_count = 0
+    file_count = 1
     line_count = 0
 
     for normFileName in normFileNames:
-        print("Now loading " + normFileName + " Progress: " + str(count) + "/" + str(len(normFileNames)) + ".")
+        print("Now loading " + normFileName + " Progress: " + str(file_count) + "/" + str(len(normFileNames)) + ".")
         sys.stdout.flush()
         file_count += 1
 
@@ -75,7 +75,7 @@ def load_data(context):
                     break
                 
                 line_count += 1
-                if line_count % 5000 == 0: 
+                if line_count % 10000 == 0: 
                     print("Total loading lines cnt: " + str(line_count))
                     sys.stdout.flush()
                 
@@ -87,7 +87,7 @@ def load_data(context):
 
                 if random.random() >= valid_data_percentage:
                     # Append training data
-                    train_target.append([float(columns[target_index])])
+                    train_target.append([int(columns[target_index])])
                     if(columns[target_index] == "1"):
                         train_pos_cnt += 1
                     else :
@@ -102,12 +102,12 @@ def load_data(context):
                         if weight < 0.0:
                             print("Warning: weight is below 0. example:" + line)
                             weight= 1.0
-                        training_data_sample_weight.append([weight])
+                        training_data_sample_weight.append(weight)
                     else:
-                        training_data_sample_weight.append([1.0])
+                        training_data_sample_weight.append(1.0)
                 else:
                     # Append validation data
-                    valid_target.append([float(columns[target_index])])
+                    valid_target.append([int(columns[target_index])])
                     if(columns[target_index] == "1"):
                         valid_pos_cnt += 1
                     else:
@@ -122,10 +122,11 @@ def load_data(context):
                         if weight < 0.0:
                             print("Warning: weight is below 0. example:" + line)
                             weight= 1.0
-                        valid_data_sample_weight.append([weight])
+                        valid_data_sample_weight.append(weight)
                     else:
-                        valid_data_sample_weight.append([1.0])
-    print("Total date count: " + str(count) + ".")
+                        valid_data_sample_weight.append(1.0)
+
+    print("Total data count: " + str(line_count) + ".")
     print("Train pos count: " + str(train_pos_cnt) + ".")
     print("Train neg count: " + str(train_neg_cnt) + ".")
     print("Valid pos count: " + str(valid_pos_cnt) + ".")
@@ -137,34 +138,66 @@ def load_data(context):
     return train_data, train_target, valid_data, valid_target, training_data_sample_weight, valid_data_sample_weight
 
 def build_graph(shifu_context):
+    num_classes = 2
+
     graph = tf.get_default_graph
     in_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, context["feature_count"]), name="shifu_input_0")
-    label_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, 1))
-    sample_weight_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, 1))
+    label_placeholder = tf.placeholder(dtype=tf.int32, shape=(None, num_classes))
+    sample_weight_placeholder = tf.placeholder(dtype=tf.float32, shape=(None))
 
     layers = shifu_context["layers"]
     current_nodes = shifu_context["feature_count"]
+    learning_rate = shifu_context["learning_rate"]
+    
     current_layer = in_placeholder
     dnn_layer = []
     weights = []
-
+    biases = []
+    
     for i in range(len(layers)):
         node_num = layers[i]
-        weight = tf.Variable(tf.random_uniform([current_nodes, node_num]))
-        bias = tf.Variable(tf.random_normal(shape=(1, 1)))
+        weight = tf.Variable(tf.random_normal([current_nodes, node_num]))
+        bias = tf.Variable(tf.random_normal(shape=([node_num])))
         current_layer = tf.matmul(current_layer, weight)
         current_layer = tf.add(current_layer, bias)
-        current_layer = tf.nn.relu(current_layer)
+        current_layer = tf.nn.leaky_relu(current_layer)
         weights.append(weight)
+        biases.append(bias)
         current_nodes = node_num
         dnn_layer.append(current_layer)
 
-    weight = tf.Variable(tf.random_uniform([current_nodes, 1]))
-    output_layer = tf.nn.sigmoid(tf.matmul(current_layer, weight), name="shifu_output_0")
-    cost_func = tf.multiply(tf.nn.l2_loss(label_placeholder - output_layer), sample_weight_placeholder)
-    optimizer = tf.train.AdamOptimizer(learning_rate=0.03).minimize(cost_func)
-    validate_error = label_placeholder - output_layer
-    return output_layer, cost_func, optimizer, in_placeholder, label_placeholder, validate_error, graph, sample_weight_placeholder
+
+        
+    weight = tf.Variable(tf.random_normal([current_nodes, num_classes]))
+    bias = tf.Variable(tf.random_normal(shape=([num_classes])))
+    output_layer = tf.matmul(current_layer, weight)
+    output_layer = tf.add(output_layer, bias)
+    weights.append(weight)
+    biases.append(bias)
+    dnn_layer.append(output_layer)
+    
+    prediction = tf.cast(tf.argmax(tf.nn.softmax(output_layer), 1), tf.float32, name="shifu_output_0")
+    
+    # Define loss and optimizer
+    cost_func = tf.reduce_mean(tf.losses.softmax_cross_entropy(logits=output_layer, onehot_labels=label_placeholder, weights=sample_weight_placeholder))
+    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+    train_op = optimizer.minimize(cost_func)
+    
+    # Evaluate model
+    #correct_pred = tf.equal(prediction, tf.argmax(label_placeholder, 1))
+    #accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+    
+    
+    #output_layer = tf.nn.sigmoid(current_layer, name="shifu_output_0")
+    
+    # Define loss and optimizer
+    #loss = tf.nn.l2_loss(label_placeholder - output_layer)
+    #cost_func = tf.reduce_mean(tf.multiply(loss, sample_weight_placeholder))
+    #loss = tf.losses.mean_squared_error(label_placeholder, output_layer, weights=sample_weight_placeholder)
+
+    #cost_func = tf.losses.mean_squared_error(label_placeholder, output_layer, weights=sample_weight_placeholder)
+    #optimizer = tf.train.AdamOptimizer(learning_rate=0.03).minimize(cost_func)
+    return prediction, cost_func, train_op, in_placeholder, label_placeholder, graph, sample_weight_placeholder
 
 
 def simple_save(session, export_dir, inputs, outputs, legacy_init_op=None):
@@ -183,9 +216,13 @@ def simple_save(session, export_dir, inputs, outputs, legacy_init_op=None):
         clear_devices=True)
     b.save()
 
+def one_hot(input, num_classes):
+    input = np.array(input).reshape(-1)
+    one_hot_targets = np.eye(num_classes)[input]
+    return one_hot_targets
 
-def train(input_placeholder, target_placeholder, sample_weight_placeholder, output_layer, cost_func, optimizer, train_or_validate_error, input_features, targets, validate_input, validate_target, session, context, training_data_sample_weight=[], valid_data_sample_weight=[]):
-
+def train(input_placeholder, target_placeholder, sample_weight_placeholder, prediction, cost_func, train_op, input_features, targets, validate_input, validate_target, session, context, training_data_sample_weight=[], valid_data_sample_weight=[]):
+    num_classes = 2
     session.run(tf.global_variables_initializer())
     epoch = context["epoch"]
     batch_size = context["batch_size"]
@@ -196,37 +233,34 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, outp
     
     total_batch = int(len(input_features) / batch_size)
     input_batch = np.array_split(input_features, total_batch)
-    target_batch = np.array_split(targets, total_batch)
+    target_batch = np.array_split(one_hot(targets, num_classes), total_batch)
     validate_input = np.array_split(validate_input, 1)
-    validate_target = np.array_split(validate_target, 1)
+    validate_target = np.array_split(one_hot(validate_target, num_classes), 1)
     
     train_sample_weight_batch = np.array_split(training_data_sample_weight, total_batch)
-    valid_sample_weight_batch = np.array_split(valid_data_sample_weight, total_batch)
 
     for i in range(1, epoch + 1):
         print("Start epoch " + str(i))
         sum_train_error = 0.0
         for j in range(total_batch):
-            o, l, c, e = session.run([optimizer, output_layer, cost_func, train_or_validate_error],
+            o, c, p= session.run([train_op, cost_func, prediction],
                                   feed_dict={
                                       input_placeholder: input_batch[j],
                                       target_placeholder: target_batch[j],
                                       sample_weight_placeholder: train_sample_weight_batch[j],
                                   })
-            sum_train_error = reduce(lambda x, y: x + y, reduce(lambda x1, y1: np.append(x1, y1),  e))
-        print("Epoch " + str(i) + " avg training error is " + str(sum_train_error / len(input_features)) + ".")
-        sys.stdout.flush()
+            sum_train_error += c
 
         sum_validate_error = 0.0
         for j in range(len(validate_input)):
-            v = session.run([train_or_validate_error],
+            v = session.run([cost_func],
                             feed_dict={
                                 input_placeholder: validate_input[j],
                                 target_placeholder: validate_target[j],
-                                sample_weight_placeholder: valid_sample_weight_batch[j],
+                                sample_weight_placeholder: [valid_data_sample_weight[j]],
                             })
-            sum_validate_error = reduce(lambda x, y: x + y, reduce(lambda x1, y1: x1.append(y1), v))[0]
-        print("Epoch " + str(i) + " avg validation error is " + str(sum_validate_error / len(validate_input)) + ".")
+            sum_validate_error += v[0]
+        print("Epoch " + str(i) + " avg train error " + str(sum_train_error / total_batch) + ", avg validation error is " + str(sum_validate_error / len(validate_input)) + ".")
         sys.stdout.flush()
 
     simple_save(session=session, export_dir=export_dir,
@@ -234,7 +268,7 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, outp
                                    "shifu_input_0": input_placeholder
                                 },
                                outputs ={
-                                   "shifu_output_0": output_layer
+                                   "shifu_output_0": prediction
                                })
     export_generic_config(export_dir=export_dir)
 
@@ -287,6 +321,7 @@ if __name__ == "__main__":
     parser.add_argument("-seletectedcolumnnums", action='store', dest='selectedcolumns', help="selected columns list",
                         nargs='+', type=int)
     parser.add_argument("-weightcolumnnum", action='store', dest='weightcolumnnum', help="Sample Weight column num", type=int)
+    parser.add_argument("-learningRate", action='store', dest='learningRate', help="Learning rate of NN", type=float)
 
     args, unknown = parser.parse_known_args()
 
@@ -298,17 +333,17 @@ if __name__ == "__main__":
     model_name = args.modelname
     delimiter = args.delimiter.replace('\\', "")
     sample_weight_column_num = args.weightcolumnnum
-    
+    learning_rate = args.learningRate
+
     context = {"feature_column_nums": feature_column_nums ,"layers": hidden_layers, "batch_size": 10,
-               "export_dir": "./models", "epoch": args.epochnums, "model_name": model_name, "checkpoint_interval": args.checkpointinterval, "sample_weight_column_num": sample_weight_column_num}
+               "export_dir": "./models", "epoch": args.epochnums, "model_name": model_name, "checkpoint_interval": args.checkpointinterval, "sample_weight_column_num": sample_weight_column_num, "learning_rate": learning_rate}
     if not os.path.exists("./models"):
         os.makedirs("./models", 0777)
     input_features, targets, validate_feature, validate_target, training_data_sample_weight, valid_data_sample_weight = load_data(context)
 
-    output_layer, cost_func, optimizer, input_placeholder, target_placeholder, \
-        validate_error, graph, sample_weight_placeholder = build_graph(shifu_context=context)
+    prediction, cost_func, train_op, input_placeholder, target_placeholder, graph, sample_weight_placeholder = build_graph(shifu_context=context)
     session = tf.Session()
-    train(input_placeholder=input_placeholder, target_placeholder=target_placeholder, sample_weight_placeholder = sample_weight_placeholder, output_layer=output_layer,
-          cost_func=cost_func, optimizer=optimizer, train_or_validate_error=validate_error, input_features=input_features,
+    train(input_placeholder=input_placeholder, target_placeholder=target_placeholder, sample_weight_placeholder = sample_weight_placeholder, prediction=prediction,
+          cost_func=cost_func, train_op=train_op, input_features=input_features,
           targets=targets, validate_input=validate_feature, validate_target=validate_target, session=session, context=context,
           training_data_sample_weight=training_data_sample_weight, valid_data_sample_weight=valid_data_sample_weight)
