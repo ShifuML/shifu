@@ -87,7 +87,7 @@ def load_data(context):
 
                 if random.random() >= valid_data_percentage:
                     # Append training data
-                    train_target.append([int(columns[target_index])])
+                    train_target.append([float(columns[target_index])])
                     if(columns[target_index] == "1"):
                         train_pos_cnt += 1
                     else :
@@ -102,12 +102,12 @@ def load_data(context):
                         if weight < 0.0:
                             print("Warning: weight is below 0. example:" + line)
                             weight= 1.0
-                        training_data_sample_weight.append(weight)
+                        training_data_sample_weight.append([weight])
                     else:
-                        training_data_sample_weight.append(1.0)
+                        training_data_sample_weight.append([1.0])
                 else:
                     # Append validation data
-                    valid_target.append([int(columns[target_index])])
+                    valid_target.append([float(columns[target_index])])
                     if(columns[target_index] == "1"):
                         valid_pos_cnt += 1
                     else:
@@ -122,9 +122,9 @@ def load_data(context):
                         if weight < 0.0:
                             print("Warning: weight is below 0. example:" + line)
                             weight= 1.0
-                        valid_data_sample_weight.append(weight)
+                        valid_data_sample_weight.append([weight])
                     else:
-                        valid_data_sample_weight.append(1.0)
+                        valid_data_sample_weight.append([1.0])
 
     print("Total data count: " + str(line_count) + ".")
     print("Train pos count: " + str(train_pos_cnt) + ".")
@@ -138,11 +138,9 @@ def load_data(context):
     return train_data, train_target, valid_data, valid_target, training_data_sample_weight, valid_data_sample_weight
 
 def build_graph(shifu_context):
-    num_classes = 2
-
     graph = tf.get_default_graph
     in_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, context["feature_count"]), name="shifu_input_0")
-    label_placeholder = tf.placeholder(dtype=tf.int32, shape=(None, num_classes))
+    label_placeholder = tf.placeholder(dtype=tf.int32, shape=(None, 1))
     sample_weight_placeholder = tf.placeholder(dtype=tf.float32, shape=(None))
 
     layers = shifu_context["layers"]
@@ -168,18 +166,19 @@ def build_graph(shifu_context):
 
 
         
-    weight = tf.Variable(tf.random_normal([current_nodes, num_classes]))
-    bias = tf.Variable(tf.random_normal(shape=([num_classes])))
+    weight = tf.Variable(tf.random_normal([current_nodes, 1]))
+    bias = tf.Variable(tf.random_normal(shape=([1])))
     output_layer = tf.matmul(current_layer, weight)
     output_layer = tf.add(output_layer, bias)
     weights.append(weight)
     biases.append(bias)
     dnn_layer.append(output_layer)
     
-    prediction = tf.cast(tf.argmax(tf.nn.softmax(output_layer), 1), tf.float32, name="shifu_output_0")
+    #prediction = tf.cast(tf.argmax(tf.nn.softmax(output_layer), 1), tf.float32, name="shifu_output_0")
+    prediction = tf.nn.sigmoid(output_layer, name="shifu_output_0")
     
     # Define loss and optimizer
-    cost_func = tf.reduce_mean(tf.losses.softmax_cross_entropy(logits=output_layer, onehot_labels=label_placeholder, weights=sample_weight_placeholder))
+    cost_func = tf.losses.mean_squared_error(predictions=prediction, labels=label_placeholder, weights=sample_weight_placeholder)
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
     train_op = optimizer.minimize(cost_func)
     
@@ -233,10 +232,12 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
     
     total_batch = int(len(input_features) / batch_size)
     input_batch = np.array_split(input_features, total_batch)
-    target_batch = np.array_split(one_hot(targets, num_classes), total_batch)
+    #target_batch = np.array_split(one_hot(targets, num_classes), total_batch)
+    target_batch = np.array_split(targets, total_batch)
     validate_input = np.array_split(validate_input, 1)
-    validate_target = np.array_split(one_hot(validate_target, num_classes), 1)
-    
+    #validate_target = np.array_split(one_hot(validate_target, num_classes), 1)
+    validate_target = np.array_split(validate_target, 1)
+
     train_sample_weight_batch = np.array_split(training_data_sample_weight, total_batch)
 
     for i in range(1, epoch + 1):
