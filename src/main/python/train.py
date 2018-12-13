@@ -34,6 +34,9 @@ import numpy as np
 import sys
 import os
 import datetime
+def tprint(content, log_level="INFO"):
+    systime = datetime.datetime.now()
+    print(str(systime) + " " + log_level + " " + " [Shifu.Tensorflow.train] " + str(content))
 
 def load_data(context):
 
@@ -164,7 +167,6 @@ def build_graph(shifu_context):
         current_nodes = node_num
         dnn_layer.append(current_layer)
 
-
         
     weight = tf.Variable(tf.random_normal([current_nodes, 1]))
     bias = tf.Variable(tf.random_normal(shape=([1])))
@@ -174,7 +176,6 @@ def build_graph(shifu_context):
     biases.append(bias)
     dnn_layer.append(output_layer)
     
-    #prediction = tf.cast(tf.argmax(tf.nn.softmax(output_layer), 1), tf.float32, name="shifu_output_0")
     prediction = tf.nn.sigmoid(output_layer, name="shifu_output_0")
     
     # Define loss and optimizer
@@ -182,20 +183,6 @@ def build_graph(shifu_context):
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
     train_op = optimizer.minimize(cost_func)
     
-    # Evaluate model
-    #correct_pred = tf.equal(prediction, tf.argmax(label_placeholder, 1))
-    #accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-    
-    
-    #output_layer = tf.nn.sigmoid(current_layer, name="shifu_output_0")
-    
-    # Define loss and optimizer
-    #loss = tf.nn.l2_loss(label_placeholder - output_layer)
-    #cost_func = tf.reduce_mean(tf.multiply(loss, sample_weight_placeholder))
-    #loss = tf.losses.mean_squared_error(label_placeholder, output_layer, weights=sample_weight_placeholder)
-
-    #cost_func = tf.losses.mean_squared_error(label_placeholder, output_layer, weights=sample_weight_placeholder)
-    #optimizer = tf.train.AdamOptimizer(learning_rate=0.03).minimize(cost_func)
     return prediction, cost_func, train_op, in_placeholder, label_placeholder, graph, sample_weight_placeholder
 
 
@@ -214,6 +201,7 @@ def simple_save(session, export_dir, inputs, outputs, legacy_init_op=None):
         legacy_init_op=legacy_init_op,
         clear_devices=True)
     b.save()
+    export_generic_config(export_dir=export_dir)
 
 def one_hot(input, num_classes):
     input = np.array(input).reshape(-1)
@@ -232,10 +220,8 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
     
     total_batch = int(len(input_features) / batch_size)
     input_batch = np.array_split(input_features, total_batch)
-    #target_batch = np.array_split(one_hot(targets, num_classes), total_batch)
     target_batch = np.array_split(targets, total_batch)
     validate_input = np.array_split(validate_input, 1)
-    #validate_target = np.array_split(one_hot(validate_target, num_classes), 1)
     validate_target = np.array_split(validate_target, 1)
 
     train_sample_weight_batch = np.array_split(training_data_sample_weight, total_batch)
@@ -263,6 +249,15 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
             sum_validate_error += v[0]
         print("Epoch " + str(i) + " avg train error " + str(sum_train_error / total_batch) + ", avg validation error is " + str(sum_validate_error / len(validate_input)) + ".")
         sys.stdout.flush()
+        if checkpoint_interval > 0 and i % checkpoint_interval == 0:
+            simple_save(session=session, export_dir=export_dir + "-checkpoint-" + str(i),
+                        inputs={
+                            "shifu_input_0": input_placeholder
+                        },
+                        outputs ={
+                            "shifu_output_0": output_layer
+                        })
+            print("Save checkpoint model at epoch " + str(i))
 
     simple_save(session=session, export_dir=export_dir,
                                inputs={
@@ -271,7 +266,7 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
                                outputs ={
                                    "shifu_output_0": prediction
                                })
-    export_generic_config(export_dir=export_dir)
+    print("Model training finished, model export path: " + export_dir)
 
 
 def export_generic_config(export_dir):
