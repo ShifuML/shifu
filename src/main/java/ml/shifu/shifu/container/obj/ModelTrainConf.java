@@ -544,7 +544,7 @@ public class ModelTrainConf {
             List<String> func = new ArrayList<String>();
             func.add("tanh");
             params.put(CommonConstants.ACTIVATION_FUNC, func);
-            params.put("RegularizedConstant", 0.0);
+            params.put(CommonConstants.REGULARIZED_CONSTANT, 0.0);
         } else if(ALGORITHM.SVM.equals(alg)) {
             params.put(SVMTrainer.SVM_KERNEL, "linear");
             params.put(SVMTrainer.SVM_GAMMA, 1.0);
@@ -570,8 +570,8 @@ public class ModelTrainConf {
         } else if(ALGORITHM.LR.equals(alg)) {
             params.put(CommonConstants.PROPAGATION, "R");
             params.put(LogisticRegressionTrainer.LEARNING_RATE, 0.1);
-            params.put("RegularizedConstant", 0.0);
-            params.put("L1orL2", "NONE");
+            params.put(CommonConstants.REGULARIZED_CONSTANT, 0.0);
+            params.put(CommonConstants.REG_LEVEL_KEY, "NONE");
         } else if(ALGORITHM.TENSORFLOW.equals(alg)) {
             params.put(CommonConstants.LEARNING_RATE, 0.1);
             params.put(CommonConstants.NUM_HIDDEN_LAYERS, 1);

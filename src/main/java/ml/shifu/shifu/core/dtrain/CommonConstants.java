@@ -19,14 +19,21 @@ public interface CommonConstants {
 
     public static final double DEFAULT_SIGNIFICANCE_VALUE = 1.0d;
     public static final String MAPREDUCE_PARAM_FORMAT = "-D%s=%s";
-    public static final String GUAGUA_OUTPUT = "guagua.output";
 
-    public static final String LR_REGULARIZED_CONSTANT = "RegularizedConstant";
 
-    public static final String LR_LEARNING_RATE = "LearningRate";
+    /* --------------   Other Constants  ---------------------- */
+    public static final String DEFAULT_COLUMN_SEPARATOR = "|";
 
-    public static final String REG_LEVEL_KEY = "L1orL2";
+    public static final String NAMESPACE_DELIMITER = "::";
 
+    public static final long NOT_CONFIGURED_BAGGING_SEED = -1L;
+
+    public static final long MAX_RECORDS_PER_WORKER = 100000L;
+
+    public static final int PART_FILE_COUNT_THRESHOLD = 20;
+
+
+    /* --------------   Shifu setting Constants  ---------------------- */
     public static final String MODELSET_SOURCE_TYPE = "shifu.source.type";
 
     public static final String SHIFU_COLUMN_CONFIG = "shifu.column.config";
@@ -41,14 +48,6 @@ public interface CommonConstants {
 
     public static final String SHIFU_DTRAIN_PROGRESS_FILE = "shifu.progress.file";
 
-    public static final String DEFAULT_COLUMN_SEPARATOR = "|";
-
-    public static final String RF_ALG_NAME = "RF";
-
-    public static final String GBT_ALG_NAME = "GBT";
-
-    public static final String GS_VALIDATION_ERROR = "gridsearch.validation.error";
-
     public static final String CROSS_VALIDATION_DIR = "shifu.crossValidation.dir";
 
     public static final String SHIFU_TRAIN_BAGGING_INPARALLEL = "shifu.train.bagging.inparallel";
@@ -59,29 +58,34 @@ public interface CommonConstants {
 
     public static final String SHIFU_DT_MASTER_CHECKPOINT_FOLDER = "shifu.dt.master.checkpoint.folder";
 
-    // Used to enable input layer dropout  
+    // Used to enable input layer dropout
     public static final String SHIFU_TRAIN_NN_INPUTLAYERDROPOUT_ENABLE = "shifu.train.nn.inputlayerdropout.enable";
-    
-    /**
-     * Version 2: support final selected columns
-     * Version 3: in Node to change wgtCnt float to double
-     * Version 4: change trees in IndependentTreeModel to support bagging of RF and GBDT
-     */
-    public static final int TREE_FORMAT_VERSION = 4;
 
-    public static final int NN_FORMAT_VERSION = 1;
+    public static final String SHIFU_UPDATEBINNING_REDUCER = "shifu.updatebinning.reducer";
+
+    public static final String SHIFU_NN_FEATURE_SUBSET = "shifu.nn.feature.subset";
+
+    public static final String SHIFU_TREE_CHECKPOINT_INTERVAL = "shifu.tree.checkpoint.interval";
+
+
+    /* --------------   Other setting Constants  ---------------------- */
+    public static final String MAPREDUCE_MAP_CPU_VCORES = "mapreduce.map.cpu.vcores";
+
+    public static final String GS_VALIDATION_ERROR = "gridsearch.validation.error";
+
+    public static final String GUAGUA_OUTPUT = "guagua.output";
+
+
+    /* --------------   Train Configuration Constants  ---------------------- */
+    public static final String RF_ALG_NAME = "RF";
+
+    public static final String GBT_ALG_NAME = "GBT";
 
     public static final String NUM_HIDDEN_LAYERS = "NumHiddenLayers";
 
     public static final String CHECKPOINT_INTERVAL = "CheckpointInterval";
 
     public static final String ACTIVATION_FUNC = "ActivationFunc";
-    
-    public static final String TF_OPTIMIZER = "TF.optimizer";
-
-    public static final String TF_LOSS = "TF.loss";
-    
-    public static final String TF_ALG = "TF.alg";
 
     public static final String NUM_HIDDEN_NODES = "NumHiddenNodes";
 
@@ -93,23 +97,38 @@ public interface CommonConstants {
 
     public static final String OUTPUT_ACTIVATION_FUNC = "OutputActivationFunc";
 
-    public static final String SHIFU_NN_FEATURE_SUBSET = "shifu.nn.feature.subset";
 
-    public static final String SHIFU_TREE_CHECKPOINT_INTERVAL = "shifu.tree.checkpoint.interval";
+    /* --------------   Train Param Constants  ---------------------- */
+    public static final String REGULARIZED_CONSTANT = "RegularizedConstant";
 
-    public static final String NAMESPACE_DELIMITER = "::";
-
-    public static final long NOT_CONFIGURED_BAGGING_SEED = -1L;
-
-    public static final long MAX_RECORDS_PER_WORKER = 100000L;
-
-    public static final int PART_FILE_COUNT_THRESHOLD = 20;
-    
-    public static final String MAPREDUCE_MAP_CPU_VCORES = "mapreduce.map.cpu.vcores";
-    
-    public static final String SHIFU_UPDATEBINNING_REDUCER = "shifu.updatebinning.reducer";
-    
     public static final String FIXED_LAYERS = "FixedLayers";
 
     public static final String FIXED_BIAS = "FixedBias";
+
+    public static final String ENABLE_EARLY_STOP = "EnableEarlyStop";
+
+    public static final String VALIDATION_TOLERANCE = "ValidationTolerance";
+
+    public static final String REG_LEVEL_KEY = "L1orL2";
+
+    public static final String LEARNING_DECAY = "LearningDecay";
+
+
+    /* --------------   TF Constants  ---------------------- */
+    public static final String TF_OPTIMIZER = "TF.optimizer";
+
+    public static final String TF_LOSS = "TF.loss";
+
+    public static final String TF_ALG = "TF.alg";
+
+
+    /**
+     * Version 2: support final selected columns
+     * Version 3: in Node to change wgtCnt float to double
+     * Version 4: change trees in IndependentTreeModel to support bagging of RF and GBDT
+     */
+    public static final int TREE_FORMAT_VERSION = 4;
+
+    public static final int NN_FORMAT_VERSION = 1;
+
 }
