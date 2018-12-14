@@ -378,12 +378,21 @@ public class Scorer {
                     }
                 }
             } else if(model instanceof GenericModel) {
-                modelResults.add(new Callable<MLData>() {
+                Callable<MLData> callable = new Callable<MLData>() {
                     @Override
                     public MLData call() {
                         return ((GenericModel) model).compute(pair.getInput());
                     }
-                }.call());
+                };
+                if (multiThread) {
+                    tasks.add(callable);
+                } else {
+                    try {
+                        modelResults.add(callable.call());
+                    } catch (Exception e) {
+                        log.error("error in model evaluation", e);
+                    }
+                }
             } else {
                 throw new RuntimeException("unsupport models");
             }

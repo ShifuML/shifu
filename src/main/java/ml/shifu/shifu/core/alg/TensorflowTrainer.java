@@ -34,6 +34,8 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 
 /**
@@ -92,6 +94,7 @@ public class TensorflowTrainer {
     
     private String modelName;
 
+    private int weightColumnNum = -1;
     /**
      * Extract and store tensorflow training params from shifu configs.
      * 
@@ -112,6 +115,8 @@ public class TensorflowTrainer {
                 targetColumnNum = i;
             } else if(cc.isFinalSelect()) {
                 seletectedColumnNums.add(i);
+            } else if (cc.isWeight()) {
+                weightColumnNum = i;
             }
         }
         if(seletectedColumnNums.size() == 0) {
@@ -131,7 +136,10 @@ public class TensorflowTrainer {
         hiddenLayers = hiddenLayerNodes.size();
         inputDataPath = pathFinder.getNormalizedDataPath();
         alg = (String) modelConfig.getParams().get(CommonConstants.TF_ALG);
-        delimiter = modelConfig.getDataSetDelimiter().charAt(0);
+        //delimiter = modelConfig.getDataSetDelimiter().charAt(0);
+        delimiter = CommonUtils.escapePigString(
+                Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER)).charAt(0);
+
         lossFunc = (String) modelTrainConf.getParams().get(CommonConstants.TF_LOSS);
         optimizer = (String) modelTrainConf.getParams().get(CommonConstants.TF_OPTIMIZER);
         epoch = modelTrainConf.getNumTrainEpochs();
@@ -233,7 +241,9 @@ public class TensorflowTrainer {
         commands.add(String.valueOf(validateRate));
         commands.add("-modelname");
         commands.add(modelName);
-
+        commands.add("-weightcolumnnum");
+        commands.add(String.valueOf(weightColumnNum));
+        
         return commands;
     }
 
