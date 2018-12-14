@@ -95,6 +95,7 @@ public class ShifuCLI {
 
     // options for stats
     private static final String CORRELATION = "correlation";
+    private static final String SHORT_CORRELATION = "c";
     private static final String PSI = "psi";
     private static final String SHORT_PSI = "p";
     // options for variable re-binning
@@ -137,28 +138,7 @@ public class ShifuCLI {
     static private final Logger log = LoggerFactory.getLogger(ShifuCLI.class);
 
     public static void main(String[] args) {
-        // get -D parameters at first and set it in Environment then clean args
-        List<String> cleanedArgsList = new ArrayList<String>();
-        for(int i = 0; i < args.length; i++) {
-            if(args[i].startsWith("-D")) {
-                // remove '-D' at first
-                String keyValue = args[i].substring(2, args[i].length());
-                int index = keyValue.indexOf("=");
-                String key = keyValue.substring(0, index);
-                String value = "";
-                if(keyValue.length() >= index + 1) {
-                    value = keyValue.substring(index + 1, keyValue.length());
-                }
-                // set to Environment for others to read
-                Environment.setProperty(key.trim(), value.trim());
-                // such parameter will also be set in system properties for later reference in correlation and others
-                System.setProperty(key.trim(), value.trim());
-            } else {
-                cleanedArgsList.add(args[i]);
-            }
-        }
-
-        String[] cleanedArgs = cleanedArgsList.toArray(new String[0]);
+        String[] cleanedArgs = cleanArgs(args);
         // invalid input and help options
         if(cleanedArgs.length < 1 || (isHelpOption(cleanedArgs[0]))) {
             printUsage();
@@ -172,7 +152,7 @@ public class ShifuCLI {
         }
 
         CommandLineParser parser = new GnuParser();
-        Options opts = buildModelSetOptions(cleanedArgs);
+        Options opts = buildModelSetOptions();
         CommandLine cmd = null;
 
         try {
@@ -223,7 +203,7 @@ public class ShifuCLI {
                     }
                 } else if(cleanedArgs[0].equals(STATS_CMD)) {
                     Map<String, Object> params = new HashMap<String, Object>();
-                    params.put(Constants.IS_COMPUTE_CORR, cmd.hasOption(CORRELATION) || cmd.hasOption("c"));
+                    params.put(Constants.IS_COMPUTE_CORR, cmd.hasOption(CORRELATION) || cmd.hasOption(SHORT_CORRELATION));
                     params.put(Constants.IS_REBIN, cmd.hasOption(REBIN));
                     params.put(Constants.REQUEST_VARS, cmd.getOptionValue(VARS));
                     params.put(Constants.EXPECTED_BIN_NUM, cmd.getOptionValue(N));
@@ -234,7 +214,7 @@ public class ShifuCLI {
                     // stats step
                     status = calModelStats(params);
                     if(status == 0) {
-                        if(cmd.hasOption(CORRELATION) || cmd.hasOption("c")) {
+                        if(cmd.hasOption(CORRELATION) || cmd.hasOption(SHORT_CORRELATION)) {
                             log.info(
                                     "Do model set correlation computing successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
                         }
@@ -435,6 +415,31 @@ public class ShifuCLI {
         } catch (Exception e) {
             exceptionExit(e);
         }
+    }
+
+    private static String[] cleanArgs(String[] args) {
+        // get -D parameters at first and set it in Environment then clean args
+        List<String> cleanedArgsList = new ArrayList<>();
+        for(int i = 0; i < args.length; i++) {
+            if(args[i].startsWith("-D")) {
+                // remove '-D' at first
+                String keyValue = args[i].substring(2);
+                int index = keyValue.indexOf("=");
+                String key = keyValue.substring(0, index).trim();
+                String value = "";
+                if(keyValue.length() >= index + 1) {
+                    value = keyValue.substring(index + 1).trim();
+                }
+                // set to Environment for others to read
+                Environment.setProperty(key, value);
+                // such parameter will also be set in system properties for later reference in correlation and others
+                System.setProperty(key, value);
+            } else {
+                cleanedArgsList.add(args[i]);
+            }
+        }
+
+        return cleanedArgsList.toArray(new String[0]);
     }
 
     /*
@@ -655,7 +660,7 @@ public class ShifuCLI {
     }
 
     @SuppressWarnings("static-access")
-    private static Options buildModelSetOptions(String[] args) {
+    private static Options buildModelSetOptions() {
         Options opts = new Options();
 
         Option opt_cmt = OptionBuilder.hasArg().withDescription("The description for new model").create(MODELSET_CMD_M);
