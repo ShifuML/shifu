@@ -1008,8 +1008,6 @@ public final class CommonUtils {
         return entries;
     }
 
-
-
     public static boolean isTreeModel(String alg) {
         return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
     }
