@@ -58,7 +58,6 @@ def load_data(context):
     sample_weight_column_num = context["sample_weight_column_num"]
     allFileNames = gfile.ListDirectory(root)
     normFileNames = filter(lambda x: not x.startswith(".") and not x.startswith("_"), allFileNames)
-    print(normFileNames)
     print("Total input file count is " + str(len(normFileNames)) + ".")
     sys.stdout.flush()
 
@@ -130,10 +129,8 @@ def load_data(context):
                         valid_data_sample_weight.append([1.0])
 
     print("Total data count: " + str(line_count) + ".")
-    print("Train pos count: " + str(train_pos_cnt) + ".")
-    print("Train neg count: " + str(train_neg_cnt) + ".")
-    print("Valid pos count: " + str(valid_pos_cnt) + ".")
-    print("Valid neg count: " + str(valid_neg_cnt) + ".")
+    print("Train pos count: " + str(train_pos_cnt) + ", neg count: " + str(train_neg_cnt) + ".")
+    print("Valid pos count: " + str(valid_pos_cnt) + ", neg count: " + str(valid_neg_cnt) + ".")
     sys.stdout.flush()
 
     context['feature_count'] = len(feature_column_nums)
@@ -215,7 +212,6 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
     batch_size = context["batch_size"]
     export_dir = context["export_dir"] + "/" + context["model_name"]
     checkpoint_interval = context["checkpoint_interval"]
-    print(checkpoint_interval)
     sys.stdout.flush()
     
     total_batch = int(len(input_features) / batch_size)
