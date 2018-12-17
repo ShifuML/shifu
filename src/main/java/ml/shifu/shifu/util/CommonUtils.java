@@ -36,7 +36,6 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
@@ -67,16 +66,16 @@ public final class CommonUtils {
 
     /**
      * Sync up all local configuration files to HDFS.
-     * 
+     *
      * @param modelConfig
      *            the model config
      * @param pathFinder
      *            the path finder to locate file
      * @return if copy successful
-     * 
+     *
      * @throws IOException
      *             If any exception on HDFS IO or local IO.
-     * 
+     *
      * @throws NullPointerException
      *             If parameter {@code modelConfig} is null
      */
@@ -140,7 +139,7 @@ public final class CommonUtils {
 
     /**
      * Sync-up the evaluation data into HDFS
-     * 
+     *
      * @param modelConfig
      *            - ModelConfig
      * @param evalName
@@ -187,7 +186,7 @@ public final class CommonUtils {
 
     /**
      * Load ModelConfig from local json ModelConfig.json file.
-     * 
+     *
      * @return model config instance from default model config file
      * @throws IOException
      *             any io exception to load file
@@ -198,7 +197,7 @@ public final class CommonUtils {
 
     /**
      * Load model configuration from the path and the source type.
-     * 
+     *
      * @param path
      *            model file path
      * @param sourceType
@@ -206,7 +205,7 @@ public final class CommonUtils {
      * @return model config instance
      * @throws IOException
      *             if any IO exception in parsing json.
-     * 
+     *
      * @throws IllegalArgumentException
      *             if {@code path} is null or empty, if sourceType is null.
      */
@@ -227,7 +226,7 @@ public final class CommonUtils {
 
     /**
      * Load text file content, each line as a String in the List.
-     * 
+     *
      * @param path
      *            file path
      * @param sourceType
@@ -263,7 +262,7 @@ public final class CommonUtils {
 
     /**
      * Load reason code map and change it to column &gt; resonCode map.
-     * 
+     *
      * @param path
      *            reason code path
      * @param sourceType
@@ -271,7 +270,7 @@ public final class CommonUtils {
      * @return reason code map
      * @throws IOException
      *             if any IO exception in parsing json.
-     * 
+     *
      * @throws IllegalArgumentException
      *             if {@code path} is null or empty, if sourceType is null.
      */
@@ -292,7 +291,7 @@ public final class CommonUtils {
 
     /**
      * Load JSON instance
-     * 
+     *
      * @param path
      *            file path
      * @param sourceType
@@ -304,7 +303,7 @@ public final class CommonUtils {
      * @return instance from json file
      * @throws IOException
      *             if any IO exception in parsing json.
-     * 
+     *
      * @throws IllegalArgumentException
      *             if {@code path} is null or empty, if sourceType is null.
      */
@@ -321,7 +320,7 @@ public final class CommonUtils {
 
     /**
      * Load column configuration list.
-     * 
+     *
      * @return column config list
      * @throws IOException
      *             if any IO exception in parsing json.
@@ -337,7 +336,7 @@ public final class CommonUtils {
 
     /**
      * Load column configuration list.
-     * 
+     *
      * @param path
      *            file path
      * @param sourceType
@@ -354,7 +353,7 @@ public final class CommonUtils {
 
     /**
      * Load column configuration list.
-     * 
+     *
      * @param path
      *            file path
      * @param sourceType
@@ -406,7 +405,7 @@ public final class CommonUtils {
     /**
      * Some column name has illegal chars which are all be normed in shifu. This is a hook to norm column name but
      * actually so far it is just return;
-     * 
+     *
      * @param columnName
      *            the column name to be normed
      * @return normed column name
@@ -425,7 +424,7 @@ public final class CommonUtils {
 
     /**
      * Return final selected column collection.
-     * 
+     *
      * @param columnConfigList
      *            column config list
      * @return collection of column config list for final select is true
@@ -516,7 +515,7 @@ public final class CommonUtils {
 
     /**
      * Return header column list from header file.
-     * 
+     *
      * @param pathHeader
      *            header path
      * @param delimiter
@@ -526,10 +525,10 @@ public final class CommonUtils {
      * @return headers array
      * @throws IOException
      *             if any IO exception in reading file.
-     * 
+     *
      * @throws IllegalArgumentException
      *             if sourceType is null, if pathHeader is null or empty, if delimiter is null or empty.
-     * 
+     *
      * @throws RuntimeException
      *             if first line of pathHeader is null or empty.
      */
@@ -539,7 +538,7 @@ public final class CommonUtils {
 
     /**
      * Return header column array from header file.
-     * 
+     *
      * @param pathHeader
      *            header path
      * @param delimiter
@@ -551,10 +550,10 @@ public final class CommonUtils {
      * @return headers array
      * @throws IOException
      *             if any IO exception in reading file.
-     * 
+     *
      * @throws IllegalArgumentException
      *             if sourceType is null, if pathHeader is null or empty, if delimiter is null or empty.
-     * 
+     *
      * @throws RuntimeException
      *             if first line of pathHeader is null or empty.
      */
@@ -613,7 +612,7 @@ public final class CommonUtils {
 
     /**
      * Get full column name from pig header. For example, one column is a::b, return a_b. If b, return b.
-     * 
+     *
      * @param raw
      *            raw name
      * @return full name including namespace
@@ -624,7 +623,7 @@ public final class CommonUtils {
 
     /**
      * Get relative column name from pig header. For example, one column is a::b, return b. If b, return b.
-     * 
+     *
      * @param raw
      *            raw name
      * @return relative name including namespace
@@ -639,13 +638,13 @@ public final class CommonUtils {
     /**
      * Return the real bin number for one value. As the first bin value is NEGATIVE_INFINITY, invalid index is 0, not
      * -1.
-     * 
+     *
      * @param binBoundary
      *            bin boundary list which should be sorted.
      * @param value
      *            value of column
      * @return bin index
-     * 
+     *
      * @throws IllegalArgumentException
      *             if binBoundary is null or empty.
      */
@@ -665,13 +664,13 @@ public final class CommonUtils {
     /**
      * Common split function to ignore special character like '|'. It's better to return a list while many calls in our
      * framework using string[].
-     * 
+     *
      * @param raw
      *            raw string
      * @param delimiter
      *            the delimeter to split the string
      * @return array of split Strings
-     * 
+     *
      * @throws IllegalArgumentException
      *             {@code raw} and {@code delimiter} is null or empty.
      */
@@ -681,7 +680,7 @@ public final class CommonUtils {
 
     /**
      * Common split function to ignore special character like '|'.
-     * 
+     *
      * @param raw
      *            raw string
      * @param delimiter
@@ -704,13 +703,13 @@ public final class CommonUtils {
 
     /**
      * Get target column.
-     * 
+     *
      * @param columnConfigList
      *            column config list
      * @return target column index
      * @throws IllegalArgumentException
      *             if columnConfigList is null or empty.
-     * 
+     *
      * @throws IllegalStateException
      *             if no target column can be found.
      */
@@ -750,7 +749,7 @@ public final class CommonUtils {
     /**
      * Get ColumnConfig from ColumnConfig list by columnId, since the columnId may not represent the position
      * in ColumnConfig list after the segments (Column Expansion).
-     * 
+     *
      * @param columnConfigList
      *            - list of ColumnConfig
      * @param columnId
@@ -786,7 +785,7 @@ public final class CommonUtils {
     /**
      * Return one HashMap Object contains keys in the first parameter, values in the second parameter. Before calling
      * this method, you should be aware that headers should be unique.
-     * 
+     *
      * @param header
      *            - header that contains column name
      * @param data
@@ -808,7 +807,7 @@ public final class CommonUtils {
 
     /**
      * Return all parameters for pig execution.
-     * 
+     *
      * @param modelConfig
      *            model config
      * @param sourceType
@@ -855,7 +854,7 @@ public final class CommonUtils {
 
     /**
      * Return all parameters for pig execution.
-     * 
+     *
      * @param modelConfig
      *            model config
      * @param sourceType
@@ -908,7 +907,7 @@ public final class CommonUtils {
 
     /**
      * Change list str to List object with double type.
-     * 
+     *
      * @param str
      *            str to be split
      * @return list of double
@@ -947,7 +946,7 @@ public final class CommonUtils {
 
     /**
      * Change list str to List object with int type.
-     * 
+     *
      * @param str
      *            str to be split
      * @return list of int
@@ -966,7 +965,7 @@ public final class CommonUtils {
 
     /**
      * Change list str to List object with string type.
-     * 
+     *
      * @param str
      *            str to be split
      * @return list of string
@@ -979,7 +978,7 @@ public final class CommonUtils {
 
     /**
      * Change list str to List object with string type.
-     * 
+     *
      * @param str
      *            str to be split
      * @param separator
@@ -1038,7 +1037,7 @@ public final class CommonUtils {
 
     /**
      * Return column name string with 'derived_' started
-     * 
+     *
      * @param columnConfigList
      *            list of column config
      * @return list of column names
@@ -1058,7 +1057,7 @@ public final class CommonUtils {
 
     /**
      * Get the file separator regex
-     * 
+     *
      * @return "/" - if the OS is Linux
      *         "\\\\" - if the OS is Windows
      */
@@ -1072,14 +1071,14 @@ public final class CommonUtils {
 
     /**
      * Update target, listMeta, listForceSelect, listForceRemove
-     * 
+     *
      * @param modelConfig
      *            model config list
      * @param columnConfigList
      *            the column config list
      * @throws IOException
      *             any io exception
-     * 
+     *
      * @throws IllegalArgumentException
      *             if modelConfig is null or columnConfigList is null.
      */
@@ -1187,37 +1186,13 @@ public final class CommonUtils {
     }
 
     /**
-     * To check whether there is targetColumn in columns or not
-     * 
-     * @param columns
-     *            column array
-     * @param targetColumn
-     *            target column
-     * 
-     * @return true - if the columns contains targetColumn, or false
-     */
-    public static boolean isColumnExists(String[] columns, String targetColumn) {
-        if(ArrayUtils.isEmpty(columns) || StringUtils.isBlank(targetColumn)) {
-            return false;
-        }
-
-        for(int i = 0; i < columns.length; i++) {
-            if(columns[i] != null && columns[i].equalsIgnoreCase(targetColumn)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
      * Returns the element if it is in both collections.
      * - return null if any collection is null or empty
      * - return null if no element exists in both collections
-     * 
+     *
      * @param leftCol
      *            - left collection
-     * 
+     *
      * @param rightCol
      *            - right collection
      * @param <T>
@@ -1243,7 +1218,7 @@ public final class CommonUtils {
 
     /**
      * Escape the delimiter for Pig.... Since the Pig doesn't support invisible character
-     * 
+     *
      * @param delimiter
      *            - the original delimiter
      * @return the delimiter after escape
@@ -1317,32 +1292,9 @@ public final class CommonUtils {
         return fileLines;
     }
 
-    public static Map<String, Integer> generateColumnSeatMap(List<ColumnConfig> columnConfigList) {
-        List<ColumnConfig> selectedColumnList = new ArrayList<ColumnConfig>();
-        for(ColumnConfig columnConfig: columnConfigList) {
-            if(columnConfig.isFinalSelect()) {
-                selectedColumnList.add(columnConfig);
-            }
-        }
-        Collections.sort(selectedColumnList, new Comparator<ColumnConfig>() {
-            @Override
-            public int compare(ColumnConfig from, ColumnConfig to) {
-                return from.getColumnName().compareTo(to.getColumnName());
-            }
-
-        });
-
-        Map<String, Integer> columnSeatMap = new HashMap<String, Integer>();
-        for(int i = 0; i < selectedColumnList.size(); i++) {
-            columnSeatMap.put(selectedColumnList.get(i).getColumnName(), i);
-        }
-
-        return columnSeatMap;
-    }
-
     /**
      * Find the @ColumnConfig according the column name
-     * 
+     *
      * @param columnConfigList
      *            list of column config
      * @param columnName
@@ -1360,7 +1312,7 @@ public final class CommonUtils {
 
     /**
      * Return target column configuration itme.
-     * 
+     *
      * @param columnConfigList
      *            the column config list
      * @return target column configuration.
@@ -1377,7 +1329,7 @@ public final class CommonUtils {
     /**
      * Convert data into (key, value) map. The inputData is String of a record, which is delimited by delimiter
      * If fields in inputData is not equal header size, return null
-     * 
+     *
      * @param inputData
      *            - String of a record
      * @param delimiter
@@ -1406,40 +1358,9 @@ public final class CommonUtils {
     }
 
     /**
-     * Convert tuple record into (key, value) map. The @tuple is Tuple for a record
-     * If @tuple size is not equal @header size, return null
-     * 
-     * @param tuple
-     *            - Tuple of a record
-     * @param header
-     *            - the column names for all the input data
-     * @return (key, value) map for the record
-     * @throws ExecException
-     *             - throw exception when operating tuple
-     */
-    public static Map<String, String> convertDataIntoMap(Tuple tuple, String[] header) throws ExecException {
-        if(tuple == null || tuple.size() == 0 || tuple.size() != header.length) {
-            log.error("Invalid input, the tuple.size is = " + (tuple == null ? null : tuple.size())
-                    + ", header.length = " + header.length);
-            return null;
-        }
-
-        Map<String, String> rawDataMap = new HashMap<String, String>(tuple.size());
-        for(int i = 0; i < header.length; i++) {
-            if(tuple.get(i) == null) {
-                rawDataMap.put(header[i], "");
-            } else {
-                rawDataMap.put(header[i], tuple.get(i).toString());
-            }
-        }
-
-        return rawDataMap;
-    }
-
-    /**
      * Convert tuple record into (NSColumn, value) map. The @tuple is Tuple for a record
      * If @tuple size is not equal @header size, return null
-     * 
+     *
      * @param tuple
      *            - Tuple of a record
      * @param header
@@ -1482,7 +1403,7 @@ public final class CommonUtils {
 
     /**
      * Check whether to normalize one variable or not
-     * 
+     *
      * @param columnConfig
      *            - ColumnConfig to check
      * @param hasCandidate
@@ -1507,7 +1428,7 @@ public final class CommonUtils {
 
     /**
      * Check the variable is good candidate or not
-     * 
+     *
      * @param columnConfig
      *            - ColumnConfig to check
      * @param hasCandidate
@@ -1534,7 +1455,7 @@ public final class CommonUtils {
 
     /**
      * Check the variable is good candidate or not
-     * 
+     *
      * @param columnConfig
      *            - ColumnConfig to check
      * @param hasCandidate
@@ -1553,7 +1474,7 @@ public final class CommonUtils {
 
     /**
      * Check whether a variable is good or bad
-     * 
+     *
      * @param columnConfig
      *            - ColumnConfig to check
      * @param isBinaryClassification
@@ -1577,7 +1498,7 @@ public final class CommonUtils {
 
     /**
      * Return first line split string array. This is used to detect data schema.
-     * 
+     *
      * @param dataSetRawPath
      *            raw data path
      * @param delimeter
@@ -1645,7 +1566,7 @@ public final class CommonUtils {
      * Return first two lines split string array. This is used to detect data schema and check if data
      * schema is the
      * same as data.
-     * 
+     *
      * @param dataSetRawPath
      *            raw data path
      * @param delimiter
@@ -1721,21 +1642,9 @@ public final class CommonUtils {
         }
     }
 
-    public static String genPigFieldName(String name) {
-        return ((name != null) ? name.replace('-', '_') : null);
-    }
-
-    public static String[] genPigFieldName(String[] names) {
-        String[] pigScoreNames = new String[names.length];
-        for(int i = 0; i < names.length; i++) {
-            pigScoreNames[i] = genPigFieldName(names[i]) + "::mean";
-        }
-        return pigScoreNames;
-    }
-
     /**
      * Compute feature importance for all bagging tree models.
-     * 
+     *
      * @param models
      *            the tree models, should be instance of TreeModel
      * @return feature importance per each column id
@@ -1850,7 +1759,7 @@ public final class CommonUtils {
 
     /**
      * flatten categorical value group into values list
-     * 
+     *
      * @param categoricalValGrp
      *            - categorical val group, it some values like zn^us^ck^
      * @return value list of categorical val
@@ -1867,11 +1776,11 @@ public final class CommonUtils {
 
     /**
      * Manual split function to avoid depending on guava.
-     * 
+     *
      * <p>
      * Some examples: "^"=&gt;[, ]; ""=&gt;[]; "a"=&gt;[a]; "abc"=&gt;[abc]; "a^"=&gt;[a, ]; "^b"=&gt;[, b];
      * "^^b"=&gt;[, , b]
-     * 
+     *
      * @param str
      *            the string to be split
      * @param delimiter
@@ -1915,7 +1824,7 @@ public final class CommonUtils {
 
     /**
      * Inject Shifu or Hadoop parameters into MapReduce / Pig jobs, by using visitor.
-     * 
+     *
      * @param visitor
      *            - provider to do injection
      */
@@ -1933,7 +1842,7 @@ public final class CommonUtils {
 
     /**
      * Check whether the prefix of key is Shifu or Hadoop-related.
-     * 
+     *
      * @param key
      *            - key to check
      * @return
