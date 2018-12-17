@@ -34,6 +34,8 @@ import ml.shifu.shifu.core.dtrain.earlystop.WindowEarlyStop;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
+import ml.shifu.shifu.util.NormalUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -324,12 +326,12 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         NNParams params = null;
         try {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-            BasicML basicML = CommonUtils.loadModel(modelConfig, modelPath,
+            BasicML basicML = ModelSpecLoaderUtils.loadModel(modelConfig, modelPath,
                     ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
 
             params = initWeights();
 
-            BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils.getBasicNetwork(basicML);
+            BasicFloatNetwork existingModel = (BasicFloatNetwork) ModelSpecLoaderUtils.getBasicNetwork(basicML);
             if(existingModel != null) {
                 LOG.info("Starting to train model from existing model {}.", modelPath);
                 int mspecCompareResult = new NNStructureComparator().compare(this.flatNetwork, existingModel.getFlat());
@@ -418,7 +420,9 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             Double validTolerance = DTrainUtils.getDouble(validParams, CommonConstants.VALIDATION_TOLERANCE, null);
             if(validTolerance == null) {
                 LOG.info("Early Stop is enabled. use WindowEarlyStop");
-                this.earlyStopStrategy = new WindowEarlyStop(20); // default, user should could adjust it
+                // windowSize default 20, user should could adjust it
+                this.earlyStopStrategy = new WindowEarlyStop(context, this.modelConfig,
+                        DTrainUtils.getInt(context.getProps(), CommonConstants.SHIFU_TRAIN_EARLYSTOP_WINDOW_SIZE, 20));
             } else {
                 LOG.info("Early Stop is enabled. use ConvergeAndValiToleranceEarlyStop");
                 Double threshold = this.modelConfig.getTrain().getConvergenceThreshold();
@@ -491,7 +495,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         this.isAfterVarSelect = (inputOutputIndex[3] == 1);
         // cache all feature list for sampling features
-        this.allFeatures = CommonUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
+        this.allFeatures = NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
         String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);
         if(StringUtils.isBlank(subsetStr)) {
             this.subFeatures = this.allFeatures;

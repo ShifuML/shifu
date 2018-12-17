@@ -42,6 +42,7 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -158,7 +159,9 @@ public class LogisticRegressionMaster extends
             Double validTolerance = DTrainUtils.getDouble(validParams, CommonConstants.VALIDATION_TOLERANCE, null);
             if(validTolerance == null) {
                 LOG.info("Early Stop is enabled. use WindowEarlyStop");
-                this.earlyStopStrategy = new WindowEarlyStop(20); // default, user should could adjust it
+                // windowSize default 20, user should could adjust it
+                this.earlyStopStrategy = new WindowEarlyStop(context, this.modelConfig,
+                        DTrainUtils.getInt(context.getProps(), CommonConstants.SHIFU_TRAIN_EARLYSTOP_WINDOW_SIZE, 20));
             } else {
                 LOG.info("Early Stop is enabled. use ConvergeAndValiToleranceEarlyStop");
                 Double threshold = this.modelConfig.getTrain().getConvergenceThreshold();
@@ -207,7 +210,7 @@ public class LogisticRegressionMaster extends
         // read existing model weights
         try {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-            LR existingModel = (LR) CommonUtils.loadModel(modelConfig, modelPath,
+            LR existingModel = (LR) ModelSpecLoaderUtils.loadModel(modelConfig, modelPath,
                     ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
             if(existingModel == null) {
                 params = initWeights();

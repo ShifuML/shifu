@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -130,7 +131,7 @@ public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, Fea
         this.tags = new HashSet<String>(modelConfig.getFlattenTags());
         SourceType sourceType = this.modelConfig.getDataSet().getSource();
 
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, null, sourceType);
+        List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(modelConfig, null, sourceType);
 
         this.headers = CommonUtils.getFinalHeaders(modelConfig);
         this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,

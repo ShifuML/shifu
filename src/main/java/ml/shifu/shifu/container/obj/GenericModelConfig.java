@@ -25,8 +25,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
- * Generic model is used for extend shifu evaluation capability. The GenericModelConfig holds all config information for
- * model formats other than shifu binary.
+ * Generic model is used for extend Shifu evaluation capability. The GenericModelConfig holds all config information for
+ * model formats other than Shifu binary.
  * 
  * @author minizhuwei
  */

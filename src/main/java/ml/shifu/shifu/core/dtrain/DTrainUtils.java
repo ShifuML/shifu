@@ -480,4 +480,29 @@ public final class DTrainUtils {
         }
         return val;
     }
+
+    /**
+     * Get Integer property value from map.
+     * If the value doesn't exist in the Map or the format is incorrect, use @defval as default
+     * @param params input Map
+     * @param key the key to look up
+     * @param defval default value, if the key is not in the map or the value format is illegal
+     * @return
+     *      Integer value if the key exists and value format is correct
+     *      or defval
+     */
+    public static Integer getInt(Map params, String key, Integer defval) {
+        Integer val = defval;
+        if(MapUtils.isNotEmpty(params) && params.containsKey(key)) {
+            Object obj = params.get(key);
+            if(obj != null) {
+                try {
+                    val = Integer.valueOf(StringUtils.trimToEmpty(obj.toString()));
+                } catch (Exception e) {
+                    LOG.warn("Export int value for {} in params, but got {}", key, obj, e);
+                }
+            }
+        }
+        return val;
+    }
 }

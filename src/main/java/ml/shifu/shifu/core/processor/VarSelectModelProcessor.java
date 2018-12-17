@@ -48,10 +48,7 @@ import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.fs.SourceFile;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-import ml.shifu.shifu.util.ValueVisitor;
+import ml.shifu.shifu.util.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -322,13 +319,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private void selectByFeatureImportance() throws Exception {
         List<BasicML> models = null;
         if(!super.modelConfig.getVarSelect().getFilterEnable()) {
-            models = CommonUtils.loadBasicModels(this.modelConfig, this.columnConfigList, null);
+            models = ModelSpecLoaderUtils.loadBasicModels(this.modelConfig, null);
         }
         if(models == null || models.size() < 1) {
             TrainModelProcessor trainModelProcessor = new TrainModelProcessor();
             trainModelProcessor.setForVarSelect(true);
             trainModelProcessor.run();
-            models = CommonUtils.loadBasicModels(this.modelConfig, this.columnConfigList, null);
+            models = ModelSpecLoaderUtils.loadBasicModels(this.modelConfig, null);
         }
 
         // compute feature importance and write to local file

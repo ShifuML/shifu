@@ -1,5 +1,10 @@
 package ml.shifu.shifu.core.dtrain.earlystop;
 
+import ml.shifu.guagua.master.MasterContext;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+
 import java.util.LinkedList;
 import java.util.List;
 
@@ -21,14 +26,22 @@ import java.util.List;
 public class WindowEarlyStop extends AbstractEarlyStopStrategy {
 
     private double globalMinimumError = Double.MAX_VALUE;
+    private int minimumEpoches;
     private int bufferSize = 0;
     private int windowSize;
 
-    public WindowEarlyStop(int windowSize) {
+    public WindowEarlyStop(MasterContext context, ModelConfig modelConfig, int windowSize) {
+        double minimumStepsRatio = DTrainUtils.getDouble(context.getProps(), // get # of steps to choose parameters
+                CommonConstants.SHIFU_TRAIN_VAL_STEPS_RATIO, 0.1);
+        this.minimumEpoches = (int)(modelConfig.getNumTrainEpochs() * minimumStepsRatio);
         this.windowSize = windowSize;
     }
 
     @Override public boolean shouldEarlyStop(int epochs, double[] weights, double trainingError, double validationError) {
+        if ( epochs < minimumEpoches ) {
+            return false;
+        }
+
         if ( validationError < this.globalMinimumError ) {
             this.globalMinimumError = validationError;
             this.bufferSize = 0;

@@ -26,6 +26,7 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 
+import ml.shifu.shifu.util.NormalUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
@@ -426,7 +427,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         LOG.info("Input count {}, output count {}, candidate count {}", inputNodeCount, outputNodeCount,
                 candidateCount);
         // cache all feature list for sampling features
-        this.allFeatures = CommonUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
+        this.allFeatures = NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
         String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);
         if(StringUtils.isBlank(subsetStr)) {
             this.subFeatures = this.allFeatures;

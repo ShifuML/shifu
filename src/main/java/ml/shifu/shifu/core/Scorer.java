@@ -25,6 +25,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 
+import ml.shifu.shifu.util.NormalUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLData;
@@ -55,13 +56,12 @@ public class Scorer {
     public static final int DEFAULT_SCORE_SCALE = 1000;
 
     private String alg;
-
+    private ModelConfig modelConfig;
     private List<BasicML> models;
     private List<ColumnConfig> columnConfigList;
     private List<ColumnConfig> selectedColumnConfigList;
 
     private double cutoff = 4.0d;
-    private ModelConfig modelConfig;
     private int scale = DEFAULT_SCORE_SCALE;
 
     /**
@@ -198,7 +198,7 @@ public class Scorer {
     }
 
     public ScoreObject score(Map<String, String> rawDataMap) {
-        return scoreNsData(CommonUtils.convertRawMapToNsDataMap(rawDataMap));
+        return scoreNsData(NormalUtils.convertRawMapToNsDataMap(rawDataMap));
     }
 
     /**
@@ -213,12 +213,12 @@ public class Scorer {
     }
 
     public ScoreObject score(final MLDataPair pair, Map<String, String> rawDataMap) {
-        return scoreNsData(pair, CommonUtils.convertRawMapToNsDataMap(rawDataMap));
+        return scoreNsData(pair, NormalUtils.convertRawMapToNsDataMap(rawDataMap));
     }
 
     public ScoreObject scoreNsData(MLDataPair inputPair, Map<NSColumn, String> rawNsDataMap) {
         if(inputPair == null && !this.alg.equalsIgnoreCase(NNConstants.NN_ALG_NAME)) {
-            inputPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
+            inputPair = NormalUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
                     selectedColumnConfigList, rawNsDataMap, cutoff, alg);
         }
 
@@ -242,7 +242,7 @@ public class Scorer {
                 String cacheKey = featureSetToString(network.getFeatureSet());
                 MLDataPair dataPair = cachedNormDataPair.get(cacheKey);
                 if ( dataPair == null ) {
-                    dataPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
+                    dataPair = NormalUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
                             selectedColumnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet());
                     cachedNormDataPair.put(cacheKey, dataPair);
                 }
@@ -255,8 +255,10 @@ public class Scorer {
                  * continue;
                  * }
                  */
-                log.info("Network input count = {}, while input size = {}", network.getInputCount(),
-                        networkPair.getInput().size());
+                if(System.currentTimeMillis() % 1000 == 0L) {
+                    log.info("Network input count = {}, while input size = {}", network.getInputCount(),
+                            networkPair.getInput().size());
+                }
 
                 final int fnlOutputHiddenLayerIndex = outputHiddenLayerIndex;
 
@@ -290,7 +292,7 @@ public class Scorer {
                 }
             } else if(model instanceof BasicNetwork) {
                 final BasicNetwork network = (BasicNetwork) model;
-                final MLDataPair networkPair = CommonUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
+                final MLDataPair networkPair = NormalUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
                         columnConfigList, rawNsDataMap, cutoff, alg, null);
 
                 Callable<MLData> callable = new Callable<MLData>() {

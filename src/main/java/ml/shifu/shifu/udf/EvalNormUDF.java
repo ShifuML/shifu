@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataType;
@@ -241,7 +242,7 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
             // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.
             // UDF in pig client will be initialized to get some metadata issues
             @SuppressWarnings("deprecation")
-            List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig,
+            List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(modelConfig, evalConfig,
                     evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb(),
                     evalConfig.getGbtScoreConvertStrategy());
             this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,

@@ -447,7 +447,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         boolean isAfterVarSelect = (inputOutputIndex[0] != 0);
         // cache all feature list for sampling features
-        List<Integer> allFeatures = CommonUtils.getAllFeatureList(this.columnConfigList, isAfterVarSelect);
+        List<Integer> allFeatures = NormalUtils.getAllFeatureList(this.columnConfigList, isAfterVarSelect);
 
         if(modelConfig.getNormalize().getIsParquet()) {
             guaguaClient = new GuaguaParquetMapReduceClient();
@@ -597,8 +597,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
                     Set<Integer> subFeatures = null;
                     if(isContinuous) {
-                        BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils
-                                .getBasicNetwork(CommonUtils.loadModel(modelConfig, modelPath, ShifuFileUtils
+                        BasicFloatNetwork existingModel = (BasicFloatNetwork) ModelSpecLoaderUtils
+                                .getBasicNetwork(ModelSpecLoaderUtils.loadModel(modelConfig, modelPath, ShifuFileUtils
                                         .getFileSystemBySourceType(this.modelConfig.getDataSet().getSource())));
                         if(existingModel == null) {
                             subFeatures = new HashSet<Integer>(getSubsamplingFeatures(allFeatures,
@@ -729,7 +729,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
                     copyTmpModelsToLocal = Boolean.TRUE.toString()
                             .equalsIgnoreCase(Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "false"));
-                    List<BasicML> models = CommonUtils.loadBasicModels(this.modelConfig, this.columnConfigList, null);
+                    List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(this.modelConfig, null);
                     // compute feature importance and write to local file after models are trained
                     Map<Integer, MutablePair<String, Double>> featureImportances = CommonUtils
                             .computeTreeModelFeatureImportance(models);
@@ -890,7 +890,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 LOG.warn(
                         "!!! Model training parameters like hidden nodes, activation and others  are not consistent with settings, model training will start from scratch.");
             } else if(CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
-                TreeModel model = (TreeModel) CommonUtils.loadModel(this.modelConfig, modelPath, fileSystem);
+                TreeModel model = (TreeModel) ModelSpecLoaderUtils.loadModel(this.modelConfig, modelPath, fileSystem);
 
                 if(!model.getAlgorithm().equalsIgnoreCase(modelConfig.getAlgorithm())) {
                     finalContinuous = 0;
@@ -925,8 +925,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     @SuppressWarnings("unchecked")
     private boolean inputOutputModelCheckSuccess(FileSystem fileSystem, Path modelPath, Map<String, Object> modelParams)
             throws IOException {
-        BasicML basicML = CommonUtils.loadModel(this.modelConfig, modelPath, fileSystem);
-        BasicFloatNetwork model = (BasicFloatNetwork) CommonUtils.getBasicNetwork(basicML);
+        BasicML basicML = ModelSpecLoaderUtils.loadModel(this.modelConfig, modelPath, fileSystem);
+        BasicFloatNetwork model = (BasicFloatNetwork) ModelSpecLoaderUtils.getBasicNetwork(basicML);
 
         int[] outputCandidateCounts = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
                 getColumnConfigList());

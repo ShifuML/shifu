@@ -18,6 +18,7 @@ package ml.shifu.shifu.core.dtrain.lr;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -95,6 +96,11 @@ public class LogisticRegressionOutput extends
      */
     private boolean isGsMode;
 
+    /**
+     * The minimum epochs before choosing best parameters
+     */
+    private int minimumEpochs = -1;
+
     @Override
     public void preApplication(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         init(context);
@@ -107,15 +113,25 @@ public class LogisticRegressionOutput extends
             return;
         }
 
-        double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON) ? context.getMasterResult()
-                .getTrainError() : context.getMasterResult().getTestError());
+        if (minimumEpochs < 0) {
+            double minimumStepsRatio = DTrainUtils.getDouble(context.getProps(), // get # of steps to choose parameters
+                    CommonConstants.SHIFU_TRAIN_VAL_STEPS_RATIO, 0.1);
+            minimumEpochs = (int) (modelConfig.getNumTrainEpochs() * minimumStepsRatio) ;
+        }
 
-        // save the weights according the error decreasing
-        if(currentError < this.minTestError && context.getCurrentIteration() > 1) {
-            this.minTestError = currentError;
-            this.optimizedWeights = Arrays.copyOf(context.getMasterResult().getParameters(),
-                    context.getMasterResult().getParameters().length);
-            LOG.info("change minTestError to {}, and update best weights at {}-th epoch.", this.minTestError, context.getCurrentIteration());
+
+        if ( context.getCurrentIteration() < minimumEpochs ) {
+            this.optimizedWeights = context.getMasterResult().getParameters();
+        } else {
+            double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON) ? context.getMasterResult()
+                    .getTrainError() : context.getMasterResult().getTestError());
+            if ( currentError < this.minTestError ) {
+                this.minTestError = currentError;
+                this.optimizedWeights = Arrays.copyOf(context.getMasterResult().getParameters(),
+                        context.getMasterResult().getParameters().length);
+                LOG.info("change minTestError to {}, and update best weights at {}-th epoch.",
+                        this.minTestError, context.getCurrentIteration());
+            }
         }
 
         // save tmp to hdfs according to raw trainer logic

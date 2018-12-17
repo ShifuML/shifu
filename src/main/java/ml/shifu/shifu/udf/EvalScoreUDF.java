@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.SortedMap;
 
+import ml.shifu.shifu.util.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
@@ -48,10 +49,6 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-import ml.shifu.shifu.util.MultiClsTagPredictor;
 
 /**
  * Calculate the score for each evaluation data
@@ -140,8 +137,8 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
 
         // move model runner construction in exec to avoid OOM error in client side if model is too big like RF
         // TODO not to load model but only to check model file cnt
-        this.modelCnt = CommonUtils.getBasicModelsCnt(modelConfig, evalConfig, evalConfig.getDataSet().getSource());
-        this.subModelsCnt = CommonUtils.getSubModelsCnt(modelConfig, this.columnConfigList, evalConfig,
+        this.modelCnt = ModelSpecLoaderUtils.getBasicModelsCnt(modelConfig, evalConfig, evalConfig.getDataSet().getSource());
+        this.subModelsCnt = ModelSpecLoaderUtils.getSubModelsCnt(modelConfig, this.columnConfigList, evalConfig,
                 evalConfig.getDataSet().getSource());
 
         if(modelConfig.isClassification()) {
@@ -225,13 +222,13 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
         if(this.modelRunner == null) {
             // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.
             // UDF in pig client will be initialized to get some metadata issues
-            List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig,
+            List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(modelConfig, evalConfig,
                     evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb(),
                     evalConfig.getGbtScoreConvertStrategy());
             this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,
                     evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,this.isMultiThreadScoring);
 
-            List<ModelSpec> subModels = CommonUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
+            List<ModelSpec> subModels = ModelSpecLoaderUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
                     evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb(),
                     evalConfig.getGbtScoreConvertStrategy());
             if(CollectionUtils.isNotEmpty(subModels)) {
@@ -362,7 +359,7 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
             }
         }
 
-        if(System.currentTimeMillis() % 100 == 0L) {
+        if(System.currentTimeMillis() % 1000 == 0L) {
             log.info("running time is " + (System.currentTimeMillis() - start) + " ms.");
         }
         return tuple;

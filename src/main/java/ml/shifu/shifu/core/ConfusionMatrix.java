@@ -29,6 +29,7 @@ import java.util.Set;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
+import ml.shifu.shifu.util.*;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -54,11 +55,6 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-import ml.shifu.shifu.util.HDFSUtils;
-import ml.shifu.shifu.util.JSONUtils;
 
 /**
  * Confusion matrix, hold the confusion matrix computing.
@@ -193,7 +189,7 @@ public class ConfusionMatrix {
         // only works for multi classification
         multiClassScore1Index = targetColumnIndex + 2; // target, weight, score1, score2, this is hard code
         try {
-            multiClassModelCnt = CommonUtils.getBasicModelsCnt(modelConfig, evalConfig,
+            multiClassModelCnt = ModelSpecLoaderUtils.getBasicModelsCnt(modelConfig, evalConfig,
                     evalConfig.getDataSet().getSource());
         } catch (FileNotFoundException e) {
             multiClassModelCnt = 0;

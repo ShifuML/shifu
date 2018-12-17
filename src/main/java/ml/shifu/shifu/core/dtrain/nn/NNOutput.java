@@ -24,6 +24,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import ml.shifu.shifu.util.NormalUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -143,6 +144,11 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      */
     private String wgtInit;
 
+    /**
+     * The minimum epochs before choosing best parameters
+     */
+    private int minimumEpochs = -1;
+
     @Override
     public void preApplication(MasterContext<NNParams, NNParams> context) {
         init(context);
@@ -155,16 +161,25 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             return;
         }
 
-        double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON)
-                ? context.getMasterResult().getTrainError()
-                : context.getMasterResult().getTestError());
+        if (minimumEpochs < 0) {
+            double minimumStepsRatio = DTrainUtils.getDouble(context.getProps(), // get # of steps to choose parameters
+                    CommonConstants.SHIFU_TRAIN_VAL_STEPS_RATIO, 0.1);
+            minimumEpochs = (int) (modelConfig.getNumTrainEpochs() * minimumStepsRatio) ;
+        }
 
-        // save the weights according the error decreasing
-        // the first iteration, the test error will be 0 and it couldn't be counted
-        if(currentError < this.minTestError && context.getCurrentIteration() > 1) {
-            this.minTestError = currentError;
-            this.optimizedWeights = Arrays.copyOf(context.getMasterResult().getWeights(),
-                    context.getMasterResult().getWeights().length);
+
+        if ( context.getCurrentIteration() < minimumEpochs ) {
+            this.optimizedWeights = context.getMasterResult().getWeights();
+        } else {
+            double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON) ? context.getMasterResult()
+                    .getTrainError() : context.getMasterResult().getTestError());
+            if ( currentError < this.minTestError ) {
+                this.minTestError = currentError;
+                this.optimizedWeights = Arrays.copyOf(context.getMasterResult().getWeights(),
+                        context.getMasterResult().getWeights().length);
+                LOG.info("change minTestError to {}, and update best weights at {}-th epoch.",
+                        this.minTestError, context.getCurrentIteration());
+            }
         }
 
         // save tmp to hdfs according to raw trainer logic
@@ -352,7 +367,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
         boolean isAfterVarSelect = inputOutputIndex[0] != 0;
         // cache all feature list for sampling features
-        List<Integer> allFeatures = CommonUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
+        List<Integer> allFeatures = NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
         String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);
         if(StringUtils.isBlank(subsetStr)) {
             this.subFeatures = new HashSet<Integer>(allFeatures);

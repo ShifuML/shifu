@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 
+import ml.shifu.shifu.util.NormalUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.encog.ml.BasicML;
@@ -158,7 +159,7 @@ public class ModelRunner {
      * @return CaseScoreResult
      */
     public CaseScoreResult compute(Map<String, String> rawDataMap) {
-        return computeNsData(CommonUtils.convertRawMapToNsDataMap(rawDataMap));
+        return computeNsData(NormalUtils.convertRawMapToNsDataMap(rawDataMap));
     }
 
     /**
