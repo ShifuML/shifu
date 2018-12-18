@@ -251,7 +251,7 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
                             "shifu_input_0": input_placeholder
                         },
                         outputs ={
-                            "shifu_output_0": output_layer
+                            "shifu_output_0": prediction
                         })
             print("Save checkpoint model at epoch " + str(i))
 
