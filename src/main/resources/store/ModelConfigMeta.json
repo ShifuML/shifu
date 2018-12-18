@@ -551,10 +551,10 @@
                 "directive": "input",
                 "element": [
                     {
-                        "name" : "NumHiddenLayers",
-                        "type" : "integer",
-                        "directive": "input",
-                        "defval" : 2
+                       "name" : "NumHiddenLayers",
+                       "type" : "integer",
+                       "directive": "input",
+                       "defval" : 2
                     }, {
                       "name" : "TF.alg",
                       "type" : "text",
@@ -604,13 +604,23 @@
                     }, {
                     	"name" : "TF.optimizer",
                     	"type" : "text",
-                    	"directive" : "input",
-                    	"defval" : "Adam"
+                    	"directive" : "select",
+                    	"defval" : "adam",
+                    	"options": [
+                    		{"label": "Adam", "value":"adam"},
+                    		{"label": "GradientDescent", "value":"gradientDescent"},
+                    		{"label": "RMSProp ", "value":"RMSProp"}
+                    	]
                     }, {
                     	"name" : "TF.loss",
                     	"type" : "text",
-                    	"directive" : "input",
-                    	"defval" : "entropy"
+                    	"directive" : "select",
+                    	"defval" : "squared",
+                    	"options": [
+                            {"label": "Squared", "value":"squared"},
+                            {"label": "Absolute", "value":"absolute"},
+                            {"label": "Log", "value":"log"}
+                        ]
                     }, {
                         "name" : "Momentum",
                         "type" : "number",
