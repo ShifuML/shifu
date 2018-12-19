@@ -191,11 +191,11 @@ public class TensorflowTrainer {
     public List<String> buildCommands() {
         List<String> commands = new ArrayList<String>();
 
-        String actFuncStr = ListToString(actFuncs);
+        String actFuncStr = listToString(actFuncs);
         
-        String hiddenLayerNodesStr = ListToString(hiddenLayerNodes);
+        String hiddenLayerNodesStr = listToString(hiddenLayerNodes);
         
-        String seletectedColumnNumsStr = ListToString(seletectedColumnNums);
+        String seletectedColumnNumsStr = listToString(seletectedColumnNums);
         
         String delimiterStr = String.valueOf(delimiter);
         if((delimiter ^ '|') * (delimiter ^ '&') * (delimiter ^ '>') * (delimiter ^ '<') == 0) {
@@ -262,7 +262,7 @@ public class TensorflowTrainer {
         return commands;
     }
 
-    private <T> String ListToString(List<T> list) {
+    private <T> String listToString(List<T> list) {
         if (CollectionUtils.isEmpty(list)) {
             return StringUtils.EMPTY;
         }
