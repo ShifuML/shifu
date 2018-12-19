@@ -113,7 +113,10 @@ public interface CommonConstants {
 
     public static final String LEARNING_DECAY = "LearningDecay";
 
-
+    public static final String WEIGHT_INITIALIZER = "WeightInitializer";
+    
+    public static final String MINI_BATCH = "MiniBatchs";
+    
     /* --------------   TF Constants  ---------------------- */
     public static final String TF_OPTIMIZER = "TF.optimizer";
 

@@ -548,6 +548,26 @@ public class ModelInspector {
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
 
+                Object TFloss = params.get("TF.loss");
+                if(TFloss != null && !"squared".equalsIgnoreCase(TFloss.toString())
+                        && !"absolute".equalsIgnoreCase(TFloss.toString())
+                        && !"log".equalsIgnoreCase(TFloss.toString())) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add("Loss should be in [log,squared,absolute].");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+                
+                Object TFOptimizer = params.get("TF.optimizer");
+                if(TFOptimizer != null && !"adam".equalsIgnoreCase(TFOptimizer.toString())
+                        && !"gradientDescent".equalsIgnoreCase(TFOptimizer.toString())
+                        && !"RMSProp".equalsIgnoreCase(TFOptimizer.toString())) {
+                    ValidateResult tmpResult = new ValidateResult(true);
+                    tmpResult.setStatus(false);
+                    tmpResult.getCauses().add("tensorflow optimizer should be in [RMSProp,gradientDescent,adam].");
+                    result = ValidateResult.mergeResult(result, tmpResult);
+                }
+                
                 int layerCnt = (Integer) params.get(CommonConstants.NUM_HIDDEN_LAYERS);
                 if(layerCnt < 0) {
                     ValidateResult tmpResult = new ValidateResult(true);
@@ -614,7 +634,7 @@ public class ModelInspector {
                     }
                 }
                 
-                Object miniBatchsO = params.get("MiniBatchs");
+                Object miniBatchsO = params.get(CommonConstants.MINI_BATCH);
                 if(miniBatchsO != null) {
                     Integer miniBatchs = Integer.valueOf(miniBatchsO.toString());
                     if(miniBatchs != null && (miniBatchs <= 0 || miniBatchs > 1000)) {

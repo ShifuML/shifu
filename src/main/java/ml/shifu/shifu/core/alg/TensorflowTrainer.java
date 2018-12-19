@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,6 +90,12 @@ public class TensorflowTrainer {
     @SuppressWarnings("unused")
     private String optimizer;
 
+    @SuppressWarnings("unused")
+    private String weightInitializer;
+    
+    @SuppressWarnings("unused")
+    private Integer miniBatch;
+    
     private int epoch = 100;
 
     private double validateRate = 0.2;
@@ -149,6 +156,8 @@ public class TensorflowTrainer {
         epoch = modelTrainConf.getNumTrainEpochs();
         validateRate = modelTrainConf.getValidSetRate();
         modelName = modelConfig.getBasic().getName();
+        weightInitializer = (String) modelTrainConf.getParams().get(CommonConstants.WEIGHT_INITIALIZER);
+        miniBatch = (Integer) modelTrainConf.getParams().getOrDefault(CommonConstants.MINI_BATCH, 10);
     }
 
     public void train() throws IOException {
@@ -182,15 +191,12 @@ public class TensorflowTrainer {
     public List<String> buildCommands() {
         List<String> commands = new ArrayList<String>();
 
-        String actFuncStr = actFuncs.toString();
-        actFuncStr = actFuncs.toString().substring(1, actFuncStr.length() - 1);
-        actFuncStr = actFuncStr.replaceAll(",", "");
-        String hiddenLayerNodesStr = hiddenLayerNodes.toString();
-        hiddenLayerNodesStr = hiddenLayerNodesStr.substring(1, hiddenLayerNodesStr.length() - 1);
-        hiddenLayerNodesStr = hiddenLayerNodesStr.replaceAll(",", "");
-        String seletectedColumnNumsStr = seletectedColumnNums.toString();
-        seletectedColumnNumsStr = seletectedColumnNumsStr.substring(1, seletectedColumnNumsStr.length() - 1);
-        seletectedColumnNumsStr = seletectedColumnNumsStr.replaceAll(",", "");
+        String actFuncStr = listToString(actFuncs);
+        
+        String hiddenLayerNodesStr = listToString(hiddenLayerNodes);
+        
+        String seletectedColumnNumsStr = listToString(seletectedColumnNums);
+        
         String delimiterStr = String.valueOf(delimiter);
         if((delimiter ^ '|') * (delimiter ^ '&') * (delimiter ^ '>') * (delimiter ^ '<') == 0) {
             delimiterStr = "\\" + delimiter;
@@ -238,21 +244,33 @@ public class TensorflowTrainer {
         commands.add("-delimiter");
         commands.add(delimiterStr);
         commands.add("-lossfunc");
-        commands.add("loss");
+        commands.add(String.valueOf(lossFunc));
         commands.add("-optimizer");
-        commands.add("opti");
+        commands.add(String.valueOf(optimizer));
         commands.add("-validaterate");
         commands.add(String.valueOf(validateRate));
         commands.add("-modelname");
         commands.add(modelName);
         commands.add("-weightcolumnnum");
         commands.add(String.valueOf(weightColumnNum));
+        commands.add("-weightinitalizer");
+        commands.add(String.valueOf(weightInitializer));
+        commands.add("-minibatch");
+        commands.add(miniBatch.toString());
         commands.add("-checkppointinterval");
         commands.add(String.valueOf(DTrainUtils.tmpModelFactor(modelConfig.getTrain().getNumTrainEpochs())));
-
         return commands;
     }
 
+    private <T> String listToString(List<T> list) {
+        if (CollectionUtils.isEmpty(list)) {
+            return StringUtils.EMPTY;
+        }
+        
+        String listStr = list.toString();
+        return listStr.substring(1, listStr.length() - 1).replaceAll(",", "");
+    }
+    
     private static class StreamCollector extends Thread {
         /** Number of last lines to keep */
         private static final int LAST_LINES_COUNT = 100;
