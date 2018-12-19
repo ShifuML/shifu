@@ -272,6 +272,20 @@ class TrainAndEvalErrorHook(tf.train.SessionRunHook):
         else:
             self.current_step += 1
 
+def move_model(export_dir):
+    if os.path.isfile(export_dir + '/saved_model.pb'):
+        os.remove(export_dir + '/saved_model.pb')
+    shutil.rmtree(export_dir + "/variables/", ignore_errors=True)
+    
+    dirs = [export_dir + "/" + d for d in os.listdir(export_dir) if os.path.isdir(export_dir + "/" + d)]
+    latest = sorted(dirs, key=lambda x: os.path.getctime(x), reverse=True)[0]
+    
+    for f in os.listdir(latest):
+        cur = latest + '/' + f
+        if os.path.isdir(cur):
+            shutil.copytree(cur, export_dir + '/' + f)
+        else:
+            shutil.copy(cur, export_dir + '/' + f)
 
 def dnn_model_fn(features, labels, mode, params):
     shifu_context = params['shifu_context']
@@ -433,7 +447,11 @@ if __name__ == "__main__":
 
     export_dir = context["export_dir"] + "/" + context["model_name"]
     dnn.export_savedmodel(export_dir, serving_input_receiver_fn)
+    
+    move_model(export_dir)
+
     export_generic_config(export_dir=export_dir)
+
     
 '''
     prediction, cost_func, train_op, input_placeholder, target_placeholder, graph, sample_weight_placeholder = build_graph(shifu_context=context)
