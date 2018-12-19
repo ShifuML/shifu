@@ -19,6 +19,7 @@
 # same folder of regular models in 'models' folder and being evaluated in distributed shifu eval step.
 #
 
+import shutil
 import argparse
 from tensorflow.python.platform import gfile
 import gzip
@@ -34,8 +35,11 @@ import numpy as np
 import sys
 import os
 import datetime
+import math
 
 FEATURE_CNT = 0
+TRAINING_MODE = "Training"
+EVAL_MODE = "Validation"
 
 def get_activation_fun(name):
     if name == None:
@@ -55,7 +59,7 @@ def get_activation_fun(name):
     
 def get_loss_func(name):
     if name == None:
-        return tf.nn.leaky_relu
+        return tf.losses.mean_squared_error
     name = name.lower()
 
     if 'squared' == name:
@@ -225,6 +229,50 @@ def serving_input_receiver_fn():
     }
     return tf.estimator.export.ServingInputReceiver(inputs, inputs)
 
+class TrainAndEvalErrorHook(tf.train.SessionRunHook):
+    _current_epoch = 1
+
+    def __init__(self, mode_name = None, data_cnt = 0, batch_size = 1):
+        self._mode_name = mode_name
+        self._data_cnt = float(data_cnt)
+        self.steps_per_epoch = math.ceil(data_cnt / batch_size)
+        self.total_loss = 0.0
+        self.current_step = 1
+        print("")
+        print("*** " + self._mode_name + " Hook: - Created")
+        print("steps_per_epoch: " + str(self.steps_per_epoch))
+        print("")
+
+    def before_run(self, run_context):
+        
+        graph = run_context.session.graph
+        
+        #tensor_name = 'loss_tensor_0'
+        #loss_tensor = graph.get_tensor_by_name(tensor_name)
+
+        loss_tensor = graph.get_collection(tf.GraphKeys.LOSSES)[0]
+        return tf.train.SessionRunArgs(loss_tensor)
+
+    def after_run(self, run_context, run_values):
+        current_loss = run_values.results
+        self.total_loss += current_loss
+        if self.current_step >= self.steps_per_epoch:
+            if EVAL_MODE == self._mode_name:
+                print("                               " + self._mode_name + " Epoch " + str(type(self)._current_epoch-1) + ": Loss :"+ str(self.total_loss/self._data_cnt))
+            elif TRAINING_MODE == self._mode_name:
+                print(self._mode_name + " Epoch " + str(type(self)._current_epoch) + ": Loss :"+ str(self.total_loss/self._data_cnt))
+            else:
+                print("invalid mode name: " + self._mode_name)
+            sys.stdout.flush()
+
+            self.current_step = 1
+            self.total_loss = 0.0
+            if "Training" == self._mode_name:
+                type(self)._current_epoch += 1
+        else:
+            self.current_step += 1
+
+
 def dnn_model_fn(features, labels, mode, params):
     shifu_context = params['shifu_context']
     layers = shifu_context["layers"]
@@ -260,35 +308,32 @@ def dnn_model_fn(features, labels, mode, params):
         predictions = {
             'scores': prediction
         }
-	
+    
         export_outputs = {
-			'predictions': tf.estimator.export.PredictOutput(predictions)
-		}
+            'predictions': tf.estimator.export.PredictOutput(predictions)
+        }
         # In `PREDICT` mode we only need to return predictions.
         return tf.estimator.EstimatorSpec(mode = mode, predictions = predictions, export_outputs = export_outputs)
 
-    average_loss = get_loss_func(loss_func)(predictions=prediction, labels=labels, weights=features['sample_weight'])
+    average_loss = get_loss_func(loss_func)(predictions=prediction, labels=labels, weights=features['sample_weight'], reduction=tf.losses.Reduction.SUM)
     # Pre-made estimators use the total_loss instead of the average,
     # so report total_loss for compatibility.
     #batch_size = tf.shape(labels)[0]
     #total_loss = tf.to_float(batch_size) * average_loss
-    eval_metrics = {"loss": average_loss}
-    logging_hook = tf.train.LoggingTensorHook(eval_metrics, every_n_iter=1)
-	
+    
     if mode == tf.estimator.ModeKeys.TRAIN:
         optimizer = get_optimizer(optimizer_name)(learning_rate=learning_rate)
         train_op = optimizer.minimize(average_loss, global_step=tf.train.get_global_step())
-        return tf.estimator.EstimatorSpec(mode=mode, loss=average_loss, train_op=train_op, training_hooks = [logging_hook])
+        return tf.estimator.EstimatorSpec(mode=mode, loss=average_loss, train_op=train_op)
     
     
-    
+    eval_metrics = {"a-loss": tf.metrics.mean_squared_error(predictions=prediction, labels=labels, weights=features['sample_weight'])}
     if mode == tf.estimator.ModeKeys.EVAL:
         return tf.estimator.EstimatorSpec(
             mode=mode,
             # Report sum of error for compatibility with pre-made estimators
             loss=average_loss,
-            eval_metric_ops=eval_metrics,
-			evaluation_hooks=[logging_hook])
+            eval_metric_ops=eval_metrics)
     
 if __name__ == "__main__":
     print("Training input arguments: " + str(sys.argv))
@@ -337,11 +382,25 @@ if __name__ == "__main__":
     act_funcs = args.actfuncs
     batch_size = args.minibatch
     
+    RESUME_TRAINING = False
+    TIME_INTERVAL_TO_DO_VALIDATION = 3 #seconds
+
+
     context = {"feature_column_nums": feature_column_nums ,"layers": hidden_layers, "batch_size": batch_size,
                "export_dir": "./models", "epoch": args.epochnums, "model_name": model_name, "checkpoint_interval": args.checkpointinterval, "sample_weight_column_num": sample_weight_column_num, "learning_rate": learning_rate, "loss_func":loss_func, "optimizer":optimizer, "weight_initalizer":weight_initalizer, "act_funcs":act_funcs}
     if not os.path.exists("./models"):
         os.makedirs("./models", 0777)
+    
+    if not RESUME_TRAINING:
+        print("Removing previous artifacts...")
+        shutil.rmtree('./models/tmp', ignore_errors=True)
+    else:
+        print("Resuming training...") 
+
     input_features, targets, validate_feature, validate_target, training_data_sample_weight, valid_data_sample_weight = load_data(context)
+    context["total_steps"] = math.ceil(len(input_features)/context['batch_size'])*context['epoch']
+    
+    #tf.logging.set_verbosity(tf.logging.INFO)
 
     # Train the model
     train_input_fn = tf.estimator.inputs.numpy_input_fn(
@@ -350,10 +409,27 @@ if __name__ == "__main__":
         batch_size=context["batch_size"],
         num_epochs=context['epoch'],
         shuffle=False)
+    train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, 
+        max_steps=context["total_steps"], 
+        hooks = [TrainAndEvalErrorHook(TRAINING_MODE, len(input_features), context["batch_size"])])
 
-    dnn=tf.estimator.Estimator(model_fn=dnn_model_fn, model_dir='./models', params={'shifu_context': context})
+    eval_input_fn = tf.estimator.inputs.numpy_input_fn(
+        x={'input_feature': np.asarray(validate_feature, dtype=np.float32), 'sample_weight': np.asarray(valid_data_sample_weight, dtype=np.float32)},
+        y=np.asarray(validate_target, dtype=np.float32),
+        batch_size=len(validate_target),
+        num_epochs=1,
+        shuffle=False)
+    eval_spec = tf.estimator.EvalSpec(input_fn = eval_input_fn, 
+        throttle_secs = TIME_INTERVAL_TO_DO_VALIDATION,
+        hooks = [TrainAndEvalErrorHook(EVAL_MODE, len(validate_target), len(validate_target))])
+    
+    run_config = tf.estimator.RunConfig(tf_random_seed=19830610, 
+       model_dir='./models/tmp',
+       save_checkpoints_secs = TIME_INTERVAL_TO_DO_VALIDATION)
+    dnn=tf.estimator.Estimator(model_fn=dnn_model_fn, params={'shifu_context': context}, config=run_config)
 
-    dnn.train(input_fn=train_input_fn, steps=context['epoch'])
+    #dnn.train(input_fn=train_input_fn, steps=context['epoch'])
+    tf.estimator.train_and_evaluate(dnn, train_spec, eval_spec)
 
     export_dir = context["export_dir"] + "/" + context["model_name"]
     dnn.export_savedmodel(export_dir, serving_input_receiver_fn)
