@@ -258,6 +258,30 @@ public class CommonUtilsTest {
     // }
 
     @Test
+    public void hasCandidateTest(){
+        List<ColumnConfig> configList = new ArrayList<ColumnConfig>();
+
+        ColumnConfig config = new ColumnConfig();
+        config.setColumnName("A");
+        config.setFinalSelect(false);
+        config.setColumnFlag(ColumnFlag.Candidate);
+
+        configList.add(config);
+        Assert.assertTrue(CommonUtils.hasCandidateColumns(configList));
+    }
+    @Test
+    public void hasNoCandidateTest(){
+        List<ColumnConfig> configList = new ArrayList<ColumnConfig>();
+
+        ColumnConfig config = new ColumnConfig();
+        config.setColumnName("A");
+        config.setFinalSelect(false);
+
+        configList.add(config);
+        Assert.assertFalse(CommonUtils.hasCandidateColumns(configList));
+    }
+
+    @Test
     public void getTargetColumnNumTest() {
         List<ColumnConfig> list = new ArrayList<ColumnConfig>();
         ColumnConfig config = new ColumnConfig();

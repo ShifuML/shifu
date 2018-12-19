@@ -34,6 +34,9 @@ import numpy as np
 import sys
 import os
 import datetime
+def tprint(content, log_level="INFO"):
+    systime = datetime.datetime.now()
+    print(str(systime) + " " + log_level + " " + " [Shifu.Tensorflow.train] " + str(content))
 
 #############################################################################
 #
@@ -168,7 +171,6 @@ def load_data(context):
     sample_weight_column_num = context["sample_weight_column_num"]
     allFileNames = gfile.ListDirectory(root)
     normFileNames = filter(lambda x: not x.startswith(".") and not x.startswith("_"), allFileNames)
-    print(normFileNames)
     print("Total input file count is " + str(len(normFileNames)) + ".")
     sys.stdout.flush()
 
@@ -240,10 +242,8 @@ def load_data(context):
                         valid_data_sample_weight.append([1.0])
 
     print("Total data count: " + str(line_count) + ".")
-    print("Train pos count: " + str(train_pos_cnt) + ".")
-    print("Train neg count: " + str(train_neg_cnt) + ".")
-    print("Valid pos count: " + str(valid_pos_cnt) + ".")
-    print("Valid neg count: " + str(valid_neg_cnt) + ".")
+    print("Train pos count: " + str(train_pos_cnt) + ", neg count: " + str(train_neg_cnt) + ".")
+    print("Valid pos count: " + str(valid_pos_cnt) + ", neg count: " + str(valid_neg_cnt) + ".")
     sys.stdout.flush()
 
     context['feature_count'] = len(feature_column_nums)
@@ -265,6 +265,7 @@ def simple_save(session, export_dir, inputs, outputs, legacy_init_op=None):
         legacy_init_op=legacy_init_op,
         clear_devices=True)
     b.save()
+    export_generic_config(export_dir=export_dir)
 
 def one_hot(input, num_classes):
     input = np.array(input).reshape(-1)
@@ -278,15 +279,12 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
     batch_size = context["batch_size"]
     export_dir = context["export_dir"] + "/" + context["model_name"]
     checkpoint_interval = context["checkpoint_interval"]
-    print(checkpoint_interval)
     sys.stdout.flush()
     
     total_batch = int(len(input_features) / batch_size)
     input_batch = np.array_split(input_features, total_batch)
-    #target_batch = np.array_split(one_hot(targets, num_classes), total_batch)
     target_batch = np.array_split(targets, total_batch)
     validate_input = np.array_split(validate_input, 1)
-    #validate_target = np.array_split(one_hot(validate_target, num_classes), 1)
     validate_target = np.array_split(validate_target, 1)
 
     train_sample_weight_batch = np.array_split(training_data_sample_weight, total_batch)
@@ -314,6 +312,15 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
             sum_validate_error += v[0]
         print("Epoch " + str(i) + " avg train error " + str(sum_train_error / total_batch) + ", avg validation error is " + str(sum_validate_error / len(validate_input)) + ".")
         sys.stdout.flush()
+        if checkpoint_interval > 0 and i % checkpoint_interval == 0:
+            simple_save(session=session, export_dir=export_dir + "-checkpoint-" + str(i),
+                        inputs={
+                            "shifu_input_0": input_placeholder
+                        },
+                        outputs ={
+                            "shifu_output_0": prediction
+                        })
+            print("Save checkpoint model at epoch " + str(i))
 
     simple_save(session=session, export_dir=export_dir,
                                inputs={
@@ -322,7 +329,7 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
                                outputs ={
                                    "shifu_output_0": prediction
                                })
-    export_generic_config(export_dir=export_dir)
+    print("Model training finished, model export path: " + export_dir)
 
 
 def export_generic_config(export_dir):

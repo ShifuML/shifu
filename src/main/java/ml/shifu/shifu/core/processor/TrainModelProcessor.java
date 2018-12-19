@@ -373,8 +373,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     protected int runDistributedTrain() throws IOException, InterruptedException, ClassNotFoundException {
-        
-        LOG.info("Started {} d-training.", isDryTrain ? "dry" : "");
+        LOG.info("Started {}distributed training.", isDryTrain ? "dry " : "");
         int status = 0;
 
         if(Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {

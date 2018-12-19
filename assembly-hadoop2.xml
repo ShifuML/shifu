@@ -147,7 +147,6 @@
                 <include>*:slf4j-api:*</include>
                 <include>*:stringtemplate:*</include>
                 <include>*:xmlenc:*</include>
-                <include>*:xz:*</include>
                 <include>*:zookeeper:*</include>
                 <include>*:joda-time:*</include>
                 <include>*:automaton:*</include>

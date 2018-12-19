@@ -34,6 +34,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -96,12 +97,13 @@ public class TensorflowTrainer {
     private Integer miniBatch;
     
     private int epoch = 100;
-    
+
     private double validateRate = 0.2;
-    
+
     private String modelName;
 
     private int weightColumnNum = -1;
+
     /**
      * Extract and store tensorflow training params from shifu configs.
      * 
@@ -122,7 +124,7 @@ public class TensorflowTrainer {
                 targetColumnNum = i;
             } else if(cc.isFinalSelect()) {
                 seletectedColumnNums.add(i);
-            } else if (cc.isWeight()) {
+            } else if(cc.isWeight()) {
                 weightColumnNum = i;
             }
         }
@@ -143,9 +145,11 @@ public class TensorflowTrainer {
         hiddenLayers = hiddenLayerNodes.size();
         inputDataPath = pathFinder.getNormalizedDataPath();
         alg = (String) modelConfig.getParams().get(CommonConstants.TF_ALG);
-        //delimiter = modelConfig.getDataSetDelimiter().charAt(0);
-        delimiter = CommonUtils.escapePigString(
-                Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER)).charAt(0);
+        // delimiter = modelConfig.getDataSetDelimiter().charAt(0);
+        delimiter = CommonUtils
+                .escapePigString(
+                        Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER))
+                .charAt(0);
 
         lossFunc = (String) modelTrainConf.getParams().get(CommonConstants.TF_LOSS);
         optimizer = (String) modelTrainConf.getParams().get(CommonConstants.TF_OPTIMIZER);
@@ -253,7 +257,8 @@ public class TensorflowTrainer {
         commands.add(String.valueOf(weightInitializer));
         commands.add("-minibatch");
         commands.add(miniBatch.toString());
-        
+        commands.add("-checkppointinterval");
+        commands.add(String.valueOf(DTrainUtils.tmpModelFactor(modelConfig.getTrain().getNumTrainEpochs())));
         return commands;
     }
 
