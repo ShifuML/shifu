@@ -59,7 +59,7 @@ def build_graph(shifu_context):
     weight_initalizer = shifu_context["weight_initalizer"]
     act_funcs = shifu_context["act_funcs"]
 
-    tprint("Configuration info: loss func=" + loss_func + " optimizer_name=" + optimizer_name + " weight_initalizer=" + weight_initalizer + " act_funcs=" + act_funcs)
+    tprint("Configuration info: loss func=" + str(loss_func) + " optimizer_name=" + str(optimizer_name) + " weight_initalizer=" + str(weight_initalizer) + " act_funcs=" + str(act_funcs))
     
     current_layer = in_placeholder
     dnn_layer = []
@@ -294,7 +294,7 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
     train_sample_weight_batch = np.array_split(training_data_sample_weight, total_batch)
 
     for i in range(1, epoch + 1):
-        print("Start epoch " + str(i))
+        tprint("Start epoch " + str(i))
         sum_train_error = 0.0
         for j in range(total_batch):
             o, c, p= session.run([train_op, cost_func, prediction],
