@@ -67,10 +67,14 @@ def build_graph(shifu_context):
     weights = []
     biases = []
     
+    l2_reg = tf.contrib.layers.l2_regularizer(scale=0.1)
+
     for i in range(len(layers)):
         node_num = layers[i]
-        weight = tf.Variable(tf.random_normal([current_nodes, node_num]))
-        bias = tf.Variable(tf.random_normal(shape=([node_num])))
+        #weight = tf.Variable(tf.random_uniform([current_nodes, node_num], -1.0, 1.0))
+        weight = tf.get_variable(name="weight_" + str(i), regularizer = l2_reg, initializer= tf.random_uniform([current_nodes, node_num], -1.0, 1.0))
+
+        bias = tf.Variable(tf.random_uniform(shape=([node_num]), minval=-1.0, maxval=1.0))
         current_layer = tf.matmul(current_layer, weight)
         current_layer = tf.add(current_layer, bias)
         current_layer = get_activation_fun(act_funcs[i])(current_layer)
@@ -79,8 +83,9 @@ def build_graph(shifu_context):
         current_nodes = node_num
         dnn_layer.append(current_layer)
 
-    weight = tf.Variable(tf.random_normal([current_nodes, 1]))
-    bias = tf.Variable(tf.random_normal(shape=([1])))
+    #weight = tf.Variable(tf.random_uniform([current_nodes, 1], -1.0, 1.0))
+    weight = tf.get_variable(name="weight_" + str(len(layers)), regularizer = l2_reg, initializer= tf.random_uniform([current_nodes, 1], -1.0, 1.0))
+    bias = tf.Variable(tf.random_uniform(shape=([1]), minval=-1.0, maxval=1.0))
     output_layer = tf.matmul(current_layer, weight)
     output_layer = tf.add(output_layer, bias)
     weights.append(weight)
@@ -91,11 +96,13 @@ def build_graph(shifu_context):
     prediction = tf.nn.sigmoid(output_layer, name="shifu_output_0")
     
     # Define loss and optimizer
+    #reg_term = tf.contrib.layers.apply_regularization(l2_reg)
+    
+    #cost_func = (get_loss_func(loss_func)(predictions=prediction, labels=label_placeholder, weights=sample_weight_placeholder) + reg_term)
     cost_func = get_loss_func(loss_func)(predictions=prediction, labels=label_placeholder, weights=sample_weight_placeholder)
+    
     optimizer = get_optimizer(optimizer_name)(learning_rate=learning_rate)
     train_op = optimizer.minimize(cost_func)
-    
-    
     
     return prediction, cost_func, train_op, in_placeholder, label_placeholder, graph, sample_weight_placeholder
 
