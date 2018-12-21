@@ -34,13 +34,16 @@ import numpy as np
 import sys
 import os
 import datetime
+
 def tprint(content, log_level="INFO"):
     systime = datetime.datetime.now()
     print(str(systime) + " " + log_level + " " + " [Shifu.Tensorflow.train] " + str(content))
+    sys.stdout.flush()
 
-#############################################################################
-#
-#############################################################################
+########################################################################################################################
+# Buid your own training graph, user can edit tf graph in below method, this case, configuration in ModelConfig.json 
+# will not be honoured.
+########################################################################################################################
 def build_graph(shifu_context):
     graph = tf.get_default_graph
     in_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, context["feature_count"]), name="shifu_input_0")
@@ -56,18 +59,14 @@ def build_graph(shifu_context):
     weight_initalizer = shifu_context["weight_initalizer"]
     act_funcs = shifu_context["act_funcs"]
 
-    print(loss_func)
-    print(optimizer_name)
-    print(weight_initalizer)
-    print(act_funcs)
-    sys.stdout.flush()
+    tprint("Configuration info: loss func=" + loss_func + " optimizer_name=" + optimizer_name + " weight_initalizer=" + weight_initalizer + " act_funcs=" + act_funcs)
     
     current_layer = in_placeholder
     dnn_layer = []
     weights = []
     biases = []
     
-    l2_reg = tf.contrib.layers.l2_regularizer(scale=0.1)
+    l2_reg = tf.contrib.layers.l2_regularizer(scale=0.01)
 
     for i in range(len(layers)):
         node_num = layers[i]
@@ -105,6 +104,9 @@ def build_graph(shifu_context):
     train_op = optimizer.minimize(cost_func)
     
     return prediction, cost_func, train_op, in_placeholder, label_placeholder, graph, sample_weight_placeholder
+########################################################################################################################
+# End of build tensorflow training graph
+########################################################################################################################
 
 def get_activation_fun(name):
     if name == None:
@@ -143,9 +145,9 @@ def get_optimizer(name):
     
     if 'adam' == name:
         return tf.train.AdamOptimizer
-    elif 'gradientDescent' == name:
+    elif 'gradientdescent' == name:
         return tf.train.GradientDescentOptimizer
-    elif 'RMSProp' == name:
+    elif 'rmsprop' == name:
         return tf.train.RMSPropOptimizer
     else:
         return tf.train.AdamOptimizer
@@ -159,7 +161,6 @@ def get_initalizer(name):
         return tf.contrib.layers.xavier_initializer()
         
 def load_data(context):
-
     train_data = []
     train_target = []
     valid_data = []
@@ -178,8 +179,7 @@ def load_data(context):
     sample_weight_column_num = context["sample_weight_column_num"]
     allFileNames = gfile.ListDirectory(root)
     normFileNames = filter(lambda x: not x.startswith(".") and not x.startswith("_"), allFileNames)
-    print("Total input file count is " + str(len(normFileNames)) + ".")
-    sys.stdout.flush()
+    tprint("Total input file count is " + str(len(normFileNames)) + ".")
 
     file_count = 1
     line_count = 0
@@ -198,8 +198,7 @@ def load_data(context):
                 
                 line_count += 1
                 if line_count % 10000 == 0: 
-                    print("Total loading lines cnt: " + str(line_count))
-                    sys.stdout.flush()
+                    tprint("Total loading lines: " + str(line_count))
                 
                 columns = line.split(delimiter)
 
@@ -248,10 +247,9 @@ def load_data(context):
                     else:
                         valid_data_sample_weight.append([1.0])
 
-    print("Total data count: " + str(line_count) + ".")
-    print("Train pos count: " + str(train_pos_cnt) + ", neg count: " + str(train_neg_cnt) + ".")
-    print("Valid pos count: " + str(valid_pos_cnt) + ", neg count: " + str(valid_neg_cnt) + ".")
-    sys.stdout.flush()
+    tprint("Total data count: " + str(line_count) + ".")
+    tprint("Train pos count: " + str(train_pos_cnt) + ", neg count: " + str(train_neg_cnt) + ".")
+    tprint("Valid pos count: " + str(valid_pos_cnt) + ", neg count: " + str(valid_neg_cnt) + ".")
 
     context['feature_count'] = len(feature_column_nums)
 
@@ -286,7 +284,6 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
     batch_size = context["batch_size"]
     export_dir = context["export_dir"] + "/" + context["model_name"]
     checkpoint_interval = context["checkpoint_interval"]
-    sys.stdout.flush()
     
     total_batch = int(len(input_features) / batch_size)
     input_batch = np.array_split(input_features, total_batch)
@@ -317,8 +314,8 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
                                 sample_weight_placeholder: [valid_data_sample_weight[j]],
                             })
             sum_validate_error += v[0]
-        print("Epoch " + str(i) + " avg train error " + str(sum_train_error / total_batch) + ", avg validation error is " + str(sum_validate_error / len(validate_input)) + ".")
-        sys.stdout.flush()
+        tprint("Epoch " + str(i) + " avg train error " + str(sum_train_error / total_batch) + ", avg validation error is " + str(sum_validate_error / len(validate_input)) + ".")
+
         if checkpoint_interval > 0 and i % checkpoint_interval == 0:
             simple_save(session=session, export_dir=export_dir + "-checkpoint-" + str(i),
                         inputs={
@@ -327,7 +324,7 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
                         outputs ={
                             "shifu_output_0": prediction
                         })
-            print("Save checkpoint model at epoch " + str(i))
+            tprint("Save checkpoint model at epoch " + str(i))
 
     simple_save(session=session, export_dir=export_dir,
                                inputs={
@@ -336,7 +333,7 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
                                outputs ={
                                    "shifu_output_0": prediction
                                })
-    print("Model training finished, model export path: " + export_dir)
+    tprint("Model training finished, model export path: " + export_dir)
 
 
 def export_generic_config(export_dir):
@@ -367,8 +364,7 @@ def remove_path(path):
     os.removedirs(path)
 
 if __name__ == "__main__":
-    print("Training input arguments: " + str(sys.argv))
-    sys.stdout.flush()
+    tprint("Training input arguments: " + str(sys.argv))
     # Use for parse Arguments
     parser = argparse.ArgumentParser("Shifu_tensorflow_training")
     parser.add_argument("-inputdaatapath", action='store', dest='inputdaatapath', help="data path used for training",
@@ -421,6 +417,7 @@ if __name__ == "__main__":
 
     # Train the model
     prediction, cost_func, train_op, input_placeholder, target_placeholder, graph, sample_weight_placeholder = build_graph(shifu_context=context)
+
     session = tf.Session()
     train(input_placeholder=input_placeholder, target_placeholder=target_placeholder, sample_weight_placeholder = sample_weight_placeholder, prediction=prediction,
           cost_func=cost_func, train_op=train_op, input_features=input_features,

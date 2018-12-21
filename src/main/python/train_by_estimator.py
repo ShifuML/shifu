@@ -41,6 +41,10 @@ FEATURE_CNT = 0
 TRAINING_MODE = "Training"
 EVAL_MODE = "Validation"
 
+def tprint(content, log_level="INFO"):
+    systime = datetime.datetime.now()
+    print(str(systime) + " " + log_level + " " + " [Shifu.Tensorflow.train] " + str(content))
+    sys.stdout.flush()
 
 def get_activation_fun(name):
     if name == None:
@@ -81,9 +85,9 @@ def get_optimizer(name):
 
     if 'adam' == name:
         return tf.train.AdamOptimizer
-    elif 'gradientDescent' == name:
+    elif 'gradientdescent' == name:
         return tf.train.GradientDescentOptimizer
-    elif 'RMSProp' == name:
+    elif 'rmsprop' == name:
         return tf.train.RMSPropOptimizer
     else:
         return tf.train.AdamOptimizer
