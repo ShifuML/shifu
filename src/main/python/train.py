@@ -71,8 +71,8 @@ def build_graph(shifu_context):
 
     for i in range(len(layers)):
         node_num = layers[i]
-        #weight = tf.Variable(tf.random_uniform([current_nodes, node_num], -1.0, 1.0))
-        weight = tf.get_variable(name="weight_" + str(i), regularizer = l2_reg, initializer= tf.random_uniform([current_nodes, node_num], -1.0, 1.0))
+        weight = tf.Variable(tf.random_uniform([current_nodes, node_num], -1.0, 1.0))
+        #weight = tf.get_variable(name="weight_" + str(i), regularizer = l2_reg, initializer= tf.random_uniform([current_nodes, node_num], -1.0, 1.0))
 
         bias = tf.Variable(tf.random_uniform(shape=([node_num]), minval=-1.0, maxval=1.0))
         current_layer = tf.matmul(current_layer, weight)
@@ -83,8 +83,8 @@ def build_graph(shifu_context):
         current_nodes = node_num
         dnn_layer.append(current_layer)
 
-    #weight = tf.Variable(tf.random_uniform([current_nodes, 1], -1.0, 1.0))
-    weight = tf.get_variable(name="weight_" + str(len(layers)), regularizer = l2_reg, initializer= tf.random_uniform([current_nodes, 1], -1.0, 1.0))
+    weight = tf.Variable(tf.random_uniform([current_nodes, 1], -1.0, 1.0))
+    #weight = tf.get_variable(name="weight_" + str(len(layers)), regularizer = l2_reg, initializer= tf.random_uniform([current_nodes, 1], -1.0, 1.0))
     bias = tf.Variable(tf.random_uniform(shape=([1]), minval=-1.0, maxval=1.0))
     output_layer = tf.matmul(current_layer, weight)
     output_layer = tf.add(output_layer, bias)
@@ -96,10 +96,10 @@ def build_graph(shifu_context):
     prediction = tf.nn.sigmoid(output_layer, name="shifu_output_0")
     
     # Define loss and optimizer
-    #reg_term = tf.contrib.layers.apply_regularization(l2_reg)
+    reg_term = tf.contrib.layers.apply_regularization(l2_reg, weights)
     
-    #cost_func = (get_loss_func(loss_func)(predictions=prediction, labels=label_placeholder, weights=sample_weight_placeholder) + reg_term)
-    cost_func = get_loss_func(loss_func)(predictions=prediction, labels=label_placeholder, weights=sample_weight_placeholder)
+    cost_func = (get_loss_func(loss_func)(predictions=prediction, labels=label_placeholder, weights=sample_weight_placeholder) + reg_term)
+    #cost_func = get_loss_func(loss_func)(predictions=prediction, labels=label_placeholder, weights=sample_weight_placeholder)
     
     optimizer = get_optimizer(optimizer_name)(learning_rate=learning_rate)
     train_op = optimizer.minimize(cost_func)
