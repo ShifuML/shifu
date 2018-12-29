@@ -191,11 +191,7 @@ public class VariableSelector {
         log.info("Expected selected columns:" + expectedVarNum);
 
         // reset to false at first.
-        for(ColumnConfig columnConfig: this.columnConfigList) {
-            if(columnConfig.isFinalSelect()) {
-                columnConfig.setFinalSelect(false);
-            }
-        }
+        resetFinalSelect();
         ColumnConfig config = null;
         while(cntSelected < expectedVarNum) {
             if(key.equalsIgnoreCase("ks")) {
@@ -287,6 +283,14 @@ public class VariableSelector {
         }
 
         return columnConfigList;
+    }
+
+    private void resetFinalSelect() {
+        for(ColumnConfig columnConfig: this.columnConfigList) {
+            if(columnConfig.isFinalSelect()) {
+                columnConfig.setFinalSelect(false);
+            }
+        }
     }
 
     private static class Archives {

@@ -181,12 +181,12 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 }
 
                 if(modelConfig.isRegression()) {
-                    VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
                     String filterBy = this.modelConfig.getVarSelectFilterBy();
                     if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_KS)
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_IV)
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_PARETO)
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_MIX)) {
+                        VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
                         this.columnConfigList = selector.selectByFilter();
                     } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_FI)) {
                         if(!CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {

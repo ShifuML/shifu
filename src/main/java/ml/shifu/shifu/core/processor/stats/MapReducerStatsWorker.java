@@ -607,7 +607,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         log.info("Start to use {} to compute the PSI ", columnConfig.getColumnName());
 
-        Map<String, String> paramsMap = new HashMap<String, String>();
+        Map<String, String> paramsMap = new HashMap<>();
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
         paramsMap.put("PSIColumn", modelConfig.getPsiColumnName().trim());
         paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 10));

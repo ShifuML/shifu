@@ -40,15 +40,14 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
     protected ModelConfig modelConfig;
     protected List<ColumnConfig> columnConfigList;
 
-    // Need to specify the default value as -1, or it won't report error if it doesn't find target column
-    protected int tagColumnNum = -1;
+    protected int tagColumnNum;
 
     // cache tags in set for search
     protected Set<String> posTagSet;
     protected Set<String> negTagSet;
     protected Set<String> tagSet;
 
-    protected int maxCategorySize = Constants.MAX_CATEGORICAL_BINC_COUNT;
+    protected int maxCategorySize;
 
     protected boolean hasCandidates;
 
@@ -72,25 +71,16 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
         }
 
         columnConfigList = CommonUtils.loadColumnConfigList(pathColumnConfig, sourceType);
-        for(ColumnConfig config: columnConfigList) {
-            if(config.isTarget()) {
-                tagColumnNum = config.getColumnNum();
-                break;
-            }
-        }
-
-        if(tagColumnNum == -1) {
-            throw new RuntimeException("No Valid Target.");
-        }
+        tagColumnNum = CommonUtils.getTargetColumnNum(columnConfigList);
 
         if(modelConfig != null && modelConfig.getPosTags() != null) {
-            this.posTagSet = new HashSet<String>(modelConfig.getPosTags());
+            this.posTagSet = new HashSet<>(modelConfig.getPosTags());
         }
         if(modelConfig != null && modelConfig.getNegTags() != null) {
-            this.negTagSet = new HashSet<String>(modelConfig.getNegTags());
+            this.negTagSet = new HashSet<>(modelConfig.getNegTags());
         }
         if(modelConfig != null && modelConfig.getFlattenTags() != null) {
-            this.tagSet = new HashSet<String>(modelConfig.getFlattenTags());
+            this.tagSet = new HashSet<>(modelConfig.getFlattenTags());
         }
 
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
