@@ -35,6 +35,9 @@ import sys
 import os
 import datetime
 
+MODELS_PATH = "./models"
+
+
 def tprint(content, log_level="INFO"):
     systime = datetime.datetime.now()
     print(str(systime) + " " + log_level + " " + " [Shifu.Tensorflow.train] " + str(content))
@@ -45,8 +48,15 @@ def tprint(content, log_level="INFO"):
 # will not be honoured.
 ########################################################################################################################
 def build_graph(shifu_context):
-    graph = tf.get_default_graph
-    in_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, context["feature_count"]), name="shifu_input_0")
+    is_continuous = shifu_context["is_continuous"]
+    if is_continuous == "TRUE":
+        tf.saved_model.loader.load(session, [tag_constants.SERVING], export_dir=os.path.join(MODELS_PATH, model_name))
+        graph = tf.get_default_graph()
+        in_placeholder = graph.get_tensor_by_name('shifu_input_0:0')
+    else:
+        graph = tf.get_default_graph()
+        in_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, context["feature_count"]), name="shifu_input_0")
+
     label_placeholder = tf.placeholder(dtype=tf.int32, shape=(None, 1))
     sample_weight_placeholder = tf.placeholder(dtype=tf.float32, shape=(None))
 
@@ -90,7 +100,7 @@ def build_graph(shifu_context):
     weights.append(weight)
     biases.append(bias)
     dnn_layer.append(output_layer)
-    
+
     #prediction = tf.cast(tf.argmax(tf.nn.softmax(output_layer), 1), tf.float32, name="shifu_output_0")
     prediction = tf.nn.sigmoid(output_layer, name="shifu_output_0")
     
@@ -189,7 +199,7 @@ def load_data(context):
         sys.stdout.flush()
         file_count += 1
 
-        with gfile.Open(root + '/' + normFileName, 'rb') as f:
+        with gfile.Open(os.path.join(root, normFileName), 'rb') as f:
             gf = gzip.GzipFile(fileobj=StringIO(f.read()))
             while True:
                 line = gf.readline()
@@ -282,7 +292,7 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
     session.run(tf.global_variables_initializer())
     epoch = context["epoch"]
     batch_size = context["batch_size"]
-    export_dir = context["export_dir"] + "/" + context["model_name"]
+    export_dir = os.path.join(context["export_dir"],context["model_name"])
     checkpoint_interval = context["checkpoint_interval"]
     
     total_batch = int(len(input_features) / batch_size)
@@ -390,6 +400,7 @@ if __name__ == "__main__":
     parser.add_argument("-actfuncs", action='store', dest='actfuncs', help="act funcs of each hidden layers",
                         nargs='+',type=str)
     parser.add_argument("-minibatch", action='store', dest='minibatch', help="batch size of each iteration", type=int)
+    parser.add_argument("-iscontinuous", action='store', dest='iscontinuous', help="continuous training or not", default=False)
 
     args, unknown = parser.parse_known_args()
 
@@ -408,17 +419,20 @@ if __name__ == "__main__":
     weight_initalizer = args.weightinitalizer
     act_funcs = args.actfuncs
     batch_size = args.minibatch
-    
+    is_continuous = args.iscontinuous.upper()
+
     context = {"feature_column_nums": feature_column_nums ,"layers": hidden_layers, "batch_size": batch_size,
-               "export_dir": "./models", "epoch": args.epochnums, "model_name": model_name, "checkpoint_interval": args.checkpointinterval, "sample_weight_column_num": sample_weight_column_num, "learning_rate": learning_rate, "loss_func":loss_func, "optimizer":optimizer, "weight_initalizer":weight_initalizer, "act_funcs":act_funcs}
-    if not os.path.exists("./models"):
-        os.makedirs("./models", 0777)
+               "export_dir": MODELS_PATH, "epoch": args.epochnums, "model_name": model_name, "checkpoint_interval": args.checkpointinterval, "sample_weight_column_num": sample_weight_column_num, "learning_rate": learning_rate, "loss_func":loss_func, "optimizer":optimizer, "weight_initalizer":weight_initalizer, "act_funcs":act_funcs, "is_continuous":is_continuous}
+    if not os.path.exists(MODELS_PATH):
+        os.makedirs(MODELS_PATH, 0777)
+
+    session = tf.Session()
+
     input_features, targets, validate_feature, validate_target, training_data_sample_weight, valid_data_sample_weight = load_data(context)
 
     # Train the model
     prediction, cost_func, train_op, input_placeholder, target_placeholder, graph, sample_weight_placeholder = build_graph(shifu_context=context)
 
-    session = tf.Session()
     train(input_placeholder=input_placeholder, target_placeholder=target_placeholder, sample_weight_placeholder = sample_weight_placeholder, prediction=prediction,
           cost_func=cost_func, train_op=train_op, input_features=input_features,
           targets=targets, validate_input=validate_feature, validate_target=validate_target, session=session, context=context,
