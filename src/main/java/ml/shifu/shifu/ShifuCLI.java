@@ -211,9 +211,9 @@ public class ShifuCLI {
                         status = initializeModel();
                         if(status == 0) {
                             log.info(
-                                    "ModelSet initilization is successful. Please continue next step by using 'shifu stats'.");
+                                    "ModelSet initialization is successful. Please continue next step by using 'shifu stats'.");
                         } else {
-                            log.warn("Error in ModelSet initilization, please check your shifu config or report issue");
+                            log.warn("Error in ModelSet initialization, please check your shifu config or report issue");
                         }
                     } else if(cmd.hasOption(INIT_CMD_MODEL)) {
                         initializeModelParam();
