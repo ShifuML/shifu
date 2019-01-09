@@ -134,7 +134,7 @@ public class ModelTrainConf {
     private Boolean isContinuous = Boolean.FALSE;
 
     /**
-     * Only works in NN and do swapping training, validation data in differnent epochs.
+     * Only works in NN and do swapping training, validation data in different epochs.
      */
     private Boolean isCrossOver = Boolean.FALSE;
 
