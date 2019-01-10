@@ -72,24 +72,20 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
 
     public AddColumnNumAndFilterUDF(String source, String pathModelConfig, String pathColumnConfig,
             String withScoreStr, String isAppendRandom) throws Exception {
-        this(source, pathModelConfig, pathColumnConfig, withScoreStr, isAppendRandom, "");
-    }
-
-    public AddColumnNumAndFilterUDF(String source, String pathModelConfig, String pathColumnConfig,
-            String withScoreStr, String isAppendRandom, String filterExpressions) throws Exception {
         super(source, pathModelConfig, pathColumnConfig, withScoreStr);
         this.isAppendRandom = Boolean.TRUE.toString().equalsIgnoreCase(isAppendRandom);
 
+        String filterExpressions;
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
-            filterExpressions = UDFContext.getUDFContext().getJobConf().get("shifu.segment.expressions");
+            filterExpressions = UDFContext.getUDFContext().getJobConf().get(Constants.SHIFU_SEGMENT_EXPRESSIONS);
         } else {
-            filterExpressions = Environment.getProperty("shifu.segment.expressions");
+            filterExpressions = Environment.getProperty(Constants.SHIFU_SEGMENT_EXPRESSIONS);
         }
 
         if(StringUtils.isNotBlank(filterExpressions)) {
             this.isForExpressions = true;
             String[] splits = CommonUtils.split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
-            this.dataPurifiers = new ArrayList<DataPurifier>(splits.length);
+            this.dataPurifiers = new ArrayList<>(splits.length);
             for(String split: splits) {
                 this.dataPurifiers.add(new DataPurifier(modelConfig, split, false));
             }

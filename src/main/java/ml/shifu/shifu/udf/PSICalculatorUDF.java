@@ -92,7 +92,7 @@ public class PSICalculatorUDF extends AbstractTrainerUDF<Tuple> {
                         if (logNum <= 0) {
                             continue;
                         } else {
-                            psi = psi + ((sub / total - expected.get(i)) * Math.log((sub / total) / expected.get(i)));
+                            psi = psi + ((sub / total - expected.get(i)) * Math.log(logNum));
                         }
                     }
                     i ++;

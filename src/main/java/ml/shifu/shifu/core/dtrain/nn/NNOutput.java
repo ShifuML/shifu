@@ -309,7 +309,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             LOG.info("'dropoutRate' in master output is :{}", this.dropoutRate);
 
             this.wgtInit = "default";
-            Object wgtInitObj = validParams.get("WeightInitializer");
+            Object wgtInitObj = validParams.get(CommonConstants.WEIGHT_INITIALIZER);
             if(wgtInitObj != null) {
                 this.wgtInit = wgtInitObj.toString();
             }

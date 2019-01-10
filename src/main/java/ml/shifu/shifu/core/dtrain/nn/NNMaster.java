@@ -472,7 +472,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         LOG.info("'adamBeta2' in master is :{}", adamBeta2);
 
         this.wgtInit = "default";
-        Object wgtInitObj = validParams.get("WeightInitializer");
+        Object wgtInitObj = validParams.get(CommonConstants.WEIGHT_INITIALIZER);
         if(wgtInitObj != null) {
             this.wgtInit = wgtInitObj.toString();
         }

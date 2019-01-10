@@ -397,7 +397,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         }
         LOG.info("'dropoutRate' in worker is :{}", this.dropoutRate);
 
-        Object miniBatchO = validParams.get("MiniBatchs");
+        Object miniBatchO = validParams.get(CommonConstants.MINI_BATCH);
         if(miniBatchO != null) {
             int miniBatchs;
             try {
@@ -445,7 +445,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 this.subFeatureSet);
 
         this.wgtInit = "default";
-        Object wgtInitObj = validParams.get("WeightInitializer");
+        Object wgtInitObj = validParams.get(CommonConstants.WEIGHT_INITIALIZER);
         if(wgtInitObj != null) {
             this.wgtInit = wgtInitObj.toString();
         }

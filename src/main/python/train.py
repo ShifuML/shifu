@@ -34,12 +34,143 @@ import numpy as np
 import sys
 import os
 import datetime
+
+MODELS_PATH = "./models"
+
+
 def tprint(content, log_level="INFO"):
     systime = datetime.datetime.now()
     print(str(systime) + " " + log_level + " " + " [Shifu.Tensorflow.train] " + str(content))
+    sys.stdout.flush()
 
+########################################################################################################################
+# Buid your own training graph, user can edit tf graph in below method, this case, configuration in ModelConfig.json 
+# will not be honoured.
+########################################################################################################################
+def build_graph(shifu_context):
+    is_continuous = shifu_context["is_continuous"]
+    if is_continuous == "TRUE":
+        tf.saved_model.loader.load(session, [tag_constants.SERVING], export_dir=os.path.join(MODELS_PATH, model_name))
+        graph = tf.get_default_graph()
+        in_placeholder = graph.get_tensor_by_name('shifu_input_0:0')
+    else:
+        graph = tf.get_default_graph()
+        in_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, context["feature_count"]), name="shifu_input_0")
+
+    label_placeholder = tf.placeholder(dtype=tf.int32, shape=(None, 1))
+    sample_weight_placeholder = tf.placeholder(dtype=tf.float32, shape=(None))
+
+    layers = shifu_context["layers"]
+    current_nodes = shifu_context["feature_count"]
+    learning_rate = shifu_context["learning_rate"]
+    
+    loss_func = shifu_context["loss_func"]
+    optimizer_name = shifu_context["optimizer"]
+    weight_initalizer = shifu_context["weight_initalizer"]
+    act_funcs = shifu_context["act_funcs"]
+
+    tprint("Configuration info: loss func=" + str(loss_func) + " optimizer_name=" + str(optimizer_name) + " weight_initalizer=" + str(weight_initalizer) + " act_funcs=" + str(act_funcs))
+    
+    current_layer = in_placeholder
+    dnn_layer = []
+    weights = []
+    biases = []
+    
+    l2_reg = tf.contrib.layers.l2_regularizer(scale=0.01)
+
+    for i in range(len(layers)):
+        node_num = layers[i]
+        weight = tf.Variable(tf.random_uniform([current_nodes, node_num], -1.0, 1.0))
+        #weight = tf.get_variable(name="weight_" + str(i), regularizer = l2_reg, initializer= tf.random_uniform([current_nodes, node_num], -1.0, 1.0))
+
+        bias = tf.Variable(tf.random_uniform(shape=([node_num]), minval=-1.0, maxval=1.0))
+        current_layer = tf.matmul(current_layer, weight)
+        current_layer = tf.add(current_layer, bias)
+        current_layer = get_activation_fun(act_funcs[i])(current_layer)
+        weights.append(weight)
+        biases.append(bias)
+        current_nodes = node_num
+        dnn_layer.append(current_layer)
+
+    weight = tf.Variable(tf.random_uniform([current_nodes, 1], -1.0, 1.0))
+    #weight = tf.get_variable(name="weight_" + str(len(layers)), regularizer = l2_reg, initializer= tf.random_uniform([current_nodes, 1], -1.0, 1.0))
+    bias = tf.Variable(tf.random_uniform(shape=([1]), minval=-1.0, maxval=1.0))
+    output_layer = tf.matmul(current_layer, weight)
+    output_layer = tf.add(output_layer, bias)
+    weights.append(weight)
+    biases.append(bias)
+    dnn_layer.append(output_layer)
+
+    #prediction = tf.cast(tf.argmax(tf.nn.softmax(output_layer), 1), tf.float32, name="shifu_output_0")
+    prediction = tf.nn.sigmoid(output_layer, name="shifu_output_0")
+    
+    # Define loss and optimizer
+    reg_term = tf.contrib.layers.apply_regularization(l2_reg, weights)
+    
+    cost_func = (get_loss_func(loss_func)(predictions=prediction, labels=label_placeholder, weights=sample_weight_placeholder) + reg_term)
+    #cost_func = get_loss_func(loss_func)(predictions=prediction, labels=label_placeholder, weights=sample_weight_placeholder)
+    
+    optimizer = get_optimizer(optimizer_name)(learning_rate=learning_rate)
+    train_op = optimizer.minimize(cost_func)
+    
+    return prediction, cost_func, train_op, in_placeholder, label_placeholder, graph, sample_weight_placeholder
+########################################################################################################################
+# End of build tensorflow training graph
+########################################################################################################################
+
+def get_activation_fun(name):
+    if name == None:
+        return tf.nn.leaky_relu
+    name = name.lower()
+
+    if 'sigmoid' == name:
+        return tf.nn.sigmoid
+    elif 'tanh' == name:
+        return tf.nn.tanh
+    elif 'relu' == name:
+        return tf.nn.relu
+    elif 'leakyrelu' == name:
+        return tf.nn.leaky_relu
+    else:
+        return tf.nn.leaky_relu
+    
+def get_loss_func(name):
+    if name == None:
+        return tf.losses.mean_squared_error
+    name = name.lower()
+
+    if 'squared' == name:
+        return tf.losses.mean_squared_error
+    elif 'absolute' == name:
+        return tf.losses.absolute_difference
+    elif 'log' == name:
+        return tf.losses.log_loss
+    else:
+        return tf.losses.mean_squared_error
+    
+def get_optimizer(name):
+    if name == None:
+        return tf.train.AdamOptimizer
+    name = name.lower()
+    
+    if 'adam' == name:
+        return tf.train.AdamOptimizer
+    elif 'gradientdescent' == name:
+        return tf.train.GradientDescentOptimizer
+    elif 'rmsprop' == name:
+        return tf.train.RMSPropOptimizer
+    else:
+        return tf.train.AdamOptimizer
+
+def get_initalizer(name):
+    if 'gaussian' == name:
+        return tf.initializers.random_normal()
+    elif 'xavier' == name:
+        return tf.contrib.layers.xavier_initializer()
+    else:
+        return tf.contrib.layers.xavier_initializer()
+        
 def load_data(context):
-
     train_data = []
     train_target = []
     valid_data = []
@@ -58,8 +189,7 @@ def load_data(context):
     sample_weight_column_num = context["sample_weight_column_num"]
     allFileNames = gfile.ListDirectory(root)
     normFileNames = filter(lambda x: not x.startswith(".") and not x.startswith("_"), allFileNames)
-    print("Total input file count is " + str(len(normFileNames)) + ".")
-    sys.stdout.flush()
+    tprint("Total input file count is " + str(len(normFileNames)) + ".")
 
     file_count = 1
     line_count = 0
@@ -69,7 +199,7 @@ def load_data(context):
         sys.stdout.flush()
         file_count += 1
 
-        with gfile.Open(root + '/' + normFileName, 'rb') as f:
+        with gfile.Open(os.path.join(root, normFileName), 'rb') as f:
             gf = gzip.GzipFile(fileobj=StringIO(f.read()))
             while True:
                 line = gf.readline()
@@ -78,8 +208,7 @@ def load_data(context):
                 
                 line_count += 1
                 if line_count % 10000 == 0: 
-                    print("Total loading lines cnt: " + str(line_count))
-                    sys.stdout.flush()
+                    tprint("Total loading lines: " + str(line_count))
                 
                 columns = line.split(delimiter)
 
@@ -128,60 +257,13 @@ def load_data(context):
                     else:
                         valid_data_sample_weight.append([1.0])
 
-    print("Total data count: " + str(line_count) + ".")
-    print("Train pos count: " + str(train_pos_cnt) + ", neg count: " + str(train_neg_cnt) + ".")
-    print("Valid pos count: " + str(valid_pos_cnt) + ", neg count: " + str(valid_neg_cnt) + ".")
-    sys.stdout.flush()
+    tprint("Total data count: " + str(line_count) + ".")
+    tprint("Train pos count: " + str(train_pos_cnt) + ", neg count: " + str(train_neg_cnt) + ".")
+    tprint("Valid pos count: " + str(valid_pos_cnt) + ", neg count: " + str(valid_neg_cnt) + ".")
 
     context['feature_count'] = len(feature_column_nums)
 
     return train_data, train_target, valid_data, valid_target, training_data_sample_weight, valid_data_sample_weight
-
-def build_graph(shifu_context):
-    graph = tf.get_default_graph
-    in_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, context["feature_count"]), name="shifu_input_0")
-    label_placeholder = tf.placeholder(dtype=tf.int32, shape=(None, 1))
-    sample_weight_placeholder = tf.placeholder(dtype=tf.float32, shape=(None))
-
-    layers = shifu_context["layers"]
-    current_nodes = shifu_context["feature_count"]
-    learning_rate = shifu_context["learning_rate"]
-    
-    current_layer = in_placeholder
-    dnn_layer = []
-    weights = []
-    biases = []
-    
-    for i in range(len(layers)):
-        node_num = layers[i]
-        weight = tf.Variable(tf.random_normal([current_nodes, node_num]))
-        bias = tf.Variable(tf.random_normal(shape=([node_num])))
-        current_layer = tf.matmul(current_layer, weight)
-        current_layer = tf.add(current_layer, bias)
-        current_layer = tf.nn.leaky_relu(current_layer)
-        weights.append(weight)
-        biases.append(bias)
-        current_nodes = node_num
-        dnn_layer.append(current_layer)
-
-        
-    weight = tf.Variable(tf.random_normal([current_nodes, 1]))
-    bias = tf.Variable(tf.random_normal(shape=([1])))
-    output_layer = tf.matmul(current_layer, weight)
-    output_layer = tf.add(output_layer, bias)
-    weights.append(weight)
-    biases.append(bias)
-    dnn_layer.append(output_layer)
-    
-    prediction = tf.nn.sigmoid(output_layer, name="shifu_output_0")
-    
-    # Define loss and optimizer
-    cost_func = tf.losses.mean_squared_error(predictions=prediction, labels=label_placeholder, weights=sample_weight_placeholder)
-    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
-    train_op = optimizer.minimize(cost_func)
-    
-    return prediction, cost_func, train_op, in_placeholder, label_placeholder, graph, sample_weight_placeholder
-
 
 def simple_save(session, export_dir, inputs, outputs, legacy_init_op=None):
     remove_path(export_dir)
@@ -210,9 +292,8 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
     session.run(tf.global_variables_initializer())
     epoch = context["epoch"]
     batch_size = context["batch_size"]
-    export_dir = context["export_dir"] + "/" + context["model_name"]
+    export_dir = os.path.join(context["export_dir"],context["model_name"])
     checkpoint_interval = context["checkpoint_interval"]
-    sys.stdout.flush()
     
     total_batch = int(len(input_features) / batch_size)
     input_batch = np.array_split(input_features, total_batch)
@@ -223,7 +304,7 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
     train_sample_weight_batch = np.array_split(training_data_sample_weight, total_batch)
 
     for i in range(1, epoch + 1):
-        print("Start epoch " + str(i))
+        tprint("Start epoch " + str(i))
         sum_train_error = 0.0
         for j in range(total_batch):
             o, c, p= session.run([train_op, cost_func, prediction],
@@ -243,17 +324,17 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
                                 sample_weight_placeholder: [valid_data_sample_weight[j]],
                             })
             sum_validate_error += v[0]
-        print("Epoch " + str(i) + " avg train error " + str(sum_train_error / total_batch) + ", avg validation error is " + str(sum_validate_error / len(validate_input)) + ".")
-        sys.stdout.flush()
+        tprint("Epoch " + str(i) + " avg train error " + str(sum_train_error / total_batch) + ", avg validation error is " + str(sum_validate_error / len(validate_input)) + ".")
+
         if checkpoint_interval > 0 and i % checkpoint_interval == 0:
             simple_save(session=session, export_dir=export_dir + "-checkpoint-" + str(i),
                         inputs={
                             "shifu_input_0": input_placeholder
                         },
                         outputs ={
-                            "shifu_output_0": output_layer
+                            "shifu_output_0": prediction
                         })
-            print("Save checkpoint model at epoch " + str(i))
+            tprint("Save checkpoint model at epoch " + str(i))
 
     simple_save(session=session, export_dir=export_dir,
                                inputs={
@@ -262,7 +343,7 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
                                outputs ={
                                    "shifu_output_0": prediction
                                })
-    print("Model training finished, model export path: " + export_dir)
+    tprint("Model training finished, model export path: " + export_dir)
 
 
 def export_generic_config(export_dir):
@@ -292,10 +373,8 @@ def remove_path(path):
         remove_path(path + "/" + f)
     os.removedirs(path)
 
-
 if __name__ == "__main__":
-    print("Training input arguments: " + str(sys.argv))
-    sys.stdout.flush()
+    tprint("Training input arguments: " + str(sys.argv))
     # Use for parse Arguments
     parser = argparse.ArgumentParser("Shifu_tensorflow_training")
     parser.add_argument("-inputdaatapath", action='store', dest='inputdaatapath', help="data path used for training",
@@ -315,6 +394,14 @@ if __name__ == "__main__":
     parser.add_argument("-weightcolumnnum", action='store', dest='weightcolumnnum', help="Sample Weight column num", type=int)
     parser.add_argument("-learningRate", action='store', dest='learningRate', help="Learning rate of NN", type=float)
 
+    parser.add_argument("-lossfunc", action='store', dest='lossfunc', help="Loss functions", type=str)
+    parser.add_argument("-optimizer", action='store', dest='optimizer', help="optimizer functions", type=str)
+    parser.add_argument("-weightinitalizer", action='store', dest='weightinitalizer', help="weightinitalizer functions", type=str)
+    parser.add_argument("-actfuncs", action='store', dest='actfuncs', help="act funcs of each hidden layers",
+                        nargs='+',type=str)
+    parser.add_argument("-minibatch", action='store', dest='minibatch', help="batch size of each iteration", type=int)
+    parser.add_argument("-iscontinuous", action='store', dest='iscontinuous', help="continuous training or not", default=False)
+
     args, unknown = parser.parse_known_args()
 
     root = args.inputdaatapath
@@ -327,15 +414,27 @@ if __name__ == "__main__":
     sample_weight_column_num = args.weightcolumnnum
     learning_rate = args.learningRate
 
-    context = {"feature_column_nums": feature_column_nums ,"layers": hidden_layers, "batch_size": 10,
-               "export_dir": "./models", "epoch": args.epochnums, "model_name": model_name, "checkpoint_interval": args.checkpointinterval, "sample_weight_column_num": sample_weight_column_num, "learning_rate": learning_rate}
-    if not os.path.exists("./models"):
-        os.makedirs("./models", 0777)
+    loss_func = args.lossfunc
+    optimizer = args.optimizer
+    weight_initalizer = args.weightinitalizer
+    act_funcs = args.actfuncs
+    batch_size = args.minibatch
+    is_continuous = args.iscontinuous.upper()
+
+    context = {"feature_column_nums": feature_column_nums ,"layers": hidden_layers, "batch_size": batch_size,
+               "export_dir": MODELS_PATH, "epoch": args.epochnums, "model_name": model_name, "checkpoint_interval": args.checkpointinterval, "sample_weight_column_num": sample_weight_column_num, "learning_rate": learning_rate, "loss_func":loss_func, "optimizer":optimizer, "weight_initalizer":weight_initalizer, "act_funcs":act_funcs, "is_continuous":is_continuous}
+    if not os.path.exists(MODELS_PATH):
+        os.makedirs(MODELS_PATH, 0777)
+
+    session = tf.Session()
+
     input_features, targets, validate_feature, validate_target, training_data_sample_weight, valid_data_sample_weight = load_data(context)
 
+    # Train the model
     prediction, cost_func, train_op, input_placeholder, target_placeholder, graph, sample_weight_placeholder = build_graph(shifu_context=context)
-    session = tf.Session()
+
     train(input_placeholder=input_placeholder, target_placeholder=target_placeholder, sample_weight_placeholder = sample_weight_placeholder, prediction=prediction,
           cost_func=cost_func, train_op=train_op, input_features=input_features,
           targets=targets, validate_input=validate_feature, validate_target=validate_target, session=session, context=context,
           training_data_sample_weight=training_data_sample_weight, valid_data_sample_weight=valid_data_sample_weight)
+
