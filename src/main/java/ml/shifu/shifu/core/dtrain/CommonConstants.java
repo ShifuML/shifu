@@ -15,8 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
-import org.apache.pig.builtin.SIZE;
-
 public interface CommonConstants {
 
     public static final double DEFAULT_SIGNIFICANCE_VALUE = 1.0d;

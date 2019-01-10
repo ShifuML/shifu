@@ -15,13 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.lr;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import ml.shifu.guagua.master.BasicMasterInterceptor;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -29,10 +22,8 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
-//import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,6 +31,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Arrays;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * {@link LogisticRegressionOutput} is used to write the final model output to file system.
