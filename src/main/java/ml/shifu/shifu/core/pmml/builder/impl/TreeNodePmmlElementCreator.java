@@ -26,6 +26,7 @@ import ml.shifu.shifu.core.dtrain.dt.Split;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 import ml.shifu.shifu.util.CommonUtils;
 
+import ml.shifu.shifu.util.NormalUtils;
 import org.dmg.pmml.Array;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.Predicate;
@@ -87,7 +88,7 @@ public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.d
             SimplePredicate p = new SimplePredicate();
             p.setValue(String.valueOf(split.getThreshold()));
             // TODO, how to support segment variable in tree model, here should be changed
-            p.setField(new FieldName(CommonUtils.getSimpleColumnName(columnConfig.getColumnName())));
+            p.setField(new FieldName(NormalUtils.getSimpleColumnName(columnConfig.getColumnName())));
             if(isLeft) {
                 p.setOperator(SimplePredicate.Operator.fromValue("lessThan"));
             } else {
@@ -98,7 +99,7 @@ public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.d
             SimpleSetPredicate p = new SimpleSetPredicate();
             Set<Short> childCategories = split.getLeftOrRightCategories();
             // TODO, how to support segment variable in tree model, here should be changed
-            p.setField(new FieldName(CommonUtils.getSimpleColumnName(columnConfig.getColumnName())));
+            p.setField(new FieldName(NormalUtils.getSimpleColumnName(columnConfig.getColumnName())));
             StringBuilder arrayStr = new StringBuilder();
             List<String> valueList = treeModel.getCategoricalColumnNameNames().get(columnConfig.getColumnNum());
             for(Short sh: childCategories) {

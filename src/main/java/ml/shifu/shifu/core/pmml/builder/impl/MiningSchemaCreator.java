@@ -26,6 +26,7 @@ import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 import ml.shifu.shifu.util.CommonUtils;
 
+import ml.shifu.shifu.util.NormalUtils;
 import org.dmg.pmml.*;
 import org.dmg.pmml.MiningField.UsageType;
 import org.encog.ml.BasicML;
@@ -124,7 +125,7 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
 
     private MiningField createActiveMingFields(ColumnConfig columnConfig) {
         return createMiningField(
-                CommonUtils.getSimpleColumnName(columnConfig.getColumnName()),
+                NormalUtils.getSimpleColumnName(columnConfig.getColumnName()),
                 getOptype(columnConfig), UsageType.ACTIVE);
     }
 
@@ -134,12 +135,12 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
                 && ModelTrainConf.MultipleClassification.NATIVE.equals(modelConfig.getTrain().getMultiClassifyMethod())) {
             for ( int i = 0; i < modelConfig.getTags().size(); i ++ ) {
                 targetMiningFields.add(createMiningField(
-                        CommonUtils.getSimpleColumnName(columnConfig.getColumnName()) + "_" + i,
+                        NormalUtils.getSimpleColumnName(columnConfig.getColumnName()) + "_" + i,
                         getOptype(columnConfig), UsageType.TARGET));
             }
         } else {
             targetMiningFields.add(createMiningField(
-                    CommonUtils.getSimpleColumnName(columnConfig.getColumnName()),
+                    NormalUtils.getSimpleColumnName(columnConfig.getColumnName()),
                     getOptype(columnConfig), UsageType.TARGET));
         }
         return targetMiningFields;

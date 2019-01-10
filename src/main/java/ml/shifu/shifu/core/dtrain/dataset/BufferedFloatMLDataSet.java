@@ -129,7 +129,8 @@ public class BufferedFloatMLDataSet implements FloatMLDataSet, Serializable {
             this.egb.read(idealTarget);
         }
 
-        this.egb.read();
+        // read and set significance
+        pair.setSignificance(this.egb.read());
     }
 
     /**

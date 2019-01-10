@@ -15,6 +15,8 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
+import org.apache.pig.builtin.SIZE;
+
 public interface CommonConstants {
 
     public static final double DEFAULT_SIGNIFICANCE_VALUE = 1.0d;
@@ -67,6 +69,9 @@ public interface CommonConstants {
 
     public static final String SHIFU_TREE_CHECKPOINT_INTERVAL = "shifu.tree.checkpoint.interval";
 
+    public static final String SHIFU_TRAIN_VAL_STEPS_RATIO = "shifu.train.val.steps.ratio";
+
+    public static final String SHIFU_TRAIN_EARLYSTOP_WINDOW_SIZE = "shifu.train.earlystop.window.size";
 
     /* --------------   Other setting Constants  ---------------------- */
     public static final String MAPREDUCE_MAP_CPU_VCORES = "mapreduce.map.cpu.vcores";

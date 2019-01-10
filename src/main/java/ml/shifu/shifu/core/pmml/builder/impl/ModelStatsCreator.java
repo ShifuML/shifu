@@ -21,6 +21,7 @@ import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 import ml.shifu.shifu.util.CommonUtils;
 
+import ml.shifu.shifu.util.NormalUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.dmg.pmml.*;
@@ -54,10 +55,10 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
                 if(columnConfig.isFinalSelect()
                         && (CollectionUtils.isEmpty(featureSet) || featureSet.contains(columnConfig.getColumnNum()))) {
                     UnivariateStats univariateStats = new UnivariateStats();
-                    // here, no need to consider if column is in segment expansion as we need to address new stats
-                    // variable
-                    univariateStats.setField(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig
-                            .getColumnName())));
+                    // here, no need to consider if column is in segment expansion
+                    // as we need to address new stats variable
+                    univariateStats.setField( // set simple column name in PMML
+                            FieldName.create(NormalUtils.getSimpleColumnName(columnConfig.getColumnName())));
 
                     if(columnConfig.isCategorical()) {
                         DiscrStats discrStats = new DiscrStats();
@@ -88,7 +89,7 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
                     UnivariateStats univariateStats = new UnivariateStats();
                     // here, no need to consider if column is in segment expansion as we need to address new stats
                     // variable
-                    univariateStats.setField(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig
+                    univariateStats.setField(FieldName.create(NormalUtils.getSimpleColumnName(columnConfig
                             .getColumnName())));
 
                     if(columnConfig.isCategorical()) {

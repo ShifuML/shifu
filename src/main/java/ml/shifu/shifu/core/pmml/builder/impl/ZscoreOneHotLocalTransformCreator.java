@@ -4,6 +4,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.NormalUtils;
 import org.dmg.pmml.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,12 +77,12 @@ public class ZscoreOneHotLocalTransformCreator extends ZscoreLocalTransformCreat
                 .setDataType(DataType.DOUBLE)
                 .setDefaultValue(defaultValue)
                 .addFieldColumnPairs(new FieldColumnPair(new FieldName(
-                        CommonUtils.getSimpleColumnName(config, columnConfigList, segmentExpansions, datasetHeaders)),
+                        NormalUtils.getSimpleColumnName(config, columnConfigList, segmentExpansions, datasetHeaders)),
                         ELEMENT_ORIGIN)).setInlineTable(inlineTable)
                 .setMapMissingTo(missingValue);
 
         return new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).setName(FieldName.create(genPmmlColumnName(
-                CommonUtils.getSimpleColumnName(config.getColumnName()), normType) + "_" + ops))
+                NormalUtils.getSimpleColumnName(config.getColumnName()), normType) + "_" + ops))
                 .setExpression(mapValues);
     }
 

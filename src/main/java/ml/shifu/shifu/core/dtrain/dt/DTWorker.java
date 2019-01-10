@@ -530,7 +530,7 @@ public class DTWorker extends
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             TreeModel existingModel = null;
             try {
-                existingModel = (TreeModel) CommonUtils.loadModel(modelConfig, modelPath,
+                existingModel = (TreeModel) ModelSpecLoaderUtils.loadModel(modelConfig, modelPath,
                         ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
             } catch (IOException e) {
                 LOG.error("Error in get existing model, will ignore and start from scratch", e);

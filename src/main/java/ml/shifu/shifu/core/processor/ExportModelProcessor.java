@@ -41,6 +41,7 @@ import ml.shifu.shifu.udf.CalculateStatsUDF;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.HDFSUtils;
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FileUtils;
@@ -122,7 +123,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                     && !CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
                 log.warn("Currently one bagging model is only supported in NN/GBT/RF algorithm.");
             } else {
-                List<BasicML> models = CommonUtils.loadBasicModels(modelsPath,
+                List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(modelsPath,
                         ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
                 if(models.size() < 1) {
                     log.warn("No model is found in {}.", modelsPath);
@@ -156,7 +157,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             }
         } else if(type.equalsIgnoreCase(PMML)) {
             // typical pmml generation
-            List<BasicML> models = CommonUtils.loadBasicModels(modelsPath,
+            List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(modelsPath,
                     ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
 
             PMMLTranslator translator = PMMLConstructorFactory.produce(modelConfig, columnConfigList, isConcise(),
@@ -175,7 +176,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             if(!"nn".equalsIgnoreCase(modelConfig.getAlgorithm())) {
                 log.warn("Currently one bagging pmml model is only supported in NN algorithm.");
             } else {
-                List<BasicML> models = CommonUtils.loadBasicModels(modelsPath,
+                List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(modelsPath,
                         ALGORITHM.valueOf(modelConfig.getAlgorithm().toUpperCase()));
                 PMMLTranslator translator = PMMLConstructorFactory.produce(modelConfig, columnConfigList, isConcise(),
                         true);
