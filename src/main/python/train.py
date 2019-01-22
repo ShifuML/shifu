@@ -20,17 +20,15 @@
 #
 
 import argparse
-from tensorflow.python.platform import gfile
-import gzip
-from StringIO import StringIO
-import random
 from tensorflow.python.framework import ops
 from tensorflow.python.saved_model import builder
 from tensorflow.python.saved_model import signature_constants
 from tensorflow.python.saved_model import signature_def_utils
 from tensorflow.python.saved_model import tag_constants
+from file_input_format import FileInputFormat
 import tensorflow as tf
 import numpy as np
+from numpy import array
 import sys
 import os
 import datetime
@@ -169,101 +167,6 @@ def get_initalizer(name):
         return tf.contrib.layers.xavier_initializer()
     else:
         return tf.contrib.layers.xavier_initializer()
-        
-def load_data(context):
-    train_data = []
-    train_target = []
-    valid_data = []
-    valid_target = []
-
-    training_data_sample_weight = []
-    valid_data_sample_weight = []
-
-    count = 0
-    train_pos_cnt = 0
-    train_neg_cnt = 0
-    valid_pos_cnt = 0
-    valid_neg_cnt = 0
-
-    feature_column_nums = context["feature_column_nums"]
-    sample_weight_column_num = context["sample_weight_column_num"]
-    allFileNames = gfile.ListDirectory(root)
-    normFileNames = filter(lambda x: not x.startswith(".") and not x.startswith("_"), allFileNames)
-    tprint("Total input file count is " + str(len(normFileNames)) + ".")
-
-    file_count = 1
-    line_count = 0
-
-    for normFileName in normFileNames:
-        print("Now loading " + normFileName + " Progress: " + str(file_count) + "/" + str(len(normFileNames)) + ".")
-        sys.stdout.flush()
-        file_count += 1
-
-        with gfile.Open(os.path.join(root, normFileName), 'rb') as f:
-            gf = gzip.GzipFile(fileobj=StringIO(f.read()))
-            while True:
-                line = gf.readline()
-                if len(line) == 0:
-                    break
-                
-                line_count += 1
-                if line_count % 10000 == 0: 
-                    tprint("Total loading lines: " + str(line_count))
-                
-                columns = line.split(delimiter)
-
-                if feature_column_nums == None:
-                    feature_column_nums = range(0, len(columns))
-                    feature_column_nums.remove(target_index)
-
-                if random.random() >= valid_data_percentage:
-                    # Append training data
-                    train_target.append([float(columns[target_index])])
-                    if(columns[target_index] == "1"):
-                        train_pos_cnt += 1
-                    else :
-                        train_neg_cnt += 1
-                    single_train_data = []
-                    for feature_column_num in feature_column_nums:
-                        single_train_data.append(float(columns[feature_column_num].strip('\n')))
-                    train_data.append(single_train_data)
-                    
-                    if sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):
-                        weight = float(columns[sample_weight_column_num].strip('\n'))
-                        if weight < 0.0:
-                            print("Warning: weight is below 0. example:" + line)
-                            weight= 1.0
-                        training_data_sample_weight.append([weight])
-                    else:
-                        training_data_sample_weight.append([1.0])
-                else:
-                    # Append validation data
-                    valid_target.append([float(columns[target_index])])
-                    if(columns[target_index] == "1"):
-                        valid_pos_cnt += 1
-                    else:
-                        valid_neg_cnt += 1
-                    single_valid_data = []
-                    for feature_column_num in feature_column_nums:
-                        single_valid_data.append(float(columns[feature_column_num].strip('\n')))
-                    valid_data.append(single_valid_data)
-                    
-                    if sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):
-                        weight = float(columns[sample_weight_column_num].strip('\n'))
-                        if weight < 0.0:
-                            print("Warning: weight is below 0. example:" + line)
-                            weight= 1.0
-                        valid_data_sample_weight.append([weight])
-                    else:
-                        valid_data_sample_weight.append([1.0])
-
-    tprint("Total data count: " + str(line_count) + ".")
-    tprint("Train pos count: " + str(train_pos_cnt) + ", neg count: " + str(train_neg_cnt) + ".")
-    tprint("Valid pos count: " + str(valid_pos_cnt) + ", neg count: " + str(valid_neg_cnt) + ".")
-
-    context['feature_count'] = len(feature_column_nums)
-
-    return train_data, train_target, valid_data, valid_target, training_data_sample_weight, valid_data_sample_weight
 
 def simple_save(session, export_dir, inputs, outputs, legacy_init_op=None):
     remove_path(export_dir)
@@ -287,54 +190,55 @@ def one_hot(input, num_classes):
     one_hot_targets = np.eye(num_classes)[input]
     return one_hot_targets
 
-def train(input_placeholder, target_placeholder, sample_weight_placeholder, prediction, cost_func, train_op, input_features, targets, validate_input, validate_target, session, context, training_data_sample_weight=[], valid_data_sample_weight=[]):
+def train(input_placeholder, target_placeholder, sample_weight_placeholder, prediction, cost_func, train_op, session,
+          context, input_format):
     num_classes = 2
     session.run(tf.global_variables_initializer())
     epoch = context["epoch"]
-    batch_size = context["batch_size"]
     export_dir = os.path.join(context["export_dir"],context["model_name"])
     checkpoint_interval = context["checkpoint_interval"]
     
-    total_batch = int(len(input_features) / batch_size)
-    input_batch = np.array_split(input_features, total_batch)
-    target_batch = np.array_split(targets, total_batch)
-    validate_input = np.array_split(validate_input, 1)
-    validate_target = np.array_split(validate_target, 1)
-
-    train_sample_weight_batch = np.array_split(training_data_sample_weight, total_batch)
-
     for i in range(1, epoch + 1):
         tprint("Start epoch " + str(i))
         sum_train_error = 0.0
-        for j in range(total_batch):
-            o, c, p= session.run([train_op, cost_func, prediction],
+
+        mini_batch = input_format.next_batch()
+        while mini_batch is not None:
+            input_batch = array(mini_batch[0])
+            target_batch = array(mini_batch[1])
+            validate_input = array(mini_batch[2])
+            validate_target = array(mini_batch[3])
+            train_sample_weight_batch = array(mini_batch[4])
+            valid_data_sample_weight = array(mini_batch[5])
+
+            o, c, p = session.run([train_op, cost_func, prediction],
                                   feed_dict={
-                                      input_placeholder: input_batch[j],
-                                      target_placeholder: target_batch[j],
-                                      sample_weight_placeholder: train_sample_weight_batch[j],
+                                      input_placeholder: input_batch,
+                                      target_placeholder: target_batch,
+                                      sample_weight_placeholder: train_sample_weight_batch,
                                   })
             sum_train_error += c
 
-        sum_validate_error = 0.0
-        for j in range(len(validate_input)):
+            sum_validate_error = 0.0
             v = session.run([cost_func],
                             feed_dict={
-                                input_placeholder: validate_input[j],
-                                target_placeholder: validate_target[j],
-                                sample_weight_placeholder: [valid_data_sample_weight[j]],
+                                input_placeholder: validate_input,
+                                target_placeholder: validate_target,
+                                sample_weight_placeholder: [valid_data_sample_weight],
                             })
             sum_validate_error += v[0]
-        tprint("Epoch " + str(i) + " avg train error " + str(sum_train_error / total_batch) + ", avg validation error is " + str(sum_validate_error / len(validate_input)) + ".")
+            tprint("Epoch " + str(i) + " avg train error " + str(sum_train_error / input_format.get_total_batch()) +
+                   ", avg validation error is " + str(sum_validate_error / len(validate_input)) + ".")
 
-        if checkpoint_interval > 0 and i % checkpoint_interval == 0:
-            simple_save(session=session, export_dir=export_dir + "-checkpoint-" + str(i),
-                        inputs={
-                            "shifu_input_0": input_placeholder
-                        },
-                        outputs ={
-                            "shifu_output_0": prediction
-                        })
-            tprint("Save checkpoint model at epoch " + str(i))
+            if checkpoint_interval > 0 and i % checkpoint_interval == 0:
+                simple_save(session=session, export_dir=export_dir + "-checkpoint-" + str(i),
+                            inputs={
+                                "shifu_input_0": input_placeholder
+                            },
+                            outputs ={
+                                "shifu_output_0": prediction
+                            })
+                tprint("Save checkpoint model at epoch " + str(i))
 
     simple_save(session=session, export_dir=export_dir,
                                inputs={
@@ -421,20 +325,26 @@ if __name__ == "__main__":
     batch_size = args.minibatch
     is_continuous = args.iscontinuous.upper()
 
-    context = {"feature_column_nums": feature_column_nums ,"layers": hidden_layers, "batch_size": batch_size,
-               "export_dir": MODELS_PATH, "epoch": args.epochnums, "model_name": model_name, "checkpoint_interval": args.checkpointinterval, "sample_weight_column_num": sample_weight_column_num, "learning_rate": learning_rate, "loss_func":loss_func, "optimizer":optimizer, "weight_initalizer":weight_initalizer, "act_funcs":act_funcs, "is_continuous":is_continuous}
+    context = {"feature_column_nums": feature_column_nums, "layers": hidden_layers, "batch_size": batch_size,
+               "export_dir": MODELS_PATH, "epoch": args.epochnums, "model_name": model_name,
+               "checkpoint_interval": args.checkpointinterval, "sample_weight_column_num": sample_weight_column_num,
+               "learning_rate": learning_rate, "loss_func": loss_func, "optimizer": optimizer,
+               "weight_initalizer": weight_initalizer, "act_funcs":act_funcs, "is_continuous": is_continuous,
+               "data_root_folder": root, "target_index": target_index, "valid_data_percentage": valid_data_percentage}
     if not os.path.exists(MODELS_PATH):
         os.makedirs(MODELS_PATH, 0777)
 
     session = tf.Session()
 
-    input_features, targets, validate_feature, validate_target, training_data_sample_weight, valid_data_sample_weight = load_data(context)
+    # Init input format
+    input_format = FileInputFormat(context)
+    input_format.initialize()
 
     # Train the model
     prediction, cost_func, train_op, input_placeholder, target_placeholder, graph, sample_weight_placeholder = build_graph(shifu_context=context)
 
-    train(input_placeholder=input_placeholder, target_placeholder=target_placeholder, sample_weight_placeholder = sample_weight_placeholder, prediction=prediction,
-          cost_func=cost_func, train_op=train_op, input_features=input_features,
-          targets=targets, validate_input=validate_feature, validate_target=validate_target, session=session, context=context,
-          training_data_sample_weight=training_data_sample_weight, valid_data_sample_weight=valid_data_sample_weight)
+    train(input_placeholder=input_placeholder, target_placeholder=target_placeholder,
+          sample_weight_placeholder = sample_weight_placeholder, prediction=prediction,
+          cost_func=cost_func, train_op=train_op, session=session, context=context,
+          input_format=input_format)
 
