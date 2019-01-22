@@ -54,6 +54,10 @@ class InputFormat:
     def initialize(self):
         pass
 
+    @abstractmethod
+    def reset(self):
+        pass
+
     @staticmethod
     def get_file_length(file_path):
         with gfile.Open(file_path, 'rb') as f:
@@ -106,6 +110,9 @@ class FileInputFormat(InputFormat):
     def get_total_batch(self):
         return len(self._train_splits)
 
+    def reset(self):
+        self._current_batch_index = 0
+
     def next_batch(self):
         """Return batch if have more splits, else return None"""
         if self._current_batch_index is None:
@@ -121,8 +128,6 @@ class FileInputFormat(InputFormat):
         train_pos_cnt = 0
         train_neg_cnt = 0
         for line in self.get_split(*self._train_splits[self._current_batch_index]):
-            if line_count % 10000 == 0:
-                self.tprint("Total loading lines: " + str(line_count))
             line_count += 1
             columns = line.split(self._delimiter)
             if self._feature_column_nums is None:
@@ -148,7 +153,6 @@ class FileInputFormat(InputFormat):
                 training_data_sample_weight.append([weight])
             else:
                 training_data_sample_weight.append([1.0])
-        self.tprint("Total data count: " + str(line_count) + ".")
         self.tprint("Train pos count: " + str(train_pos_cnt) + ", neg count: " + str(train_neg_cnt) + ".")
         self._current_batch_index += 1
         return train_data, train_target, self._valid_data, self._valid_target, training_data_sample_weight, self._valid_data_sample_weight
@@ -440,6 +444,7 @@ def train(input_placeholder, target_placeholder, sample_weight_placeholder, pred
                             })
             sum_validate_error += v[0]
             mini_batch = input_format.next_batch()
+        input_format.reset()
         tprint("Epoch " + str(i) + " avg train error " + str(sum_train_error / len(input_batch)) +
                ", avg validation error is " + str(sum_validate_error / len(validate_input)) + ".")
 
