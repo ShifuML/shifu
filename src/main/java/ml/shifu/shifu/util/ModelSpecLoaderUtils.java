@@ -348,7 +348,13 @@ public class ModelSpecLoaderUtils {
             stream = fs.open(modelPath);
             if(modelPath.getName().endsWith(LogisticRegressionContants.LR_ALG_NAME.toLowerCase())) { // LR model
                 br = new BufferedReader(new InputStreamReader(stream));
-                return LR.loadFromString(br.readLine());
+                try {
+                    return LR.loadFromString(br.readLine());
+                } catch (Exception e) { // local LR model?
+                    IOUtils.closeQuietly(br); // close and reopen
+                    stream = fs.open(modelPath);
+                    return BasicML.class.cast(EncogDirectoryPersistence.loadObject(stream));
+                }
             } else if(modelPath.getName().endsWith(CommonConstants.RF_ALG_NAME.toLowerCase()) // RF or GBT
                     || modelPath.getName().endsWith(CommonConstants.GBT_ALG_NAME.toLowerCase())) {
                 return TreeModel.loadFromStream(stream, gbtConvertToProb, gbtScoreConvertStrategy);

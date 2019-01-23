@@ -147,7 +147,7 @@ public class DataLoadWorker extends AbstractWorkerActor {
 
             if(recordCnt % recordCntPerMsg == 0) {
                 log.info("Read " + recordCnt + " Records.");
-                nextActorRef.tell(new RunModelDataMessage(streamId, totalStreamCnt, (msgId++), false, rawDataList),
+                nextActorRef.tell(new RunModelDataMessage(streamId, totalStreamCnt, (++msgId), false, rawDataList),
                         getSelf());
                 rawDataList = new LinkedList<String>();
             }
@@ -155,7 +155,7 @@ public class DataLoadWorker extends AbstractWorkerActor {
 
         log.info("Totally read " + recordCnt + " Records.");
         // anyhow, sent the last message to let next actor know - it's done
-        nextActorRef.tell(new RunModelDataMessage(streamId, totalStreamCnt, (msgId++), true, rawDataList), getSelf());
+        nextActorRef.tell(new RunModelDataMessage(streamId, totalStreamCnt, (++msgId), true, rawDataList), getSelf());
 
         return recordCnt;
     }

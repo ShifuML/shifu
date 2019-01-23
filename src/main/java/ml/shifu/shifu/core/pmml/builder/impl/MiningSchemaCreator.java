@@ -151,6 +151,7 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
         miningField.setName(FieldName.create(name));
         miningField.setOpType(opType);
         miningField.setUsageType(fieldUsageType);
+        miningField.setInvalidValueTreatment(InvalidValueTreatmentMethod.AS_MISSING);
         return miningField;
     }
 
