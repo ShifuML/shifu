@@ -27,6 +27,7 @@ public class WindowEarlyStop extends AbstractEarlyStopStrategy {
     private int bufferSize = 0;
     private int windowSize;
 
+    @SuppressWarnings("rawtypes")
     public WindowEarlyStop(MasterContext context, ModelConfig modelConfig, int windowSize) {
         double minimumStepsRatio = DTrainUtils.getDouble(context.getProps(), // get # of steps to choose parameters
                 CommonConstants.SHIFU_TRAIN_VAL_STEPS_RATIO, 0.1);

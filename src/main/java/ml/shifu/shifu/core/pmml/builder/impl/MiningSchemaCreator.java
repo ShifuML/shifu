@@ -19,17 +19,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.MiningField;
+import org.dmg.pmml.MiningField.UsageType;
+import org.dmg.pmml.MiningSchema;
+import org.dmg.pmml.OpType;
+import org.encog.ml.BasicML;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
-import ml.shifu.shifu.util.CommonUtils;
-
 import ml.shifu.shifu.util.NormalUtils;
-import org.dmg.pmml.*;
-import org.dmg.pmml.MiningField.UsageType;
-import org.encog.ml.BasicML;
 
 /**
  * Created by zhanhu on 3/29/16.

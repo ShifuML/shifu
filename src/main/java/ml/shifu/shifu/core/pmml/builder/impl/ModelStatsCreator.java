@@ -15,19 +15,30 @@
  */
 package ml.shifu.shifu.core.pmml.builder.impl;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.dmg.pmml.Array;
+import org.dmg.pmml.ContStats;
+import org.dmg.pmml.DiscrStats;
+import org.dmg.pmml.Extension;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.Interval;
+import org.dmg.pmml.ModelStats;
+import org.dmg.pmml.NumericInfo;
+import org.dmg.pmml.UnivariateStats;
+import org.encog.ml.BasicML;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
-import ml.shifu.shifu.util.CommonUtils;
-
 import ml.shifu.shifu.util.NormalUtils;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
-import org.dmg.pmml.*;
-import org.encog.ml.BasicML;
-
-import java.util.*;
 
 /**
  * Created by zhanhu on 3/29/16.

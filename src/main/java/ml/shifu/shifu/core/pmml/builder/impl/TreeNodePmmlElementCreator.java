@@ -18,15 +18,6 @@ package ml.shifu.shifu.core.pmml.builder.impl;
 import java.util.List;
 import java.util.Set;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
-import ml.shifu.shifu.core.dtrain.dt.Node;
-import ml.shifu.shifu.core.dtrain.dt.Split;
-import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
-import ml.shifu.shifu.util.CommonUtils;
-
-import ml.shifu.shifu.util.NormalUtils;
 import org.dmg.pmml.Array;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.Predicate;
@@ -34,6 +25,14 @@ import org.dmg.pmml.SimplePredicate;
 import org.dmg.pmml.SimpleSetPredicate;
 import org.dmg.pmml.True;
 import org.encog.ml.BasicML;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
+import ml.shifu.shifu.core.dtrain.dt.Node;
+import ml.shifu.shifu.core.dtrain.dt.Split;
+import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
+import ml.shifu.shifu.util.NormalUtils;
 
 public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.dmg.pmml.tree.Node> {
 

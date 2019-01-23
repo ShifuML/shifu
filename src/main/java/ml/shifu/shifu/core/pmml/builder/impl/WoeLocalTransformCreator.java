@@ -15,17 +15,22 @@
  */
 package ml.shifu.shifu.core.pmml.builder.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.dmg.pmml.DataType;
+import org.dmg.pmml.DerivedField;
+import org.dmg.pmml.Discretize;
+import org.dmg.pmml.DiscretizeBin;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.Interval;
+import org.dmg.pmml.OpType;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.util.CommonUtils;
-
 import ml.shifu.shifu.util.NormalUtils;
-import org.dmg.pmml.*;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Created by zhanhu on 3/29/16.

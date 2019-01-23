@@ -491,6 +491,7 @@ public final class DTrainUtils {
      *      Integer value if the key exists and value format is correct
      *      or defval
      */
+    @SuppressWarnings("rawtypes")
     public static Integer getInt(Map params, String key, Integer defval) {
         Integer val = defval;
         if(MapUtils.isNotEmpty(params) && params.containsKey(key)) {
