@@ -818,7 +818,9 @@
                         "defval": "Linear",
                         "options": [
                             {"label": "Linear", "value":"Linear"},
-                            {"label": "ReLU", "value":"ReLU"}
+                            {"label": "ReLU", "value":"ReLU"},
+                            {"label": "LeakyReLU", "value":"LeakyReLU"},
+                            {"label": "Swish", "value":"Swish"}
                         ]
                     }
                 ]

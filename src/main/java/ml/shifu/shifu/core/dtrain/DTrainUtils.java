@@ -405,7 +405,7 @@ public final class DTrainUtils {
         if(modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)) {
             int inputCount = 0;
             for(ColumnConfig columnConfig: columnConfigList) {
-                if(columnConfig.isFinalSelect() && featureSet.contains(columnConfig.getColumnNum())) {
+                if(featureSet.contains(columnConfig.getColumnNum())) {
                     if(columnConfig.isNumerical()) {
                         inputCount += (columnConfig.getBinBoundary().size() + 1);
                     } else {
@@ -417,7 +417,7 @@ public final class DTrainUtils {
         } else if(modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)) {
             int inputCount = 0;
             for(ColumnConfig columnConfig: columnConfigList) {
-                if(columnConfig.isFinalSelect() && featureSet.contains(columnConfig.getColumnNum())) {
+                if(featureSet.contains(columnConfig.getColumnNum())) {
                     if(columnConfig.isNumerical()) {
                         inputCount += 1;
                     } else {
