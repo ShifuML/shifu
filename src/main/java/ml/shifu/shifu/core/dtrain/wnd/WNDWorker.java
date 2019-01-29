@@ -95,6 +95,11 @@ public class WNDWorker extends
     protected int inputCount;
 
     /**
+     * Basic numerical input count for final-select variables or good candidates(if no any variables are selected)
+     */
+    protected int numericalInputCount;
+
+    /**
      * Basic categorical input count
      */
     protected int categoricalInputCount;
@@ -196,7 +201,7 @@ public class WNDWorker extends
      * If k-fold cross validation
      */
     private boolean isKFoldCV;
-    
+
     /**
      * Construct a validation random map for different classes. For stratified sampling, this is useful for each class
      * sampling.
@@ -216,7 +221,7 @@ public class WNDWorker extends
 
         // hashcode for fixed input split in train and validation
         long hashcode = 0;
-        float[] inputs = new float[this.inputCount];
+        float[] inputs = new float[this.numericalInputCount];
         SparseInput[] cateInputs = new SparseInput[this.categoricalInputCount];
         float ideal = 0f, significance = 1f;
         int index = 0, numericalIndex = 0, cateIndex = 0;
@@ -512,22 +517,7 @@ public class WNDWorker extends
             throw new RuntimeException(e);
         }
 
-        this.columnCategoryIndexMapping = new HashMap<Integer, Map<String, Integer>>();
-        for(ColumnConfig config: this.columnConfigList) {
-            if(config.isCategorical()) {
-                if(config.getBinCategory() != null) {
-                    Map<String, Integer> tmpMap = new HashMap<String, Integer>();
-                    for(int i = 0; i < config.getBinCategory().size(); i++) {
-                        List<String> catVals = CommonUtils.flattenCatValGrp(config.getBinCategory().get(i));
-                        for(String cval: catVals) {
-                            tmpMap.put(cval, i);
-                        }
-                    }
-                    this.columnCategoryIndexMapping.put(config.getColumnNum(), tmpMap);
-                }
-            }
-        }
-        
+        this.initCateIndexMap();
         this.hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
 
         // create Splitter
@@ -568,6 +558,7 @@ public class WNDWorker extends
 
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         // numerical + categorical = # of all input
+        this.numericalInputCount = inputOutputIndex[0];
         this.inputCount = inputOutputIndex[0] + inputOutputIndex[1];
         // regression outputNodeCount is 1, binaryClassfication, it is 1, OneVsAll it is 1, Native classification it is
         // 1, with index of 0,1,2,3 denotes different classes
@@ -576,6 +567,22 @@ public class WNDWorker extends
                 && !"".equals(modelConfig.getValidationDataSetRawPath()));
 
         this.isStratifiedSampling = this.modelConfig.getTrain().getStratifiedSample();
+    }
+
+    private void initCateIndexMap() {
+        this.columnCategoryIndexMapping = new HashMap<Integer, Map<String, Integer>>();
+        for(ColumnConfig config: this.columnConfigList) {
+            if(config.isCategorical() && config.getBinCategory() != null) {
+                Map<String, Integer> tmpMap = new HashMap<String, Integer>();
+                for(int i = 0; i < config.getBinCategory().size(); i++) {
+                    List<String> catVals = CommonUtils.flattenCatValGrp(config.getBinCategory().get(i));
+                    for(String cval: catVals) {
+                        tmpMap.put(cval, i);
+                    }
+                }
+                this.columnCategoryIndexMapping.put(config.getColumnNum(), tmpMap);
+            }
+        }
     }
 
     /*
