@@ -23,37 +23,80 @@ import java.util.List;
  * 
  * @author pengzhang
  */
-public class WideLayer implements Layer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>> {
+public class WideLayer implements Layer<List<SparseInput>, float[], float[], List<float[]>> {
 
     private List<WideFieldLayer> layers;
+
+    private BiasLayer bias;
+    
+    public WideLayer(List<WideFieldLayer> layers, BiasLayer bias) {
+        this.layers = layers;
+        this.bias = bias;
+    }
 
     @Override
     public int getOutDim() {
         int len = 0;
-        for(WideFieldLayer layer: layers) {
+        for(WideFieldLayer layer: getLayers()) {
             len += layer.getOutDim();
         }
         return len;
     }
 
     @Override
-    public List<float[]> forward(List<SparseInput> inputList) {
-        assert this.layers.size() == inputList.size();
+    public float[] forward(List<SparseInput> inputList) {
+        assert this.getLayers().size() == inputList.size();
+        float [] results = new float [layers.get(0).getOutDim()];
+        for(int i = 0; i < getLayers().size(); i++) {
+            float[] fOuts = this.getLayers().get(i).forward(inputList.get(i));
+            for(int j = 0; j < results.length; j++) {
+                results[j] += fOuts[j];
+            }
+        }
+        
+        for(int j = 0; j < results.length; j++) {
+            results[j] += bias.forward(0f);
+        }
+        
+        return results;
+    }
+
+    @Override
+    public List<float[]> backward(float[] backInputs) {
         List<float[]> list = new ArrayList<float[]>();
-        for(int i = 0; i < layers.size(); i++) {
-            list.add(this.layers.get(i).forward(inputList.get(i)));
+        for(int i = 0; i < getLayers().size(); i++) {
+            list.add(this.getLayers().get(i).backward(backInputs));
         }
         return list;
     }
 
-    @Override
-    public List<float[]> backward(List<float[]> backInputList) {
-        assert this.layers.size() == backInputList.size();
-        List<float[]> list = new ArrayList<float[]>();
-        for(int i = 0; i < layers.size(); i++) {
-            list.add(this.layers.get(i).backward(backInputList.get(i)));
-        }
-        return list;
+    /**
+     * @return the layers
+     */
+    public List<WideFieldLayer> getLayers() {
+        return layers;
+    }
+
+    /**
+     * @param layers
+     *            the layers to set
+     */
+    public void setLayers(List<WideFieldLayer> layers) {
+        this.layers = layers;
+    }
+
+    /**
+     * @return the bias
+     */
+    public BiasLayer getBias() {
+        return bias;
+    }
+
+    /**
+     * @param bias the bias to set
+     */
+    public void setBias(BiasLayer bias) {
+        this.bias = bias;
     }
 
 }

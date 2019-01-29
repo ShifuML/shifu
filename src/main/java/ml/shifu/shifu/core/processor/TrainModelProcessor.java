@@ -15,41 +15,27 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Splitter;
-import ml.shifu.guagua.GuaguaConstants;
-import ml.shifu.guagua.hadoop.util.HDPUtils;
-import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
-import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
-import ml.shifu.shifu.actor.AkkaSystemExecutor;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
-import ml.shifu.shifu.container.obj.ModelTrainConf.MultipleClassification;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.AbstractTrainer;
-import ml.shifu.shifu.core.TreeModel;
-import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
-import ml.shifu.shifu.core.alg.NNTrainer;
-import ml.shifu.shifu.core.alg.SVMTrainer;
-import ml.shifu.shifu.core.alg.TensorflowTrainer;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.core.dtrain.FeatureSubsetStrategy;
-import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
-import ml.shifu.shifu.core.dtrain.dt.*;
-import ml.shifu.shifu.core.dtrain.gs.GridSearch;
-import ml.shifu.shifu.core.dtrain.lr.*;
-import ml.shifu.shifu.core.dtrain.nn.*;
-import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
-import ml.shifu.shifu.exception.ShifuErrorCode;
-import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.fs.PathFinder;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.guagua.GuaguaParquetMapReduceClient;
-import ml.shifu.shifu.guagua.ShifuInputFormat;
-import ml.shifu.shifu.util.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Reader;
+import java.lang.Thread.UncaughtExceptionHandler;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Scanner;
+import java.util.Set;
+
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
@@ -70,7 +56,12 @@ import org.apache.pig.impl.PigContext;
 import org.apache.pig.impl.util.JarManager;
 import org.apache.pig.impl.util.ObjectSerializer;
 import org.apache.zookeeper.ZooKeeper;
-import org.encog.engine.network.activation.*;
+import org.encog.engine.network.activation.ActivationFunction;
+import org.encog.engine.network.activation.ActivationLOG;
+import org.encog.engine.network.activation.ActivationLinear;
+import org.encog.engine.network.activation.ActivationSIN;
+import org.encog.engine.network.activation.ActivationSigmoid;
+import org.encog.engine.network.activation.ActivationTANH;
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLDataSet;
 import org.jboss.netty.bootstrap.ServerBootstrap;
@@ -78,6 +69,68 @@ import org.joda.time.ReadableInstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xerial.snappy.Snappy;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Splitter;
+
+import ml.shifu.guagua.GuaguaConstants;
+import ml.shifu.guagua.hadoop.util.HDPUtils;
+import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
+import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
+import ml.shifu.shifu.actor.AkkaSystemExecutor;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
+import ml.shifu.shifu.container.obj.ModelTrainConf.MultipleClassification;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.AbstractTrainer;
+import ml.shifu.shifu.core.TreeModel;
+import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
+import ml.shifu.shifu.core.alg.NNTrainer;
+import ml.shifu.shifu.core.alg.SVMTrainer;
+import ml.shifu.shifu.core.alg.TensorflowTrainer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.FeatureSubsetStrategy;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dt.DTMaster;
+import ml.shifu.shifu.core.dtrain.dt.DTMasterParams;
+import ml.shifu.shifu.core.dtrain.dt.DTOutput;
+import ml.shifu.shifu.core.dtrain.dt.DTWorker;
+import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
+import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
+import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionMaster;
+import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionOutput;
+import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionParams;
+import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionWorker;
+import ml.shifu.shifu.core.dtrain.nn.ActivationLeakyReLU;
+import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
+import ml.shifu.shifu.core.dtrain.nn.ActivationSwish;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.core.dtrain.nn.NNMaster;
+import ml.shifu.shifu.core.dtrain.nn.NNOutput;
+import ml.shifu.shifu.core.dtrain.nn.NNParams;
+import ml.shifu.shifu.core.dtrain.nn.NNParquetWorker;
+import ml.shifu.shifu.core.dtrain.nn.NNWorker;
+import ml.shifu.shifu.core.dtrain.wnd.WNDMaster;
+import ml.shifu.shifu.core.dtrain.wnd.WNDParams;
+import ml.shifu.shifu.core.dtrain.wnd.WNDWorker;
+import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
+import ml.shifu.shifu.exception.ShifuErrorCode;
+import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.guagua.GuaguaParquetMapReduceClient;
+import ml.shifu.shifu.guagua.ShifuInputFormat;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.HDFSUtils;
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
+import ml.shifu.shifu.util.NormalUtils;
+import ml.shifu.shifu.util.ValueVisitor;
 import parquet.ParquetRuntimeException;
 import parquet.column.ParquetProperties;
 import parquet.column.values.bitpacking.Packer;
@@ -85,11 +138,6 @@ import parquet.encoding.Generator;
 import parquet.format.PageType;
 import parquet.hadoop.ParquetRecordReader;
 import parquet.org.codehaus.jackson.Base64Variant;
-
-import java.io.*;
-import java.lang.Thread.UncaughtExceptionHandler;
-import java.nio.charset.Charset;
-import java.util.*;
 
 /**
  * Train processor, produce model based on the normalized dataset
@@ -1114,6 +1162,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             this.prepareNNParams(args, sourceType);
         } else if(CommonUtils.isTreeModel(alg)) {
             this.prepareDTParams(args, sourceType);
+        } else if(Constants.WND_ALG_NAME.equalsIgnoreCase(alg)) {
+            this.prepareWNDParams(args, sourceType);
         }
 
         args.add("-c");
@@ -1190,6 +1240,25 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, key.toString(), value.toString()));
             }
         });
+    }
+
+    private void prepareWNDParams(List<String> args, SourceType sourceType) {
+        args.add("-w");
+        args.add(WNDWorker.class.getName());
+
+        args.add("-m");
+        args.add(WNDMaster.class.getName());
+
+        args.add("-mr");
+        args.add(WNDParams.class.getName());
+
+        args.add("-wr");
+        args.add(WNDParams.class.getName());
+
+        // TODO, add WNDOutput here
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
+                NNOutput.class.getName()));
+
     }
 
     private int vcoresSetting() {

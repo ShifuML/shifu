@@ -22,7 +22,11 @@ package ml.shifu.shifu.core.dtrain.wnd;
  */
 public class DenseInputLayer implements Layer<float[], float[], float[], float[]> {
 
-    private int out;
+    private final int out;
+
+    public DenseInputLayer(int out) {
+        this.out = out;
+    }
 
     @Override
     public int getOutDim() {
@@ -31,6 +35,7 @@ public class DenseInputLayer implements Layer<float[], float[], float[], float[]
 
     @Override
     public float[] forward(float[] inputs) {
+        assert inputs.length == this.out;
         return inputs;
     }
 

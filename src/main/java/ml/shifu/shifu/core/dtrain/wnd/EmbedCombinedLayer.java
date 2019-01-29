@@ -27,10 +27,14 @@ public class EmbedCombinedLayer implements Layer<List<SparseInput>, List<float[]
 
     private List<EmbedLayer> embedLayers;
 
+    public EmbedCombinedLayer(List<EmbedLayer> embedLayers) {
+        this.setEmbedLayers(embedLayers);
+    }
+
     @Override
     public int getOutDim() {
         int len = 0;
-        for(EmbedLayer embedLayer: embedLayers) {
+        for(EmbedLayer embedLayer: getEmbedLayers()) {
             len += embedLayer.getOutDim();
         }
         return len;
@@ -38,22 +42,36 @@ public class EmbedCombinedLayer implements Layer<List<SparseInput>, List<float[]
 
     @Override
     public List<float[]> forward(List<SparseInput> inputList) {
-        assert this.embedLayers.size() == inputList.size();
+        assert this.getEmbedLayers().size() == inputList.size();
         List<float[]> list = new ArrayList<float[]>();
-        for(int i = 0; i < this.embedLayers.size(); i++) {
-            list.add(this.embedLayers.get(i).forward(inputList.get(i)));
+        for(int i = 0; i < this.getEmbedLayers().size(); i++) {
+            list.add(this.getEmbedLayers().get(i).forward(inputList.get(i)));
         }
         return list;
     }
 
     @Override
     public List<float[]> backward(List<float[]> backInputList) {
-        assert this.embedLayers.size() == backInputList.size();
+        assert this.getEmbedLayers().size() == backInputList.size();
         List<float[]> list = new ArrayList<float[]>();
-        for(int i = 0; i < this.embedLayers.size(); i++) {
-            list.add(this.embedLayers.get(i).backward(backInputList.get(i)));
+        for(int i = 0; i < this.getEmbedLayers().size(); i++) {
+            list.add(this.getEmbedLayers().get(i).backward(backInputList.get(i)));
         }
         return list;
+    }
+
+    /**
+     * @return the embedLayers
+     */
+    public List<EmbedLayer> getEmbedLayers() {
+        return embedLayers;
+    }
+
+    /**
+     * @param embedLayers the embedLayers to set
+     */
+    public void setEmbedLayers(List<EmbedLayer> embedLayers) {
+        this.embedLayers = embedLayers;
     }
 
 }

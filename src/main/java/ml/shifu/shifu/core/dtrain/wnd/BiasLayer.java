@@ -19,29 +19,28 @@ package ml.shifu.shifu.core.dtrain.wnd;
  * @author pengzhang
  *
  */
-public class Sigmoid extends Activiation {
+public class BiasLayer implements Layer<Float, Float, Float, Float> {
+
+    private float weight;
 
     @Override
-    public float[] forward(float[] in) {
-        assert in != null;
-        float[] results = new float[in.length];
-        for(int i = 0; i < results.length; i++) {
-            results[i] = (float) (1 / (1 + Math.min(1.0E19, Math.exp(-20 * in[i]))));
-
-        }
-        return results;
+    public int getOutDim() {
+        return 1;
     }
 
     @Override
-    public float[] backward(float[] out) {
-        // TODO not correct?
-        assert out != null;
-        float[] results = new float[out.length];
-        for(int i = 0; i < results.length; i++) {
-            results[i] = (float) (out[i] * (1 - out[i]));
+    public Float forward(Float input) {
+        return weight;
+    }
 
-        }
-        return results;
+    /*
+     * (non-Javadoc)
+     * 
+     * @see ml.shifu.shifu.core.dtrain.wnd.Layer#backward(java.lang.Object)
+     */
+    @Override
+    public Float backward(Float backInput) {
+        return backInput * weight;
     }
 
 }

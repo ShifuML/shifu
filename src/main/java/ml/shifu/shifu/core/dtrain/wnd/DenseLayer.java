@@ -30,6 +30,75 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]> {
 
     private int in;
 
+    public DenseLayer(float[][] weights, float[] bias, int out, int in) {
+        this.weights = weights;
+        this.bias = bias;
+        this.out = out;
+        this.in = in;
+    }
+
+    public DenseLayer(int out, int in) {
+        this.out = out;
+        this.in = in;
+        // TODO init weights and bias
+    }
+
+    /**
+     * @return the weights
+     */
+    public float[][] getWeights() {
+        return weights;
+    }
+
+    /**
+     * @param weights the weights to set
+     */
+    public void setWeights(float[][] weights) {
+        this.weights = weights;
+    }
+
+    /**
+     * @return the bias
+     */
+    public float[] getBias() {
+        return bias;
+    }
+
+    /**
+     * @param bias the bias to set
+     */
+    public void setBias(float[] bias) {
+        this.bias = bias;
+    }
+
+    /**
+     * @return the out
+     */
+    public int getOut() {
+        return out;
+    }
+
+    /**
+     * @param out the out to set
+     */
+    public void setOut(int out) {
+        this.out = out;
+    }
+
+    /**
+     * @return the in
+     */
+    public int getIn() {
+        return in;
+    }
+
+    /**
+     * @param in the in to set
+     */
+    public void setIn(int in) {
+        this.in = in;
+    }
+
     @Override
     public int getOutDim() {
         return this.out;

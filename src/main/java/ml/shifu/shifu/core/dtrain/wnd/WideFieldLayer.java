@@ -24,7 +24,21 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
 
     private float[] weights;
 
-    private int output;
+    private int in;
+    
+    private int columnId;
+
+    public WideFieldLayer(int columnId, float[] weights, int in) {
+        this.weights = weights;
+        this.in = in;
+        this.setColumnId(columnId);
+    }
+
+    public WideFieldLayer(int columnId, int in) {
+        this.in = in;
+        this.setColumnId(columnId);
+        // TODO init weights
+    }
 
     @Override
     public float[] forward(SparseInput si) {
@@ -45,7 +59,51 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
 
     @Override
     public int getOutDim() {
-        return this.output;
+        return 1;
+    }
+
+    /**
+     * @return the weights
+     */
+    public float[] getWeights() {
+        return weights;
+    }
+
+    /**
+     * @param weights
+     *            the weights to set
+     */
+    public void setWeights(float[] weights) {
+        this.weights = weights;
+    }
+
+    /**
+     * @return the in
+     */
+    public int getIn() {
+        return in;
+    }
+
+    /**
+     * @param in
+     *            the in to set
+     */
+    public void setIn(int in) {
+        this.in = in;
+    }
+
+    /**
+     * @return the columnId
+     */
+    public int getColumnId() {
+        return columnId;
+    }
+
+    /**
+     * @param columnId the columnId to set
+     */
+    public void setColumnId(int columnId) {
+        this.columnId = columnId;
     }
 
 }
