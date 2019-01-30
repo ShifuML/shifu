@@ -115,6 +115,7 @@ import ml.shifu.shifu.core.dtrain.nn.NNParams;
 import ml.shifu.shifu.core.dtrain.nn.NNParquetWorker;
 import ml.shifu.shifu.core.dtrain.nn.NNWorker;
 import ml.shifu.shifu.core.dtrain.wnd.WNDMaster;
+import ml.shifu.shifu.core.dtrain.wnd.WNDOutput;
 import ml.shifu.shifu.core.dtrain.wnd.WNDParams;
 import ml.shifu.shifu.core.dtrain.wnd.WNDWorker;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
@@ -1257,7 +1258,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         // TODO, add WNDOutput here
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
-                NNOutput.class.getName()));
+                WNDOutput.class.getName()));
 
     }
 

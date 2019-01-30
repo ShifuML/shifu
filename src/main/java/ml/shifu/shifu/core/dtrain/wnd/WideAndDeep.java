@@ -112,6 +112,7 @@ public class WideAndDeep {
         return logits;
     }
 
+    @SuppressWarnings("rawtypes")
     public float[] backward(float[] error) {
         this.wl.backward(error);
 
