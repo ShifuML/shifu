@@ -21,25 +21,30 @@ package ml.shifu.shifu.core.dtrain.wnd;
  */
 public class Sigmoid extends Activiation {
 
+    private float[] lastForward;
+
     @Override
     public float[] forward(float[] in) {
         assert in != null;
+
         float[] results = new float[in.length];
         for(int i = 0; i < results.length; i++) {
             results[i] = (float) (1 / (1 + Math.min(1.0E19, Math.exp(-20 * in[i]))));
-
         }
+
+        // temp saved for backward usage
+        this.lastForward = results;
         return results;
     }
 
     @Override
     public float[] backward(float[] out) {
-        // TODO not correct?
         assert out != null;
+        assert out.length == lastForward.length;
+
         float[] results = new float[out.length];
         for(int i = 0; i < results.length; i++) {
-            results[i] = (float) (out[i] * (1 - out[i]));
-
+            results[i] = out[i] * lastForward[i] * (1f - lastForward[i]);
         }
         return results;
     }

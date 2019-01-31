@@ -40,6 +40,7 @@ public class BiasLayer implements Layer<Float, Float, Float, Float> {
      */
     @Override
     public Float backward(Float backInput) {
+        // TODO compute gradients here
         return backInput * weight;
     }
 

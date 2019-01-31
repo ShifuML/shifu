@@ -30,6 +30,7 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]> {
 
     private int in;
 
+    // TODO l2 reg add
     public DenseLayer(float[][] weights, float[] bias, int out, int in) {
         this.weights = weights;
         this.bias = bias;
@@ -51,7 +52,8 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]> {
     }
 
     /**
-     * @param weights the weights to set
+     * @param weights
+     *            the weights to set
      */
     public void setWeights(float[][] weights) {
         this.weights = weights;
@@ -65,7 +67,8 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]> {
     }
 
     /**
-     * @param bias the bias to set
+     * @param bias
+     *            the bias to set
      */
     public void setBias(float[] bias) {
         this.bias = bias;
@@ -79,7 +82,8 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]> {
     }
 
     /**
-     * @param out the out to set
+     * @param out
+     *            the out to set
      */
     public void setOut(int out) {
         this.out = out;
@@ -93,7 +97,8 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]> {
     }
 
     /**
-     * @param in the in to set
+     * @param in
+     *            the in to set
      */
     public void setIn(int in) {
         this.in = in;
@@ -119,17 +124,12 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]> {
 
     @Override
     public float[] backward(float[] backInputs) {
-        // TODO assert here
-        // output results is + bias
-        float[] results = new float[this.in + 1]; // bias
+        // TODO gradients compute and L2 reg here
+        float[] results = new float[this.in]; 
         for(int i = 0; i < this.in; i++) {
             for(int j = 0; j < backInputs.length; j++) {
                 results[i] += backInputs[j] * this.weights[i][j];
             }
-        }
-
-        for(int j = 0; j < backInputs.length; j++) {
-            results[this.in] += bias[j] * this.weights[in][j];
         }
 
         return results;

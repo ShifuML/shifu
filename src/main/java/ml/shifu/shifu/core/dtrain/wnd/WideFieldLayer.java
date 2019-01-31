@@ -25,7 +25,7 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
     private float[] weights;
 
     private int in;
-    
+
     private int columnId;
 
     public WideFieldLayer(int columnId, float[] weights, int in) {
@@ -50,10 +50,12 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
     public float[] backward(float[] backInputs) {
         assert backInputs.length == 1;
         float error = backInputs[0];
+
         float[] results = new float[this.weights.length];
         for(int i = 0; i < results.length; i++) {
-            results[i] = this.weights.length * error;
+            results[i] = this.weights[i] * error;
         }
+        // TODO sparse version backward wide layer major for gradients here, up backward could be ignored
         return results;
     }
 
@@ -100,7 +102,8 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
     }
 
     /**
-     * @param columnId the columnId to set
+     * @param columnId
+     *            the columnId to set
      */
     public void setColumnId(int columnId) {
         this.columnId = columnId;

@@ -39,6 +39,7 @@ public class WideAndDeep {
 
     private WideLayer wl;
 
+    // TODO support wide-only and dnn-only case
     public WideAndDeep(List<ColumnConfig> columnConfigList, int numericalSize, List<Integer> embedColumnIds,
             List<Integer> embedOutputs, List<Integer> wideColumnIds, List<Integer> hiddenNodes,
             List<String> actiFuncs) {
@@ -74,7 +75,7 @@ public class WideAndDeep {
             hiddenLayers.add(denseLayer);
             String acti = actiFuncs.get(i);
 
-            // TODO , add more and else;
+            // TODO , add more else;
             if("relu".equalsIgnoreCase(acti)) {
                 hiddenLayers.add(new ReLU());
             } else if("sigmoid".equalsIgnoreCase(acti)) {

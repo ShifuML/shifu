@@ -21,8 +21,11 @@ package ml.shifu.shifu.core.dtrain.wnd;
  */
 public class ReLU extends Activiation {
 
+    private float[] lastInput;
+
     @Override
     public float[] forward(float[] inputs) {
+        this.lastInput = inputs;
         float[] outputs = new float[inputs.length];
         for(int i = 0; i < inputs.length; i++) {
             outputs[i] = Math.max(0, inputs[i]);
@@ -32,11 +35,11 @@ public class ReLU extends Activiation {
 
     @Override
     public float[] backward(float[] outputs) {
-        float[] inputs = new float[outputs.length];
+        float[] results = new float[outputs.length];
         for(int i = 0; i < outputs.length; i++) {
-            inputs[i] = outputs[i] > 0 ? 1f : 0f;
+            results[i] = this.lastInput[i] > 0 ? outputs[i] * 1f : 0f;
         }
-        return inputs;
+        return results;
     }
 
 }

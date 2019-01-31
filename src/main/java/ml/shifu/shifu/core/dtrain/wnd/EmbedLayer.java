@@ -57,6 +57,7 @@ public class EmbedLayer implements Layer<SparseInput, float[], float[], float[]>
 
     @Override
     public float[] backward(float[] backInputs) {
+        // below backward compute can be ignored if gradients computation is added TODO gradients computation
         float[] results = new float[backInputs.length];
         for(int i = 0; i < results.length; i++) {
             for(int j = 0; j < backInputs.length; j++) {
