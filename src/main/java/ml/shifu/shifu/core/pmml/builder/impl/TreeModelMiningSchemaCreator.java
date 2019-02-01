@@ -15,19 +15,18 @@
  */
 package ml.shifu.shifu.core.pmml.builder.impl;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
-import ml.shifu.shifu.util.CommonUtils;
+import java.util.List;
 
-import ml.shifu.shifu.util.NormalUtils;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.MiningField;
 import org.dmg.pmml.MiningField.UsageType;
 import org.dmg.pmml.MiningSchema;
 import org.encog.ml.BasicML;
 
-import java.util.List;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
+import ml.shifu.shifu.util.NormalUtils;
 
 public class TreeModelMiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema> {
 

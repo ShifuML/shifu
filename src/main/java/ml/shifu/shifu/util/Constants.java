@@ -351,5 +351,10 @@ public interface Constants {
     public static final String SHIFU_NORM_PRECISION_TYPE = "shifu.norm.precision.type";
     
     public static final String TF_ALG_NAME = "Tensorflow";
+    
+    /**
+     * Wide and deep model name
+     */
+    public static final String WND_ALG_NAME = "WND";
 
 }

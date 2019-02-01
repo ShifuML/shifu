@@ -15,13 +15,10 @@
  */
 package ml.shifu.shifu.core.pmml.builder.impl;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
-import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
-import ml.shifu.shifu.util.CommonUtils;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
-import ml.shifu.shifu.util.NormalUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.dmg.pmml.DataDictionary;
 import org.dmg.pmml.DataField;
@@ -29,9 +26,11 @@ import org.dmg.pmml.DataType;
 import org.dmg.pmml.FieldName;
 import org.encog.ml.BasicML;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
+import ml.shifu.shifu.util.NormalUtils;
 
 /**
  * Created by zhanhu on 3/29/16.

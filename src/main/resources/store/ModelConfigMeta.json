@@ -538,6 +538,7 @@
                     {"label": "Random Forest", "value":"RF"},
                     {"label": "Gradient Boost Decision Tree", "value":"GBT"},
                     {"label": "Tensorflow", "value":"Tensorflow"},
+                    {"label": "Wide And Deep", "value":"WND"},
                     {"label": "Generic", "value":"generic"}
                 ]
             }, {

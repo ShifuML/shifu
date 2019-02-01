@@ -237,7 +237,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     /**
      * If enabled by extreme learning machine: https://en.wikipedia.org/wiki/Extreme_learning_machine
      */
-    //private boolean isELM;
+    // private boolean isELM;
 
     /**
      * Cache all features with feature index for searching
@@ -387,9 +387,9 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         this.epochsPerIteration = epochsPerIterationInteger == null ? 1 : epochsPerIterationInteger.intValue();
         LOG.info("epochsPerIteration in worker is :{}", epochsPerIteration);
 
-//        Object elmObject = validParams.get(DTrainUtils.IS_ELM);
-//        isELM = elmObject == null ? false : "true".equalsIgnoreCase(elmObject.toString());
-//        LOG.info("Check isELM: {}", isELM);
+        // Object elmObject = validParams.get(DTrainUtils.IS_ELM);
+        // isELM = elmObject == null ? false : "true".equalsIgnoreCase(elmObject.toString());
+        // LOG.info("Check isELM: {}", isELM);
 
         Object dropoutRateObj = validParams.get(CommonConstants.DROPOUT_RATE);
         if(dropoutRateObj != null) {
@@ -554,7 +554,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         this.gradient.getNetwork().setWeights(weights);
 
         Set<Integer> dropoutNodes = context.getLastMasterResult().getDropoutNodes();
-        
+
         // using the weights from master to train model in current iteration
         double[] gradients = null;
         for(int i = 0; i < epochsPerIteration; i++) {
@@ -593,7 +593,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
-        String outputActivationFunc = (String)validParams.get(CommonConstants.OUTPUT_ACTIVATION_FUNC);
+        String outputActivationFunc = (String) validParams.get(CommonConstants.OUTPUT_ACTIVATION_FUNC);
         BasicNetwork network = DTrainUtils.generateNetwork(this.featureInputsCnt, this.outputNodeCount, numLayers,
                 actFunc, hiddenNodeList, false, this.dropoutRate, this.wgtInit,
                 CommonUtils.isLinearTarget(modelConfig, columnConfigList), outputActivationFunc);
@@ -610,8 +610,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         LOG.info("Gradient computing thread count is {}.", modelConfig.getTrain().getWorkerThreadCount());
 
         this.gradient = new ParallelGradient((FloatFlatNetwork) flat, training, testing, flatSpot,
-                new LinearErrorFunction(), isCrossOver, modelConfig.getTrain().getWorkerThreadCount(),
-                this.lossStr, this.batchs);
+                new LinearErrorFunction(), isCrossOver, modelConfig.getTrain().getWorkerThreadCount(), this.lossStr,
+                this.batchs);
     }
 
     private NNParams buildEmptyNNParams(WorkerContext<NNParams, NNParams> workerContext) {
@@ -720,7 +720,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     }
 
     protected boolean isPositive(float value) {
-        return Float.compare(1f, value) == 0 ? true : false;
+        return Float.compare(1f, value) == 0;
     }
 
     /**

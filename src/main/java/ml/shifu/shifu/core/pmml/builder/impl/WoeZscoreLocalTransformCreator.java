@@ -18,13 +18,6 @@ package ml.shifu.shifu.core.pmml.builder.impl;
 import java.util.ArrayList;
 import java.util.List;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.ModelNormalizeConf;
-import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.util.CommonUtils;
-
-import ml.shifu.shifu.util.NormalUtils;
 import org.dmg.pmml.DataType;
 import org.dmg.pmml.DerivedField;
 import org.dmg.pmml.FieldName;
@@ -34,6 +27,12 @@ import org.dmg.pmml.OpType;
 import org.dmg.pmml.OutlierTreatmentMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf;
+import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.util.NormalUtils;
 
 /**
  * Created by zhanhu on 5/20/16.
