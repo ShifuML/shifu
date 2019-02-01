@@ -53,6 +53,7 @@ public class NNConstants {
     public static final String NN_RELU = "relu";
     public static final String NN_LEAKY_RELU = "leakyrelu";
     public static final String NN_SWISH = "swish";
+    public static final String NN_PTANH = "ptanh";
 
     public static final String LIB_JAR_SEPARATOR = ",";
 

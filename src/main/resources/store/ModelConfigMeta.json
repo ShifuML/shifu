@@ -574,6 +574,7 @@
                                 "options": [
                                     {"label": "Sigmoid", "value":"Sigmoid"},
                                     {"label": "Tanh", "value":"Tanh"},
+                                    {"label": "Penalized Tanh", "value":"PTanh"},
                                     {"label": "Log", "value":"Log"},
                                     {"label": "Sin", "value":"Sin"},
                                     {"label": "Linear", "value":"Linear"},

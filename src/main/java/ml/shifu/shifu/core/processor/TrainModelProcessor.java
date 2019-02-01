@@ -969,6 +969,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 isHasSameHiddenActivation = ActivationLeakyReLU.class == activation.getClass();
             } else if(actFunc.equalsIgnoreCase(NNConstants.NN_SWISH)) {
                 isHasSameHiddenActivation = ActivationSwish.class == activation.getClass();
+            } else if(actFunc.equalsIgnoreCase(NNConstants.NN_PTANH)) {
+                isHasSameHiddenActivation = ActivationPTANH.class == activation.getClass();
             } else {
                 isHasSameHiddenActivation = ActivationSigmoid.class == activation.getClass();
             }

@@ -687,6 +687,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         switch(this.getPrecisionType()) {
                             case DOUBLE64:
                                 tupleSchema.add(new Schema.FieldSchema(normName, DataType.DOUBLE));
+                                break;
                             case FLOAT7:
                             case FLOAT16:
                             case FLOAT32:
@@ -758,6 +759,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 switch(this.getPrecisionType()) {
                     case DOUBLE64:
                         tupleSchema.add(new Schema.FieldSchema("weight", DataType.DOUBLE));
+                        break;
                     case FLOAT7:
                     case FLOAT16:
                     case FLOAT32:

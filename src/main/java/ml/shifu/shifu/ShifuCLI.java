@@ -122,6 +122,7 @@ public class ShifuCLI {
     private static final String NORM = "norm";
     private static final String NOSORT = "nosort";
     private static final String REF = "ref";
+    private static final String STRICT = "strict";
 
     private static final String SAVE = "save";
     private static final String SWITCH = "switch";
@@ -355,7 +356,7 @@ public class ShifuCLI {
                         // delete some evaluation set
                         deleteEvalSet(cmd.getOptionValue(DELETE));
                     } else if(cmd.hasOption(NORM)) {
-                        runEvalNorm(cmd.getOptionValue(NORM));
+                        runEvalNorm(cmd.getOptionValue(NORM), cmd.hasOption(STRICT));
                     } else {
                         log.error("Invalid command, please check help message.");
                         printUsage();
@@ -577,8 +578,10 @@ public class ShifuCLI {
         return p.run();
     }
 
-    private static int runEvalNorm(String evalSetNames) throws Exception {
-        EvalModelProcessor p = new EvalModelProcessor(EvalStep.NORM, evalSetNames);
+    private static int runEvalNorm(String evalSetNames, boolean strictMode) throws Exception {
+        Map<String, Object> params = new HashMap<>();
+        params.put(Constants.STRICT_MODE, strictMode);
+        EvalModelProcessor p = new EvalModelProcessor(EvalStep.NORM, evalSetNames, params);
         return p.run();
     }
 
@@ -740,6 +743,7 @@ public class ShifuCLI {
         Option opt_nosort = OptionBuilder.hasArg(false).create(NOSORT);
         Option opt_ref = OptionBuilder.hasArg(true).create(REF);
         Option opt_filter = OptionBuilder.hasOptionalArg().create(FILTER);
+        Option opt_strict = OptionBuilder.hasArg(false).create(STRICT);
 
         // options for variable re-binning
         Option opt_rebin = OptionBuilder.hasArg(false).create(REBIN);
@@ -770,6 +774,7 @@ public class ShifuCLI {
         opts.addOption(opt_nosort);
         opts.addOption(opt_ref);
         opts.addOption(opt_filter);
+        opts.addOption(opt_strict);
 
         opts.addOption(opt_reset);
         opts.addOption(opt_filter_auto);

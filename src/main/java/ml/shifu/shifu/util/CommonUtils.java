@@ -1500,7 +1500,7 @@ public final class CommonUtils {
      *
      * @param dataSetRawPath
      *            raw data path
-     * @param delimeter
+     * @param delimiter
      *            the delimiter
      * @param source
      *            source type
@@ -1508,9 +1508,9 @@ public final class CommonUtils {
      * @throws IOException
      *             any io exception
      */
-    public static String[] takeFirstLine(String dataSetRawPath, String delimeter, SourceType source)
+    public static String[] takeFirstLine(String dataSetRawPath, String delimiter, SourceType source)
             throws IOException {
-        if(dataSetRawPath == null || delimeter == null || source == null) {
+        if(dataSetRawPath == null || delimiter == null || source == null) {
             throw new IllegalArgumentException("Input parameters should not be null.");
         }
 
@@ -1548,7 +1548,7 @@ public final class CommonUtils {
             String firstLine = reader.readLine();
             if(firstLine != null && firstLine.length() > 0) {
                 List<String> list = new ArrayList<String>();
-                for(String unit: Splitter.on(delimeter).split(firstLine)) {
+                for(String unit: Splitter.on(delimiter).split(firstLine)) {
                     list.add(unit);
                 }
                 return list.toArray(new String[0]);

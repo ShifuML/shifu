@@ -26,11 +26,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.FloatNeuralStructure;
-import ml.shifu.shifu.core.dtrain.nn.ActivationLeakyReLU;
-import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
-import ml.shifu.shifu.core.dtrain.nn.ActivationSwish;
-import ml.shifu.shifu.core.dtrain.nn.BasicDropoutLayer;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.core.dtrain.nn.*;
 import ml.shifu.shifu.core.dtrain.random.HeWeightRandomizer;
 import ml.shifu.shifu.core.dtrain.random.LecunWeightRandomizer;
 import ml.shifu.shifu.core.dtrain.random.XavierWeightRandomizer;
@@ -307,6 +303,8 @@ public final class DTrainUtils {
                 network.addLayer(new BasicDropoutLayer(new ActivationLeakyReLU(), true, numHiddenNode, dropoutRate));
             } else if (func.equalsIgnoreCase(NNConstants.NN_SWISH)) {
                 network.addLayer(new BasicDropoutLayer(new ActivationSwish(), true, numHiddenNode, dropoutRate));
+            } else if (func.equalsIgnoreCase(NNConstants.NN_PTANH)) {
+                network.addLayer(new BasicDropoutLayer(new ActivationPTANH(), true, numHiddenNode, dropoutRate));
             } else {
                 network.addLayer(new BasicDropoutLayer(new ActivationSigmoid(), true, numHiddenNode, dropoutRate));
             }

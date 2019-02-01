@@ -326,6 +326,8 @@ public interface Constants {
     public static final String RECURSIVE_CNT = "RECURSIVE_CNT";
     public static final String IS_TO_SHUFFLE_DATA = "IS_TO_SHUFFLE_DATA";
 
+    public static final String STRICT_MODE = "STRICT";
+
     /**
      * GBT score range is not in [0, 1], to make it in [0, 1], such strategies are provided with case insensitive.
      */
@@ -344,6 +346,7 @@ public interface Constants {
     public static final String SHIFU_NORM_ONLY_SELECTED = "shifu.norm.only.selected";
 
     public static final String SHIFU_OUTPUT_DATA_DELIMITER = "shifu.output.data.delimiter";
+    public static final String SHIFU_OUTPUT_DATA_CSV = "shifu.output.data.csv";
     
     public static final String SHIFU_NORM_PRECISION_TYPE = "shifu.norm.precision.type";
     
