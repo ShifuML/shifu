@@ -18,8 +18,7 @@ package ml.shifu.shifu.core.dtrain.wnd;
 /**
  * {@link DenseLayer} defines normal hidden layer in neural network while activation is not included but in one
  * specified layer.
- * 
- * <b>
+ *
  * As common dense layer, bias part is included.
  * 
  * @author Zhang David (pengzhang@paypal.com)
