@@ -59,18 +59,21 @@ import ml.shifu.shifu.util.MapReduceUtils;
  * iteration.
  * 
  * <p>
- * {@link WNDWorker} needs to be recovered like load snapshot models and load data into memory again and can be used to
- * train with current iterations. All fault tolerance related state recovery should be taken care in this worker.
- * 
- * <p>
  * Data loading into memory as memory list includes two parts: numerical float array and sparse input object array which
  * is for categorical variables. To leverage sparse feature of categorical variables, sparse object is leveraged to
  * save memory and matrix computation.
  * 
  * <p>
+ * First iteration, just return empty to master but wait for next iteration master models sync-up. Since at very first
+ * model training in all workers should be starting from the same model.
+ * 
+ * <p>
+ * After {@link #wnd} updating weights from master result each iteration. Then do forward-backward computation and in
+ * backward computation of each record to compute gradients. Such gradients arch as wide and deep graph needs to be
+ * aggregated and sent back to master.
+ * 
+ * <p>
  * TODO mini batch matrix support, matrix computation support
- * TODO forward, backward abstraction
- * TODO embedding arch logic
  * TODO variable/field based optimization to compute gradients
  * 
  * @author Zhang David (pengzhang@paypal.com)
@@ -104,7 +107,7 @@ public class WNDWorker extends
     /**
      * Basic categorical input count
      */
-    protected int categoricalInputCount;
+    protected int cateInputs;
 
     /**
      * Means if do variable selection, if done, many variables will be set to finalSelect = true; if not, no variables
@@ -205,7 +208,7 @@ public class WNDWorker extends
     private boolean isKFoldCV;
 
     /**
-     * Construct a validation random map for different classes. For stratified sampling, this is useful for each class
+     * Construct a validation random map for different classes. For stratified sampling, this is useful for class level
      * sampling.
      */
     private Map<Integer, Random> validationRandomMap = new HashMap<Integer, Random>();
@@ -254,9 +257,9 @@ public class WNDWorker extends
         // hashcode for fixed input split in train and validation
         long hashcode = 0;
         float[] inputs = new float[this.numInputs];
-        SparseInput[] cateInputs = new SparseInput[this.categoricalInputCount];
+        SparseInput[] cateInputs = new SparseInput[this.cateInputs];
         float ideal = 0f, significance = 1f;
-        int index = 0, numericalIndex = 0, cateIndex = 0;
+        int index = 0, numIndex = 0, cateIndex = 0;
         // use guava Splitter to iterate only once
         for(String input: this.splitter.split(currentValue.getWritable().toString())) {
             if(index == this.columnConfigList.size()) {
@@ -270,8 +273,8 @@ public class WNDWorker extends
                     // final select some variables but meta and target are not included
                     if(validColumn(config)) {
                         if(config.isNumerical()) {
-                            inputs[numericalIndex] = getFloatValue(input);
-                            this.inputIndexMap.putIfAbsent(config.getColumnNum(), numericalIndex++);
+                            inputs[numIndex] = getFloatValue(input);
+                            this.inputIndexMap.putIfAbsent(config.getColumnNum(), numIndex++);
                         } else if(config.isCategorical()) {
                             cateInputs[cateIndex] = new SparseInput(config.getColumnNum(), getCateIndex(input, config));
                             this.inputIndexMap.putIfAbsent(config.getColumnNum(), cateIndex++);
@@ -285,7 +288,7 @@ public class WNDWorker extends
 
         // output delimiter in norm can be set by user now and if user set a special one later changed, this exception
         // is helped to quick find such issue.
-        validateInputLength(context, inputs, numericalIndex);
+        validateInputLength(context, inputs, numIndex);
 
         // sample negative only logic here
         if(sampleNegOnly(hashcode, ideal)) {
@@ -484,7 +487,7 @@ public class WNDWorker extends
     }
 
     private boolean isPositive(float value) {
-        return Float.compare(1f, value) == 0 ? true : false;
+        return Float.compare(1f, value) == 0;
     }
 
     private boolean isInRange(long hashcode, int startHashCode, int endHashCode) {
@@ -526,18 +529,12 @@ public class WNDWorker extends
 
     private int getCateIndex(String input, ColumnConfig columnConfig) {
         int shortValue = (columnConfig.getBinCategory().size());
-        if(input.length() == 0) {
-            // empty string
+        if(input.length() == 0) { // missing which is invalid category
             shortValue = columnConfig.getBinCategory().size();
         } else {
-            Integer categoricalIndex = this.columnCategoryIndexMapping.get(columnConfig.getColumnNum()).get(input);
-            if(categoricalIndex == null) {
-                shortValue = -1; // invalid category, set to -1 for last index
-            } else {
-                shortValue = categoricalIndex.intValue();
-            }
-            if(shortValue == -1) {
-                // not found
+            Integer cateIndex = this.columnCategoryIndexMapping.get(columnConfig.getColumnNum()).get(input);
+            shortValue = (cateIndex == null) ? -1 : cateIndex.intValue(); // -1 is invalid or not existing category
+            if(shortValue == -1) { // still not found
                 shortValue = columnConfig.getBinCategory().size();
             }
         }
@@ -550,9 +547,8 @@ public class WNDWorker extends
             // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 1f)
             significance = input.length() == 0 ? 1f : NumberFormatUtils.getFloat(input, 1f);
             // if invalid weight, set it to 1f and warning in log
-            if(Float.compare(significance, 0f) < 0) {
-                LOG.warn("Record {} in current worker weight {} is less than 0 and invalid, set it to 1.", count,
-                        significance);
+            if(significance < 0f) {
+                LOG.warn("Record {} with weight {} is less than 0 and invalid, set it to 1.", count, significance);
                 significance = 1f;
             }
         }
@@ -572,11 +568,6 @@ public class WNDWorker extends
         super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see ml.shifu.guagua.worker.AbstractWorkerComputable#init(ml.shifu.guagua.worker.WorkerContext)
-     */
     @SuppressWarnings({ "unchecked", "unused" })
     @Override
     public void init(WorkerContext<WNDParams, WNDParams> context) {
@@ -607,9 +598,9 @@ public class WNDWorker extends
 
         this.poissonSampler = Boolean.TRUE.toString()
                 .equalsIgnoreCase(context.getProps().getProperty(NNConstants.NN_POISON_SAMPLER));
-        this.rng = new PoissonDistribution(1.0d);
+        this.rng = new PoissonDistribution(1d);
         Double upSampleWeight = modelConfig.getTrain().getUpSampleWeight();
-        if(Double.compare(upSampleWeight, 1d) != 0 && (modelConfig.isRegression()
+        if(upSampleWeight != 1d && (modelConfig.isRegression()
                 || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()))) {
             // set mean to upSampleWeight -1 and get sample + 1to make sure no zero sample value
             LOG.info("Enable up sampling with weight {}.", upSampleWeight);
@@ -629,7 +620,7 @@ public class WNDWorker extends
             this.validationData = new MemoryLimitedList<Data>(
                     (long) (Runtime.getRuntime().maxMemory() * memoryFraction * 0.4), new ArrayList<Data>());
         } else {
-            if(Double.compare(validationRate, 0d) != 0) {
+            if(validationRate != 0d) {
                 this.trainingData = new MemoryLimitedList<Data>(
                         (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - validationRate)),
                         new ArrayList<Data>());
@@ -661,13 +652,13 @@ public class WNDWorker extends
         Integer embedOutputs = (Integer) this.validParams.get(CommonConstants.NUM_EMBED_OUTPUTS);
         List<Integer> embedOutputList = new ArrayList<Integer>();
         for(Integer cId: embedColumnIds) {
-            embedOutputList.add(embedOutputs == null ? 16 : embedOutputs);
+            embedOutputList.add(embedOutputs == null ? CommonConstants.DEFAULT_EMBEDING_OUTPUT : embedOutputs);
         }
         List<Integer> wideColumnIds = DTrainUtils.getCategoricalIds(columnConfigList, isAfterVarSelect);
         int numLayers = (Integer) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
-        Float l2reg = (Float) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
+        Float l2reg = (Float) this.validParams.get(CommonConstants.WND_L2_REG);
         this.wnd = new WideAndDeep(columnConfigList, numInputs, embedColumnIds, embedOutputList, wideColumnIds,
                 hiddenNodes, actFunc, l2reg);
     }
@@ -691,6 +682,7 @@ public class WNDWorker extends
     @Override
     public WNDParams doCompute(WorkerContext<WNDParams, WNDParams> context) {
         if(context.isFirstIteration()) {
+            // return empty which has been ignored in master first iteration, worker needs sync with master at first.
             return new WNDParams();
         }
 
@@ -698,8 +690,9 @@ public class WNDWorker extends
         this.wnd.updateWeights(context.getLastMasterResult());
 
         // compute gradients for each iteration
-        WideAndDeep gradientsWnd = new WideAndDeep(); // TODO, construct a wideanddeep graph, how to aggregate gradients
-                                                      // to params
+        WideAndDeep gradientsWnd = new WideAndDeep(this.wnd); // TODO build a wideanddeep to aggregate gradients
+
+        // forward and backward computation
         int trainCnt = trainingData.size(), validCnt = validationData.size();
         double trainSumError = 0d, validSumError = 0d;
         for(Data data: trainingData) {
@@ -747,7 +740,8 @@ public class WNDWorker extends
     }
 
     /**
-     * TODO
+     * {@link Data} denotes training record with a float array of dense (numerical) inputs and a list of sparse inputs
+     * of categorical input features.
      * 
      * @author Zhang David (pengzhang@paypal.com)
      */
@@ -782,6 +776,8 @@ public class WNDWorker extends
          *            categorical values which stored into one {@link SparseInput} array.
          * @param weight
          *            the weight of one training record
+         * @param ideal
+         *            the label field, 0 or 1
          */
         public Data(float[] numericalValues, SparseInput[] categoricalValues, float weight, float ideal) {
             this.numericalValues = numericalValues;

@@ -19,14 +19,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * TODO
+ * {@link WideLayer} defines wide part of WideAndDeep. It includes a list of {@link WideFieldLayer} instances (each one
+ * is for each wide column) and one {@link BiasLayer}.
  * 
- * @author pengzhang
+ * <p>
+ * {@link SparseInput} is leveraged for wide columns as with one-hot encoding to save more computation.
+ * 
+ * @author Zhang David (pengzhang@paypal.com)
  */
 public class WideLayer implements Layer<List<SparseInput>, float[], float[], List<float[]>> {
 
+    /**
+     * Layers for all wide columns.
+     */
     private List<WideFieldLayer> layers;
 
+    /**
+     * Bias layer
+     */
     private BiasLayer bias;
 
     public WideLayer(List<WideFieldLayer> layers, BiasLayer bias) {

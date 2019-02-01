@@ -16,11 +16,15 @@
 package ml.shifu.shifu.core.dtrain.wnd;
 
 /**
- * @author pengzhang
- *
+ * Typical ReLU implementation.
+ * 
+ * @author Zhang David (pengzhang@paypal.com)
  */
-public class ReLU extends Activiation {
+public class ReLU extends Activation {
 
+    /**
+     * Tmp save last inputs in forward and then can be used in backward computation.
+     */
     private float[] lastInput;
 
     @Override

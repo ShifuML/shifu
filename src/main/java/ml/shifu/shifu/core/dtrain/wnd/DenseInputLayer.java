@@ -16,12 +16,16 @@
 package ml.shifu.shifu.core.dtrain.wnd;
 
 /**
- * TODO
+ * {@link DenseInputLayer} denotes dense input number array. Forward computation is a wrapper with just current input
+ * array. {@linkplain #backward(float[], float)} no need to be supported as it should not be called.
  * 
- * @author pengzhang
+ * @author Zhang David (pengzhang@paypal.com)
  */
 public class DenseInputLayer implements Layer<float[], float[], float[], float[]> {
 
+    /**
+     * Output dimension.
+     */
     private final int out;
 
     public DenseInputLayer(int out) {

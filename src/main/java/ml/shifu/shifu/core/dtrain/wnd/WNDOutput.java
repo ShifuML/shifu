@@ -45,9 +45,9 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
 /**
- * TODO a output inteceptor to save wnd model.
+ * {@link WNDOutput} is used to save final model path and tmp models per checkpoint definition.
  * 
- * @author pengzhang
+ * @author Zhang David (pengzhang@paypal.com)
  */
 public class WNDOutput extends BasicMasterInterceptor<WNDParams, WNDParams> {
 
@@ -87,6 +87,7 @@ public class WNDOutput extends BasicMasterInterceptor<WNDParams, WNDParams> {
     /**
      * ColumnConfig list reference
      */
+    @SuppressWarnings("unused")
     private List<ColumnConfig> columnConfigList;
 
     /**
@@ -113,16 +114,14 @@ public class WNDOutput extends BasicMasterInterceptor<WNDParams, WNDParams> {
         final int totalIteration = context.getTotalIteration();
         final boolean isHalt = context.getMasterResult().isHalt();
 
-        if(currentIteration % (tmpModelFactor * 2) == 0) {
-            // save tmp models
-            Thread tmpModelPersistThread = new Thread(new Runnable() {
+        if(currentIteration % tmpModelFactor == 0) {
+            Thread modePersistThread = new Thread(new Runnable() {
                 @Override
                 public void run() {
                     // save model results for continue model training, if current job is failed, then next
                     // running we can start from this point to save time. Another case for master recovery, if master is
                     // failed, read such checkpoint model
                     Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-
                     // if current iteration is the last iteration, or it is halted by early stop condition, no
                     // need to save checkpoint model here as it is replicated with postApplicaiton.
                     // There is issue here if saving the same model in this thread and another thread in
@@ -147,13 +146,13 @@ public class WNDOutput extends BasicMasterInterceptor<WNDParams, WNDParams> {
                         saveTmpModelToHDFS(currentIteration, context.getMasterResult());
                     }
                 }
-            }, "saveTmpModelToHDFS thread");
-            tmpModelPersistThread.setDaemon(true);
-            tmpModelPersistThread.start();
+            }, "SaveTmpModelToHDFS Thread");
+            modePersistThread.setDaemon(true);
+            modePersistThread.start();
         }
 
         updateProgressLog(context);
-        LOG.debug("DT output post iteration time is {}ms", (System.currentTimeMillis() - start));
+        LOG.debug("Write output model in post iteration time is {}ms", (System.currentTimeMillis() - start));
     }
 
     @SuppressWarnings("deprecation")
@@ -182,7 +181,7 @@ public class WNDOutput extends BasicMasterInterceptor<WNDParams, WNDParams> {
                 this.progressOutput.flush();
                 this.progressOutput.sync();
             } catch (IOException e) {
-                LOG.error("Error in write progress log:", e);
+                LOG.error("Error in write progress log", e);
             }
         }
     }
@@ -193,9 +192,9 @@ public class WNDOutput extends BasicMasterInterceptor<WNDParams, WNDParams> {
         writeModelToFileSystem(context.getMasterResult(), out);
         if(this.isGsMode || this.isKFoldCV) {
             Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
-            writeValErrorToFileSystem(
-                    context.getMasterResult().getValidationError() / context.getMasterResult().getValidationCount(),
-                    valErrOutput);
+            double valErr = context.getMasterResult().getValidationError()
+                    / context.getMasterResult().getValidationCount();
+            writeValErrorToFileSystem(valErr, valErrOutput);
         }
         IOUtils.closeStream(this.progressOutput);
     }
@@ -230,7 +229,6 @@ public class WNDOutput extends BasicMasterInterceptor<WNDParams, WNDParams> {
                 modelConfig.getTrain().getAlgorithm().toLowerCase()));
     }
 
-    @SuppressWarnings("unused")
     private void init(MasterContext<WNDParams, WNDParams> context) {
         if(isInit.compareAndSet(false, true)) {
             this.conf = new Configuration();
@@ -246,8 +244,6 @@ public class WNDOutput extends BasicMasterInterceptor<WNDParams, WNDParams> {
             }
 
             this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);
-            int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
-            // numerical + categorical = # of all input
             try {
                 Path progressLog = new Path(context.getProps().getProperty(CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE));
                 // if the progressLog already exists, that because the master failed, and fail-over

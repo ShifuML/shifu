@@ -35,8 +35,25 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
 /**
- * TODO master aggregation logic to aggregate gradients and update weights based on different optimization strategies
- * like ADAM, AdaGrad, SGD ...
+ * {@link WNDMaster} is master logic in wide and deep implementation based on Guagua.
+ * 
+ * <p>
+ * Like neural network implementation on Guagua. WNDMaster is used to aggregate worker gradients and update global wide
+ * and deep model inside of current master {@link #wnd}.
+ * 
+ * <p>
+ * Based on worker aggregated gradients and current model, by using different optimizer implementation like SGD, ADAM,
+ * AdaGrad to do model updates.
+ * 
+ * <p>
+ * At the first iteration, workre results are ignored because after master model initialization, workers training model
+ * needs pulling lastest consistent model in worker while not to use on random model. In
+ * {@link #doCompute(MasterContext)}, the first iteration is to just send back model to workers and in {@link WNDWorker}
+ * the first iteration is just to return an empty parameters without usage in master.
+ * 
+ * <p>
+ * For fault tolerance, {@link #wnd} needs to be recovered from existing model hdfs folder if continuous model training
+ * enabled.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -68,34 +85,23 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
     /**
      * Whether to enable continuous model training based on existing models.
      */
-    @SuppressWarnings("unused")
     private boolean isContinuousEnabled = false;
 
     /**
-     * Every checkpoint interval, do checkpoint to save {@link #trees} and {@link #toDoQueue} and MasterParams in that
-     * iteration.
+     * # of numerical inputs
      */
-    @SuppressWarnings("unused")
-    private int checkpointInterval;
-
-    /**
-     * Checkpoint output HDFS file
-     */
-    @SuppressWarnings("unused")
-    private Path checkpointOutput;
-
     private int numInputs;
 
-
+    /**
+     * Valid parameters from ModelConfig#train#params
+     */
     private Map<String, Object> validParams;
 
+    /**
+     * Wide and Deep model object inside of master which is global model and each iteration should be sent back.
+     */
     private WideAndDeep wnd;
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see ml.shifu.guagua.master.AbstractMasterComputable#init(ml.shifu.guagua.master.MasterContext)
-     */
     @SuppressWarnings({ "unchecked", "unused" })
     @Override
     public void init(MasterContext<WNDParams, WNDParams> context) {
@@ -111,10 +117,9 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
             throw new RuntimeException(e);
         }
 
-        //        this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
+        // this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
 
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
-        // numerical + categorical = # of all input
         this.numInputs = inputOutputIndex[0];
         // regression outputNodeCount is 1, binaryClassfication, it is 1, OneVsAll it is 1, Native classification it is
         // 1, with index of 0,1,2,3 denotes different classes
@@ -122,48 +127,40 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
         this.validParams = this.modelConfig.getTrain().getParams();
         this.learningRate = Double.valueOf(validParams.get(CommonConstants.LEARNING_RATE).toString());
 
+        this.isContinuousEnabled = Boolean.TRUE.toString()
+                .equalsIgnoreCase(context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
+
         // Build wide and deep graph
         List<Integer> embedColumnIds = (List<Integer>) this.validParams.get(CommonConstants.NUM_EMBED_COLUMN_IDS);
         Integer embedOutputs = (Integer) this.validParams.get(CommonConstants.NUM_EMBED_OUTPUTS);
         List<Integer> embedOutputList = new ArrayList<Integer>();
         for(Integer cId: embedColumnIds) {
-            embedOutputList.add(embedOutputs == null ? 16 : embedOutputs);
+            embedOutputList.add(embedOutputs == null ? CommonConstants.DEFAULT_EMBEDING_OUTPUT : embedOutputs);
         }
         List<Integer> wideColumnIds = DTrainUtils.getCategoricalIds(columnConfigList, isAfterVarSelect);
         int numLayers = (Integer) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
-        Float l2reg = (Float) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
+        Float l2reg = (Float) this.validParams.get(CommonConstants.WND_L2_REG);
         this.wnd = new WideAndDeep(columnConfigList, numInputs, embedColumnIds, embedOutputList, wideColumnIds,
                 hiddenNodes, actFunc, l2reg);
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see ml.shifu.guagua.master.AbstractMasterComputable#doCompute(ml.shifu.guagua.master.MasterContext)
-     */
     @Override
     public WNDParams doCompute(MasterContext<WNDParams, WNDParams> context) {
         if(context.isFirstIteration()) {
-            WNDParams params = new WNDParams(); // TODO, init weights in WideAndDeep with this.wnd object
-            params.setWnd(this.wnd); //weights from this.wnd
-            return params;
+            // Fist iteration, no need take worker results and after master model initialization, global model should be
+            // sent to workers for training.
+            return initOrRecoverModelWeights(context);
         }
-        
-        WNDParams aggregation = null;
-        for(WNDParams params: context.getWorkerResults()) {
-            if(aggregation == null) {
-                aggregation = params;
-            } else {
-                aggregation.combine(params);
-            }
-        }
-        
+
+        // aggregate all worker gradients to one gradient object.
+        WNDParams aggregation = aggregateWorkerGradients(context);
+
         // TODO optimizer, wnd object as current model weights, aggregation as current iteration gradients aggregation
         // gradients = aggregation.getWnd();
         // this.wnd -= this.learningRate * gradients;
-        
+
         // construct master result which contains WideAndDeep current model weights
         WNDParams params = new WNDParams();
         params.setTrainCount(aggregation.getTrainCount());
@@ -172,6 +169,41 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
         params.setValidationError(aggregation.getValidationError());
         params.setWnd(this.wnd);
         return params;
+    }
+
+    private WNDParams aggregateWorkerGradients(MasterContext<WNDParams, WNDParams> context) {
+        WNDParams aggregation = null;
+        for(WNDParams params: context.getWorkerResults()) {
+            if(aggregation == null) {
+                aggregation = params;
+            } else {
+                aggregation.combine(params);
+            }
+        }
+        return aggregation;
+    }
+
+    private WNDParams initOrRecoverModelWeights(MasterContext<WNDParams, WNDParams> context) {
+        WNDParams params = new WNDParams();
+        if(this.isContinuousEnabled) {
+            Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
+            WideAndDeep existingModel = loadModel(modelPath);
+            if(existingModel == null) {
+                this.wnd.updateWeights(existingModel);
+            } else {
+                LOG.warn("Continuous training enabled but existing model load failed, do random initialization.");
+                // TODO this.wnd.initWeights();
+            }
+        } else {
+            // TODO, init weights in WideAndDeep with this.wnd object this.wnd.initWeights();
+        }
+        params.setWnd(this.wnd); // weights from this.wnd
+        return params;
+    }
+
+    private WideAndDeep loadModel(Path modelPath) {
+        // TODO load wide and deep model from file path
+        return null;
     }
 
 }

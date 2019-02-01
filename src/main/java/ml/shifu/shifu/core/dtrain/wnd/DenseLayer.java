@@ -16,36 +16,57 @@
 package ml.shifu.shifu.core.dtrain.wnd;
 
 /**
- * TODO
+ * {@link DenseLayer} defines normal hidden layer in neural network while activation is not included but in one
+ * specified layer.
  * 
- * @author pengzhang
+ * <b>
+ * As common dense layer, bias part is included.
+ * 
+ * @author Zhang David (pengzhang@paypal.com)
  */
 public class DenseLayer implements Layer<float[], float[], float[], float[]> {
 
+    /**
+     * [in, out] array for deep matrix weights
+     */
     private float[][] weights;
 
+    /**
+     * [out] array for bias in input of such DenseLayer
+     */
     private float[] bias;
 
+    /**
+     * The output dimension
+     */
     private int out;
 
+    /**
+     * The input dimension (bias not included)
+     */
     private int in;
 
+    /**
+     * L2 level regularization parameter.
+     */
     private float l2reg;
 
-    // TODO l2 reg add
     public DenseLayer(float[][] weights, float[] bias, int out, int in, float l2reg) {
         this.weights = weights;
         this.bias = bias;
         this.out = out;
         this.in = in;
-        this.setL2reg(l2reg);
+        this.l2reg = l2reg;
     }
 
     public DenseLayer(int out, int in, float l2reg) {
         this.out = out;
         this.in = in;
-        this.setL2reg(l2reg);
-        // TODO init weights and bias
+        this.l2reg = l2reg;
+        this.bias = new float[out];
+        for(int i = 0; i < in; i++) {
+            this.weights[i] = new float[out];
+        }
     }
 
     /**
@@ -121,7 +142,8 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]> {
     }
 
     /**
-     * @param l2reg the l2reg to set
+     * @param l2reg
+     *            the l2reg to set
      */
     public void setL2reg(float l2reg) {
         this.l2reg = l2reg;
@@ -129,7 +151,6 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]> {
 
     @Override
     public float[] forward(float[] inputs) {
-        // TODO assert here
         float[] results = new float[this.out];
         for(int i = 0; i < results.length; i++) {
             for(int j = 0; j < inputs.length; j++) {

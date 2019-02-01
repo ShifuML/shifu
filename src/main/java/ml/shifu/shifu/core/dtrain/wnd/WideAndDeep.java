@@ -23,7 +23,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 /**
  * TODO
  * 
- * @author pengzhang
+ * @author Zhang David (pengzhang@paypal.com)
  */
 public class WideAndDeep {
 
@@ -34,7 +34,7 @@ public class WideAndDeep {
 
     private DenseLayer finalLayer;
 
-    private EmbedCombinedLayer ecl;
+    private EmbedLayer ecl;
 
     private WideLayer wl;
 
@@ -53,6 +53,10 @@ public class WideAndDeep {
     private List<String> actiFuncs;
 
     private float l2reg;
+    
+    public WideAndDeep(WideAndDeep wnd) {
+        //TODO
+    }
 
     public WideAndDeep() {
     }
@@ -73,15 +77,15 @@ public class WideAndDeep {
         this.dil = new DenseInputLayer(numericalSize);
 
         assert embedColumnIds.size() == embedOutputs.size();
-        List<EmbedLayer> embedLayers = new ArrayList<EmbedLayer>();
+        List<EmbedFieldLayer> embedLayers = new ArrayList<EmbedFieldLayer>();
         for(int i = 0; i < embedColumnIds.size(); i++) {
             Integer columnId = embedColumnIds.get(i);
             ColumnConfig config = columnConfigList.get(columnId);
             // +1 to append missing category
-            EmbedLayer el = new EmbedLayer(columnId, embedOutputs.get(i), config.getBinCategory().size() + 1);
+            EmbedFieldLayer el = new EmbedFieldLayer(columnId, embedOutputs.get(i), config.getBinCategory().size() + 1);
             embedLayers.add(el);
         }
-        this.ecl = new EmbedCombinedLayer(embedLayers);
+        this.ecl = new EmbedLayer(embedLayers);
 
         List<WideFieldLayer> wfLayers = new ArrayList<WideFieldLayer>();
         for(int i = 0; i < wideColumnIds.size(); i++) {
@@ -113,7 +117,7 @@ public class WideAndDeep {
 
         this.finalLayer = new DenseLayer(1, preHiddenInputs, l2reg);
     }
-
+    
     @SuppressWarnings("rawtypes")
     public float[] forward(float[] denseInputs, List<SparseInput> embedInputs, List<SparseInput> wideInputs) {
         // wide layer forward
@@ -128,8 +132,8 @@ public class WideAndDeep {
             if(layer instanceof DenseLayer) {
                 DenseLayer dl = (DenseLayer) layer;
                 inputs = dl.forward(inputs);
-            } else if(layer instanceof Activiation) {
-                Activiation acti = (Activiation) layer;
+            } else if(layer instanceof Activation) {
+                Activation acti = (Activation) layer;
                 inputs = acti.forward(inputs);
             }
         }
@@ -156,8 +160,8 @@ public class WideAndDeep {
             if(layer instanceof DenseLayer) {
                 DenseLayer dl = (DenseLayer) layer;
                 backInputs = dl.backward(backInputs, sig);
-            } else if(layer instanceof Activiation) {
-                Activiation acti = (Activiation) layer;
+            } else if(layer instanceof Activation) {
+                Activation acti = (Activation) layer;
                 backInputs = acti.backward(backInputs, sig);
             }
         }
@@ -170,11 +174,11 @@ public class WideAndDeep {
         return null;
     }
 
-    private List<float[]> splitArray(int outDim, List<EmbedLayer> embedLayers, float[] backInputs) {
+    private List<float[]> splitArray(int outDim, List<EmbedFieldLayer> embedLayers, float[] backInputs) {
         List<float[]> results = new ArrayList<float[]>();
         int srcPos = outDim;
         for(int i = 0; i < embedLayers.size(); i++) {
-            EmbedLayer el = embedLayers.get(i);
+            EmbedFieldLayer el = embedLayers.get(i);
             float[] elBackInputs = new float[el.getIn()];
             System.arraycopy(backInputs, srcPos, elBackInputs, 0, elBackInputs.length);
             srcPos += elBackInputs.length;
@@ -253,7 +257,7 @@ public class WideAndDeep {
     /**
      * @return the ecl
      */
-    public EmbedCombinedLayer getEcl() {
+    public EmbedLayer getEcl() {
         return ecl;
     }
 
@@ -261,7 +265,7 @@ public class WideAndDeep {
      * @param ecl
      *            the ecl to set
      */
-    public void setEcl(EmbedCombinedLayer ecl) {
+    public void setEcl(EmbedLayer ecl) {
         this.ecl = ecl;
     }
 

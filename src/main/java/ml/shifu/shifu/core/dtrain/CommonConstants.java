@@ -141,5 +141,7 @@ public interface CommonConstants {
     public static final int TREE_FORMAT_VERSION = 4;
 
     public static final int NN_FORMAT_VERSION = 1;
+    
+    public static final int DEFAULT_EMBEDING_OUTPUT = 16;
 
 }

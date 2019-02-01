@@ -15,116 +15,68 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * TODO
+ * {@link EmbedLayer} merges all embedding layers together and distributes forward and backward computation to
+ * {@link EmbedFieldLayer}s.
  * 
- * @author pengzhang
+ * @author Zhang David (pengzhang@paypal.com)
  */
-public class EmbedLayer implements Layer<SparseInput, float[], float[], float[]> {
+public class EmbedLayer implements Layer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>> {
 
-    private float[][] weights;
+    /**
+     * List of embed layer which is for each embed column.
+     */
+    private List<EmbedFieldLayer> embedLayers;
 
-    private int out;
-
-    private int in;
-
-    private int columnId;
-
-    public EmbedLayer(int columnId, float[][] weights, int out, int in) {
-        this.columnId = columnId;
-        this.weights = weights;
-        this.out = out;
-        this.in = in;
-    }
-
-    public EmbedLayer(int columnId, int out, int in) {
-        this.columnId = columnId;
-        this.out = out;
-        this.in = in;
-        // TODO init weights
+    public EmbedLayer(List<EmbedFieldLayer> embedLayers) {
+        this.setEmbedLayers(embedLayers);
     }
 
     @Override
     public int getOutDim() {
-        return this.getOut();
-    }
-
-    @Override
-    public float[] forward(SparseInput si) {
-        int valueIndex = si.getValueIndex();
-        return this.getWeights()[valueIndex];
-    }
-
-    @Override
-    public float[] backward(float[] backInputs, float sig) {
-        // below backward compute can be ignored if gradients computation is added TODO gradients computation
-        float[] results = new float[backInputs.length];
-        for(int i = 0; i < results.length; i++) {
-            for(int j = 0; j < backInputs.length; j++) {
-                results[i] += this.getWeights()[i][j] * backInputs[j];
-            }
+        int len = 0;
+        for(EmbedFieldLayer embedLayer: getEmbedLayers()) {
+            len += embedLayer.getOutDim();
         }
-        return results;
+        return len;
+    }
+
+    @Override
+    public List<float[]> forward(List<SparseInput> inputList) {
+        assert this.getEmbedLayers().size() == inputList.size();
+        List<float[]> list = new ArrayList<float[]>();
+        for(int i = 0; i < this.getEmbedLayers().size(); i++) {
+            list.add(this.getEmbedLayers().get(i).forward(inputList.get(i)));
+        }
+        return list;
+    }
+
+    @Override
+    public List<float[]> backward(List<float[]> backInputList, float sig) {
+        assert this.getEmbedLayers().size() == backInputList.size();
+        List<float[]> list = new ArrayList<float[]>();
+        for(int i = 0; i < this.getEmbedLayers().size(); i++) {
+            list.add(this.getEmbedLayers().get(i).backward(backInputList.get(i), sig));
+        }
+        return list;
     }
 
     /**
-     * @return the in
+     * @return the embedLayers
      */
-    public int getIn() {
-        return in;
+    public List<EmbedFieldLayer> getEmbedLayers() {
+        return embedLayers;
     }
 
     /**
-     * @param in
-     *            the in to set
+     * @param embedLayers
+     *            the embedLayers to set
      */
-    public void setIn(int in) {
-        this.in = in;
-    }
-
-    /**
-     * @return the out
-     */
-    public int getOut() {
-        return out;
-    }
-
-    /**
-     * @param out
-     *            the out to set
-     */
-    public void setOut(int out) {
-        this.out = out;
-    }
-
-    /**
-     * @return the weights
-     */
-    public float[][] getWeights() {
-        return weights;
-    }
-
-    /**
-     * @param weights
-     *            the weights to set
-     */
-    public void setWeights(float[][] weights) {
-        this.weights = weights;
-    }
-
-    /**
-     * @return the columnId
-     */
-    public int getColumnId() {
-        return columnId;
-    }
-
-    /**
-     * @param columnId
-     *            the columnId to set
-     */
-    public void setColumnId(int columnId) {
-        this.columnId = columnId;
+    public void setEmbedLayers(List<EmbedFieldLayer> embedLayers) {
+        this.embedLayers = embedLayers;
     }
 
 }

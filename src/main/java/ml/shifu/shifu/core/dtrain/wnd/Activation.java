@@ -16,15 +16,16 @@
 package ml.shifu.shifu.core.dtrain.wnd;
 
 /**
- * TODO
+ * {@link Activation} is basic abstraction for different kind of activation methods like sigmoid, ReLU, tanh ...
  * 
- * @author pengzhang
+ * @author Zhang David (pengzhang@paypal.com)
  */
-public abstract class Activiation implements Layer<float[], float[], float[], float[]> {
+public abstract class Activation implements Layer<float[], float[], float[], float[]> {
 
     @Override
     public int getOutDim() {
-        throw new IllegalStateException();
+        // no need call output dimension, as Activation usually for 1:1 mapping between inputs and outputs.
+        throw new UnsupportedOperationException();
     }
 
 }

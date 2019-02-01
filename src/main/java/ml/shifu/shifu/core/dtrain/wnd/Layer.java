@@ -16,16 +16,38 @@
 package ml.shifu.shifu.core.dtrain.wnd;
 
 /**
- * TODO
+ * This is single {@link Layer} abstraction for all kind of operations in a neural network graph. Typical implementation
+ * like dense layer and activation, some others like embedding layer and wide field layer use the same interface for
+ * graph level computation.
  * 
- * @author pengzhang
+ * @author Zhang David (pengzhang@paypal.com)
  */
 public interface Layer<FIN, FOUT, BIN, BOUT> {
 
+    /**
+     * Output dimesion of current layer.
+     */
     public int getOutDim();
 
+    /**
+     * Layer forward computation from input to output. Activation in neural network is abstracted as one layer.
+     * 
+     * @param input
+     *            the input object (float array or sparse input) of current layer
+     * @return output results, common case like float[] or float.
+     */
     public FOUT forward(FIN input);
 
+    /**
+     * Backward is used to backward compute inputs according to layer outputs. At the same time layer inside gradients
+     * are computed together for model training/updates.
+     * 
+     * @param backInput
+     *            the backward input from last layer backward.
+     * @param significance
+     *            weight/significance per each record in backward computation.
+     * @return backward output result which is typically corresponding like input of layer.
+     */
     public BOUT backward(BIN backInput, float significance);
 
 }

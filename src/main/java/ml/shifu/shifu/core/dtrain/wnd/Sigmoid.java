@@ -16,11 +16,15 @@
 package ml.shifu.shifu.core.dtrain.wnd;
 
 /**
- * @author pengzhang
- *
+ * Typical sigmoid activation implementation.
+ * 
+ * @author Zhang David (pengzhang@paypal.com)
  */
-public class Sigmoid extends Activiation {
+public class Sigmoid extends Activation {
 
+    /**
+     * Last forward results which saved in forward but used in backward.
+     */
     private float[] lastForward;
 
     @Override

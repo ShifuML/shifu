@@ -16,8 +16,9 @@
 package ml.shifu.shifu.core.dtrain.wnd;
 
 /**
- * @author pengzhang
- *
+ * {@link BiasLayer} used in wide part of WideAndDeep architecture.
+ * 
+ * @author Zhang David (pengzhang@paypal.com)
  */
 public class BiasLayer implements Layer<Float, Float, Float, Float> {
 
@@ -33,11 +34,6 @@ public class BiasLayer implements Layer<Float, Float, Float, Float> {
         return weight;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see ml.shifu.shifu.core.dtrain.wnd.Layer#backward(java.lang.Object)
-     */
     @Override
     public Float backward(Float backInput, float sig) {
         // TODO compute gradients here

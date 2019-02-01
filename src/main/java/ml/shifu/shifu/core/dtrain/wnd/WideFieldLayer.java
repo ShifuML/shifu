@@ -16,28 +16,38 @@
 package ml.shifu.shifu.core.dtrain.wnd;
 
 /**
- * TODO
+ * {@link WideFieldLayer} is wide part input of WideAndDeep architecture. Per each column a {@link WideFieldLayer}
+ * instance and each instanced will be forwarded and backwarded accordingly.
  * 
- * @author pengzhang
+ * @author Zhang David (pengzhang@paypal.com)
  */
 public class WideFieldLayer implements Layer<SparseInput, float[], float[], float[]> {
 
+    /**
+     * [in] float array of weights
+     */
     private float[] weights;
 
+    /**
+     * # of inputs
+     */
     private int in;
 
+    /**
+     * ColumnConfig#columnNum for features used in this wide field layer.
+     */
     private int columnId;
 
     public WideFieldLayer(int columnId, float[] weights, int in) {
         this.weights = weights;
         this.in = in;
-        this.setColumnId(columnId);
+        this.columnId = columnId;
     }
 
     public WideFieldLayer(int columnId, int in) {
         this.in = in;
-        this.setColumnId(columnId);
-        // TODO init weights
+        this.columnId = columnId;
+        this.weights = new float[in];
     }
 
     @Override
