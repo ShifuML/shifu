@@ -104,6 +104,7 @@ public class PMMLEncogNeuralNetworkModel implements
                 put("ActivationTANH", ActivationFunction.TANH);
                 put("ActivationReLU", ActivationFunction.RECTIFIER);
                 //put("ActivationLeakyReLU", ActivationFunction.RECTIFIER);
+                //put("ActivationPTANH", ActivationFunction.PTANH);
             }
         };
         for(int i = 0; i < funLen; i++) {

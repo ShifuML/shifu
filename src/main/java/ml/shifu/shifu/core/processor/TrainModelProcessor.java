@@ -36,6 +36,7 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 
+import ml.shifu.shifu.core.dtrain.nn.*;
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
@@ -105,15 +106,6 @@ import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionMaster;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionOutput;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionParams;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionWorker;
-import ml.shifu.shifu.core.dtrain.nn.ActivationLeakyReLU;
-import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
-import ml.shifu.shifu.core.dtrain.nn.ActivationSwish;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
-import ml.shifu.shifu.core.dtrain.nn.NNMaster;
-import ml.shifu.shifu.core.dtrain.nn.NNOutput;
-import ml.shifu.shifu.core.dtrain.nn.NNParams;
-import ml.shifu.shifu.core.dtrain.nn.NNParquetWorker;
-import ml.shifu.shifu.core.dtrain.nn.NNWorker;
 import ml.shifu.shifu.core.dtrain.wnd.WNDMaster;
 import ml.shifu.shifu.core.dtrain.wnd.WNDOutput;
 import ml.shifu.shifu.core.dtrain.wnd.WNDParams;
@@ -426,7 +418,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         int status = 0;
 
         if(Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
-            // we currently run lcoal tensorflow train in dist mode, because we need the sync hdfs feature to
+            // we currently run local TensorFlow train in dist mode, because we need the sync hdfs feature to
             // sync eval the local trained model for dist model eval
             runLocalTrain();
             return status;
@@ -754,46 +746,41 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             }
             LOG.info("The best parameters in grid search is {}", params);
             LOG.info("Grid search on distributed training finished in {}ms.", System.currentTimeMillis() - start);
-        } else {
-            // copy all models to local after all jobs are finished
-            if(!gs.hasHyperParam()) {
-                // copy model files at last.
-                for(int i = 0; i < baggingNum; i++) {
-                    String modelName = getModelName(i);
-                    Path modelPath = fileSystem
-                            .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
-                    if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath) && (status == 0)) {
-                        copyModelToLocal(modelName, modelPath, sourceType);
-                    } else {
-                        LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
-                                modelPath.toString());
-                    }
-                }
-
-                // copy temp model files, for RF/GBT, not to copy tmp models because of larger space needed, for others
-                // by default copy tmp models to local
-                boolean copyTmpModelsToLocal = Boolean.TRUE.toString()
-                        .equalsIgnoreCase(Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "true"));
-                if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
-                    copyTmpModelsToLocal = Boolean.TRUE.toString()
-                            .equalsIgnoreCase(Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "false"));
-                    List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(this.modelConfig, null);
-                    // compute feature importance and write to local file after models are trained
-                    Map<Integer, MutablePair<String, Double>> featureImportances = CommonUtils
-                            .computeTreeModelFeatureImportance(models);
-                    String localFsFolder = pathFinder.getLocalFeatureImportanceFolder();
-                    String localFIPath = pathFinder.getLocalFeatureImportancePath();
-                    processRollupForFIFiles(localFsFolder, localFIPath);
-                    CommonUtils.writeFeatureImportance(localFIPath, featureImportances);
-                }
-
-                if(copyTmpModelsToLocal) {
-                    copyTmpModelsToLocal(tmpModelsPath, sourceType);
+        } else { // if(!gs.hasHyperParam())
+            // copy model files at last.
+            for(int i = 0; i < baggingNum; i++) {
+                String modelName = getModelName(i);
+                Path modelPath = fileSystem
+                        .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
+                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath) && (status == 0)) {
+                    copyModelToLocal(modelName, modelPath, sourceType);
                 } else {
-                    LOG.info("Tmp models are not copied into local, please find them in hdfs path: {}", tmpModelsPath);
+                    LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
+                            modelPath.toString());
                 }
-                LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
             }
+
+            // copy temp model files, for RF/GBT, not to copy tmp models because of larger space needed, for others
+            // by default copy tmp models to local
+            boolean copyTmpModelsToLocal = Boolean.TRUE.toString()
+                    .equalsIgnoreCase(Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "true"));
+            if(copyTmpModelsToLocal) {
+                copyTmpModelsToLocal(tmpModelsPath, sourceType);
+            } else {
+                LOG.info("Tmp models are not copied into local, please find them in hdfs path: {}", tmpModelsPath);
+            }
+            LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
+        }
+
+        if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
+            List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(this.modelConfig, null);
+            // compute feature importance and write to local file after models are trained
+            Map<Integer, MutablePair<String, Double>> featureImportances = CommonUtils
+                    .computeTreeModelFeatureImportance(models);
+            String localFsFolder = pathFinder.getLocalFeatureImportanceFolder();
+            String localFIPath = pathFinder.getLocalFeatureImportancePath();
+            processRollupForFIFiles(localFsFolder, localFIPath);
+            CommonUtils.writeFeatureImportance(localFIPath, featureImportances);
         }
 
         if(status != 0) {
@@ -1023,6 +1010,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 isHasSameHiddenActivation = ActivationLeakyReLU.class == activation.getClass();
             } else if(actFunc.equalsIgnoreCase(NNConstants.NN_SWISH)) {
                 isHasSameHiddenActivation = ActivationSwish.class == activation.getClass();
+            } else if(actFunc.equalsIgnoreCase(NNConstants.NN_PTANH)) {
+                isHasSameHiddenActivation = ActivationPTANH.class == activation.getClass();
             } else {
                 isHasSameHiddenActivation = ActivationSigmoid.class == activation.getClass();
             }

@@ -424,8 +424,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : (classes == 2 ? 1 : classes));
         this.candidateCount = inputOutputIndex[2];
         boolean isAfterVarSelect = inputOutputIndex[0] != 0;
-        LOG.info("Input count {}, output count {}, candidate count {}", inputNodeCount, outputNodeCount,
-                candidateCount);
+        LOG.info("isAfterVarSelect {}: Input count {}, output count {}, candidate count {}",
+                isAfterVarSelect, inputNodeCount, outputNodeCount, candidateCount);
         // cache all feature list for sampling features
         this.allFeatures = NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
         String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);

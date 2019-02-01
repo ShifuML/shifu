@@ -89,6 +89,11 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
      */
     private boolean isAppendScore = false;
 
+    /**
+     * There is header for input or not?
+     */
+    private boolean isCsvFormat = false;
+
     private PrecisionType precisionType;
 
     public EvalNormUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName, String scale)
@@ -97,11 +102,12 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
 
         if(!evalConfig.getNormAllColumns()) {
             // log such un compactiable
-            log.warn("Default behanior is changed in eval norm to only norm selected columns.");
+            log.warn("Default behavior is changed in eval norm to only norm selected columns.");
         }
 
         if(StringUtils.isBlank(evalConfig.getDataSet().getHeaderPath())) {
             log.warn("eval header path is empty, take the first line as schema (for csv format)");
+            this.isCsvFormat = true;
         }
 
         this.headers = CommonUtils.getFinalHeaders(evalConfig);
@@ -238,6 +244,15 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
     }
 
     public Tuple exec(Tuple input) throws IOException {
+        if (isCsvFormat) {
+            String firstCol = ((input.get(0) == null) ? "" : input.get(0).toString());
+            if (this.headers[0].equals(CommonUtils.normColumnName(firstCol))) {
+                // Column value == Column Header? It's the first line of file?
+                // TODO what to do if the column value == column name? ...
+                return null;
+            }
+        }
+
         if(this.modelRunner == null && this.isAppendScore) {
             // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.
             // UDF in pig client will be initialized to get some metadata issues

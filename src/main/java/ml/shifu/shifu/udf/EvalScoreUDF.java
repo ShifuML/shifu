@@ -105,6 +105,11 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
 
     private boolean isLinearTarget = false;
 
+    /**
+     * There is header for input or not?
+     */
+    private boolean isCsvFormat = false;
+
     private MultiClsTagPredictor mcPredictor;
 
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
@@ -121,6 +126,7 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
             this.columnConfigList = ShifuFileUtils.searchColumnConfig(evalConfig, columnConfigList);
         }
 
+        this.isCsvFormat = StringUtils.isBlank(evalConfig.getDataSet().getHeaderPath());
         this.headers = CommonUtils.getFinalHeaders(evalConfig);
 
         String filterExpressions = "";
@@ -218,6 +224,15 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
 
     @SuppressWarnings("deprecation")
     public Tuple exec(Tuple input) throws IOException {
+        if (isCsvFormat) {
+            String firstCol = ((input.get(0) == null) ? "" : input.get(0).toString());
+            if (this.headers[0].equals(CommonUtils.normColumnName(firstCol))) {
+                // Column value == Column Header? It's the first line of file?
+                // TODO what to do if the column value == column name? ...
+                return null;
+            }
+        }
+
         long start = System.currentTimeMillis();
         if(this.modelRunner == null) {
             // here to initialize modelRunner, this is moved from constructor to here to avoid OOM in client side.

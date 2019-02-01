@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.dmg.pmml.FieldName;
+import org.dmg.pmml.InvalidValueTreatmentMethod;
 import org.dmg.pmml.MiningField;
 import org.dmg.pmml.MiningField.UsageType;
 import org.dmg.pmml.MiningSchema;
@@ -153,6 +154,7 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
         miningField.setName(FieldName.create(name));
         miningField.setOpType(opType);
         miningField.setUsageType(fieldUsageType);
+        miningField.setInvalidValueTreatment(InvalidValueTreatmentMethod.AS_MISSING);
         return miningField;
     }
 

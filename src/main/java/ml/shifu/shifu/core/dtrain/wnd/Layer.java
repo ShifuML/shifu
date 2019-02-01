@@ -26,6 +26,7 @@ public interface Layer<FIN, FOUT, BIN, BOUT> {
 
     /**
      * Output dimesion of current layer.
+     * @return output dim
      */
     public int getOutDim();
 

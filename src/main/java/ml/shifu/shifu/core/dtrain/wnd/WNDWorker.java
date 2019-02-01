@@ -362,7 +362,7 @@ public class WNDWorker extends
      *            the hash code of the data
      * @param data
      *            data instance
-     * @param isValidation
+     * @param attachment
      *            if it is validation
      * @return if in training, training is true, others are false.
      */
