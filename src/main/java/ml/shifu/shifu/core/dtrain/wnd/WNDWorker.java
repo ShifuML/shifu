@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
@@ -47,6 +48,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.MapReduceUtils;
@@ -97,7 +99,7 @@ public class WNDWorker extends
     /**
      * Basic numerical input count for final-select variables or good candidates(if no any variables are selected)
      */
-    protected int numericalInputCount;
+    protected int numInputs;
 
     /**
      * Basic categorical input count
@@ -209,6 +211,36 @@ public class WNDWorker extends
     private Map<Integer, Random> validationRandomMap = new HashMap<Integer, Random>();
 
     /**
+     * Random object to sample negative records
+     */
+    protected Random negOnlyRnd = new Random(System.currentTimeMillis() + 1000L);
+
+    /**
+     * Whether to enable poisson bagging with replacement.
+     */
+    protected boolean poissonSampler;
+
+    /**
+     * PoissonDistribution which is used for poisson sampling for bagging with replacement.
+     */
+    protected PoissonDistribution rng = null;
+
+    /**
+     * PoissonDistribution which is used for up sampling positive records.
+     */
+    protected PoissonDistribution upSampleRng = null;
+
+    /**
+     * Parameters defined in ModelConfig.json#train part
+     */
+    private Map<String, Object> validParams;
+
+    /**
+     * WideAndDeep graph definition network.
+     */
+    private WideAndDeep wnd;
+
+    /**
      * Logic to load data into memory list which includes float array for numerical features and sparse object array for
      * categorical features.
      */
@@ -221,7 +253,7 @@ public class WNDWorker extends
 
         // hashcode for fixed input split in train and validation
         long hashcode = 0;
-        float[] inputs = new float[this.numericalInputCount];
+        float[] inputs = new float[this.numInputs];
         SparseInput[] cateInputs = new SparseInput[this.categoricalInputCount];
         float ideal = 0f, significance = 1f;
         int index = 0, numericalIndex = 0, cateIndex = 0;
@@ -255,12 +287,54 @@ public class WNDWorker extends
         // is helped to quick find such issue.
         validateInputLength(context, inputs, numericalIndex);
 
+        // sample negative only logic here
+        if(sampleNegOnly(hashcode, ideal)) {
+            return;
+        }
+        // up sampling logic, just add more weights while bagging sampling rate is still not changed
+        if(modelConfig.isRegression() && isUpSampleEnabled() && Double.compare(ideal, 1d) == 0) {
+            // ideal == 1 means positive tags; sample + 1 to avoid sample count to 0
+            significance = significance * (this.upSampleRng.sample() + 1);
+        }
+
         Data data = new Data(inputs, cateInputs, significance, ideal);
         // split into validation and training data set according to validation rate
         boolean isInTraining = this.addDataPairToDataSet(hashcode, data, context.getAttachment());
-
         // update some positive or negative selected count in metrics
         this.updateMetrics(data, isInTraining);
+    }
+
+    protected boolean isUpSampleEnabled() {
+        // only enabled in regression
+        return this.upSampleRng != null && (modelConfig.isRegression()
+                || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()));
+    }
+
+    private boolean sampleNegOnly(long hashcode, float ideal) {
+        boolean ret = false;
+        if(modelConfig.getTrain().getSampleNegOnly()) {
+            double bagSampleRate = this.modelConfig.getBaggingSampleRate();
+            if(this.modelConfig.isFixInitialInput()) {
+                // if fixInitialInput, sample hashcode in 1-sampleRate range out if negative records
+                int startHashCode = (100 / this.modelConfig.getBaggingNum()) * this.trainerId;
+                // here BaggingSampleRate means how many data will be used in training and validation, if it is 0.8, we
+                // should take 1-0.8 to check endHashCode
+                int endHashCode = startHashCode + Double.valueOf((1d - bagSampleRate) * 100).intValue();
+                if((modelConfig.isRegression()
+                        || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()))
+                        && (int) (ideal + 0.01d) == 0 && isInRange(hashcode, startHashCode, endHashCode)) {
+                    ret = true;
+                }
+            } else {
+                // if not fixed initial input, for regression or onevsall multiple classification, if negative record
+                if((modelConfig.isRegression()
+                        || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()))
+                        && (int) (ideal + 0.01d) == 0 && negOnlyRnd.nextDouble() > bagSampleRate) {
+                    ret = true;
+                }
+            }
+        }
+        return ret;
     }
 
     private void updateMetrics(Data data, boolean isInTraining) {
@@ -503,6 +577,7 @@ public class WNDWorker extends
      * 
      * @see ml.shifu.guagua.worker.AbstractWorkerComputable#init(ml.shifu.guagua.worker.WorkerContext)
      */
+    @SuppressWarnings({ "unchecked", "unused" })
     @Override
     public void init(WorkerContext<WNDParams, WNDParams> context) {
         Properties props = context.getProps();
@@ -528,6 +603,17 @@ public class WNDWorker extends
         if(kCrossValidation != null && kCrossValidation > 0) {
             isKFoldCV = true;
             LOG.info("Cross validation is enabled by kCrossValidation: {}.", kCrossValidation);
+        }
+
+        this.poissonSampler = Boolean.TRUE.toString()
+                .equalsIgnoreCase(context.getProps().getProperty(NNConstants.NN_POISON_SAMPLER));
+        this.rng = new PoissonDistribution(1.0d);
+        Double upSampleWeight = modelConfig.getTrain().getUpSampleWeight();
+        if(Double.compare(upSampleWeight, 1d) != 0 && (modelConfig.isRegression()
+                || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()))) {
+            // set mean to upSampleWeight -1 and get sample + 1to make sure no zero sample value
+            LOG.info("Enable up sampling with weight {}.", upSampleWeight);
+            this.upSampleRng = new PoissonDistribution(upSampleWeight - 1);
         }
 
         this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
@@ -558,7 +644,7 @@ public class WNDWorker extends
 
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         // numerical + categorical = # of all input
-        this.numericalInputCount = inputOutputIndex[0];
+        this.numInputs = inputOutputIndex[0];
         this.inputCount = inputOutputIndex[0] + inputOutputIndex[1];
         // regression outputNodeCount is 1, binaryClassfication, it is 1, OneVsAll it is 1, Native classification it is
         // 1, with index of 0,1,2,3 denotes different classes
@@ -567,6 +653,23 @@ public class WNDWorker extends
                 && !"".equals(modelConfig.getValidationDataSetRawPath()));
 
         this.isStratifiedSampling = this.modelConfig.getTrain().getStratifiedSample();
+
+        this.validParams = this.modelConfig.getTrain().getParams();
+
+        // Build wide and deep graph
+        List<Integer> embedColumnIds = (List<Integer>) this.validParams.get(CommonConstants.NUM_EMBED_COLUMN_IDS);
+        Integer embedOutputs = (Integer) this.validParams.get(CommonConstants.NUM_EMBED_OUTPUTS);
+        List<Integer> embedOutputList = new ArrayList<Integer>();
+        for(Integer cId: embedColumnIds) {
+            embedOutputList.add(embedOutputs == null ? 16 : embedOutputs);
+        }
+        List<Integer> wideColumnIds = DTrainUtils.getCategoricalIds(columnConfigList, isAfterVarSelect);
+        int numLayers = (Integer) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
+        List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
+        List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
+        Float l2reg = (Float) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
+        this.wnd = new WideAndDeep(columnConfigList, numInputs, embedColumnIds, embedOutputList, wideColumnIds,
+                hiddenNodes, actFunc, l2reg);
     }
 
     private void initCateIndexMap() {
@@ -585,16 +688,62 @@ public class WNDWorker extends
         }
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see ml.shifu.guagua.worker.AbstractWorkerComputable#doCompute(ml.shifu.guagua.worker.WorkerContext)
-     */
     @Override
     public WNDParams doCompute(WorkerContext<WNDParams, WNDParams> context) {
-        // TODO major worker computation logic like get mini-batch data from memory and forward, backward computation to
-        // compute gradients, error computation ...
-        return null;
+        if(context.isFirstIteration()) {
+            return new WNDParams();
+        }
+
+        // update master global model into worker WideAndDeep graph
+        this.wnd.updateWeights(context.getLastMasterResult());
+
+        // compute gradients for each iteration
+        WideAndDeep gradientsWnd = new WideAndDeep(); // TODO, construct a wideanddeep graph, how to aggregate gradients
+                                                      // to params
+        int trainCnt = trainingData.size(), validCnt = validationData.size();
+        double trainSumError = 0d, validSumError = 0d;
+        for(Data data: trainingData) {
+            float[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data), getWideInputs(data));
+            float error = sigmoid(logits[0]) - data.label;
+            trainSumError += data.weight * error * error; // TODO, logloss, squredloss, weighted error or not
+            this.wnd.backward(new float[] { error }, data.getWeight());
+        }
+
+        // compute validation error
+        for(Data data: validationData) {
+            float[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data), getWideInputs(data));
+            float error = sigmoid(logits[0]) - data.label;
+            validSumError += data.weight * error * error;
+        }
+
+        // set cnt, error to params and return to master
+        WNDParams params = new WNDParams();
+        params.setTrainCount(trainCnt);
+        params.setValidationCount(validCnt);
+        params.setTrainError(trainSumError);
+        params.setValidationError(validSumError);
+        params.setWnd(gradientsWnd);
+        return params;
+    }
+
+    public float sigmoid(float logit) {
+        return (float) (1 / (1 + Math.min(1.0E19, Math.exp(-logit))));
+    }
+
+    private List<SparseInput> getWideInputs(Data data) {
+        List<SparseInput> wideInputs = new ArrayList<SparseInput>();
+        for(Integer columnId: this.wnd.getWideColumnIds()) {
+            wideInputs.add(data.getCategoricalValues()[this.inputIndexMap.get(columnId)]);
+        }
+        return wideInputs;
+    }
+
+    private List<SparseInput> getEmbedInputs(Data data) {
+        List<SparseInput> embedInputs = new ArrayList<SparseInput>();
+        for(Integer columnId: this.wnd.getEmbedColumnIds()) {
+            embedInputs.add(data.getCategoricalValues()[this.inputIndexMap.get(columnId)]);
+        }
+        return embedInputs;
     }
 
     /**

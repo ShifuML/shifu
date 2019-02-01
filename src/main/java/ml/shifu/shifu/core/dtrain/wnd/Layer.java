@@ -26,6 +26,6 @@ public interface Layer<FIN, FOUT, BIN, BOUT> {
 
     public FOUT forward(FIN input);
 
-    public BOUT backward(BIN backInput);
+    public BOUT backward(BIN backInput, float significance);
 
 }

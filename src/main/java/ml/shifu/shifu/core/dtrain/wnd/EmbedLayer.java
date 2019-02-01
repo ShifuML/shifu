@@ -27,20 +27,20 @@ public class EmbedLayer implements Layer<SparseInput, float[], float[], float[]>
     private int out;
 
     private int in;
-    
+
     private int columnId;
-    
+
     public EmbedLayer(int columnId, float[][] weights, int out, int in) {
-        this.setColumnId(columnId);
-        this.setWeights(weights);
-        this.setOut(out);
-        this.setIn(in);
+        this.columnId = columnId;
+        this.weights = weights;
+        this.out = out;
+        this.in = in;
     }
 
     public EmbedLayer(int columnId, int out, int in) {
-        this.setColumnId(columnId);
-        this.setOut(out);
-        this.setIn(in);
+        this.columnId = columnId;
+        this.out = out;
+        this.in = in;
         // TODO init weights
     }
 
@@ -56,7 +56,7 @@ public class EmbedLayer implements Layer<SparseInput, float[], float[], float[]>
     }
 
     @Override
-    public float[] backward(float[] backInputs) {
+    public float[] backward(float[] backInputs, float sig) {
         // below backward compute can be ignored if gradients computation is added TODO gradients computation
         float[] results = new float[backInputs.length];
         for(int i = 0; i < results.length; i++) {
@@ -105,7 +105,8 @@ public class EmbedLayer implements Layer<SparseInput, float[], float[], float[]>
     }
 
     /**
-     * @param weights the weights to set
+     * @param weights
+     *            the weights to set
      */
     public void setWeights(float[][] weights) {
         this.weights = weights;
@@ -119,7 +120,8 @@ public class EmbedLayer implements Layer<SparseInput, float[], float[], float[]>
     }
 
     /**
-     * @param columnId the columnId to set
+     * @param columnId
+     *            the columnId to set
      */
     public void setColumnId(int columnId) {
         this.columnId = columnId;

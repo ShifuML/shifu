@@ -86,6 +86,8 @@ public interface CommonConstants {
 
     public static final String NUM_HIDDEN_LAYERS = "NumHiddenLayers";
 
+    public static final String WND_L2_REG = "WNDL2Reg";
+
     public static final String CHECKPOINT_INTERVAL = "CheckpointInterval";
 
     public static final String ACTIVATION_FUNC = "ActivationFunc";
@@ -99,7 +101,10 @@ public interface CommonConstants {
     public static final String PROPAGATION = "Propagation";
 
     public static final String OUTPUT_ACTIVATION_FUNC = "OutputActivationFunc";
-
+    
+    public static final String NUM_EMBED_COLUMN_IDS = "NumEmbedCoulmIds";
+    
+    public static final String NUM_EMBED_OUTPUTS = "NumEmbedOuputs";
 
     /* --------------   Train Param Constants  ---------------------- */
     public static final String REGULARIZED_CONSTANT = "RegularizedConstant";

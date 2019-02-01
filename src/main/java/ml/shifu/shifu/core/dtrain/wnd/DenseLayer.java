@@ -30,17 +30,21 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]> {
 
     private int in;
 
+    private float l2reg;
+
     // TODO l2 reg add
-    public DenseLayer(float[][] weights, float[] bias, int out, int in) {
+    public DenseLayer(float[][] weights, float[] bias, int out, int in, float l2reg) {
         this.weights = weights;
         this.bias = bias;
         this.out = out;
         this.in = in;
+        this.setL2reg(l2reg);
     }
 
-    public DenseLayer(int out, int in) {
+    public DenseLayer(int out, int in, float l2reg) {
         this.out = out;
         this.in = in;
+        this.setL2reg(l2reg);
         // TODO init weights and bias
     }
 
@@ -109,6 +113,20 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]> {
         return this.out;
     }
 
+    /**
+     * @return the l2reg
+     */
+    public float getL2reg() {
+        return l2reg;
+    }
+
+    /**
+     * @param l2reg the l2reg to set
+     */
+    public void setL2reg(float l2reg) {
+        this.l2reg = l2reg;
+    }
+
     @Override
     public float[] forward(float[] inputs) {
         // TODO assert here
@@ -123,9 +141,9 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]> {
     }
 
     @Override
-    public float[] backward(float[] backInputs) {
+    public float[] backward(float[] backInputs, float sig) {
         // TODO gradients compute and L2 reg here
-        float[] results = new float[this.in]; 
+        float[] results = new float[this.in];
         for(int i = 0; i < this.in; i++) {
             for(int j = 0; j < backInputs.length; j++) {
                 results[i] += backInputs[j] * this.weights[i][j];

@@ -39,7 +39,7 @@ public class BiasLayer implements Layer<Float, Float, Float, Float> {
      * @see ml.shifu.shifu.core.dtrain.wnd.Layer#backward(java.lang.Object)
      */
     @Override
-    public Float backward(Float backInput) {
+    public Float backward(Float backInput, float sig) {
         // TODO compute gradients here
         return backInput * weight;
     }

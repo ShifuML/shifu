@@ -24,7 +24,6 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
  * TODO
  * 
  * @author pengzhang
- * 
  */
 public class WideAndDeep {
 
@@ -39,10 +38,38 @@ public class WideAndDeep {
 
     private WideLayer wl;
 
+    private List<ColumnConfig> columnConfigList;
+
+    private int numericalSize;
+
+    private List<Integer> embedColumnIds;
+
+    private List<Integer> embedOutputs;
+
+    private List<Integer> wideColumnIds;
+
+    private List<Integer> hiddenNodes;
+
+    private List<String> actiFuncs;
+
+    private float l2reg;
+
+    public WideAndDeep() {
+    }
+
     // TODO support wide-only and dnn-only case
     public WideAndDeep(List<ColumnConfig> columnConfigList, int numericalSize, List<Integer> embedColumnIds,
-            List<Integer> embedOutputs, List<Integer> wideColumnIds, List<Integer> hiddenNodes,
-            List<String> actiFuncs) {
+            List<Integer> embedOutputs, List<Integer> wideColumnIds, List<Integer> hiddenNodes, List<String> actiFuncs,
+            float l2reg) {
+        this.columnConfigList = columnConfigList;
+        this.numericalSize = numericalSize;
+        this.embedColumnIds = embedColumnIds;
+        this.embedOutputs = embedOutputs;
+        this.wideColumnIds = wideColumnIds;
+        this.hiddenNodes = hiddenNodes;
+        this.actiFuncs = actiFuncs;
+        this.setL2reg(l2reg);
+
         this.dil = new DenseInputLayer(numericalSize);
 
         assert embedColumnIds.size() == embedOutputs.size();
@@ -71,11 +98,11 @@ public class WideAndDeep {
         assert hiddenNodes.size() == actiFuncs.size();
         for(int i = 0; i < hiddenNodes.size(); i++) {
             int hiddenOutputs = hiddenNodes.get(i);
-            DenseLayer denseLayer = new DenseLayer(hiddenOutputs, preHiddenInputs);
+            DenseLayer denseLayer = new DenseLayer(hiddenOutputs, preHiddenInputs, l2reg);
             hiddenLayers.add(denseLayer);
             String acti = actiFuncs.get(i);
 
-            // TODO , add more else;
+            // TODO add more else
             if("relu".equalsIgnoreCase(acti)) {
                 hiddenLayers.add(new ReLU());
             } else if("sigmoid".equalsIgnoreCase(acti)) {
@@ -84,12 +111,15 @@ public class WideAndDeep {
             preHiddenInputs = hiddenOutputs;
         }
 
-        this.finalLayer = new DenseLayer(1, preHiddenInputs);
+        this.finalLayer = new DenseLayer(1, preHiddenInputs, l2reg);
     }
 
     @SuppressWarnings("rawtypes")
     public float[] forward(float[] denseInputs, List<SparseInput> embedInputs, List<SparseInput> wideInputs) {
+        // wide layer forward
         float[] wlLogits = this.wl.forward(wideInputs);
+
+        // deep layer forward
         float[] dilOuts = this.dil.forward(denseInputs);
         List<float[]> eclOutList = this.ecl.forward(embedInputs);
         float[] inputs = mergeToDenseInputs(dilOuts, eclOutList);
@@ -105,6 +135,7 @@ public class WideAndDeep {
         }
         float[] dnnLogits = this.finalLayer.forward(inputs);
 
+        // merge wide and deep together
         assert wlLogits.length == dnnLogits.length;
         float[] logits = new float[wlLogits.length];
         for(int i = 0; i < logits.length; i++) {
@@ -114,38 +145,62 @@ public class WideAndDeep {
     }
 
     @SuppressWarnings("rawtypes")
-    public float[] backward(float[] error) {
-        this.wl.backward(error);
+    public float[] backward(float[] error, float sig) {
+        // wide layer backward, as wide layer in LR actually in backward, only gradients computation is needed.
+        this.wl.backward(error, sig);
 
-        float[] backInputs = this.finalLayer.backward(error);
+        // deep layer backward, for gradients computation inside of each layer
+        float[] backInputs = this.finalLayer.backward(error, sig);
         for(int i = 0; i < this.hiddenLayers.size(); i++) {
             Layer layer = this.hiddenLayers.get(this.hiddenLayers.size() - 1 - i);
             if(layer instanceof DenseLayer) {
                 DenseLayer dl = (DenseLayer) layer;
-                backInputs = dl.backward(backInputs);
+                backInputs = dl.backward(backInputs, sig);
             } else if(layer instanceof Activiation) {
                 Activiation acti = (Activiation) layer;
-                backInputs = acti.backward(backInputs);
+                backInputs = acti.backward(backInputs, sig);
             }
         }
-        
-        List<float[]> backInputList = splitArray(backInputs);
-        this.ecl.backward(backInputList);
+
+        // embedding layer backward, gradients computation
+        List<float[]> backInputList = splitArray(this.dil.getOutDim(), this.ecl.getEmbedLayers(), backInputs);
+        this.ecl.backward(backInputList, sig);
+
+        // no need return final backward outputs as gradients are computed well
         return null;
     }
 
-    /**
-     * @param backInputs
-     * @return
-     */
-    private List<float[]> splitArray(float[] backInputs) {
-        // TODO Auto-generated method stub
-        return null;
+    private List<float[]> splitArray(int outDim, List<EmbedLayer> embedLayers, float[] backInputs) {
+        List<float[]> results = new ArrayList<float[]>();
+        int srcPos = outDim;
+        for(int i = 0; i < embedLayers.size(); i++) {
+            EmbedLayer el = embedLayers.get(i);
+            float[] elBackInputs = new float[el.getIn()];
+            System.arraycopy(backInputs, srcPos, elBackInputs, 0, elBackInputs.length);
+            srcPos += elBackInputs.length;
+            results.add(elBackInputs);
+        }
+        return results;
     }
 
     private float[] mergeToDenseInputs(float[] dilOuts, List<float[]> eclOutList) {
-        // TODO Auto-generated method stub
-        return null;
+        int len = dilOuts.length;
+        for(float[] fs: eclOutList) {
+            len += fs.length;
+        }
+
+        float[] results = new float[len];
+
+        // copy dense
+        System.arraycopy(dilOuts, 0, results, 0, dilOuts.length);
+
+        // copy embed
+        int currIndex = dilOuts.length;
+        for(float[] fs: eclOutList) {
+            System.arraycopy(fs, 0, results, currIndex, fs.length);
+            currIndex += fs.length;
+        }
+        return results;
     }
 
     /**
@@ -223,6 +278,134 @@ public class WideAndDeep {
      */
     public void setWl(WideLayer wl) {
         this.wl = wl;
+    }
+
+    /**
+     * @return the columnConfigList
+     */
+    public List<ColumnConfig> getColumnConfigList() {
+        return columnConfigList;
+    }
+
+    /**
+     * @param columnConfigList
+     *            the columnConfigList to set
+     */
+    public void setColumnConfigList(List<ColumnConfig> columnConfigList) {
+        this.columnConfigList = columnConfigList;
+    }
+
+    /**
+     * @return the numericalSize
+     */
+    public int getNumericalSize() {
+        return numericalSize;
+    }
+
+    /**
+     * @param numericalSize
+     *            the numericalSize to set
+     */
+    public void setNumericalSize(int numericalSize) {
+        this.numericalSize = numericalSize;
+    }
+
+    /**
+     * @return the embedColumnIds
+     */
+    public List<Integer> getEmbedColumnIds() {
+        return embedColumnIds;
+    }
+
+    /**
+     * @param embedColumnIds
+     *            the embedColumnIds to set
+     */
+    public void setEmbedColumnIds(List<Integer> embedColumnIds) {
+        this.embedColumnIds = embedColumnIds;
+    }
+
+    /**
+     * @return the embedOutputs
+     */
+    public List<Integer> getEmbedOutputs() {
+        return embedOutputs;
+    }
+
+    /**
+     * @param embedOutputs
+     *            the embedOutputs to set
+     */
+    public void setEmbedOutputs(List<Integer> embedOutputs) {
+        this.embedOutputs = embedOutputs;
+    }
+
+    /**
+     * @return the wideColumnIds
+     */
+    public List<Integer> getWideColumnIds() {
+        return wideColumnIds;
+    }
+
+    /**
+     * @param wideColumnIds
+     *            the wideColumnIds to set
+     */
+    public void setWideColumnIds(List<Integer> wideColumnIds) {
+        this.wideColumnIds = wideColumnIds;
+    }
+
+    /**
+     * @return the hiddenNodes
+     */
+    public List<Integer> getHiddenNodes() {
+        return hiddenNodes;
+    }
+
+    /**
+     * @param hiddenNodes
+     *            the hiddenNodes to set
+     */
+    public void setHiddenNodes(List<Integer> hiddenNodes) {
+        this.hiddenNodes = hiddenNodes;
+    }
+
+    /**
+     * @return the actiFuncs
+     */
+    public List<String> getActiFuncs() {
+        return actiFuncs;
+    }
+
+    /**
+     * @param actiFuncs
+     *            the actiFuncs to set
+     */
+    public void setActiFuncs(List<String> actiFuncs) {
+        this.actiFuncs = actiFuncs;
+    }
+
+    /**
+     * @return the l2reg
+     */
+    public float getL2reg() {
+        return l2reg;
+    }
+
+    /**
+     * @param l2reg
+     *            the l2reg to set
+     */
+    public void setL2reg(float l2reg) {
+        this.l2reg = l2reg;
+    }
+
+    public void updateWeights(WideAndDeep wnd) {
+        // TODO copy weights from wnd object and set it in current wide and deep, update weights from master
+    }
+
+    public void updateWeights(WNDParams params) {
+        updateWeights(params.getWnd());
     }
 
 }

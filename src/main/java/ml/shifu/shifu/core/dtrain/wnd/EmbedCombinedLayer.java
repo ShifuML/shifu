@@ -51,11 +51,11 @@ public class EmbedCombinedLayer implements Layer<List<SparseInput>, List<float[]
     }
 
     @Override
-    public List<float[]> backward(List<float[]> backInputList) {
+    public List<float[]> backward(List<float[]> backInputList, float sig) {
         assert this.getEmbedLayers().size() == backInputList.size();
         List<float[]> list = new ArrayList<float[]>();
         for(int i = 0; i < this.getEmbedLayers().size(); i++) {
-            list.add(this.getEmbedLayers().get(i).backward(backInputList.get(i)));
+            list.add(this.getEmbedLayers().get(i).backward(backInputList.get(i), sig));
         }
         return list;
     }
@@ -68,7 +68,8 @@ public class EmbedCombinedLayer implements Layer<List<SparseInput>, List<float[]
     }
 
     /**
-     * @param embedLayers the embedLayers to set
+     * @param embedLayers
+     *            the embedLayers to set
      */
     public void setEmbedLayers(List<EmbedLayer> embedLayers) {
         this.embedLayers = embedLayers;

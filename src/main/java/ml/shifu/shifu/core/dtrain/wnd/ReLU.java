@@ -34,7 +34,7 @@ public class ReLU extends Activiation {
     }
 
     @Override
-    public float[] backward(float[] outputs) {
+    public float[] backward(float[] outputs, float sig) {
         float[] results = new float[outputs.length];
         for(int i = 0; i < outputs.length; i++) {
             results[i] = this.lastInput[i] > 0 ? outputs[i] * 1f : 0f;

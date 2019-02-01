@@ -38,7 +38,7 @@ public class Sigmoid extends Activiation {
     }
 
     @Override
-    public float[] backward(float[] out) {
+    public float[] backward(float[] out, float sig) {
         assert out != null;
         assert out.length == lastForward.length;
 

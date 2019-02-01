@@ -47,7 +47,7 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
     }
 
     @Override
-    public float[] backward(float[] backInputs) {
+    public float[] backward(float[] backInputs, float sig) {
         assert backInputs.length == 1;
         float error = backInputs[0];
 

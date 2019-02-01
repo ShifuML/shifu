@@ -40,7 +40,7 @@ public class DenseInputLayer implements Layer<float[], float[], float[], float[]
     }
 
     @Override
-    public float[] backward(float[] backInputs) {
+    public float[] backward(float[] backInputs, float sig) {
         throw new UnsupportedOperationException();
     }
 

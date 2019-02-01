@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.dtrain;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -74,9 +75,9 @@ public final class DTrainUtils {
     public static final String WGT_INIT_DEFAULT = "default";
 
     public static final String WGT_INIT_XAVIER = "xavier";
-    
+
     public static final String WGT_INIT_HE = "he";
-    
+
     public static final String WGT_INIT_LECUN = "lecun";
 
     /**
@@ -258,6 +259,26 @@ public final class DTrainUtils {
         return new int[] { numericInput, categoricalInput, output, isVarSelect };
     }
 
+    public static List<Integer> getCategoricalIds(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect) {
+        List<Integer> results = new ArrayList<Integer>();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
+
+        for(ColumnConfig config: columnConfigList) {
+            if(isAfterVarSelect) {
+                if(config.isFinalSelect() && !config.isTarget() && !config.isMeta() && config.isCategorical()) {
+                    results.add(config.getColumnNum());
+                }
+            } else {
+                if(!config.isTarget() && !config.isMeta() && CommonUtils.isGoodCandidate(config, hasCandidates)
+                        && config.isCategorical()) {
+                    results.add(config.getColumnNum());
+                }
+            }
+        }
+
+        return results;
+    }
+
     public static String getTmpModelName(String tmpModelsFolder, String trainerId, int iteration, String modelPost) {
         return new StringBuilder(200).append(tmpModelsFolder).append(Path.SEPARATOR_CHAR).append("model")
                 .append(trainerId).append('-').append(iteration).append(".").append(modelPost).toString();
@@ -303,9 +324,9 @@ public final class DTrainUtils {
                 network.addLayer(new BasicDropoutLayer(new ActivationSIN(), true, numHiddenNode, dropoutRate));
             } else if(func.equalsIgnoreCase(NNConstants.NN_RELU)) {
                 network.addLayer(new BasicDropoutLayer(new ActivationReLU(), true, numHiddenNode, dropoutRate));
-            } else if (func.equalsIgnoreCase(NNConstants.NN_LEAKY_RELU)) {
+            } else if(func.equalsIgnoreCase(NNConstants.NN_LEAKY_RELU)) {
                 network.addLayer(new BasicDropoutLayer(new ActivationLeakyReLU(), true, numHiddenNode, dropoutRate));
-            } else if (func.equalsIgnoreCase(NNConstants.NN_SWISH)) {
+            } else if(func.equalsIgnoreCase(NNConstants.NN_SWISH)) {
                 network.addLayer(new BasicDropoutLayer(new ActivationSwish(), true, numHiddenNode, dropoutRate));
             } else {
                 network.addLayer(new BasicDropoutLayer(new ActivationSigmoid(), true, numHiddenNode, dropoutRate));
@@ -313,11 +334,11 @@ public final class DTrainUtils {
         }
 
         if(isLinearTarget) {
-            if (NNConstants.NN_RELU.equalsIgnoreCase(outputActivationFunc)) {
+            if(NNConstants.NN_RELU.equalsIgnoreCase(outputActivationFunc)) {
                 network.addLayer(new BasicLayer(new ActivationReLU(), true, out));
-            } else if (NNConstants.NN_LEAKY_RELU.equalsIgnoreCase(outputActivationFunc)) {
+            } else if(NNConstants.NN_LEAKY_RELU.equalsIgnoreCase(outputActivationFunc)) {
                 network.addLayer(new BasicLayer(new ActivationLeakyReLU(), true, out));
-            } else if (NNConstants.NN_SWISH.equalsIgnoreCase(outputActivationFunc)) {
+            } else if(NNConstants.NN_SWISH.equalsIgnoreCase(outputActivationFunc)) {
                 network.addLayer(new BasicLayer(new ActivationSwish(), true, out));
             } else {
                 network.addLayer(new BasicLayer(new ActivationLinear(), true, out));
@@ -434,12 +455,16 @@ public final class DTrainUtils {
     /**
      * Get Double property value from map.
      * If the value doesn't exist in the Map or the format is incorrect, use @defval as default
-     * @param params input Map
-     * @param key the key to look up
-     * @param defval default value, if the key is not in the map or the value format is illegal
+     * 
+     * @param params
+     *            input Map
+     * @param key
+     *            the key to look up
+     * @param defval
+     *            default value, if the key is not in the map or the value format is illegal
      * @return
-     *      Double value if the key exists and value format is correct
-     *      or defval
+     *         Double value if the key exists and value format is correct
+     *         or defval
      */
     public static Double getDouble(Map<?, ?> params, String key, Double defval) {
         Double val = defval;
@@ -459,12 +484,16 @@ public final class DTrainUtils {
     /**
      * Get Boolean property value from map.
      * If the value doesn't exist in the Map or the format is incorrect, use @defval as default
-     * @param params input Map
-     * @param key the key to look up
-     * @param defval default value, if the key is not in the map or the value format is illegal
+     * 
+     * @param params
+     *            input Map
+     * @param key
+     *            the key to look up
+     * @param defval
+     *            default value, if the key is not in the map or the value format is illegal
      * @return
-     *      Boolean value if the key exists and value format is correct
-     *      or defval
+     *         Boolean value if the key exists and value format is correct
+     *         or defval
      */
     public static Boolean getBoolean(Map<?, ?> params, String key, Boolean defval) {
         Boolean val = defval;
@@ -484,12 +513,16 @@ public final class DTrainUtils {
     /**
      * Get Integer property value from map.
      * If the value doesn't exist in the Map or the format is incorrect, use @defval as default
-     * @param params input Map
-     * @param key the key to look up
-     * @param defval default value, if the key is not in the map or the value format is illegal
+     * 
+     * @param params
+     *            input Map
+     * @param key
+     *            the key to look up
+     * @param defval
+     *            default value, if the key is not in the map or the value format is illegal
      * @return
-     *      Integer value if the key exists and value format is correct
-     *      or defval
+     *         Integer value if the key exists and value format is correct
+     *         or defval
      */
     @SuppressWarnings("rawtypes")
     public static Integer getInt(Map params, String key, Integer defval) {
