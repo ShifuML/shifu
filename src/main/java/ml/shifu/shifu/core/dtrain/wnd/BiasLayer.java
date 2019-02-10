@@ -24,6 +24,13 @@ public class BiasLayer implements Layer<Float, Float, Float, Float> {
 
     private float weight;
 
+    public BiasLayer(float weight) {
+        this.weight = weight;
+    }
+
+    public BiasLayer(){
+    }
+
     @Override
     public int getOutDim() {
         return 1;
@@ -38,6 +45,14 @@ public class BiasLayer implements Layer<Float, Float, Float, Float> {
     public Float backward(Float backInput, float sig) {
         // TODO compute gradients here
         return backInput * weight;
+    }
+
+    public float getWeight() {
+        return weight;
+    }
+
+    public void setWeight(float weight) {
+        this.weight = weight;
     }
 
 }

@@ -42,6 +42,8 @@ public class WideAndDeep {
 
     private int numericalSize;
 
+    private List<Integer> denseColumnIds;
+
     private List<Integer> embedColumnIds;
 
     private List<Integer> embedOutputs;
@@ -59,6 +61,29 @@ public class WideAndDeep {
     }
 
     public WideAndDeep() {
+    }
+
+    public WideAndDeep(List<Layer> hiddenLayers, DenseLayer finalLayer, EmbedLayer ecl, WideLayer wl,
+                       List<ColumnConfig> columnConfigList, List<Integer> denseColumnIds, List<Integer> embedColumnIds,
+                       List<Integer> embedOutputs, List<Integer> wideColumnIds, List<Integer> hiddenNodes,
+                       List<String> actiFuncs, float l2reg) {
+        this.hiddenLayers = hiddenLayers;
+        this.finalLayer = finalLayer;
+        this.ecl = ecl;
+        this.wl = wl;
+        this.columnConfigList = columnConfigList;
+        this.denseColumnIds = denseColumnIds;
+        this.numericalSize = denseColumnIds.size();
+        this.embedColumnIds = embedColumnIds;
+        this.embedOutputs = embedOutputs;
+        this.wideColumnIds = wideColumnIds;
+        this.hiddenLayers = hiddenLayers;
+        this.hiddenNodes = hiddenNodes;
+        this.actiFuncs = actiFuncs;
+        this.l2reg = l2reg;
+
+        assert embedColumnIds.size() == embedOutputs.size();
+        assert hiddenNodes.size() == actiFuncs.size();
     }
 
     // TODO support wide-only and dnn-only case
@@ -117,7 +142,7 @@ public class WideAndDeep {
 
         this.finalLayer = new DenseLayer(1, preHiddenInputs, l2reg);
     }
-    
+
     @SuppressWarnings("rawtypes")
     public float[] forward(float[] denseInputs, List<SparseInput> embedInputs, List<SparseInput> wideInputs) {
         // wide layer forward
@@ -314,6 +339,18 @@ public class WideAndDeep {
         this.numericalSize = numericalSize;
     }
 
+    public List<Integer> getDenseColumnIds() {
+        return denseColumnIds;
+    }
+
+    /**
+     * @param denseColumnIds
+     *            the denseColumnIds to set
+     */
+    public void setDenseColumnIds(List<Integer> denseColumnIds) {
+        this.denseColumnIds = denseColumnIds;
+    }
+
     /**
      * @return the embedColumnIds
      */
@@ -412,4 +449,10 @@ public class WideAndDeep {
         updateWeights(params.getWnd());
     }
 
+    /**
+     * TODO: init the weights in WideAndDeeep Model and it's sub module
+     */
+    public void initWeights(){
+        // get init mode from configuration
+    }
 }

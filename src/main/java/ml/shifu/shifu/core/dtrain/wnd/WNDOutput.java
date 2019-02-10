@@ -213,7 +213,11 @@ public class WNDOutput extends BasicMasterInterceptor<WNDParams, WNDParams> {
     }
 
     private void writeModelToFileSystem(WNDParams params, Path out) {
-        // TODO write model spec to output file
+        try {
+            BinaryWNDSerializer.save(modelConfig, params.getWnd(), FileSystem.get(new Configuration()), out);
+        } catch (IOException e) {
+            LOG.error("Error in writing WideAndDeep model", e);
+        }
     }
 
     /**

@@ -16,11 +16,15 @@
 package ml.shifu.shifu.core.dtrain.wnd;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +37,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.util.CommonUtils;
+import sun.nio.ch.IOUtil;
 
 /**
  * {@link WNDMaster} is master logic in wide and deep implementation based on Guagua.
@@ -192,17 +197,26 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
                 this.wnd.updateWeights(existingModel);
             } else {
                 LOG.warn("Continuous training enabled but existing model load failed, do random initialization.");
-                // TODO this.wnd.initWeights();
+                this.wnd.initWeights();
             }
         } else {
-            // TODO, init weights in WideAndDeep with this.wnd object this.wnd.initWeights();
+            this.wnd.initWeights();
         }
         params.setWnd(this.wnd); // weights from this.wnd
         return params;
     }
 
     private WideAndDeep loadModel(Path modelPath) {
-        // TODO load wide and deep model from file path
+        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS);
+        InputStream inputStream = null;
+        try {
+            inputStream = fileSystem.open(modelPath);
+            return IndependentWNDModel.loadFromStream(inputStream).getWnd();
+        } catch(IOException e) {
+            LOG.error("IOException happen when load WideAndDeep from HDFS", e);
+        } finally {
+            IOUtils.closeQuietly(inputStream);
+        }
         return null;
     }
 
