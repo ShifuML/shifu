@@ -145,10 +145,10 @@ public class IndependentWNDModel {
 
     /**
      * Compute logits according to data inputs
-     * @param denseInputs
-     * @param embedInputs
-     * @param wideInputs
-     * @return
+     * @param denseInputs, the dense inputs for deep model, numerical values
+     * @param embedInputs, the embed inputs for deep model, category values
+     * @param wideInputs, the wide model inputs, category values
+     * @return model score of the inputs.
      */
     public float[] compute(float[] denseInputs, List<SparseInput> embedInputs, List<SparseInput> wideInputs){
         return this.wnd.forward(denseInputs, embedInputs, wideInputs);
@@ -232,7 +232,7 @@ public class IndependentWNDModel {
     }
 
     private List<SparseInput> getEmbedInputs(Map<String, Object> dataMap) {
-        List<SparseInput> embedInputs = new ArrayList<SparseInput>();
+        List<SparseInput> embedInputs = new ArrayList<>();
         Object value;
         for(Integer columnId: this.wnd.getEmbedColumnIds()) {
             value = getValueByColumnId(columnId, dataMap);
@@ -265,7 +265,7 @@ public class IndependentWNDModel {
     }
 
     private List<SparseInput> getWideInputs(Map<String, Object> dataMap) {
-        List<SparseInput> wideInputs = new ArrayList<SparseInput>();
+        List<SparseInput> wideInputs = new ArrayList<>();
         Object value;
         for(Integer columnId: this.wnd.getWideColumnIds()) {
             value = getValueByColumnId(columnId, dataMap);
@@ -289,7 +289,7 @@ public class IndependentWNDModel {
      *             any IOException in de-serialization.
      */
     public static IndependentWNDModel loadFromStream(InputStream input) throws IOException {
-        DataInputStream dis = null;
+        DataInputStream dis;
         // check if gzip or not
         try {
             byte[] header = new byte[2];
@@ -319,9 +319,9 @@ public class IndependentWNDModel {
 
     private static IndependentWNDModel buildIndependentWNDModel(WideAndDeep wideAndDeep, NormType normType,
                                                                 double cutOff) {
-        Map<Integer, String> columnIdNameMap = new HashMap<Integer, String>();
-        Map<Integer, Map<String, Integer>> cateIndexMap = new HashMap<Integer, Map<String, Integer>>();
-        Map<Integer, List<Float>> numberBinBoundaries = new HashMap<Integer, List<Float>>();
+        Map<Integer, String> columnIdNameMap = new HashMap<>();
+        Map<Integer, Map<String, Integer>> cateIndexMap = new HashMap<>();
+        Map<Integer, List<Float>> numberBinBoundaries = new HashMap<>();
         Map<Integer, List<Float>> numberWoes = new HashMap<>();
         Map<Integer, List<Float>> numberWgtWoes = new HashMap<>();
         Map<Integer, Float> numberMeanMap = new HashMap<>();
@@ -331,14 +331,66 @@ public class IndependentWNDModel {
         Map<Integer, Float> wgtWoeMeanMap = new HashMap<>();
         Map<Integer, Float> wgtWoeStddevMap = new HashMap<>();
 
-        // Below is not use when construct IndependentWNDModel
-        Map<Integer, List<String>> cateCateMap = new HashMap<>();
-
         List<ColumnConfig> columnConfigList = wideAndDeep.getColumnConfigList();
-
         for(ColumnConfig columnConfig: columnConfigList) {
+            // build column Id -> name map
             columnIdNameMap.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
-            //TODO build other maps
+
+            // for category value: build column id -> { category -> index } map
+            Map<String, Integer> indexMap = new HashMap<>(1);
+            if(columnConfig.getBinCategory() != null) {
+                for(int i = 0; i < columnConfig.getBinCategory().size(); i++) {
+                    indexMap.put(columnConfig.getBinCategory().get(i), i);
+                }
+            }
+            cateIndexMap.put(columnConfig.getColumnNum(), indexMap);
+
+            // for numerical value: build column id -> bin boundaries
+            List<Float> binBoundaries = new ArrayList<>();
+            if(columnConfig.getBinBoundary() != null) {
+                for(Double boundary: columnConfig.getBinBoundary()) {
+                    binBoundaries.add(boundary.floatValue());
+                }
+                numberBinBoundaries.put(columnConfig.getColumnNum(), binBoundaries);
+            }
+
+            // for numerical value: build number -> Woes list map
+            List<Float> woes = new ArrayList<>();
+            if(columnConfig.getBinCountWoe() != null) {
+                for(Double woe: columnConfig.getBinCountWoe()) {
+                    woes.add(woe.floatValue());
+                }
+            }
+            numberWoes.put(columnConfig.getColumnNum(), woes);
+
+            // for numerical value: build number ->  wgt woes list map
+            List<Float> wgtWoes = new ArrayList<>();
+            if(columnConfig.getBinWeightedWoe() != null) {
+                for(Double woe: columnConfig.getBinWeightedWoe()) {
+                    wgtWoes.add(woe.floatValue());
+                }
+            }
+            numberWgtWoes.put(columnConfig.getColumnNum(), wgtWoes);
+
+            // for numerical value: build number -> mean Map
+            if(columnConfig.getMean() != null) {
+                numberMeanMap.put(columnConfig.getColumnNum(), columnConfig.getMean().floatValue());
+            }
+
+            // for numerical value: build number -> stddev map
+            if(columnConfig.getStdDev() != null) {
+                numberMeanMap.put(columnConfig.getColumnNum(), columnConfig.getStdDev().floatValue());
+            }
+
+            // for numerical value: build number -> woe mean stddev
+            double[] woeMeanAndStdDev= Normalizer.calculateWoeMeanAndStdDev(columnConfig, false);
+            woeMeanMap.put(columnConfig.getColumnNum(), Double.valueOf(woeMeanAndStdDev[0]).floatValue());
+            woeStddevMap.put(columnConfig.getColumnNum(), Double.valueOf(woeMeanAndStdDev[1]).floatValue());
+
+            // for numerical value: build number -> wgt woe mean stddev
+            double[] wgtWoeMeanAndStdDev= Normalizer.calculateWoeMeanAndStdDev(columnConfig, true);
+            wgtWoeMeanMap.put(columnConfig.getColumnNum(), Double.valueOf(wgtWoeMeanAndStdDev[0]).floatValue());
+            wgtWoeMeanMap.put(columnConfig.getColumnNum(), Double.valueOf(wgtWoeMeanAndStdDev[1]).floatValue());
         }
         return new IndependentWNDModel(wideAndDeep, normType, cutOff, columnIdNameMap, cateIndexMap,
                 numberBinBoundaries, numberWoes, numberWgtWoes, numberMeanMap, numberStddevMap, woeMeanMap,
@@ -352,7 +404,7 @@ public class IndependentWNDModel {
         }
         List<Float> binWoes = isWeighted ? this.numberWgtWoes.get(columnNum) : this.numberWoes.get(columnNum);
 
-        float value = 0f;
+        float value;
         if(binIndex == -1) {
             // The last bin in woeBins is the miss value bin.
             value = binWoes.get(binWoes.size() - 1);
@@ -374,7 +426,7 @@ public class IndependentWNDModel {
     private float getnumbericalZScoreValue(Integer columnNum, Object obj) {
         float mean = this.numberMeanMap.get(columnNum);
         float stddev = this.numberStddevMap.get(columnNum);
-        float rawValue = 0f;
+        float rawValue;
         if(obj == null || obj.toString().length() == 0) {
             rawValue = defaultMissingValue(mean);
         } else {
