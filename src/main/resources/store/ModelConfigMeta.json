@@ -396,6 +396,7 @@
                     {"label":"same as weight woe zscale mode", "value":"WEIGHT_WOE_ZSCORE"},
                     {"label":"OneHot for categorical and numerical", "value":"ONEHOT"},
                     {"label":"zscore and OneHot for categorical", "value":"ZSCALE_ONEHOT"},
+                    {"label":"zscore and Ordinal for categorical", "value":"ZSCALE_ORDINAL"},
                     {"label":"Discrete numerical feature in each bin and positive rate for categorical feature", "value":"DISCRETE_ZSCALE"},
                     {"label":"Discrete numerical feature in each bin and positive rate for categorical feature", "value":"DISCRETE_ZSCORE"}
                 ]

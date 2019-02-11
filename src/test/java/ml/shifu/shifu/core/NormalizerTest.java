@@ -21,7 +21,7 @@ import ml.shifu.shifu.container.obj.ColumnBinning;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
-import ml.shifu.shifu.udf.NormalizeUDF.CategoryMissingNormType;
+import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
