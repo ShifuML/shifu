@@ -27,7 +27,7 @@ import java.util.List;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideLayer implements Layer<List<SparseInput>, float[], float[], List<float[]>> {
+public class WideLayer implements Layer<List<SparseInput>, float[], float[], List<float[]>>, WeightInitializable {
 
     /**
      * Layers for all wide columns.
@@ -74,7 +74,7 @@ public class WideLayer implements Layer<List<SparseInput>, float[], float[], Lis
     @Override
     public List<float[]> backward(float[] backInputs, float sig) {
         // below backward call is for gradients computation in WideFieldLayer and BiasLayer
-        List<float[]> list = new ArrayList<float[]>();
+        List<float[]> list = new ArrayList<>();
         for(int i = 0; i < getLayers().size(); i++) {
             list.add(this.getLayers().get(i).backward(backInputs, sig));
         }
@@ -112,4 +112,10 @@ public class WideLayer implements Layer<List<SparseInput>, float[], float[], Lis
         this.bias = bias;
     }
 
+    @Override
+    public void initWeight(String policy) {
+        for(WideFieldLayer layer: this.layers) {
+            layer.initWeight(policy);
+        }
+    }
 }

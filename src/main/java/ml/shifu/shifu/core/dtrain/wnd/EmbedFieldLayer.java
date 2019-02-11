@@ -25,7 +25,7 @@ package ml.shifu.shifu.core.dtrain.wnd;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], float[]> {
+public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitializable {
 
     /**
      * [in, out] array for deep matrix weights
@@ -146,4 +146,8 @@ public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], flo
         this.columnId = columnId;
     }
 
+    @Override
+    public void initWeight(String policy) {
+        //TODO
+    }
 }

@@ -20,7 +20,7 @@ package ml.shifu.shifu.core.dtrain.wnd;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class BiasLayer implements Layer<Float, Float, Float, Float> {
+public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightInitializable {
 
     private float weight;
 
@@ -55,4 +55,8 @@ public class BiasLayer implements Layer<Float, Float, Float, Float> {
         this.weight = weight;
     }
 
+    @Override
+    public void initWeight(String policy) {
+        //TODO
+    }
 }
