@@ -14,7 +14,7 @@ import java.util.List;
  * <p>
  * In this class, we don't close the input or output stream. So you need to close the stream where you open it.
  * <p>
- * @author: Wu Devin (haifwu@paypal.com)
+ * @author  Wu Devin (haifwu@paypal.com)
  */
 public class PersistWideAndDeep {
 
@@ -22,7 +22,7 @@ public class PersistWideAndDeep {
      * Save the WideAndDeep into output stream.
      * @param wnd, the WideAndDeep model
      * @param dos, the data output stream
-     * @throws IOException
+     * @throws IOException, IOException when operate the steam
      */
     public static void save(final WideAndDeep wnd, DataOutputStream dos) throws IOException {
         dos.writeUTF(WideAndDeep.class.getName());
@@ -30,6 +30,7 @@ public class PersistWideAndDeep {
         // Only write DenseLayer in hidden layers
         List<DenseLayer> denseLayers = getAllDenseLayers(wnd.getHiddenLayers());
         writeList(denseLayers, dos);
+        dos.writeInt(wnd.getNumericalSize());
         writeDenseLayer(wnd.getFinalLayer(), dos);
         writeEmbedLayer(wnd.getEcl(), dos);
         writeWideLayer(wnd.getWl(), dos);
@@ -48,13 +49,14 @@ public class PersistWideAndDeep {
      * Load the WideAndDeep from input stream.
      * @param dis, the data input stream
      * @return the WideAndDeep model
-     * @throws IOException
+     * @throws IOException, IOException when operate the steam
      */
     public static WideAndDeep load(DataInputStream dis) throws IOException {
         assert WideAndDeep.class.getName().equals(dis.readUTF());
 
         // Read DensorLayer only
         List<DenseLayer> denseLayers = readList(dis, DenseLayer.class);
+        int numericalSize = dis.readInt();
         DenseLayer finalLayer = readDenseLayer(dis);
         EmbedLayer ecl = readEmbedLayer(dis);
         WideLayer wl = readWideLayer(dis);
@@ -68,8 +70,8 @@ public class PersistWideAndDeep {
         float l2reg = dis.readFloat();
 
         List<Layer> hiddenLayers = buildHiddenLayers(denseLayers, actiFuncs);
-        return new WideAndDeep(hiddenLayers, finalLayer, ecl, wl, columnConfigList, denseColumnIds, embedColumnIds,
-                embedOutputs, wideColumnIds, hiddenNodes, actiFuncs, l2reg);
+        return new WideAndDeep(hiddenLayers, finalLayer, ecl, wl, columnConfigList, numericalSize, denseColumnIds,
+                embedColumnIds, embedOutputs, wideColumnIds, hiddenNodes, actiFuncs, l2reg);
     }
 
     /**
@@ -80,7 +82,7 @@ public class PersistWideAndDeep {
      * @param list, the list write to output stream
      * @param dos, data output stream
      * @param <T>, generic type
-     * @throws IOException
+     * @throws IOException, IOException when operate the steam
      */
     private static <T> void writeList(List<T> list, DataOutputStream dos) throws IOException {
         dos.writeInt(list.size());
@@ -110,7 +112,7 @@ public class PersistWideAndDeep {
      * @param tClass, the class type of the object in the list
      * @param <T>, generic type
      * @return A list of specific object
-     * @throws IOException
+     * @throws IOException, IOException when operate the steam
      */
     @SuppressWarnings("unchecked")
     private static <T> List<T> readList(DataInputStream dis, Class tClass) throws IOException {

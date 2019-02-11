@@ -64,16 +64,16 @@ public class WideAndDeep implements WeightInitializable{
     }
 
     public WideAndDeep(List<Layer> hiddenLayers, DenseLayer finalLayer, EmbedLayer ecl, WideLayer wl,
-                       List<ColumnConfig> columnConfigList, List<Integer> denseColumnIds, List<Integer> embedColumnIds,
-                       List<Integer> embedOutputs, List<Integer> wideColumnIds, List<Integer> hiddenNodes,
-                       List<String> actiFuncs, float l2reg) {
+                       List<ColumnConfig> columnConfigList, int numericalSize, List<Integer> denseColumnIds,
+                       List<Integer> embedColumnIds, List<Integer> embedOutputs, List<Integer> wideColumnIds,
+                       List<Integer> hiddenNodes, List<String> actiFuncs, float l2reg) {
         this.hiddenLayers = hiddenLayers;
         this.finalLayer = finalLayer;
         this.ecl = ecl;
         this.wl = wl;
         this.columnConfigList = columnConfigList;
+        this.numericalSize = numericalSize;
         this.denseColumnIds = denseColumnIds;
-        this.numericalSize = denseColumnIds.size();
         this.embedColumnIds = embedColumnIds;
         this.embedOutputs = embedOutputs;
         this.wideColumnIds = wideColumnIds;
@@ -86,11 +86,12 @@ public class WideAndDeep implements WeightInitializable{
     }
 
     // TODO support wide-only and dnn-only case
-    public WideAndDeep(List<ColumnConfig> columnConfigList, int numericalSize, List<Integer> embedColumnIds,
-            List<Integer> embedOutputs, List<Integer> wideColumnIds, List<Integer> hiddenNodes, List<String> actiFuncs,
-            float l2reg) {
+    public WideAndDeep(List<ColumnConfig> columnConfigList, int numericalSize, List<Integer> denseColumnIds,
+                       List<Integer> embedColumnIds, List<Integer> embedOutputs, List<Integer> wideColumnIds,
+                       List<Integer> hiddenNodes, List<String> actiFuncs, float l2reg) {
         this.columnConfigList = columnConfigList;
         this.numericalSize = numericalSize;
+        this.denseColumnIds = denseColumnIds;
         this.embedColumnIds = embedColumnIds;
         this.embedOutputs = embedOutputs;
         this.wideColumnIds = wideColumnIds;

@@ -138,17 +138,18 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
         // Build wide and deep graph
         List<Integer> embedColumnIds = (List<Integer>) this.validParams.get(CommonConstants.NUM_EMBED_COLUMN_IDS);
         Integer embedOutputs = (Integer) this.validParams.get(CommonConstants.NUM_EMBED_OUTPUTS);
-        List<Integer> embedOutputList = new ArrayList<Integer>();
+        List<Integer> embedOutputList = new ArrayList<>();
         for(Integer cId: embedColumnIds) {
             embedOutputList.add(embedOutputs == null ? CommonConstants.DEFAULT_EMBEDING_OUTPUT : embedOutputs);
         }
+        List<Integer> numericalIds = DTrainUtils.getNumericalIds(this.columnConfigList, isAfterVarSelect);
         List<Integer> wideColumnIds = DTrainUtils.getCategoricalIds(columnConfigList, isAfterVarSelect);
         int numLayers = (Integer) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
         Float l2reg = (Float) this.validParams.get(CommonConstants.WND_L2_REG);
-        this.wnd = new WideAndDeep(columnConfigList, numInputs, embedColumnIds, embedOutputList, wideColumnIds,
-                hiddenNodes, actFunc, l2reg);
+        this.wnd = new WideAndDeep(columnConfigList, numInputs, numericalIds, embedColumnIds, embedOutputList,
+                wideColumnIds, hiddenNodes, actFunc, l2reg);
     }
 
     @Override
@@ -193,7 +194,7 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
         if(this.isContinuousEnabled) {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             WideAndDeep existingModel = loadModel(modelPath);
-            if(existingModel == null) {
+            if(existingModel != null) {
                 this.wnd.updateWeights(existingModel);
             } else {
                 LOG.warn("Continuous training enabled but existing model load failed, do random initialization.");
