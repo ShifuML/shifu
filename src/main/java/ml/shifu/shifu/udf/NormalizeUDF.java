@@ -68,6 +68,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private int mismatchCnt = 0;
     private boolean isLinearTarget = false;
 
+    private Map<String, List<String>> normVarNamesMapping;
+
     /**
      * For categorical feature, a map is used to save query time in execution
      */
@@ -163,6 +165,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         // store schema list with format: tag, meta column, selected feature list, weight int a list
         if(this.isCompactNorm) {
+            this.normVarNamesMapping = new HashMap<>();
             this.outputCompactColumns = new ArrayList<String>();
             this.outputCompactColumns
                     .add(CommonUtils.normColumnName(CommonUtils.findTargetColumn(columnConfigList).getColumnName()));
@@ -175,7 +178,9 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             this.cntOfTargetAndMetaColumns = this.outputCompactColumns.size();
             for(ColumnConfig config: columnConfigList) {
                 if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
-                    this.outputCompactColumns.addAll(genNormColumnNames(config, normType));
+                    List<String> normVarNames = genNormColumnNames(config, normType);
+                    this.outputCompactColumns.addAll(normVarNames);
+                    this.normVarNamesMapping.put(config.getColumnName(), normVarNames);
                 }
             }
         }
@@ -354,7 +359,12 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                                 String formatVal = getOutputValue(normVal, true);
                                 formatNormVals.add(formatVal);
                             }
-                            compactVarMap.put(CommonUtils.normColumnName(config.getColumnName()), formatNormVals);
+
+                            List<String> normVarNames = this.normVarNamesMapping.get(config.getColumnName());
+                            assert formatNormVals.size() != normVarNames.size();
+                            for(int k = 0; k < normVarNames.size(); k ++) {
+                                compactVarMap.put(normVarNames.get(k), formatNormVals.get(k));
+                            }
                         } else if(config.isMeta()) {
                             compactVarMap.put(CommonUtils.normColumnName(config.getColumnName()), val);
                         } else {
@@ -444,7 +454,12 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                             String formatVal = getOutputValue(normVal, true);
                             formatNormVals.add(formatVal);
                         }
-                        compactVarMap.put(CommonUtils.normColumnName(config.getColumnName()), formatNormVals);
+
+                        List<String> normVarNames = this.normVarNamesMapping.get(config.getColumnName());
+                        assert formatNormVals.size() != normVarNames.size();
+                        for(int k = 0; k < normVarNames.size(); k ++) {
+                            compactVarMap.put(normVarNames.get(k), formatNormVals.get(k));
+                        }
                     } else if(config.isMeta()) {
                         compactVarMap.put(CommonUtils.normColumnName(config.getColumnName()), val);
                     } else {
@@ -471,15 +486,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         // for compact norm mode, output to tuple at here
         if (this.isCompactNorm) {
             for(int i = 0; i < this.outputCompactColumns.size(); i++) {
-                Object normObj = compactVarMap.get(this.outputCompactColumns.get(i));
-                if ( normObj instanceof List ) {
-                    List normValList = (List) normObj;
-                    for ( int j = 0; j < normValList.size(); j ++ ) {
-                        tuple.append(normValList.get(j));
-                    }
-                } else {
-                    tuple.append(normObj);
-                }
+                tuple.append(compactVarMap.get(this.outputCompactColumns.get(i)));
             }
         }
 
