@@ -255,8 +255,27 @@ public final class DTrainUtils {
         return new int[] { numericInput, categoricalInput, output, isVarSelect };
     }
 
+    public static List<Integer> getNumericalIds(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect){
+        List<Integer> numericalIds = new ArrayList<>();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
+
+        for(ColumnConfig config: columnConfigList) {
+            if(isAfterVarSelect) {
+                if(config.isNumerical() && config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
+                    numericalIds.add(config.getColumnNum());
+                }
+            } else {
+                if(config.isNumerical() && !config.isTarget() && !config.isMeta() &&
+                        CommonUtils.isGoodCandidate(config, hasCandidates)) {
+                    numericalIds.add(config.getColumnNum());
+                }
+            }
+        }
+        return numericalIds;
+    }
+
     public static List<Integer> getCategoricalIds(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect) {
-        List<Integer> results = new ArrayList<Integer>();
+        List<Integer> results = new ArrayList<>();
         boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
 
         for(ColumnConfig config: columnConfigList) {

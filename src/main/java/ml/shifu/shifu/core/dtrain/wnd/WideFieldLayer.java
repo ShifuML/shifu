@@ -21,7 +21,7 @@ package ml.shifu.shifu.core.dtrain.wnd;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideFieldLayer implements Layer<SparseInput, float[], float[], float[]> {
+public class WideFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitializable {
 
     /**
      * [in] float array of weights
@@ -119,4 +119,8 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
         this.columnId = columnId;
     }
 
+    @Override
+    public void initWeight(String policy) {
+        //TODO
+    }
 }

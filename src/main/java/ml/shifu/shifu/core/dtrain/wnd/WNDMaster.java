@@ -16,11 +16,15 @@
 package ml.shifu.shifu.core.dtrain.wnd;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +37,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.util.CommonUtils;
+import sun.nio.ch.IOUtil;
 
 /**
  * {@link WNDMaster} is master logic in wide and deep implementation based on Guagua.
@@ -133,17 +138,18 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
         // Build wide and deep graph
         List<Integer> embedColumnIds = (List<Integer>) this.validParams.get(CommonConstants.NUM_EMBED_COLUMN_IDS);
         Integer embedOutputs = (Integer) this.validParams.get(CommonConstants.NUM_EMBED_OUTPUTS);
-        List<Integer> embedOutputList = new ArrayList<Integer>();
+        List<Integer> embedOutputList = new ArrayList<>();
         for(Integer cId: embedColumnIds) {
             embedOutputList.add(embedOutputs == null ? CommonConstants.DEFAULT_EMBEDING_OUTPUT : embedOutputs);
         }
+        List<Integer> numericalIds = DTrainUtils.getNumericalIds(this.columnConfigList, isAfterVarSelect);
         List<Integer> wideColumnIds = DTrainUtils.getCategoricalIds(columnConfigList, isAfterVarSelect);
         int numLayers = (Integer) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
         Float l2reg = (Float) this.validParams.get(CommonConstants.WND_L2_REG);
-        this.wnd = new WideAndDeep(columnConfigList, numInputs, embedColumnIds, embedOutputList, wideColumnIds,
-                hiddenNodes, actFunc, l2reg);
+        this.wnd = new WideAndDeep(columnConfigList, numInputs, numericalIds, embedColumnIds, embedOutputList,
+                wideColumnIds, hiddenNodes, actFunc, l2reg);
     }
 
     @Override
@@ -188,21 +194,30 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
         if(this.isContinuousEnabled) {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             WideAndDeep existingModel = loadModel(modelPath);
-            if(existingModel == null) {
+            if(existingModel != null) {
                 this.wnd.updateWeights(existingModel);
             } else {
                 LOG.warn("Continuous training enabled but existing model load failed, do random initialization.");
-                // TODO this.wnd.initWeights();
+                this.wnd.initWeights();
             }
         } else {
-            // TODO, init weights in WideAndDeep with this.wnd object this.wnd.initWeights();
+            this.wnd.initWeights();
         }
         params.setWnd(this.wnd); // weights from this.wnd
         return params;
     }
 
     private WideAndDeep loadModel(Path modelPath) {
-        // TODO load wide and deep model from file path
+        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS);
+        InputStream inputStream = null;
+        try {
+            inputStream = fileSystem.open(modelPath);
+            return IndependentWNDModel.loadFromStream(inputStream).getWnd();
+        } catch(IOException e) {
+            LOG.error("IOException happen when load WideAndDeep from HDFS", e);
+        } finally {
+            IOUtils.closeQuietly(inputStream);
+        }
         return null;
     }
 

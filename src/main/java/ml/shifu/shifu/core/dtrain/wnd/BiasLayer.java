@@ -20,9 +20,16 @@ package ml.shifu.shifu.core.dtrain.wnd;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class BiasLayer implements Layer<Float, Float, Float, Float> {
+public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightInitializable {
 
     private float weight;
+
+    public BiasLayer(float weight) {
+        this.weight = weight;
+    }
+
+    public BiasLayer(){
+    }
 
     @Override
     public int getOutDim() {
@@ -40,4 +47,16 @@ public class BiasLayer implements Layer<Float, Float, Float, Float> {
         return backInput * weight;
     }
 
+    public float getWeight() {
+        return weight;
+    }
+
+    public void setWeight(float weight) {
+        this.weight = weight;
+    }
+
+    @Override
+    public void initWeight(String policy) {
+        //TODO
+    }
 }

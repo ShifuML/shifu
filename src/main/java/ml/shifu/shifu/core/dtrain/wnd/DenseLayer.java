@@ -23,7 +23,7 @@ package ml.shifu.shifu.core.dtrain.wnd;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class DenseLayer implements Layer<float[], float[], float[], float[]> {
+public class DenseLayer implements Layer<float[], float[], float[], float[]>, WeightInitializable {
 
     /**
      * [in, out] array for deep matrix weights
@@ -173,4 +173,8 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]> {
         return results;
     }
 
+    @Override
+    public void initWeight(String policy) {
+        //TODO
+    }
 }

@@ -24,7 +24,7 @@ import java.util.List;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class EmbedLayer implements Layer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>> {
+public class EmbedLayer implements Layer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>>, WeightInitializable {
 
     /**
      * List of embed layer which is for each embed column.
@@ -47,7 +47,7 @@ public class EmbedLayer implements Layer<List<SparseInput>, List<float[]>, List<
     @Override
     public List<float[]> forward(List<SparseInput> inputList) {
         assert this.getEmbedLayers().size() == inputList.size();
-        List<float[]> list = new ArrayList<float[]>();
+        List<float[]> list = new ArrayList<>();
         for(int i = 0; i < this.getEmbedLayers().size(); i++) {
             list.add(this.getEmbedLayers().get(i).forward(inputList.get(i)));
         }
@@ -57,7 +57,7 @@ public class EmbedLayer implements Layer<List<SparseInput>, List<float[]>, List<
     @Override
     public List<float[]> backward(List<float[]> backInputList, float sig) {
         assert this.getEmbedLayers().size() == backInputList.size();
-        List<float[]> list = new ArrayList<float[]>();
+        List<float[]> list = new ArrayList<>();
         for(int i = 0; i < this.getEmbedLayers().size(); i++) {
             list.add(this.getEmbedLayers().get(i).backward(backInputList.get(i), sig));
         }
@@ -79,4 +79,10 @@ public class EmbedLayer implements Layer<List<SparseInput>, List<float[]>, List<
         this.embedLayers = embedLayers;
     }
 
+    @Override
+    public void initWeight(String policy) {
+        for(EmbedFieldLayer embedFieldLayer: this.embedLayers) {
+            embedFieldLayer.initWeight(policy);
+        }
+    }
 }

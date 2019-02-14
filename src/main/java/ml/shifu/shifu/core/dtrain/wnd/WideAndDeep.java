@@ -25,7 +25,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideAndDeep {
+public class WideAndDeep implements WeightInitializable{
 
     private DenseInputLayer dil;
 
@@ -41,6 +41,8 @@ public class WideAndDeep {
     private List<ColumnConfig> columnConfigList;
 
     private int numericalSize;
+
+    private List<Integer> denseColumnIds;
 
     private List<Integer> embedColumnIds;
 
@@ -61,12 +63,35 @@ public class WideAndDeep {
     public WideAndDeep() {
     }
 
-    // TODO support wide-only and dnn-only case
-    public WideAndDeep(List<ColumnConfig> columnConfigList, int numericalSize, List<Integer> embedColumnIds,
-            List<Integer> embedOutputs, List<Integer> wideColumnIds, List<Integer> hiddenNodes, List<String> actiFuncs,
-            float l2reg) {
+    public WideAndDeep(List<Layer> hiddenLayers, DenseLayer finalLayer, EmbedLayer ecl, WideLayer wl,
+                       List<ColumnConfig> columnConfigList, int numericalSize, List<Integer> denseColumnIds,
+                       List<Integer> embedColumnIds, List<Integer> embedOutputs, List<Integer> wideColumnIds,
+                       List<Integer> hiddenNodes, List<String> actiFuncs, float l2reg) {
+        this.hiddenLayers = hiddenLayers;
+        this.finalLayer = finalLayer;
+        this.ecl = ecl;
+        this.wl = wl;
         this.columnConfigList = columnConfigList;
         this.numericalSize = numericalSize;
+        this.denseColumnIds = denseColumnIds;
+        this.embedColumnIds = embedColumnIds;
+        this.embedOutputs = embedOutputs;
+        this.wideColumnIds = wideColumnIds;
+        this.hiddenNodes = hiddenNodes;
+        this.actiFuncs = actiFuncs;
+        this.l2reg = l2reg;
+
+        assert embedColumnIds.size() == embedOutputs.size();
+        assert hiddenNodes.size() == actiFuncs.size();
+    }
+
+    // TODO support wide-only and dnn-only case
+    public WideAndDeep(List<ColumnConfig> columnConfigList, int numericalSize, List<Integer> denseColumnIds,
+                       List<Integer> embedColumnIds, List<Integer> embedOutputs, List<Integer> wideColumnIds,
+                       List<Integer> hiddenNodes, List<String> actiFuncs, float l2reg) {
+        this.columnConfigList = columnConfigList;
+        this.numericalSize = numericalSize;
+        this.denseColumnIds = denseColumnIds;
         this.embedColumnIds = embedColumnIds;
         this.embedOutputs = embedOutputs;
         this.wideColumnIds = wideColumnIds;
@@ -77,7 +102,7 @@ public class WideAndDeep {
         this.dil = new DenseInputLayer(numericalSize);
 
         assert embedColumnIds.size() == embedOutputs.size();
-        List<EmbedFieldLayer> embedLayers = new ArrayList<EmbedFieldLayer>();
+        List<EmbedFieldLayer> embedLayers = new ArrayList<>();
         for(int i = 0; i < embedColumnIds.size(); i++) {
             Integer columnId = embedColumnIds.get(i);
             ColumnConfig config = columnConfigList.get(columnId);
@@ -87,9 +112,8 @@ public class WideAndDeep {
         }
         this.ecl = new EmbedLayer(embedLayers);
 
-        List<WideFieldLayer> wfLayers = new ArrayList<WideFieldLayer>();
-        for(int i = 0; i < wideColumnIds.size(); i++) {
-            Integer columnId = wideColumnIds.get(i);
+        List<WideFieldLayer> wfLayers = new ArrayList<>();
+        for(Integer columnId : wideColumnIds) {
             ColumnConfig config = columnConfigList.get(columnId);
             WideFieldLayer wfl = new WideFieldLayer(columnId, config.getBinCategory().size() + 1);
             wfLayers.add(wfl);
@@ -100,24 +124,25 @@ public class WideAndDeep {
         int preHiddenInputs = dil.getOutDim() + ecl.getOutDim();
 
         assert hiddenNodes.size() == actiFuncs.size();
+        this.hiddenLayers = new ArrayList<>(hiddenNodes.size() * 2);
         for(int i = 0; i < hiddenNodes.size(); i++) {
             int hiddenOutputs = hiddenNodes.get(i);
             DenseLayer denseLayer = new DenseLayer(hiddenOutputs, preHiddenInputs, l2reg);
-            hiddenLayers.add(denseLayer);
+            this.hiddenLayers.add(denseLayer);
             String acti = actiFuncs.get(i);
 
             // TODO add more else
             if("relu".equalsIgnoreCase(acti)) {
-                hiddenLayers.add(new ReLU());
+                this.hiddenLayers.add(new ReLU());
             } else if("sigmoid".equalsIgnoreCase(acti)) {
-                hiddenLayers.add(new Sigmoid());
+                this.hiddenLayers.add(new Sigmoid());
             }
             preHiddenInputs = hiddenOutputs;
         }
 
         this.finalLayer = new DenseLayer(1, preHiddenInputs, l2reg);
     }
-    
+
     @SuppressWarnings("rawtypes")
     public float[] forward(float[] denseInputs, List<SparseInput> embedInputs, List<SparseInput> wideInputs) {
         // wide layer forward
@@ -127,8 +152,7 @@ public class WideAndDeep {
         float[] dilOuts = this.dil.forward(denseInputs);
         List<float[]> eclOutList = this.ecl.forward(embedInputs);
         float[] inputs = mergeToDenseInputs(dilOuts, eclOutList);
-        for(int i = 0; i < this.hiddenLayers.size(); i++) {
-            Layer layer = this.hiddenLayers.get(i);
+        for(Layer layer : this.hiddenLayers) {
             if(layer instanceof DenseLayer) {
                 DenseLayer dl = (DenseLayer) layer;
                 inputs = dl.forward(inputs);
@@ -175,10 +199,9 @@ public class WideAndDeep {
     }
 
     private List<float[]> splitArray(int outDim, List<EmbedFieldLayer> embedLayers, float[] backInputs) {
-        List<float[]> results = new ArrayList<float[]>();
+        List<float[]> results = new ArrayList<>();
         int srcPos = outDim;
-        for(int i = 0; i < embedLayers.size(); i++) {
-            EmbedFieldLayer el = embedLayers.get(i);
+        for(EmbedFieldLayer el : embedLayers) {
             float[] elBackInputs = new float[el.getIn()];
             System.arraycopy(backInputs, srcPos, elBackInputs, 0, elBackInputs.length);
             srcPos += elBackInputs.length;
@@ -314,6 +337,18 @@ public class WideAndDeep {
         this.numericalSize = numericalSize;
     }
 
+    public List<Integer> getDenseColumnIds() {
+        return denseColumnIds;
+    }
+
+    /**
+     * @param denseColumnIds
+     *            the denseColumnIds to set
+     */
+    public void setDenseColumnIds(List<Integer> denseColumnIds) {
+        this.denseColumnIds = denseColumnIds;
+    }
+
     /**
      * @return the embedColumnIds
      */
@@ -412,4 +447,25 @@ public class WideAndDeep {
         updateWeights(params.getWnd());
     }
 
+    /**
+     * TODO: init the weights in WideAndDeeep Model and it's sub module
+     */
+    public void initWeights(){
+        // TODO
+        String defaultMode = "get_from_configuration";
+        initWeight(defaultMode);
+    }
+
+    @Override
+    public void initWeight(String policy) {
+        for(Layer layer: this.hiddenLayers) {
+            // There are two type of layer: DenseLayer, Activation. We only need to init DenseLayer
+            if(layer instanceof DenseLayer) {
+                ((DenseLayer) layer).initWeight(policy);
+            }
+        }
+        this.finalLayer.initWeight(policy);
+        this.ecl.initWeight(policy);
+        this.wl.initWeight(policy);
+    }
 }
