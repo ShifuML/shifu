@@ -24,11 +24,13 @@ public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightIniti
 
     private float weight;
 
+    private float wGrad;
+
     public BiasLayer(float weight) {
         this.weight = weight;
     }
 
-    public BiasLayer(){
+    public BiasLayer() {
     }
 
     @Override
@@ -43,7 +45,8 @@ public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightIniti
 
     @Override
     public Float backward(Float backInput, float sig) {
-        // TODO compute gradients here
+        this.wGrad = backInput; // no need l2 reg in bias layer
+        // no need backward output computation as it is last layer.
         return backInput * weight;
     }
 
@@ -57,6 +60,21 @@ public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightIniti
 
     @Override
     public void initWeight(String policy) {
-        //TODO
+        // TODO
+    }
+
+    /**
+     * @return the wGrad
+     */
+    public float getwGrad() {
+        return wGrad;
+    }
+
+    /**
+     * @param wGrad
+     *            the wGrad to set
+     */
+    public void setwGrad(float wGrad) {
+        this.wGrad = wGrad;
     }
 }

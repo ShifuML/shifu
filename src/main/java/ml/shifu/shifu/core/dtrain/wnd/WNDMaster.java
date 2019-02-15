@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import ml.shifu.shifu.fs.ShifuFileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,8 +35,8 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
-import sun.nio.ch.IOUtil;
 
 /**
  * {@link WNDMaster} is master logic in wide and deep implementation based on Guagua.

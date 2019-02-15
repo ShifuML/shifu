@@ -40,6 +40,7 @@ import static ml.shifu.shifu.core.dtrain.CommonConstants.WND_FORMAT_VERSION;
  * {@link #compute(Map)} are the API called for prediction.
  *
  * <p>
+ * 
  * @author : Wu Devin (haifwu@paypal.com)
  */
 public class IndependentWNDModel {
@@ -115,17 +116,13 @@ public class IndependentWNDModel {
      * Mapping for (columnNum, weightedWoeStddev) for all columns
      */
     private Map<Integer, Float> wgtWoeStddevMap;
-    
-    
+
     private IndependentWNDModel(WideAndDeep wideAndDeep, NormType normType, double cutOff,
-                                Map<Integer, String> columnIdNameMap,
-                                Map<Integer, Map<String, Integer>> cateIndexMap, 
-                                Map<Integer, List<Float>> numberBinBoundaries,
-                                Map<Integer, List<Float>> numberWoes,  Map<Integer, List<Float>> numberWgtWoes,
-                                Map<Integer, Float> numberMeanMap,
-                                Map<Integer, Float> numberStddevMap, Map<Integer, Float> woeMeanMap,
-                                Map<Integer, Float> woeStddevMap, Map<Integer, Float> wgtWoeMeanMap,
-                                Map<Integer, Float> wgtWoeStddevMap) {
+            Map<Integer, String> columnIdNameMap, Map<Integer, Map<String, Integer>> cateIndexMap,
+            Map<Integer, List<Float>> numberBinBoundaries, Map<Integer, List<Float>> numberWoes,
+            Map<Integer, List<Float>> numberWgtWoes, Map<Integer, Float> numberMeanMap,
+            Map<Integer, Float> numberStddevMap, Map<Integer, Float> woeMeanMap, Map<Integer, Float> woeStddevMap,
+            Map<Integer, Float> wgtWoeMeanMap, Map<Integer, Float> wgtWoeStddevMap) {
         this.wnd = wideAndDeep;
         this.normType = normType;
         this.columnIdNameMap = columnIdNameMap;
@@ -142,15 +139,18 @@ public class IndependentWNDModel {
         this.wgtWoeStddevMap = wgtWoeStddevMap;
     }
 
-
     /**
      * Compute logits according to data inputs
-     * @param denseInputs, the dense inputs for deep model, numerical values
-     * @param embedInputs, the embed inputs for deep model, category values
-     * @param wideInputs, the wide model inputs, category values
+     * 
+     * @param denseInputs,
+     *            the dense inputs for deep model, numerical values
+     * @param embedInputs,
+     *            the embed inputs for deep model, category values
+     * @param wideInputs,
+     *            the wide model inputs, category values
      * @return model score of the inputs.
      */
-    public float[] compute(float[] denseInputs, List<SparseInput> embedInputs, List<SparseInput> wideInputs){
+    public float[] compute(float[] denseInputs, List<SparseInput> embedInputs, List<SparseInput> wideInputs) {
         return this.wnd.forward(denseInputs, embedInputs, wideInputs);
     }
 
@@ -185,9 +185,9 @@ public class IndependentWNDModel {
         // Get dense inputs
         float[] numbericalValues = new float[this.wnd.getDenseColumnIds().size()];
         Object value;
-        for (int i = 0; i < this.wnd.getDenseColumnIds().size(); i++){
+        for(int i = 0; i < this.wnd.getDenseColumnIds().size(); i++) {
             value = getValueByColumnId(this.wnd.getDenseColumnIds().get(i), dataMap);
-            if (value != null) {
+            if(value != null) {
                 numbericalValues[i] = normalize(this.wnd.getDenseColumnIds().get(i), value, this.normType);
             } else {
                 numbericalValues[i] = getMissingnumbericalValue(this.wnd.getDenseColumnIds().get(i));
@@ -226,7 +226,7 @@ public class IndependentWNDModel {
         }
         return value;
     }
-    
+
     private Object getValueByColumnId(int columnId, Map<String, Object> dataMap) {
         return dataMap.get(this.columnIdNameMap.get(columnId));
     }
@@ -236,7 +236,7 @@ public class IndependentWNDModel {
         Object value;
         for(Integer columnId: this.wnd.getEmbedColumnIds()) {
             value = getValueByColumnId(columnId, dataMap);
-            if (value != null) {
+            if(value != null) {
                 embedInputs.add(new SparseInput(columnId, getValueIndex(columnId, value.toString())));
             } else {
                 // when the value missing
@@ -245,12 +245,12 @@ public class IndependentWNDModel {
         }
         return embedInputs;
     }
-    
+
     private int getMissingTypeCategory(int columnId) {
-        //TODO if this right? Current return +1 of the last index
+        // TODO if this right? Current return +1 of the last index
         return this.cateIndexMap.get(columnId).values().size();
     }
-    
+
     private float getMissingnumbericalValue(int columnId) {
         // TODO if this right? Currently return the mean value
         return defaultMissingValue(this.numberMeanMap.get(columnId));
@@ -259,7 +259,7 @@ public class IndependentWNDModel {
     private float defaultMissingValue(Float mean) {
         return mean == null ? 0 : mean;
     }
-    
+
     private int getValueIndex(int columnId, String value) {
         return this.cateIndexMap.get(columnId).get(value);
     }
@@ -269,7 +269,7 @@ public class IndependentWNDModel {
         Object value;
         for(Integer columnId: this.wnd.getWideColumnIds()) {
             value = getValueByColumnId(columnId, dataMap);
-            if (value != null) {
+            if(value != null) {
                 wideInputs.add(new SparseInput(columnId, getValueIndex(columnId, value.toString())));
             } else {
                 // when the value missing
@@ -308,7 +308,7 @@ public class IndependentWNDModel {
         }
 
         assert WND_FORMAT_VERSION == dis.readInt();
-        //TODO assert this
+        // TODO assert this
         String algorithm = dis.readUTF();
 
         WideAndDeep wideAndDeep = PersistWideAndDeep.load(dis);
@@ -318,7 +318,7 @@ public class IndependentWNDModel {
     }
 
     private static IndependentWNDModel buildIndependentWNDModel(WideAndDeep wideAndDeep, NormType normType,
-                                                                double cutOff) {
+            double cutOff) {
         Map<Integer, String> columnIdNameMap = new HashMap<>();
         Map<Integer, Map<String, Integer>> cateIndexMap = new HashMap<>();
         Map<Integer, List<Float>> numberBinBoundaries = new HashMap<>();
@@ -363,7 +363,7 @@ public class IndependentWNDModel {
             }
             numberWoes.put(columnConfig.getColumnNum(), woes);
 
-            // for numerical value: build number ->  wgt woes list map
+            // for numerical value: build number -> wgt woes list map
             List<Float> wgtWoes = new ArrayList<>();
             if(columnConfig.getBinWeightedWoe() != null) {
                 for(Double woe: columnConfig.getBinWeightedWoe()) {
@@ -383,12 +383,12 @@ public class IndependentWNDModel {
             }
 
             // for numerical value: build number -> woe mean stddev
-            double[] woeMeanAndStdDev= Normalizer.calculateWoeMeanAndStdDev(columnConfig, false);
+            double[] woeMeanAndStdDev = Normalizer.calculateWoeMeanAndStdDev(columnConfig, false);
             woeMeanMap.put(columnConfig.getColumnNum(), Double.valueOf(woeMeanAndStdDev[0]).floatValue());
             woeStddevMap.put(columnConfig.getColumnNum(), Double.valueOf(woeMeanAndStdDev[1]).floatValue());
 
             // for numerical value: build number -> wgt woe mean stddev
-            double[] wgtWoeMeanAndStdDev= Normalizer.calculateWoeMeanAndStdDev(columnConfig, true);
+            double[] wgtWoeMeanAndStdDev = Normalizer.calculateWoeMeanAndStdDev(columnConfig, true);
             wgtWoeMeanMap.put(columnConfig.getColumnNum(), Double.valueOf(wgtWoeMeanAndStdDev[0]).floatValue());
             wgtWoeMeanMap.put(columnConfig.getColumnNum(), Double.valueOf(wgtWoeMeanAndStdDev[1]).floatValue());
         }

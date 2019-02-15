@@ -21,11 +21,20 @@ import java.util.List;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 
 /**
- * TODO
+ * {@link WideAndDeep} graph definition which is for whole network including deep side and wide side.
+ * 
+ * <p>
+ * WideAndDeep is split into dense inputs, embed inputs and wide inputs. With dense inputs + embed inputs, DNN is
+ * constructed according to hidden layer settings. Wide inputs are for wide part computations as LR (no hidden layer).
+ * 
+ * <p>
+ * TODO general chart 
+ * TODO how gradients and computation logic
+ * TODO how to scale?
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideAndDeep implements WeightInitializable{
+public class WideAndDeep implements WeightInitializable {
 
     private DenseInputLayer dil;
 
@@ -55,18 +64,19 @@ public class WideAndDeep implements WeightInitializable{
     private List<String> actiFuncs;
 
     private float l2reg;
-    
+
     public WideAndDeep(WideAndDeep wnd) {
-        //TODO
+        // TODO
     }
 
     public WideAndDeep() {
     }
 
+    @SuppressWarnings("rawtypes")
     public WideAndDeep(List<Layer> hiddenLayers, DenseLayer finalLayer, EmbedLayer ecl, WideLayer wl,
-                       List<ColumnConfig> columnConfigList, int numericalSize, List<Integer> denseColumnIds,
-                       List<Integer> embedColumnIds, List<Integer> embedOutputs, List<Integer> wideColumnIds,
-                       List<Integer> hiddenNodes, List<String> actiFuncs, float l2reg) {
+            List<ColumnConfig> columnConfigList, int numericalSize, List<Integer> denseColumnIds,
+            List<Integer> embedColumnIds, List<Integer> embedOutputs, List<Integer> wideColumnIds,
+            List<Integer> hiddenNodes, List<String> actiFuncs, float l2reg) {
         this.hiddenLayers = hiddenLayers;
         this.finalLayer = finalLayer;
         this.ecl = ecl;
@@ -87,8 +97,8 @@ public class WideAndDeep implements WeightInitializable{
 
     // TODO support wide-only and dnn-only case
     public WideAndDeep(List<ColumnConfig> columnConfigList, int numericalSize, List<Integer> denseColumnIds,
-                       List<Integer> embedColumnIds, List<Integer> embedOutputs, List<Integer> wideColumnIds,
-                       List<Integer> hiddenNodes, List<String> actiFuncs, float l2reg) {
+            List<Integer> embedColumnIds, List<Integer> embedOutputs, List<Integer> wideColumnIds,
+            List<Integer> hiddenNodes, List<String> actiFuncs, float l2reg) {
         this.columnConfigList = columnConfigList;
         this.numericalSize = numericalSize;
         this.denseColumnIds = denseColumnIds;
@@ -97,7 +107,7 @@ public class WideAndDeep implements WeightInitializable{
         this.wideColumnIds = wideColumnIds;
         this.hiddenNodes = hiddenNodes;
         this.actiFuncs = actiFuncs;
-        this.setL2reg(l2reg);
+        this.l2reg = l2reg;
 
         this.dil = new DenseInputLayer(numericalSize);
 
@@ -113,9 +123,9 @@ public class WideAndDeep implements WeightInitializable{
         this.ecl = new EmbedLayer(embedLayers);
 
         List<WideFieldLayer> wfLayers = new ArrayList<>();
-        for(Integer columnId : wideColumnIds) {
+        for(Integer columnId: wideColumnIds) {
             ColumnConfig config = columnConfigList.get(columnId);
-            WideFieldLayer wfl = new WideFieldLayer(columnId, config.getBinCategory().size() + 1);
+            WideFieldLayer wfl = new WideFieldLayer(columnId, config.getBinCategory().size() + 1, l2reg);
             wfLayers.add(wfl);
         }
 
@@ -152,7 +162,7 @@ public class WideAndDeep implements WeightInitializable{
         float[] dilOuts = this.dil.forward(denseInputs);
         List<float[]> eclOutList = this.ecl.forward(embedInputs);
         float[] inputs = mergeToDenseInputs(dilOuts, eclOutList);
-        for(Layer layer : this.hiddenLayers) {
+        for(Layer layer: this.hiddenLayers) {
             if(layer instanceof DenseLayer) {
                 DenseLayer dl = (DenseLayer) layer;
                 inputs = dl.forward(inputs);
@@ -201,7 +211,7 @@ public class WideAndDeep implements WeightInitializable{
     private List<float[]> splitArray(int outDim, List<EmbedFieldLayer> embedLayers, float[] backInputs) {
         List<float[]> results = new ArrayList<>();
         int srcPos = outDim;
-        for(EmbedFieldLayer el : embedLayers) {
+        for(EmbedFieldLayer el: embedLayers) {
             float[] elBackInputs = new float[el.getIn()];
             System.arraycopy(backInputs, srcPos, elBackInputs, 0, elBackInputs.length);
             srcPos += elBackInputs.length;
@@ -450,12 +460,13 @@ public class WideAndDeep implements WeightInitializable{
     /**
      * TODO: init the weights in WideAndDeeep Model and it's sub module
      */
-    public void initWeights(){
+    public void initWeights() {
         // TODO
         String defaultMode = "get_from_configuration";
         initWeight(defaultMode);
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public void initWeight(String policy) {
         for(Layer layer: this.hiddenLayers) {

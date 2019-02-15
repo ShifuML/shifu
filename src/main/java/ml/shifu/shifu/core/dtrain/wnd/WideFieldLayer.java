@@ -15,6 +15,9 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * {@link WideFieldLayer} is wide part input of WideAndDeep architecture. Per each column a {@link WideFieldLayer}
  * instance and each instanced will be forwarded and backwarded accordingly.
@@ -29,6 +32,11 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
     private float[] weights;
 
     /**
+     * Gradients, using map for sparse updates
+     */
+    private Map<Integer, Float> wGrads;
+
+    /**
      * # of inputs
      */
     private int in;
@@ -38,22 +46,35 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
      */
     private int columnId;
 
-    public WideFieldLayer(int columnId, float[] weights, int in) {
+    /**
+     * L2 level regularization parameter.
+     */
+    private float l2reg;
+
+    /**
+     * Last input used in backward computation
+     */
+    private SparseInput lastInput;
+
+    public WideFieldLayer(int columnId, float[] weights, int in, float l2reg) {
         this.weights = weights;
         this.in = in;
         this.columnId = columnId;
+        this.l2reg = l2reg;
     }
 
-    public WideFieldLayer(int columnId, int in) {
+    public WideFieldLayer(int columnId, int in, float l2reg) {
         this.in = in;
         this.columnId = columnId;
         this.weights = new float[in];
+        this.l2reg = l2reg;
     }
 
     @Override
     public float[] forward(SparseInput si) {
+        this.lastInput = si;
         int valueIndex = si.getValueIndex();
-        return new float[] { this.weights[valueIndex] };
+        return new float[] { si.getValue() * this.weights[valueIndex] };
     }
 
     @Override
@@ -61,11 +82,21 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
         assert backInputs.length == 1;
         float error = backInputs[0];
 
+        int valueIndex = this.lastInput.getValueIndex();
+
+        if(this.wGrads.get(valueIndex) == null) {
+            this.wGrads.put(valueIndex, 0f);
+        }
+        float tmpGrad = this.wGrads.get(valueIndex);
+        tmpGrad += (this.lastInput.getValue() * backInputs[0] * sig); // category value here is 1f
+        tmpGrad += (this.lastInput.getValue() * this.l2reg * this.weights[valueIndex] * sig);// l2 loss
+        this.wGrads.put(valueIndex, tmpGrad);
+
+        // compute backward outputs TODO check if below computation can be removed as it is last layer
         float[] results = new float[this.weights.length];
         for(int i = 0; i < results.length; i++) {
             results[i] = this.weights[i] * error;
         }
-        // TODO sparse version backward wide layer major for gradients here, up backward could be ignored
         return results;
     }
 
@@ -119,8 +150,42 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
         this.columnId = columnId;
     }
 
+    /**
+     * @return the wGrads
+     */
+    public Map<Integer, Float> getwGrads() {
+        return wGrads;
+    }
+
+    /**
+     * @param wGrads
+     *            the wGrads to set
+     */
+    public void setwGrads(Map<Integer, Float> wGrads) {
+        this.wGrads = wGrads;
+    }
+
+    /**
+     * @return the l2reg
+     */
+    public float getL2reg() {
+        return l2reg;
+    }
+
+    /**
+     * @param l2reg
+     *            the l2reg to set
+     */
+    public void setL2reg(float l2reg) {
+        this.l2reg = l2reg;
+    }
+
+    public void initGrads() {
+        this.wGrads = new HashMap<>();
+    }
+
     @Override
     public void initWeight(String policy) {
-        //TODO
+        // TODO
     }
 }

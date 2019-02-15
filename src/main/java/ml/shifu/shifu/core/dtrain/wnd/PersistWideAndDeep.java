@@ -246,7 +246,8 @@ public class PersistWideAndDeep {
         for(int i = 0; i < in; i++) {
             weights[i] = dis.readFloat();
         }
-        return new WideFieldLayer(columnId, weights, in);
+        float l2reg = dis.readFloat();
+        return new WideFieldLayer(columnId, weights, in, l2reg);
     }
 
     private static void writeBiasLayer(BiasLayer bias, DataOutputStream dos) throws IOException {

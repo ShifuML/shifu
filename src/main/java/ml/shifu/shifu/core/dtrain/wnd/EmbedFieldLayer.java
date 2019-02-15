@@ -15,13 +15,19 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
- * {@link EmbedFieldLayer} is for each column like sparse categorical feature. The input of this layer is one-hot encoding
- * while the output is dense vector.
+ * {@link EmbedFieldLayer} is for each column like sparse categorical feature. The input of this layer is one-hot
+ * encoding while the output is dense vector.
  * 
  * <p>
  * Inputs of EmbedLayer is typical sparse input and with this, forward/backward computation can be leveraged with far
  * less computation.
+ * 
+ * <p>
+ * Bias is not supported as in embed with bias, sparse gradients will be missed.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -31,6 +37,11 @@ public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], flo
      * [in, out] array for deep matrix weights
      */
     private float[][] weights;
+
+    /**
+     * Weight gradients in back computation
+     */
+    private Map<Integer, float[]> wGrads;
 
     /**
      * The output dimension
@@ -46,6 +57,11 @@ public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], flo
      * ColumnConfig#columnNum as id for such embedding layer.
      */
     private int columnId;
+
+    /**
+     * Last input used for backward gradients computation
+     */
+    private SparseInput lastInput;
 
     public EmbedFieldLayer(int columnId, float[][] weights, int out, int in) {
         this.columnId = columnId;
@@ -70,13 +86,27 @@ public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], flo
 
     @Override
     public float[] forward(SparseInput si) {
+        this.lastInput = si;
         int valueIndex = si.getValueIndex();
-        return this.getWeights()[valueIndex];
+        float[] results = new float[this.in];
+        for(int i = 0; i < results.length; i++) {
+            results[i] = si.getValue() * this.getWeights()[valueIndex][i];
+        }
+        return results;
     }
 
     @Override
     public float[] backward(float[] backInputs, float sig) {
-        // below backward compute can be ignored if gradients computation is added TODO gradients computation
+        // gradients computation
+        int valueIndex = this.lastInput.getValueIndex();
+        if(this.wGrads.get(valueIndex) == null) {
+            this.wGrads.put(valueIndex, new float[this.out]);
+        }
+        for(int j = 0; j < this.out; j++) {
+            this.wGrads.get(valueIndex)[j] += (this.lastInput.getValue() * backInputs[j] * sig);
+        }
+
+        // backward outputs computation, TODO check if below computation can be removed as it is last layer
         float[] results = new float[backInputs.length];
         for(int i = 0; i < results.length; i++) {
             for(int j = 0; j < backInputs.length; j++) {
@@ -146,8 +176,27 @@ public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], flo
         this.columnId = columnId;
     }
 
+    /**
+     * @return the wGrads
+     */
+    public Map<Integer, float[]> getwGrads() {
+        return wGrads;
+    }
+
+    /**
+     * @param wGrads
+     *            the wGrads to set
+     */
+    public void setwGrads(Map<Integer, float[]> wGrads) {
+        this.wGrads = wGrads;
+    }
+
+    public void initGrads() {
+        this.wGrads = new HashMap<>();
+    }
+
     @Override
     public void initWeight(String policy) {
-        //TODO
+        // TODO
     }
 }

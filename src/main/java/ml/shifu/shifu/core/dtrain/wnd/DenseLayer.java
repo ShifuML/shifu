@@ -31,9 +31,19 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]>, We
     private float[][] weights;
 
     /**
+     * Weight gradients in back computation
+     */
+    private float[][] wGrads;
+
+    /**
      * [out] array for bias in input of such DenseLayer
      */
     private float[] bias;
+
+    /**
+     * Bias gradients in back computation
+     */
+    private float[] bGrads;
 
     /**
      * The output dimension
@@ -49,6 +59,11 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]>, We
      * L2 level regularization parameter.
      */
     private float l2reg;
+
+    /**
+     * Layer inputs used for backward gradients computation, tmp use for computation
+     */
+    private float[] lastInput = null;
 
     public DenseLayer(float[][] weights, float[] bias, int out, int in, float l2reg) {
         this.weights = weights;
@@ -150,6 +165,7 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]>, We
 
     @Override
     public float[] forward(float[] inputs) {
+        this.lastInput = inputs;
         float[] results = new float[this.out];
         for(int i = 0; i < results.length; i++) {
             for(int j = 0; j < inputs.length; j++) {
@@ -162,19 +178,91 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]>, We
 
     @Override
     public float[] backward(float[] backInputs, float sig) {
-        // TODO gradients compute and L2 reg here
-        float[] results = new float[this.in];
+        // gradients compute and L2 reg here
+        if(this.wGrads == null) {// reuse same array
+            this.wGrads = new float[this.in][this.out];
+            for(int i = 0; i < this.in; i++) {
+                this.wGrads[i] = new float[this.out];
+            }
+        }
         for(int i = 0; i < this.in; i++) {
-            for(int j = 0; j < backInputs.length; j++) {
-                results[i] += backInputs[j] * this.weights[i][j];
+            for(int j = 0; j < this.out; j++) {
+                this.wGrads[i][j] += (this.lastInput[i] * backInputs[j] * sig); // basic derivatives
+                this.wGrads[i][j] += (this.l2reg * this.weights[i][j] * sig);// l2 loss derivatives
             }
         }
 
+        if(this.bGrads == null) { // reuse same array
+            this.bGrads = new float[this.bias.length];
+        }
+        for(int j = 0; j < this.out; j++) {
+            this.bGrads[j] = (backInputs[j] * sig); // no need l2 reg here as bias no need
+        }
+
+        // compute back inputs
+        float[] results = new float[this.in];
+        for(int i = 0; i < this.in; i++) {
+            for(int j = 0; j < backInputs.length; j++) {
+                results[i] += (backInputs[j] * this.weights[i][j]);
+            }
+        }
         return results;
+    }
+
+    public void initGrads() {
+        if(this.wGrads == null) {// reuse same array
+            this.wGrads = new float[this.in][this.out];
+            for(int i = 0; i < this.in; i++) {
+                this.wGrads[i] = new float[this.out];
+            }
+        }
+
+        for(int i = 0; i < this.in; i++) {
+            for(int j = 0; j < this.out; j++) {
+                this.wGrads[i][j] = 0f;
+            }
+        }
+
+        if(this.bGrads == null) { // reuse same array
+            this.bGrads = new float[this.bias.length];
+        }
+        for(int j = 0; j < this.out; j++) {
+            this.bGrads[j] = 0f;
+        }
+    }
+
+    /**
+     * @return the wGrads
+     */
+    public float[][] getwGrads() {
+        return wGrads;
+    }
+
+    /**
+     * @param wGrads
+     *            the wGrads to set
+     */
+    public void setwGrads(float[][] wGrads) {
+        this.wGrads = wGrads;
+    }
+
+    /**
+     * @return the bGrads
+     */
+    public float[] getbGrads() {
+        return bGrads;
+    }
+
+    /**
+     * @param bGrads
+     *            the bGrads to set
+     */
+    public void setbGrads(float[] bGrads) {
+        this.bGrads = bGrads;
     }
 
     @Override
     public void initWeight(String policy) {
-        //TODO
+        // TODO
     }
 }

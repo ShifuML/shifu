@@ -125,32 +125,17 @@ public class WNDParams extends HaltBytable implements Combinable<WNDParams> {
         this.validationError = validationError;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see ml.shifu.guagua.io.Combinable#combine(ml.shifu.guagua.io.Bytable)
-     */
     @Override
     public WNDParams combine(WNDParams from) {
         // TODO How to combine workers into one to save memory
         return null;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see ml.shifu.guagua.io.HaltBytable#doWrite(java.io.DataOutput)
-     */
     @Override
     public void doWrite(DataOutput out) throws IOException {
         // TODO serialization
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see ml.shifu.guagua.io.HaltBytable#doReadFields(java.io.DataInput)
-     */
     @Override
     public void doReadFields(DataInput in) throws IOException {
         // TODO de-serialization

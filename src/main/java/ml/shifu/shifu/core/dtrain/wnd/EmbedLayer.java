@@ -32,7 +32,7 @@ public class EmbedLayer implements Layer<List<SparseInput>, List<float[]>, List<
     private List<EmbedFieldLayer> embedLayers;
 
     public EmbedLayer(List<EmbedFieldLayer> embedLayers) {
-        this.setEmbedLayers(embedLayers);
+        this.embedLayers = embedLayers;
     }
 
     @Override
