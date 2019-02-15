@@ -28,7 +28,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
  * constructed according to hidden layer settings. Wide inputs are for wide part computations as LR (no hidden layer).
  * 
  * <p>
- * TODO general chart 
+ * TODO general chart
  * TODO how gradients and computation logic
  * TODO how to scale?
  * 
@@ -206,6 +206,21 @@ public class WideAndDeep implements WeightInitializable {
 
         // no need return final backward outputs as gradients are computed well
         return null;
+    }
+
+    /**
+     * Initialize gradients for training of each epoch
+     */
+    @SuppressWarnings("rawtypes")
+    public void initGrads() {
+        for(Layer layer: hiddenLayers) {
+            if(layer instanceof DenseLayer) {
+                ((DenseLayer) layer).initGrads();
+            }
+        }
+        this.finalLayer.initGrads();
+        this.ecl.initGrads();
+        this.wl.initGrads();
     }
 
     private List<float[]> splitArray(int outDim, List<EmbedFieldLayer> embedLayers, float[] backInputs) {
@@ -455,6 +470,8 @@ public class WideAndDeep implements WeightInitializable {
 
     public void updateWeights(WNDParams params) {
         updateWeights(params.getWnd());
+        // after update weights, gradients should be re newed.
+        this.initGrads();
     }
 
     /**

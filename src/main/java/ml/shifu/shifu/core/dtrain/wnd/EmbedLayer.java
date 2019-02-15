@@ -24,7 +24,8 @@ import java.util.List;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class EmbedLayer implements Layer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>>, WeightInitializable {
+public class EmbedLayer
+        implements Layer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>>, WeightInitializable {
 
     /**
      * List of embed layer which is for each embed column.
@@ -83,6 +84,12 @@ public class EmbedLayer implements Layer<List<SparseInput>, List<float[]>, List<
     public void initWeight(String policy) {
         for(EmbedFieldLayer embedFieldLayer: this.embedLayers) {
             embedFieldLayer.initWeight(policy);
+        }
+    }
+
+    public void initGrads() {
+        for(EmbedFieldLayer embedFieldLayer: this.embedLayers) {
+            embedFieldLayer.initGrads();
         }
     }
 }

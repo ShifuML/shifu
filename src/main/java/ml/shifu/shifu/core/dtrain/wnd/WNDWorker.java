@@ -691,7 +691,7 @@ public class WNDWorker extends
         this.wnd.updateWeights(context.getLastMasterResult());
 
         // compute gradients for each iteration
-        WideAndDeep gradientsWnd = new WideAndDeep(this.wnd); // TODO build a wideanddeep to aggregate gradients
+//        WideAndDeep gradientsWnd = new WideAndDeep(this.wnd); // TODO build a wideanddeep to aggregate gradients
 
         // forward and backward computation
         int trainCnt = trainingData.size(), validCnt = validationData.size();
@@ -716,7 +716,7 @@ public class WNDWorker extends
         params.setValidationCount(validCnt);
         params.setTrainError(trainSumError);
         params.setValidationError(validSumError);
-        params.setWnd(gradientsWnd);
+        params.setWnd(this.wnd);
         return params;
     }
 

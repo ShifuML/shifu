@@ -118,4 +118,10 @@ public class WideLayer implements Layer<List<SparseInput>, float[], float[], Lis
             layer.initWeight(policy);
         }
     }
+
+    public void initGrads() {
+        for(WideFieldLayer layer: this.layers) {
+            layer.initGrads();
+        }
+    }
 }
