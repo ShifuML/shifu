@@ -15,13 +15,13 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import ml.shifu.guagua.io.Bytable;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
-import ml.shifu.guagua.io.Bytable;
 
 /**
  * {@link WideFieldLayer} is wide part input of WideAndDeep architecture. Per each column a {@link WideFieldLayer}
@@ -29,7 +29,7 @@ import ml.shifu.guagua.io.Bytable;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitializable, Bytable {
+public class WideFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitialisable, Bytable {
 
     /**
      * [in] float array of weights
@@ -181,9 +181,8 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
         this.wGrads = new HashMap<>();
     }
 
-    @Override
-    public void initWeight(String policy) {
-        // TODO
+    @Override public void initWeight(InitMethod method) {
+        this.weights = method.getInitialisable().initWeight(this.in);
     }
 
     /* (non-Javadoc)

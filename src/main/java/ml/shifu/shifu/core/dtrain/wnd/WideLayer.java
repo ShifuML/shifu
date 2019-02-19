@@ -33,7 +33,8 @@ import java.util.List;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideLayer implements Layer<List<SparseInput>, float[], float[], List<float[]>>, WeightInitializable, Bytable {
+public class WideLayer
+        implements Layer<List<SparseInput>, float[], float[], List<float[]>>, WeightInitialisable, Bytable {
 
     /**
      * Layers for all wide columns.
@@ -118,10 +119,9 @@ public class WideLayer implements Layer<List<SparseInput>, float[], float[], Lis
         this.bias = bias;
     }
 
-    @Override
-    public void initWeight(String policy) {
+    @Override public void initWeight(InitMethod method) {
         for(WideFieldLayer layer: this.layers) {
-            layer.initWeight(policy);
+            layer.initWeight(method);
         }
     }
 

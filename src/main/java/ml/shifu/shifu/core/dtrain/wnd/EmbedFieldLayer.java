@@ -15,13 +15,13 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import ml.shifu.guagua.io.Bytable;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
-import ml.shifu.guagua.io.Bytable;
 
 /**
  * {@link EmbedFieldLayer} is for each column like sparse categorical feature. The input of this layer is one-hot
@@ -36,7 +36,7 @@ import ml.shifu.guagua.io.Bytable;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitializable, Bytable {
+public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitialisable, Bytable {
 
     /**
      * [in, out] array for deep matrix weights
@@ -194,9 +194,8 @@ public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], flo
         this.wGrads = new HashMap<>();
     }
 
-    @Override
-    public void initWeight(String policy) {
-        // TODO
+    @Override public void initWeight(InitMethod method) {
+        this.weights = method.getInitialisable().initWeight(this.in, this.out);
     }
 
     /* (non-Javadoc)

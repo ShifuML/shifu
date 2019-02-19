@@ -15,18 +15,18 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import ml.shifu.guagua.io.Bytable;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
-import ml.shifu.guagua.io.Bytable;
 
 /**
  * {@link BiasLayer} used in wide part of WideAndDeep architecture.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightInitializable, Bytable {
+public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightInitialisable, Bytable {
 
     private float weight;
 
@@ -64,9 +64,8 @@ public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightIniti
         this.weight = weight;
     }
 
-    @Override
-    public void initWeight(String policy) {
-        // TODO
+    @Override public void initWeight(InitMethod method) {
+        this.weight = method.getInitialisable().initWeight();
     }
 
     /**

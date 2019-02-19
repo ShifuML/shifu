@@ -31,7 +31,7 @@ import java.util.List;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class EmbedLayer
-        implements Layer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>>, WeightInitializable, Bytable {
+        implements Layer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>>, WeightInitialisable, Bytable {
 
     /**
      * List of embed layer which is for each embed column.
@@ -86,10 +86,9 @@ public class EmbedLayer
         this.embedLayers = embedLayers;
     }
 
-    @Override
-    public void initWeight(String policy) {
+    @Override public void initWeight(InitMethod method) {
         for(EmbedFieldLayer embedFieldLayer: this.embedLayers) {
-            embedFieldLayer.initWeight(policy);
+            embedFieldLayer.initWeight(method);
         }
     }
 

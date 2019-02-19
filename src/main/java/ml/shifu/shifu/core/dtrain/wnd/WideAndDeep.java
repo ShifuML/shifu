@@ -39,7 +39,7 @@ import java.util.Map;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideAndDeep implements WeightInitializable, Bytable {
+public class WideAndDeep implements WeightInitialisable, Bytable {
 
     private DenseInputLayer dil;
 
@@ -481,23 +481,22 @@ public class WideAndDeep implements WeightInitializable, Bytable {
      * TODO: init the weights in WideAndDeeep Model and it's sub module
      */
     public void initWeights() {
-        // TODO
-        String defaultMode = "get_from_configuration";
+        // TODO as a input from the field
+        InitMethod defaultMode = InitMethod.ZERO;
         initWeight(defaultMode);
     }
 
     @SuppressWarnings("rawtypes")
-    @Override
-    public void initWeight(String policy) {
+    @Override public void initWeight(InitMethod method) {
         for(Layer layer: this.hiddenLayers) {
             // There are two type of layer: DenseLayer, Activation. We only need to init DenseLayer
             if(layer instanceof DenseLayer) {
-                ((DenseLayer) layer).initWeight(policy);
+                ((DenseLayer) layer).initWeight(method);
             }
         }
-        this.finalLayer.initWeight(policy);
-        this.ecl.initWeight(policy);
-        this.wl.initWeight(policy);
+        this.finalLayer.initWeight(method);
+        this.ecl.initWeight(method);
+        this.wl.initWeight(method);
     }
 
     /* (non-Javadoc)
