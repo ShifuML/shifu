@@ -15,11 +15,12 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import ml.shifu.guagua.io.Bytable;
+import ml.shifu.shifu.core.dtrain.AssertUtils;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
-import ml.shifu.guagua.io.Bytable;
 
 /**
  * {@link DenseInputLayer} denotes dense input number array. Forward computation is a wrapper with just current input
@@ -45,7 +46,8 @@ public class DenseInputLayer implements Layer<float[], float[], float[], float[]
 
     @Override
     public float[] forward(float[] inputs) {
-        assert inputs.length == this.out;
+        AssertUtils.assertNotNull(inputs);
+        AssertUtils.assertEquals(inputs, this.out);
         return inputs;
     }
 
@@ -60,7 +62,7 @@ public class DenseInputLayer implements Layer<float[], float[], float[], float[]
     @Override
     public void write(DataOutput out) throws IOException {
         // TODO Auto-generated method stub
-        
+
     }
 
     /* (non-Javadoc)
@@ -69,7 +71,7 @@ public class DenseInputLayer implements Layer<float[], float[], float[], float[]
     @Override
     public void readFields(DataInput in) throws IOException {
         // TODO Auto-generated method stub
-        
+
     }
 
 }
