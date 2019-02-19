@@ -15,13 +15,14 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import ml.shifu.guagua.io.Bytable;
+import ml.shifu.shifu.core.dtrain.AssertUtils;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import ml.shifu.guagua.io.Bytable;
 
 /**
  * {@link EmbedLayer} merges all embedding layers together and distributes forward and backward computation to
@@ -52,7 +53,7 @@ public class EmbedLayer
 
     @Override
     public List<float[]> forward(List<SparseInput> inputList) {
-        assert this.getEmbedLayers().size() == inputList.size();
+        AssertUtils.assertListNotNullAndSizeEqual(this.getEmbedLayers(), inputList);
         List<float[]> list = new ArrayList<>();
         for(int i = 0; i < this.getEmbedLayers().size(); i++) {
             list.add(this.getEmbedLayers().get(i).forward(inputList.get(i)));
@@ -62,7 +63,7 @@ public class EmbedLayer
 
     @Override
     public List<float[]> backward(List<float[]> backInputList, float sig) {
-        assert this.getEmbedLayers().size() == backInputList.size();
+        AssertUtils.assertListNotNullAndSizeEqual(this.getEmbedLayers(), backInputList);
         List<float[]> list = new ArrayList<>();
         for(int i = 0; i < this.getEmbedLayers().size(); i++) {
             list.add(this.getEmbedLayers().get(i).backward(backInputList.get(i), sig));
@@ -104,7 +105,7 @@ public class EmbedLayer
     @Override
     public void write(DataOutput out) throws IOException {
         // TODO Auto-generated method stub
-        
+
     }
 
     /* (non-Javadoc)
@@ -113,6 +114,6 @@ public class EmbedLayer
     @Override
     public void readFields(DataInput in) throws IOException {
         // TODO Auto-generated method stub
-        
+
     }
 }

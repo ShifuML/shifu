@@ -15,13 +15,14 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import ml.shifu.guagua.io.Bytable;
+import ml.shifu.shifu.core.dtrain.AssertUtils;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import ml.shifu.guagua.io.Bytable;
 
 /**
  * {@link WideLayer} defines wide part of WideAndDeep. It includes a list of {@link WideFieldLayer} instances (each one
@@ -60,7 +61,7 @@ public class WideLayer implements Layer<List<SparseInput>, float[], float[], Lis
 
     @Override
     public float[] forward(List<SparseInput> inputList) {
-        assert this.getLayers().size() == inputList.size();
+        AssertUtils.assertListNotNullAndSizeEqual(this.getLayers(), inputList);
         float[] results = new float[layers.get(0).getOutDim()];
         for(int i = 0; i < getLayers().size(); i++) {
             float[] fOuts = this.getLayers().get(i).forward(inputList.get(i));
@@ -136,7 +137,7 @@ public class WideLayer implements Layer<List<SparseInput>, float[], float[], Lis
     @Override
     public void write(DataOutput out) throws IOException {
         // TODO Auto-generated method stub
-        
+
     }
 
     /* (non-Javadoc)
@@ -145,6 +146,6 @@ public class WideLayer implements Layer<List<SparseInput>, float[], float[], Lis
     @Override
     public void readFields(DataInput in) throws IOException {
         // TODO Auto-generated method stub
-        
+
     }
 }
