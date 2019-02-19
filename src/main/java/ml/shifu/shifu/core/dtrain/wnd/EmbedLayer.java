@@ -15,8 +15,13 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import ml.shifu.guagua.io.Bytable;
 
 /**
  * {@link EmbedLayer} merges all embedding layers together and distributes forward and backward computation to
@@ -25,7 +30,7 @@ import java.util.List;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class EmbedLayer
-        implements Layer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>>, WeightInitializable {
+        implements Layer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>>, WeightInitializable, Bytable {
 
     /**
      * List of embed layer which is for each embed column.
@@ -91,5 +96,23 @@ public class EmbedLayer
         for(EmbedFieldLayer embedFieldLayer: this.embedLayers) {
             embedFieldLayer.initGrads();
         }
+    }
+
+    /* (non-Javadoc)
+     * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
+     */
+    @Override
+    public void write(DataOutput out) throws IOException {
+        // TODO Auto-generated method stub
+        
+    }
+
+    /* (non-Javadoc)
+     * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
+     */
+    @Override
+    public void readFields(DataInput in) throws IOException {
+        // TODO Auto-generated method stub
+        
     }
 }

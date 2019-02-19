@@ -15,6 +15,12 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+import ml.shifu.guagua.io.Bytable;
+
 /**
  * {@link DenseLayer} defines normal hidden layer in neural network while activation is not included but in one
  * specified layer.
@@ -23,7 +29,7 @@ package ml.shifu.shifu.core.dtrain.wnd;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class DenseLayer implements Layer<float[], float[], float[], float[]>, WeightInitializable {
+public class DenseLayer implements Layer<float[], float[], float[], float[]>, WeightInitializable, Bytable {
 
     /**
      * [in, out] array for deep matrix weights
@@ -179,21 +185,11 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]>, We
     @Override
     public float[] backward(float[] backInputs, float sig) {
         // gradients compute and L2 reg here
-        if(this.wGrads == null) {// reuse same array
-            this.wGrads = new float[this.in][this.out];
-            for(int i = 0; i < this.in; i++) {
-                this.wGrads[i] = new float[this.out];
-            }
-        }
         for(int i = 0; i < this.in; i++) {
             for(int j = 0; j < this.out; j++) {
                 this.wGrads[i][j] += (this.lastInput[i] * backInputs[j] * sig); // basic derivatives
                 this.wGrads[i][j] += (this.l2reg * this.weights[i][j] * sig);// l2 loss derivatives
             }
-        }
-
-        if(this.bGrads == null) { // reuse same array
-            this.bGrads = new float[this.bias.length];
         }
         for(int j = 0; j < this.out; j++) {
             this.bGrads[j] = (backInputs[j] * sig); // no need l2 reg here as bias no need
@@ -216,7 +212,6 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]>, We
                 this.wGrads[i] = new float[this.out];
             }
         }
-
         for(int i = 0; i < this.in; i++) {
             for(int j = 0; j < this.out; j++) {
                 this.wGrads[i][j] = 0f;
@@ -264,5 +259,23 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]>, We
     @Override
     public void initWeight(String policy) {
         // TODO
+    }
+
+    /* (non-Javadoc)
+     * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
+     */
+    @Override
+    public void write(DataOutput out) throws IOException {
+        // TODO Auto-generated method stub
+        
+    }
+
+    /* (non-Javadoc)
+     * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
+     */
+    @Override
+    public void readFields(DataInput in) throws IOException {
+        // TODO Auto-generated method stub
+        
     }
 }

@@ -15,8 +15,13 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+
+import ml.shifu.guagua.io.Bytable;
 
 /**
  * {@link WideFieldLayer} is wide part input of WideAndDeep architecture. Per each column a {@link WideFieldLayer}
@@ -24,7 +29,7 @@ import java.util.Map;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitializable {
+public class WideFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitializable, Bytable {
 
     /**
      * [in] float array of weights
@@ -80,24 +85,16 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
     @Override
     public float[] backward(float[] backInputs, float sig) {
         assert backInputs.length == 1;
-        float error = backInputs[0];
 
         int valueIndex = this.lastInput.getValueIndex();
-
-        if(this.wGrads.get(valueIndex) == null) {
-            this.wGrads.put(valueIndex, 0f);
-        }
-        float tmpGrad = this.wGrads.get(valueIndex);
+        Float grad = this.wGrads.get(valueIndex);
+        float tmpGrad = grad == null ? 0 : grad;
         tmpGrad += (this.lastInput.getValue() * backInputs[0] * sig); // category value here is 1f
         tmpGrad += (this.lastInput.getValue() * this.l2reg * this.weights[valueIndex] * sig);// l2 loss
         this.wGrads.put(valueIndex, tmpGrad);
 
-        // compute backward outputs TODO check if below computation can be removed as it is last layer
-        float[] results = new float[this.weights.length];
-        for(int i = 0; i < results.length; i++) {
-            results[i] = this.weights[i] * error;
-        }
-        return results;
+        // no need compute backward outputs as it is last layer
+        return null;
     }
 
     @Override
@@ -187,5 +184,23 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
     @Override
     public void initWeight(String policy) {
         // TODO
+    }
+
+    /* (non-Javadoc)
+     * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
+     */
+    @Override
+    public void write(DataOutput out) throws IOException {
+        // TODO Auto-generated method stub
+        
+    }
+
+    /* (non-Javadoc)
+     * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
+     */
+    @Override
+    public void readFields(DataInput in) throws IOException {
+        // TODO Auto-generated method stub
+        
     }
 }

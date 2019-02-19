@@ -15,12 +15,18 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+import ml.shifu.guagua.io.Bytable;
+
 /**
  * {@link BiasLayer} used in wide part of WideAndDeep architecture.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightInitializable {
+public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightInitializable, Bytable {
 
     private float weight;
 
@@ -45,7 +51,7 @@ public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightIniti
 
     @Override
     public Float backward(Float backInput, float sig) {
-        this.wGrad = backInput; // no need l2 reg in bias layer
+        this.wGrad = backInput * sig; // no need l2 reg in bias layer
         // no need backward output computation as it is last layer.
         return backInput * weight;
     }
@@ -76,5 +82,23 @@ public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightIniti
      */
     public void setwGrad(float wGrad) {
         this.wGrad = wGrad;
+    }
+
+    /* (non-Javadoc)
+     * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
+     */
+    @Override
+    public void write(DataOutput out) throws IOException {
+        // TODO Auto-generated method stub
+        
+    }
+
+    /* (non-Javadoc)
+     * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
+     */
+    @Override
+    public void readFields(DataInput in) throws IOException {
+        // TODO Auto-generated method stub
+        
     }
 }

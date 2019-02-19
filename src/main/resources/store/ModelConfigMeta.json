@@ -609,6 +609,11 @@
                         "directive": "input",
                         "defval" : 0.1
                     }, {
+                        "name" : "WNDL2Reg",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 0.01
+                    }, {
                     	"name" : "TF.optimizer",
                     	"type" : "text",
                     	"directive" : "select",

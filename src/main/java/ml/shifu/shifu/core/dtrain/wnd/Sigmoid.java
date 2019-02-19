@@ -33,7 +33,7 @@ public class Sigmoid extends Activation {
 
         float[] results = new float[in.length];
         for(int i = 0; i < results.length; i++) {
-            results[i] = (float) (1 / (1 + Math.min(1.0E19, Math.exp(-20 * in[i]))));
+            results[i] = (float) (1 / (1 + Math.min(1.0E19, Math.exp(-1 * in[i]))));
         }
 
         // temp saved for backward usage

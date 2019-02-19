@@ -15,9 +15,13 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import ml.shifu.guagua.io.Bytable;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 
 /**
@@ -34,7 +38,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideAndDeep implements WeightInitializable {
+public class WideAndDeep implements WeightInitializable, Bytable {
 
     private DenseInputLayer dil;
 
@@ -495,5 +499,23 @@ public class WideAndDeep implements WeightInitializable {
         this.finalLayer.initWeight(policy);
         this.ecl.initWeight(policy);
         this.wl.initWeight(policy);
+    }
+
+    /* (non-Javadoc)
+     * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
+     */
+    @Override
+    public void write(DataOutput out) throws IOException {
+        // TODO Auto-generated method stub
+        
+    }
+
+    /* (non-Javadoc)
+     * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
+     */
+    @Override
+    public void readFields(DataInput in) throws IOException {
+        // TODO Auto-generated method stub
+        
     }
 }

@@ -15,8 +15,13 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+
+import ml.shifu.guagua.io.Bytable;
 
 /**
  * {@link EmbedFieldLayer} is for each column like sparse categorical feature. The input of this layer is one-hot
@@ -31,7 +36,7 @@ import java.util.Map;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitializable {
+public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitializable, Bytable {
 
     /**
      * [in, out] array for deep matrix weights
@@ -106,14 +111,8 @@ public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], flo
             this.wGrads.get(valueIndex)[j] += (this.lastInput.getValue() * backInputs[j] * sig);
         }
 
-        // backward outputs computation, TODO check if below computation can be removed as it is last layer
-        float[] results = new float[backInputs.length];
-        for(int i = 0; i < results.length; i++) {
-            for(int j = 0; j < backInputs.length; j++) {
-                results[i] += this.getWeights()[i][j] * backInputs[j];
-            }
-        }
-        return results;
+        // no need compute backward outputs as it is last layer
+        return null;
     }
 
     /**
@@ -198,5 +197,23 @@ public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], flo
     @Override
     public void initWeight(String policy) {
         // TODO
+    }
+
+    /* (non-Javadoc)
+     * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
+     */
+    @Override
+    public void write(DataOutput out) throws IOException {
+        // TODO Auto-generated method stub
+        
+    }
+
+    /* (non-Javadoc)
+     * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
+     */
+    @Override
+    public void readFields(DataInput in) throws IOException {
+        // TODO Auto-generated method stub
+        
     }
 }

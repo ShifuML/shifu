@@ -15,17 +15,32 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+import ml.shifu.guagua.io.Bytable;
+
 /**
  * {@link Activation} is basic abstraction for different kind of activation methods like sigmoid, ReLU, tanh ...
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public abstract class Activation implements Layer<float[], float[], float[], float[]> {
+public abstract class Activation implements Layer<float[], float[], float[], float[]>, Bytable {
 
     @Override
     public int getOutDim() {
         // no need call output dimension, as Activation usually for 1:1 mapping between inputs and outputs.
         throw new UnsupportedOperationException();
+    }
+    
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
     }
 
 }

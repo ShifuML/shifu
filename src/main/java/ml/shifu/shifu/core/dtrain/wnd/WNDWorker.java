@@ -690,10 +690,7 @@ public class WNDWorker extends
         // update master global model into worker WideAndDeep graph
         this.wnd.updateWeights(context.getLastMasterResult());
 
-        // compute gradients for each iteration
-//        WideAndDeep gradientsWnd = new WideAndDeep(this.wnd); // TODO build a wideanddeep to aggregate gradients
-
-        // forward and backward computation
+        // forward and backward compute gradients for each iteration
         int trainCnt = trainingData.size(), validCnt = validationData.size();
         double trainSumError = 0d, validSumError = 0d;
         for(Data data: trainingData) {

@@ -15,13 +15,19 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+import ml.shifu.guagua.io.Bytable;
+
 /**
  * {@link DenseInputLayer} denotes dense input number array. Forward computation is a wrapper with just current input
  * array. {@linkplain #backward(float[], float)} no need to be supported as it should not be called.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class DenseInputLayer implements Layer<float[], float[], float[], float[]> {
+public class DenseInputLayer implements Layer<float[], float[], float[], float[]>, Bytable {
 
     /**
      * Output dimension.
@@ -46,6 +52,24 @@ public class DenseInputLayer implements Layer<float[], float[], float[], float[]
     @Override
     public float[] backward(float[] backInputs, float sig) {
         throw new UnsupportedOperationException();
+    }
+
+    /* (non-Javadoc)
+     * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
+     */
+    @Override
+    public void write(DataOutput out) throws IOException {
+        // TODO Auto-generated method stub
+        
+    }
+
+    /* (non-Javadoc)
+     * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
+     */
+    @Override
+    public void readFields(DataInput in) throws IOException {
+        // TODO Auto-generated method stub
+        
     }
 
 }
