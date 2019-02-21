@@ -29,7 +29,7 @@ import java.io.IOException;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class DenseLayer implements Layer<float[], float[], float[], float[]>, WeightInitialisable, Bytable {
+public class DenseLayer implements Layer<float[], float[], float[], float[]>, WeightInitializer, Bytable {
 
     /**
      * [in, out] array for deep matrix weights

@@ -44,46 +44,4 @@ public interface Initialisable {
      */
     float[][] initWeight(int row, int col);
 
-    /**
-     * Convert double number to float
-     *
-     * @param d the input double value
-     * @return the float value converted
-     */
-    static float getFloat(double d) {
-        return Double.valueOf(d).floatValue();
-    }
-
-    /**
-     * Convert double array to float array
-     *
-     * @param dArray the double array to convert
-     * @param width  the array's width
-     * @return the float array after converted
-     */
-    static float[] getFloat(double[] dArray, int width) {
-        float[] weight = new float[width];
-        for(int i = 0; i < width; i++) {
-            weight[i] = getFloat(dArray[i]);
-        }
-        return weight;
-    }
-
-    /**
-     * Convert two dimension double array to float array
-     *
-     * @param dArray the double array to convert
-     * @param row    the row number
-     * @param col    the column number
-     * @return the float array after converted
-     */
-    static float[][] getFloat(double[][] dArray, int row, int col) {
-        float[][] weight = new float[row][col];
-        for(int i = 0; i < row; i++) {
-            for(int j = 0; j < col; j++) {
-                weight[i][j] = getFloat(dArray[i][j]);
-            }
-        }
-        return weight;
-    }
 }

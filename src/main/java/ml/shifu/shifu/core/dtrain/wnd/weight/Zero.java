@@ -27,16 +27,19 @@ public class Zero implements Initialisable {
      *
      * @return the init number.
      */
-    @Override public float initWeight() {
+    @Override
+    public float initWeight() {
         return 0;
     }
 
     /**
      * Init a one dimensional float array with specific length
      *
-     * @param length@return the init array
+     * @param length
+     * @return the init array
      */
-    @Override public float[] initWeight(int length) {
+    @Override
+    public float[] initWeight(int length) {
         return new float[length];
     }
 
@@ -47,7 +50,8 @@ public class Zero implements Initialisable {
      * @param col the column number
      * @return the init array
      */
-    @Override public float[][] initWeight(int row, int col) {
+    @Override
+    public float[][] initWeight(int row, int col) {
         return new float[row][col];
     }
 }

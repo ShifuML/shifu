@@ -34,7 +34,7 @@ import java.util.List;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class WideLayer
-        implements Layer<List<SparseInput>, float[], float[], List<float[]>>, WeightInitialisable, Bytable {
+        implements Layer<List<SparseInput>, float[], float[], List<float[]>>, WeightInitializer, Bytable {
 
     /**
      * Layers for all wide columns.

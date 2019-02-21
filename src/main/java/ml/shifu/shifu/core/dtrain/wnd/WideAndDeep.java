@@ -39,7 +39,7 @@ import java.util.Map;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideAndDeep implements WeightInitialisable, Bytable {
+public class WideAndDeep implements WeightInitializer, Bytable {
 
     private DenseInputLayer dil;
 
@@ -481,7 +481,6 @@ public class WideAndDeep implements WeightInitialisable, Bytable {
      * TODO: init the weights in WideAndDeeep Model and it's sub module
      */
     public void initWeights() {
-        // TODO as a input from the field
         InitMethod defaultMode = InitMethod.ZERO;
         initWeight(defaultMode);
     }

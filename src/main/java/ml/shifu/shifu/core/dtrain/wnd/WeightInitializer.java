@@ -28,7 +28,7 @@ import ml.shifu.shifu.core.dtrain.wnd.weight.Zero;
  *
  * @author : Wu Devin (haifwu@paypal.com)
  */
-public interface WeightInitialisable {
+public interface WeightInitializer {
     enum InitMethod {
         /**
          * Init all weight with 0

@@ -36,7 +36,7 @@ import java.util.Map;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitialisable, Bytable {
+public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitializer, Bytable {
 
     /**
      * [in, out] array for deep matrix weights

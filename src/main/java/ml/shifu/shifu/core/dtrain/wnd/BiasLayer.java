@@ -26,7 +26,7 @@ import java.io.IOException;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightInitialisable, Bytable {
+public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightInitializer, Bytable {
 
     private float weight;
 

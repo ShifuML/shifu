@@ -31,7 +31,7 @@ import java.util.List;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class EmbedLayer
-        implements Layer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>>, WeightInitialisable, Bytable {
+        implements Layer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>>, WeightInitializer, Bytable {
 
     /**
      * List of embed layer which is for each embed column.

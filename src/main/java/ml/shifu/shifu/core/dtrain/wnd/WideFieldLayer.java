@@ -29,7 +29,7 @@ import java.util.Map;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitialisable, Bytable {
+public class WideFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitializer, Bytable {
 
     /**
      * [in] float array of weights

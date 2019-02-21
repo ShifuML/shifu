@@ -24,7 +24,7 @@ import ml.shifu.shifu.core.dtrain.random.AbstractWeightRandomizer;
  */
 public class WeightRandom implements Initialisable {
     private AbstractWeightRandomizer randomizer;
-    private static final double NO_USE = 666;
+    private static final float NO_USE = 666f;
 
     public WeightRandom(AbstractWeightRandomizer randomizer) {
         this.randomizer = randomizer;
@@ -35,8 +35,9 @@ public class WeightRandom implements Initialisable {
      *
      * @return the init number.
      */
-    @Override public float initWeight() {
-        return Initialisable.getFloat(this.randomizer.randomize(NO_USE));
+    @Override
+    public float initWeight() {
+        return this.randomizer.randomize(NO_USE);
     }
 
     /**
@@ -44,10 +45,11 @@ public class WeightRandom implements Initialisable {
      *
      * @param length@return the init array
      */
-    @Override public float[] initWeight(int length) {
-        double[] weight = new double[length];
+    @Override
+    public float[] initWeight(int length) {
+        float[] weight = new float[length];
         this.randomizer.randomize(weight);
-        return Initialisable.getFloat(weight, length);
+        return weight;
     }
 
     /**
@@ -57,9 +59,11 @@ public class WeightRandom implements Initialisable {
      * @param col the column number
      * @return the init array
      */
-    @Override public float[][] initWeight(int row, int col) {
-        double[][] weight = new double[row][col];
+    @Override
+    public float[][] initWeight(int row, int col) {
+        float[][] weight = new float[row][col];
         this.randomizer.randomize(weight);
-        return Initialisable.getFloat(weight, row, col);
+        return weight;
     }
+
 }
