@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ml.shifu.guagua.io.Bytable;
+import ml.shifu.shifu.core.dtrain.AssertUtils;
 import ml.shifu.shifu.util.Tuple;
 
 /**
@@ -75,7 +76,7 @@ public class WideLayer implements Layer<Tuple<List<SparseInput>, float[]>, float
 
     @Override
     public float[] forward(Tuple<List<SparseInput>, float[]> input) {
-        assert this.getLayers().size() == input.getFirst().size();
+        AssertUtils.assertListNotNullAndSizeEqual(this.getLayers(), input.getFirst());
         float[] results = new float[layers.get(0).getOutDim()];
         for(int i = 0; i < getLayers().size(); i++) {
             float[] fOuts = this.getLayers().get(i).forward(input.getFirst().get(i));

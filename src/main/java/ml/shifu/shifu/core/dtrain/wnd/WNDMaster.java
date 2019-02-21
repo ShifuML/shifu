@@ -143,11 +143,12 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
         }
         List<Integer> numericalIds = DTrainUtils.getNumericalIds(this.columnConfigList, isAfterVarSelect);
         List<Integer> wideColumnIds = DTrainUtils.getCategoricalIds(columnConfigList, isAfterVarSelect);
+        Map<Integer, Integer> idBinCateSizeMap = DTrainUtils.getIdBinCategorySizeMap(columnConfigList);
         int numLayers = (Integer) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
         Float l2reg = (Float) this.validParams.get(CommonConstants.WND_L2_REG);
-        this.wnd = new WideAndDeep(columnConfigList, numInputs, numericalIds, embedColumnIds, embedOutputList,
+        this.wnd = new WideAndDeep(idBinCateSizeMap, numInputs, numericalIds, embedColumnIds, embedOutputList,
                 wideColumnIds, hiddenNodes, actFunc, l2reg);
     }
 

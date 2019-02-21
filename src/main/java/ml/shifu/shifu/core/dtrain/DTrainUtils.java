@@ -15,13 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
@@ -35,16 +28,11 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
-
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.encog.Encog;
-import org.encog.engine.network.activation.ActivationLOG;
-import org.encog.engine.network.activation.ActivationLinear;
-import org.encog.engine.network.activation.ActivationSIN;
-import org.encog.engine.network.activation.ActivationSigmoid;
-import org.encog.engine.network.activation.ActivationTANH;
+import org.encog.engine.network.activation.*;
 import org.encog.mathutil.randomize.GaussianRandomizer;
 import org.encog.mathutil.randomize.NguyenWidrowRandomizer;
 import org.encog.neural.networks.BasicNetwork;
@@ -52,6 +40,9 @@ import org.encog.neural.networks.layers.BasicLayer;
 import org.encog.neural.networks.structure.NeuralStructure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.*;
 
 /**
  * Helper class for NN distributed training.
@@ -555,5 +546,21 @@ public final class DTrainUtils {
             }
         }
         return val;
+    }
+
+    /**
+     * @param columnConfigList the column config list of the model
+     * @return the map mapping from column Id to bin category list size
+     */
+    public static Map<Integer, Integer> getIdBinCategorySizeMap(List<ColumnConfig> columnConfigList) {
+        Map<Integer, Integer> idBinCategoryMap = new HashMap<>(columnConfigList.size());
+        for(ColumnConfig columnConfig : columnConfigList) {
+            if(columnConfig.getBinCategory() != null) {
+                idBinCategoryMap.put(columnConfig.getColumnNum(), columnConfig.getBinCategory().size());
+            } else {
+                idBinCategoryMap.put(columnConfig.getColumnNum(), 0);
+            }
+        }
+        return idBinCategoryMap;
     }
 }

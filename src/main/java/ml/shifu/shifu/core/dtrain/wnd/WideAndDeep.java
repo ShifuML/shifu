@@ -15,23 +15,26 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import ml.shifu.guagua.io.Bytable;
+import ml.shifu.shifu.core.dtrain.AssertUtils;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import ml.shifu.guagua.io.Bytable;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.util.Tuple;
-
 /**
  * {@link WideAndDeep} graph definition which is for whole network including deep side and wide side.
- * 
+ *
  * <p>
  * WideAndDeep is split into dense inputs, embed inputs and wide inputs. With dense inputs + embed inputs, DNN is
  * constructed according to hidden layer settings. Wide inputs are for wide part computations as LR (no hidden layer).
- * 
+ *
  * <p>
  * TODO general chart
  * TODO how gradients and computation logic
@@ -52,7 +55,7 @@ public class WideAndDeep implements WeightInitializable, Bytable {
 
     private WideLayer wl;
 
-    private List<ColumnConfig> columnConfigList;
+    private Map<Integer, Integer> idBinCateSizeMap;
 
     private int numericalSize;
 
@@ -77,16 +80,15 @@ public class WideAndDeep implements WeightInitializable, Bytable {
     public WideAndDeep() {
     }
 
-    @SuppressWarnings("rawtypes")
-    public WideAndDeep(List<Layer> hiddenLayers, DenseLayer finalLayer, EmbedLayer ecl, WideLayer wl,
-            List<ColumnConfig> columnConfigList, int numericalSize, List<Integer> denseColumnIds,
+    @SuppressWarnings("rawtypes") public WideAndDeep(List<Layer> hiddenLayers, DenseLayer finalLayer, EmbedLayer ecl,
+            WideLayer wl, Map<Integer, Integer> idBinCateSizeMap, int numericalSize, List<Integer> denseColumnIds,
             List<Integer> embedColumnIds, List<Integer> embedOutputs, List<Integer> wideColumnIds,
             List<Integer> hiddenNodes, List<String> actiFuncs, float l2reg) {
         this.hiddenLayers = hiddenLayers;
         this.finalLayer = finalLayer;
         this.ecl = ecl;
         this.wl = wl;
-        this.columnConfigList = columnConfigList;
+        this.idBinCateSizeMap = idBinCateSizeMap;
         this.numericalSize = numericalSize;
         this.denseColumnIds = denseColumnIds;
         this.embedColumnIds = embedColumnIds;
@@ -96,15 +98,15 @@ public class WideAndDeep implements WeightInitializable, Bytable {
         this.actiFuncs = actiFuncs;
         this.l2reg = l2reg;
 
-        assert embedColumnIds.size() == embedOutputs.size();
-        assert hiddenNodes.size() == actiFuncs.size();
+        AssertUtils.assertListNotNullAndSizeEqual(embedColumnIds, embedOutputs);
+        AssertUtils.assertListNotNullAndSizeEqual(hiddenLayers, actiFuncs);
     }
 
     // TODO support wide-only and dnn-only case
-    public WideAndDeep(List<ColumnConfig> columnConfigList, int numericalSize, List<Integer> denseColumnIds,
+    public WideAndDeep(Map<Integer, Integer> idBinCateSizeMap, int numericalSize, List<Integer> denseColumnIds,
             List<Integer> embedColumnIds, List<Integer> embedOutputs, List<Integer> wideColumnIds,
             List<Integer> hiddenNodes, List<String> actiFuncs, float l2reg) {
-        this.columnConfigList = columnConfigList;
+        this.idBinCateSizeMap = idBinCateSizeMap;
         this.numericalSize = numericalSize;
         this.denseColumnIds = denseColumnIds;
         this.embedColumnIds = embedColumnIds;
@@ -116,21 +118,20 @@ public class WideAndDeep implements WeightInitializable, Bytable {
 
         this.dil = new DenseInputLayer(numericalSize);
 
-        assert embedColumnIds.size() == embedOutputs.size();
+        AssertUtils.assertListNotNullAndSizeEqual(embedColumnIds, embedOutputs);
         List<EmbedFieldLayer> embedLayers = new ArrayList<>();
         for(int i = 0; i < embedColumnIds.size(); i++) {
             Integer columnId = embedColumnIds.get(i);
-            ColumnConfig config = columnConfigList.get(columnId);
             // +1 to append missing category
-            EmbedFieldLayer el = new EmbedFieldLayer(columnId, embedOutputs.get(i), config.getBinCategory().size() + 1);
+            EmbedFieldLayer el = new EmbedFieldLayer(columnId, embedOutputs.get(i),
+                    this.idBinCateSizeMap.get(columnId) + 1);
             embedLayers.add(el);
         }
         this.ecl = new EmbedLayer(embedLayers);
 
         List<WideFieldLayer> wfLayers = new ArrayList<>();
-        for(Integer columnId: wideColumnIds) {
-            ColumnConfig config = columnConfigList.get(columnId);
-            WideFieldLayer wfl = new WideFieldLayer(columnId, config.getBinCategory().size() + 1, l2reg);
+        for(Integer columnId : wideColumnIds) {
+            WideFieldLayer wfl = new WideFieldLayer(columnId, this.idBinCateSizeMap.get(columnId) + 1, l2reg);
             wfLayers.add(wfl);
         }
 
@@ -139,7 +140,7 @@ public class WideAndDeep implements WeightInitializable, Bytable {
 
         int preHiddenInputs = dil.getOutDim() + ecl.getOutDim();
 
-        assert hiddenNodes.size() == actiFuncs.size();
+        AssertUtils.assertListNotNullAndSizeEqual(hiddenNodes, actiFuncs);
         this.hiddenLayers = new ArrayList<>(hiddenNodes.size() * 2);
         for(int i = 0; i < hiddenNodes.size(); i++) {
             int hiddenOutputs = hiddenNodes.get(i);
@@ -180,7 +181,7 @@ public class WideAndDeep implements WeightInitializable, Bytable {
         float[] dnnLogits = this.finalLayer.forward(inputs);
 
         // merge wide and deep together
-        assert wlLogits.length == dnnLogits.length;
+        AssertUtils.assertFloatArrayNotNullAndLengthEqual(wlLogits, dnnLogits);
         float[] logits = new float[wlLogits.length];
         for(int i = 0; i < logits.length; i++) {
             logits[i] += wlLogits[i] + dnnLogits[i];
@@ -339,18 +340,18 @@ public class WideAndDeep implements WeightInitializable, Bytable {
     }
 
     /**
-     * @return the columnConfigList
+     * @return the idBinCateSizeMap
      */
-    public List<ColumnConfig> getColumnConfigList() {
-        return columnConfigList;
+    public Map<Integer, Integer> getIdBinCateSizeMap() {
+        return idBinCateSizeMap;
     }
 
     /**
-     * @param columnConfigList
-     *            the columnConfigList to set
+     * @param idBinCateSizeMap
+     *            the idBinCateSizeMap to set
      */
-    public void setColumnConfigList(List<ColumnConfig> columnConfigList) {
-        this.columnConfigList = columnConfigList;
+    public void setIdBinCateSizeMap(Map<Integer, Integer> idBinCateSizeMap) {
+        this.idBinCateSizeMap = idBinCateSizeMap;
     }
 
     /**

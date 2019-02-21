@@ -1,13 +1,30 @@
+/*
+ * Copyright [2013-2019] PayPal Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package ml.shifu.shifu.core.dtrain.wnd;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.core.dtrain.AssertUtils;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-
+import java.util.Map;
 
 /**
  * Persistent WideAndDeep models.
@@ -22,7 +39,7 @@ public class PersistWideAndDeep {
      * Save the WideAndDeep into output stream.
      * @param wnd, the WideAndDeep model
      * @param dos, the data output stream
-     * @throws IOException, IOException when operate the steam
+     * @throws IOException IOException when IO operation
      */
     public static void save(final WideAndDeep wnd, DataOutputStream dos) throws IOException {
         dos.writeUTF(WideAndDeep.class.getName());
@@ -34,14 +51,14 @@ public class PersistWideAndDeep {
         writeDenseLayer(wnd.getFinalLayer(), dos);
         writeEmbedLayer(wnd.getEcl(), dos);
         writeWideLayer(wnd.getWl(), dos);
-        writeList(wnd.getColumnConfigList(), dos);
+        writeIntegerMap(wnd.getIdBinCateSizeMap(), dos);
         writeList(wnd.getDenseColumnIds(), dos);
         writeList(wnd.getEmbedColumnIds(), dos);
         writeList(wnd.getEmbedOutputs(), dos);
         writeList(wnd.getWideColumnIds(), dos);
         writeList(wnd.getHiddenNodes(), dos);
         writeList(wnd.getActiFuncs(), dos);
-        
+
         dos.writeFloat(wnd.getL2reg());
     }
 
@@ -49,10 +66,10 @@ public class PersistWideAndDeep {
      * Load the WideAndDeep from input stream.
      * @param dis, the data input stream
      * @return the WideAndDeep model
-     * @throws IOException, IOException when operate the steam
+     * @throws IOException IOException when IO operation
      */
     public static WideAndDeep load(DataInputStream dis) throws IOException {
-        assert WideAndDeep.class.getName().equals(dis.readUTF());
+        AssertUtils.assertEquals(dis.readUTF(), WideAndDeep.class.getName());
 
         // Read DensorLayer only
         List<DenseLayer> denseLayers = readList(dis, DenseLayer.class);
@@ -60,7 +77,7 @@ public class PersistWideAndDeep {
         DenseLayer finalLayer = readDenseLayer(dis);
         EmbedLayer ecl = readEmbedLayer(dis);
         WideLayer wl = readWideLayer(dis);
-        List<ColumnConfig> columnConfigList = readList(dis, ColumnConfig.class);
+        Map<Integer, Integer> idBinCateSizeMap = readIntegerMap(dis);
         List<Integer> denseColumnIds = readList(dis, Integer.class);
         List<Integer> embedColumnIds = readList(dis, Integer.class);
         List<Integer> embedOutputs = readList(dis, Integer.class);
@@ -70,7 +87,7 @@ public class PersistWideAndDeep {
         float l2reg = dis.readFloat();
 
         List<Layer> hiddenLayers = buildHiddenLayers(denseLayers, actiFuncs);
-        return new WideAndDeep(hiddenLayers, finalLayer, ecl, wl, columnConfigList, numericalSize, denseColumnIds,
+        return new WideAndDeep(hiddenLayers, finalLayer, ecl, wl, idBinCateSizeMap, numericalSize, denseColumnIds,
                 embedColumnIds, embedOutputs, wideColumnIds, hiddenNodes, actiFuncs, l2reg);
     }
 
@@ -82,7 +99,7 @@ public class PersistWideAndDeep {
      * @param list, the list write to output stream
      * @param dos, data output stream
      * @param <T>, generic type
-     * @throws IOException, IOException when operate the steam
+     * @throws IOException IOException when IO operation
      */
     private static <T> void writeList(List<T> list, DataOutputStream dos) throws IOException {
         dos.writeInt(list.size());
@@ -112,10 +129,9 @@ public class PersistWideAndDeep {
      * @param tClass, the class type of the object in the list
      * @param <T>, generic type
      * @return A list of specific object
-     * @throws IOException, IOException when operate the steam
+     * @throws IOException IOException when IO operation
      */
-    @SuppressWarnings("unchecked")
-    private static <T> List<T> readList(DataInputStream dis, Class tClass) throws IOException {
+    @SuppressWarnings("unchecked") private static <T> List<T> readList(DataInputStream dis, Class tClass) throws IOException {
         int size = dis.readInt();
         List<T> list = new ArrayList<>(size);
         for(int i = 0; i < size; i++){
@@ -134,6 +150,23 @@ public class PersistWideAndDeep {
             }
         }
         return list;
+    }
+
+    private static void writeIntegerMap(Map<Integer, Integer> map, DataOutputStream dos) throws IOException {
+        dos.writeInt(map.size());
+        for(Map.Entry<Integer, Integer> entry : map.entrySet()) {
+            dos.writeInt(entry.getKey());
+            dos.writeInt(entry.getValue());
+        }
+    }
+
+    private static Map<Integer, Integer> readIntegerMap(DataInputStream dis) throws IOException {
+        int size = dis.readInt();
+        Map<Integer, Integer> map = new HashMap<>(size);
+        for(int i = 0; i < size; i++) {
+            map.put(dis.readInt(), dis.readInt());
+        }
+        return map;
     }
 
     private static void writeColumnConfig(ColumnConfig element, DataOutputStream dos) throws IOException {
@@ -260,7 +293,7 @@ public class PersistWideAndDeep {
     }
 
     private static List<DenseLayer> getAllDenseLayers(List<Layer> hiddenLayers) {
-        assert hiddenLayers != null;
+        AssertUtils.assertNotNull(hiddenLayers);
 
         List<DenseLayer> denseLayers = new ArrayList<>(hiddenLayers.size() / 2);
         for(Layer layer: hiddenLayers) {
@@ -272,7 +305,7 @@ public class PersistWideAndDeep {
     }
 
     private static List<Layer> buildHiddenLayers(List<DenseLayer> denseLayers, List<String> actiFuncs){
-        assert denseLayers.size() == actiFuncs.size();
+        AssertUtils.assertListNotNullAndSizeEqual(denseLayers, actiFuncs);
         List<Layer> hiddenLayers = new ArrayList<>(actiFuncs.size() * 2);
 
         for(int i = 0; i < denseLayers.size(); i++) {
