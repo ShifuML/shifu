@@ -84,21 +84,29 @@ public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightIniti
         this.wGrad = wGrad;
     }
 
-    /* (non-Javadoc)
+    public void initGrads() {
+        this.wGrad = 0f;
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
      */
     @Override
     public void write(DataOutput out) throws IOException {
         // TODO Auto-generated method stub
-        
+
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
      */
     @Override
     public void readFields(DataInput in) throws IOException {
         // TODO Auto-generated method stub
-        
+
     }
 }

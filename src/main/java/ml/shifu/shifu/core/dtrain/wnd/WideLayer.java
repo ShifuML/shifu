@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ml.shifu.guagua.io.Bytable;
+import ml.shifu.shifu.util.Tuple;
 
 /**
  * {@link WideLayer} defines wide part of WideAndDeep. It includes a list of {@link WideFieldLayer} instances (each one
@@ -32,12 +33,18 @@ import ml.shifu.guagua.io.Bytable;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideLayer implements Layer<List<SparseInput>, float[], float[], List<float[]>>, WeightInitializable, Bytable {
+public class WideLayer implements Layer<Tuple<List<SparseInput>, float[]>, float[], float[], List<float[]>>,
+        WeightInitializable, Bytable {
 
     /**
      * Layers for all wide columns.
      */
     private List<WideFieldLayer> layers;
+
+    /**
+     * Layers for all wide columns.
+     */
+    private WideDenseLayer denseLayer;
 
     /**
      * Bias layer
@@ -49,24 +56,38 @@ public class WideLayer implements Layer<List<SparseInput>, float[], float[], Lis
         this.bias = bias;
     }
 
+    public WideLayer(List<WideFieldLayer> layers, WideDenseLayer denseLayer, BiasLayer bias) {
+        this.layers = layers;
+        this.bias = bias;
+        this.denseLayer = denseLayer;
+    }
+
     @Override
     public int getOutDim() {
         int len = 0;
         for(WideFieldLayer layer: getLayers()) {
             len += layer.getOutDim();
         }
+        len += 1; // bias
+        len += 1; // WideDenseLayer
         return len;
     }
 
     @Override
-    public float[] forward(List<SparseInput> inputList) {
-        assert this.getLayers().size() == inputList.size();
+    public float[] forward(Tuple<List<SparseInput>, float[]> input) {
+        assert this.getLayers().size() == input.getFirst().size();
         float[] results = new float[layers.get(0).getOutDim()];
         for(int i = 0; i < getLayers().size(); i++) {
-            float[] fOuts = this.getLayers().get(i).forward(inputList.get(i));
+            float[] fOuts = this.getLayers().get(i).forward(input.getFirst().get(i));
             for(int j = 0; j < results.length; j++) {
                 results[j] += fOuts[j];
             }
+        }
+
+        float[] denseForwards = this.denseLayer.forward(input.getSecond());
+        assert denseForwards.length == results.length;
+        for(int j = 0; j < results.length; j++) {
+            results[j] += denseForwards[j];
         }
 
         for(int j = 0; j < results.length; j++) {
@@ -83,6 +104,8 @@ public class WideLayer implements Layer<List<SparseInput>, float[], float[], Lis
         for(int i = 0; i < getLayers().size(); i++) {
             list.add(this.getLayers().get(i).backward(backInputs, sig));
         }
+
+        list.add(this.denseLayer.backward(backInputs, sig));
         list.add(new float[] { bias.backward(backInputs[0], sig) });
         return list;
     }
@@ -122,29 +145,53 @@ public class WideLayer implements Layer<List<SparseInput>, float[], float[], Lis
         for(WideFieldLayer layer: this.layers) {
             layer.initWeight(policy);
         }
+        this.denseLayer.initWeight(policy);
+        this.bias.initWeight(policy);
     }
 
     public void initGrads() {
         for(WideFieldLayer layer: this.layers) {
             layer.initGrads();
         }
+        this.denseLayer.initGrads();
+        this.bias.initGrads();
     }
 
-    /* (non-Javadoc)
+    /**
+     * @return the denseLayer
+     */
+    public WideDenseLayer getDenseLayer() {
+        return denseLayer;
+    }
+
+    /**
+     * @param denseLayer
+     *            the denseLayer to set
+     */
+    public void setDenseLayer(WideDenseLayer denseLayer) {
+        this.denseLayer = denseLayer;
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
      */
     @Override
     public void write(DataOutput out) throws IOException {
         // TODO Auto-generated method stub
-        
+
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
      */
     @Override
     public void readFields(DataInput in) throws IOException {
         // TODO Auto-generated method stub
-        
+
     }
+
 }

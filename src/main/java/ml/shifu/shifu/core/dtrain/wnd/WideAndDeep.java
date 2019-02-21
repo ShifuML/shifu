@@ -23,6 +23,7 @@ import java.util.List;
 
 import ml.shifu.guagua.io.Bytable;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.util.Tuple;
 
 /**
  * {@link WideAndDeep} graph definition which is for whole network including deep side and wide side.
@@ -133,7 +134,8 @@ public class WideAndDeep implements WeightInitializable, Bytable {
             wfLayers.add(wfl);
         }
 
-        this.wl = new WideLayer(wfLayers, new BiasLayer());
+        WideDenseLayer wdl = new WideDenseLayer(this.denseColumnIds, this.denseColumnIds.size(), l2reg);
+        this.wl = new WideLayer(wfLayers, wdl, new BiasLayer());
 
         int preHiddenInputs = dil.getOutDim() + ecl.getOutDim();
 
@@ -157,10 +159,10 @@ public class WideAndDeep implements WeightInitializable, Bytable {
         this.finalLayer = new DenseLayer(1, preHiddenInputs, l2reg);
     }
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     public float[] forward(float[] denseInputs, List<SparseInput> embedInputs, List<SparseInput> wideInputs) {
         // wide layer forward
-        float[] wlLogits = this.wl.forward(wideInputs);
+        float[] wlLogits = this.wl.forward(new Tuple(wideInputs, denseInputs));
 
         // deep layer forward
         float[] dilOuts = this.dil.forward(denseInputs);
@@ -501,21 +503,25 @@ public class WideAndDeep implements WeightInitializable, Bytable {
         this.wl.initWeight(policy);
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
      */
     @Override
     public void write(DataOutput out) throws IOException {
         // TODO Auto-generated method stub
-        
+
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
      */
     @Override
     public void readFields(DataInput in) throws IOException {
         // TODO Auto-generated method stub
-        
+
     }
 }
