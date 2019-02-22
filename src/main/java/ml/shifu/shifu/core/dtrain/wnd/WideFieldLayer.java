@@ -90,7 +90,7 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
         Float grad = this.wGrads.get(valueIndex);
         float tmpGrad = grad == null ? 0 : grad;
         tmpGrad += (this.lastInput.getValue() * backInputs[0] * sig); // category value here is 1f
-        tmpGrad += (this.lastInput.getValue() * this.l2reg * this.weights[valueIndex] * sig);// l2 loss
+        tmpGrad += (this.l2reg * this.weights[valueIndex] * sig); // l2 loss
         this.wGrads.put(valueIndex, tmpGrad);
 
         // no need compute backward outputs as it is last layer
@@ -178,7 +178,7 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
     }
 
     public void initGrads() {
-        this.wGrads = new HashMap<>();
+        this.wGrads = new HashMap<Integer, Float>();
     }
 
     @Override
@@ -186,21 +186,25 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
         // TODO
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
      */
     @Override
     public void write(DataOutput out) throws IOException {
         // TODO Auto-generated method stub
-        
+
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
      */
     @Override
     public void readFields(DataInput in) throws IOException {
         // TODO Auto-generated method stub
-        
+
     }
 }

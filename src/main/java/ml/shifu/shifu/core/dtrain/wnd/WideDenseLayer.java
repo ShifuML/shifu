@@ -77,8 +77,8 @@ public class WideDenseLayer implements Layer<float[], float[], float[], float[]>
     public float[] forward(float[] inputs) {
         this.lastInput = inputs;
         float[] results = new float[1];
-        for(int j = 0; j < inputs.length; j++) {
-            results[0] += inputs[j] * this.weights[j];
+        for(int i = 0; i < inputs.length; i++) {
+            results[0] += inputs[i] * this.weights[i];
         }
         return results;
     }

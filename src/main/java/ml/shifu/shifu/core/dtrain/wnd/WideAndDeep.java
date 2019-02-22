@@ -15,9 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
-import ml.shifu.guagua.io.Bytable;
-import ml.shifu.shifu.core.dtrain.AssertUtils;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -26,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import ml.shifu.guagua.io.Bytable;
-import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.core.dtrain.AssertUtils;
 import ml.shifu.shifu.util.Tuple;
 /**
  * {@link WideAndDeep} graph definition which is for whole network including deep side and wide side.

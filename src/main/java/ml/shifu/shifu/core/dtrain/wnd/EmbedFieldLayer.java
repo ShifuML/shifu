@@ -191,7 +191,7 @@ public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], flo
     }
 
     public void initGrads() {
-        this.wGrads = new HashMap<>();
+        this.wGrads = new HashMap<Integer, float[]>();
     }
 
     @Override
@@ -199,21 +199,25 @@ public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], flo
         // TODO
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
      */
     @Override
     public void write(DataOutput out) throws IOException {
         // TODO Auto-generated method stub
-        
+
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
      */
     @Override
     public void readFields(DataInput in) throws IOException {
         // TODO Auto-generated method stub
-        
+
     }
 }
