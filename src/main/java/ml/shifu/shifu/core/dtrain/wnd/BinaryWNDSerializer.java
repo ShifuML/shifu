@@ -118,7 +118,7 @@ public class BinaryWNDSerializer {
             }
 
             // persist WideAndDeep Model
-            PersistWideAndDeep.save(wideAndDeep, fos);
+            wideAndDeep.write(fos);
         } finally {
             IOUtils.closeStream(fos);
         }
