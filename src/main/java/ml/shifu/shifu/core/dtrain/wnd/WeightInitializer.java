@@ -19,6 +19,7 @@ import ml.shifu.shifu.core.dtrain.random.HeWeightRandomizer;
 import ml.shifu.shifu.core.dtrain.random.LecunWeightRandomizer;
 import ml.shifu.shifu.core.dtrain.random.XavierWeightRandomizer;
 import ml.shifu.shifu.core.dtrain.wnd.weight.Initialisable;
+import ml.shifu.shifu.core.dtrain.wnd.weight.RangeRandom;
 import ml.shifu.shifu.core.dtrain.wnd.weight.WeightRandom;
 import ml.shifu.shifu.core.dtrain.wnd.weight.Zero;
 
@@ -31,18 +32,25 @@ import ml.shifu.shifu.core.dtrain.wnd.weight.Zero;
 public interface WeightInitializer {
     enum InitMethod {
         /**
-         * Init all weight with 0
+         * Init all weight with {@link Zero}
          */
-        ZERO(new Zero()), /**
+        ZERO(new Zero()),
+        /**
          * Init all weight with random method define in {@link HeWeightRandomizer}
          */
-        HE_RANDOM(new WeightRandom(new HeWeightRandomizer())), /**
+        HE_RANDOM(new WeightRandom(new HeWeightRandomizer())),
+        /**
          * Init all weight with random method define in {@link LecunWeightRandomizer}
          */
-        LECUN_RANDOM(new WeightRandom(new LecunWeightRandomizer())), /**
+        LECUN_RANDOM(new WeightRandom(new LecunWeightRandomizer())),
+        /**
          * Init all weight with random method define in {@link XavierWeightRandomizer}
          */
-        XAVIER_RANDOM(new WeightRandom(new XavierWeightRandomizer()));
+        XAVIER_RANDOM(new WeightRandom(new XavierWeightRandomizer())),
+        /**
+         * Init all Weight use {@link RangeRandom}
+         */
+        ZERO_ONE_RANGE_RANDOM(new RangeRandom(0, 1));
 
         private Initialisable initialisable;
 
@@ -69,7 +77,6 @@ public interface WeightInitializer {
             }
             return defaultMethod;
         }
-
     }
 
     /**

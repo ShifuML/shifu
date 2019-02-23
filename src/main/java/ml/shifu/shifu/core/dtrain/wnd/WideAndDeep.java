@@ -481,12 +481,13 @@ public class WideAndDeep implements WeightInitializer, Bytable {
      * TODO: init the weights in WideAndDeeep Model and it's sub module
      */
     public void initWeights() {
-        InitMethod defaultMode = InitMethod.ZERO;
+        InitMethod defaultMode = InitMethod.ZERO_ONE_RANGE_RANDOM;
         initWeight(defaultMode);
     }
 
     @SuppressWarnings("rawtypes")
-    @Override public void initWeight(InitMethod method) {
+    @Override
+    public void initWeight(InitMethod method) {
         for(Layer layer: this.hiddenLayers) {
             // There are two type of layer: DenseLayer, Activation. We only need to init DenseLayer
             if(layer instanceof DenseLayer) {
