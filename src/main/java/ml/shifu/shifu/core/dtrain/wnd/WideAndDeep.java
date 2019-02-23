@@ -17,6 +17,9 @@ package ml.shifu.shifu.core.dtrain.wnd;
 
 import ml.shifu.guagua.io.Bytable;
 import ml.shifu.shifu.core.dtrain.AssertUtils;
+import ml.shifu.shifu.core.dtrain.wnd.activation.Activation;
+import ml.shifu.shifu.core.dtrain.wnd.activation.ReLU;
+import ml.shifu.shifu.core.dtrain.wnd.activation.Sigmoid;
 
 import java.io.DataInput;
 import java.io.DataOutput;

@@ -65,6 +65,11 @@ public interface WeightInitializer {
             return initialisable;
         }
 
+        /**
+         * Get InitMethod from method name
+         * @param method the method name
+         * @return InitMethod
+         */
         public static InitMethod getInitMethod(String method) {
             InitMethod defaultMethod = ZERO;
             if(method == null) {
