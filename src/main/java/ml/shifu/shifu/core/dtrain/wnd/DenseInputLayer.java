@@ -33,11 +33,16 @@ public class DenseInputLayer implements Layer<float[], float[], float[], float[]
     /**
      * Output dimension.
      */
-    private final int out;
+    private int out;
 
     public DenseInputLayer(int out) {
         this.out = out;
     }
+    
+    public DenseInputLayer() {
+        this.out = 0;
+    }
+
 
     @Override
     public int getOutDim() {

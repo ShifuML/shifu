@@ -61,6 +61,9 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
      */
     private SparseInput lastInput;
 
+    public WideFieldLayer() {
+    }
+
     public WideFieldLayer(int columnId, float[] weights, int in, float l2reg) {
         this.weights = weights;
         this.in = in;
@@ -181,7 +184,8 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
         this.wGrads = new HashMap<Integer, Float>();
     }
 
-    @Override public void initWeight(InitMethod method) {
+    @Override
+    public void initWeight(InitMethod method) {
         this.weights = method.getInitialisable().initWeight(this.in);
     }
 

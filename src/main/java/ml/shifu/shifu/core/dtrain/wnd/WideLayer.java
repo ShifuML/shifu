@@ -51,6 +51,9 @@ public class WideLayer implements Layer<Tuple<List<SparseInput>, float[]>, float
      * Bias layer
      */
     private BiasLayer bias;
+    
+    public WideLayer() {
+    }
 
     public WideLayer(List<WideFieldLayer> layers, BiasLayer bias) {
         this.layers = layers;

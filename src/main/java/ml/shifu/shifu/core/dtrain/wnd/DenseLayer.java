@@ -70,6 +70,9 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]>, We
      * Layer inputs used for backward gradients computation, tmp use for computation
      */
     private float[] lastInput = null;
+    
+    public DenseLayer() {
+    }
 
     public DenseLayer(float[][] weights, float[] bias, int out, int in, float l2reg) {
         this.weights = weights;

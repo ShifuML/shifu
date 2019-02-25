@@ -59,10 +59,13 @@ public class WideDenseLayer implements Layer<float[], float[], float[], float[]>
      */
     private List<Integer> columnIds;
 
+    public WideDenseLayer() {
+    }
+    
     public WideDenseLayer(List<Integer> columnIds, float[] weights, int in, float l2reg) {
         this.weights = weights;
         this.in = in;
-        this.setColumnIds(columnIds);
+        this.columnIds = columnIds;
         this.l2reg = l2reg;
     }
 

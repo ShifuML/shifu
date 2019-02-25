@@ -38,6 +38,9 @@ public class EmbedLayer
      */
     private List<EmbedFieldLayer> embedLayers;
 
+    public EmbedLayer() {
+    }
+
     public EmbedLayer(List<EmbedFieldLayer> embedLayers) {
         this.embedLayers = embedLayers;
     }
@@ -86,7 +89,8 @@ public class EmbedLayer
         this.embedLayers = embedLayers;
     }
 
-    @Override public void initWeight(InitMethod method) {
+    @Override
+    public void initWeight(InitMethod method) {
         for(EmbedFieldLayer embedFieldLayer: this.embedLayers) {
             embedFieldLayer.initWeight(method);
         }
@@ -98,7 +102,9 @@ public class EmbedLayer
         }
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
      */
     @Override
@@ -107,7 +113,9 @@ public class EmbedLayer
 
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
      */
     @Override

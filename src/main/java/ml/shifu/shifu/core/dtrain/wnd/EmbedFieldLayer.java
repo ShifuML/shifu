@@ -68,6 +68,9 @@ public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], flo
      */
     private SparseInput lastInput;
 
+    public EmbedFieldLayer() {
+    }
+
     public EmbedFieldLayer(int columnId, float[][] weights, int out, int in) {
         this.columnId = columnId;
         this.weights = weights;
@@ -194,7 +197,8 @@ public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], flo
         this.wGrads = new HashMap<Integer, float[]>();
     }
 
-    @Override public void initWeight(InitMethod method) {
+    @Override
+    public void initWeight(InitMethod method) {
         this.weights = method.getInitialisable().initWeight(this.in, this.out);
     }
 
