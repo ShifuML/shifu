@@ -20,16 +20,14 @@ import ml.shifu.guagua.io.Bytable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 /**
- * {@link WideFieldLayer} is wide part input of WideAndDeep architecture. Per each column a {@link WideFieldLayer}
- * instance and each instanced will be forwarded and backwarded accordingly.
+ * TODO
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitializer, Bytable {
+public class WideDenseLayer implements Layer<float[], float[], float[], float[]>, WeightInitializer, Bytable {
 
     /**
      * [in] float array of weights
@@ -39,17 +37,12 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
     /**
      * Gradients, using map for sparse updates
      */
-    private Map<Integer, Float> wGrads;
+    private float[] wGrads;
 
     /**
      * # of inputs
      */
     private int in;
-
-    /**
-     * ColumnConfig#columnNum for features used in this wide field layer.
-     */
-    private int columnId;
 
     /**
      * L2 level regularization parameter.
@@ -59,42 +52,50 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
     /**
      * Last input used in backward computation
      */
-    private SparseInput lastInput;
+    private float[] lastInput;
 
-    public WideFieldLayer(int columnId, float[] weights, int in, float l2reg) {
+    /**
+     * Columns of IDs
+     */
+    private List<Integer> columnIds;
+
+    public WideDenseLayer(List<Integer> columnIds, float[] weights, int in, float l2reg) {
         this.weights = weights;
         this.in = in;
-        this.columnId = columnId;
+        this.setColumnIds(columnIds);
         this.l2reg = l2reg;
     }
 
-    public WideFieldLayer(int columnId, int in, float l2reg) {
+    public WideDenseLayer(List<Integer> columnIds, int in, float l2reg) {
         this.in = in;
-        this.columnId = columnId;
+        this.setColumnIds(columnIds);
         this.weights = new float[in];
         this.l2reg = l2reg;
     }
 
     @Override
-    public float[] forward(SparseInput si) {
-        this.lastInput = si;
-        int valueIndex = si.getValueIndex();
-        return new float[] { si.getValue() * this.weights[valueIndex] };
+    public float[] forward(float[] inputs) {
+        this.lastInput = inputs;
+        float[] results = new float[1];
+        for(int i = 0; i < inputs.length; i++) {
+            results[0] += inputs[i] * this.weights[i];
+        }
+        return results;
     }
 
     @Override
     public float[] backward(float[] backInputs, float sig) {
-        assert backInputs.length == 1;
-
-        int valueIndex = this.lastInput.getValueIndex();
-        Float grad = this.wGrads.get(valueIndex);
-        float tmpGrad = grad == null ? 0 : grad;
-        tmpGrad += (this.lastInput.getValue() * backInputs[0] * sig); // category value here is 1f
-        tmpGrad += (this.l2reg * this.weights[valueIndex] * sig); // l2 loss
-        this.wGrads.put(valueIndex, tmpGrad);
-
+        // gradients compute and L2 reg here
+        for(int i = 0; i < this.in; i++) {
+            this.wGrads[i] += (this.lastInput[i] * backInputs[0] * sig); // basic derivatives
+            this.wGrads[i] += (this.l2reg * this.weights[i] * sig);// l2 loss derivatives
+        }
         // no need compute backward outputs as it is last layer
         return null;
+    }
+
+    public void initGrads() {
+        this.wGrads = new float[this.in];
     }
 
     @Override
@@ -133,36 +134,6 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
     }
 
     /**
-     * @return the columnId
-     */
-    public int getColumnId() {
-        return columnId;
-    }
-
-    /**
-     * @param columnId
-     *            the columnId to set
-     */
-    public void setColumnId(int columnId) {
-        this.columnId = columnId;
-    }
-
-    /**
-     * @return the wGrads
-     */
-    public Map<Integer, Float> getwGrads() {
-        return wGrads;
-    }
-
-    /**
-     * @param wGrads
-     *            the wGrads to set
-     */
-    public void setwGrads(Map<Integer, Float> wGrads) {
-        this.wGrads = wGrads;
-    }
-
-    /**
      * @return the l2reg
      */
     public float getL2reg() {
@@ -177,12 +148,20 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
         this.l2reg = l2reg;
     }
 
-    public void initGrads() {
-        this.wGrads = new HashMap<Integer, Float>();
+
+    /**
+     * @return the columnIds
+     */
+    public List<Integer> getColumnIds() {
+        return columnIds;
     }
 
-    @Override public void initWeight(InitMethod method) {
-        this.weights = method.getInitialisable().initWeight(this.in);
+    /**
+     * @param columnIds
+     *            the columnIds to set
+     */
+    public void setColumnIds(List<Integer> columnIds) {
+        this.columnIds = columnIds;
     }
 
     /*
@@ -193,7 +172,6 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
     @Override
     public void write(DataOutput out) throws IOException {
         // TODO Auto-generated method stub
-
     }
 
     /*
@@ -204,6 +182,10 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
     @Override
     public void readFields(DataInput in) throws IOException {
         // TODO Auto-generated method stub
+    }
 
+    @Override
+    public void initWeight(InitMethod method) {
+        this.weights = method.getInitialisable().initWeight(this.in);
     }
 }

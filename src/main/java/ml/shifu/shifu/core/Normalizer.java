@@ -15,16 +15,18 @@
  */
 package ml.shifu.shifu.core;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelNormalizeConf;
-import ml.shifu.shifu.udf.NormalizeUDF.CategoryMissingNormType;
-import ml.shifu.shifu.util.BinUtils;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-import java.util.List;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf;
+import ml.shifu.shifu.udf.NormalizeUDF.CategoryMissingNormType;
+import ml.shifu.shifu.util.BinUtils;
 
 /**
  * Util normalization class which is used for any kind of transformation.
@@ -261,6 +263,71 @@ public class Normalizer {
             case ZSCORE:
             default:
                 return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, false);
+        }
+    }
+
+    /**
+     * Adding new API with cateIndeMap parameter without change normalize API.
+     */
+    public static List<Double> fullNormalize(ColumnConfig config, Object raw, Double cutoff,
+            ModelNormalizeConf.NormType type, CategoryMissingNormType categoryMissingNormType,
+            Map<String, Integer> cateIndexMap) {
+        switch(type) {
+            case ZSCORE_INDEX:
+            case ZSCALE_INDEX:
+                return numZScoreAndCateIndexNorm(config, raw, cutoff, cateIndexMap);
+            case WOE_INDEX:
+                if(config.isNumerical()) {
+                    return woeNormalize(config, raw, false);
+                } else if(config.isCategorical()) {
+                    Integer index = cateIndexMap.get(raw == null ? "" : raw.toString());
+                    if(index == null || index == -1) {
+                        index = config.getBinCategory().size(); // last index for null category
+                    }
+                    return Arrays.asList((double) index);
+                }
+            case WOE_ZSCALE_INDEX:
+                if(config.isNumerical()) {
+                    return woeZScoreNormalize(config, raw, cutoff, false);
+                } else if(config.isCategorical()) {
+                    Integer index = cateIndexMap.get(raw == null ? "" : raw.toString());
+                    if(index == null || index == -1) {
+                        index = config.getBinCategory().size(); // last index for null category
+                    }
+                    return Arrays.asList((double) index);
+                }
+            default: // others use old normlize API to reuse code
+                return normalize(config, raw, cutoff, type, categoryMissingNormType);
+        }
+    }
+
+    /**
+     * Compute the normalized data for @NormalizeMethod.Zscore
+     * 
+     * @param config
+     *            ColumnConfig info
+     * @param raw
+     *            input column value
+     * @param cutoff
+     *            standard deviation cut off
+     * @param categoryMissingNormType
+     *            missing categorical value norm type
+     * @return normalized value for ZScore method.
+     */
+    private static List<Double> numZScoreAndCateIndexNorm(ColumnConfig config, Object raw, Double cutoff,
+            Map<String, Integer> cateIndexMap) {
+        if(config.isNumerical()) {
+            double stdDevCutOff = checkCutOff(cutoff);
+            double value = parseRawValue(config, raw, null);
+            return Arrays.asList(computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff));
+        } else if(config.isCategorical()) {
+            Integer index = cateIndexMap.get(raw == null ? "" : raw.toString());
+            if(index == null || index == -1) {
+                index = config.getBinCategory().size(); // last index for null category
+            }
+            return Arrays.asList(((double) index));
+        } else {
+            throw new IllegalArgumentException("Not supported norm column type.");
         }
     }
 

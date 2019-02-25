@@ -79,9 +79,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                     try {
                         autoCheckShuffleAndShuffleSize();
                     } catch (Exception e) {
-                        log.warn(
-                                "warn: exception in autho check shuffle size, exception can be ignored as no big impact",
-                                e);
+                        log.warn("warn: exception in auto check shuffle size, can be ignored as no big impact", e);
                     }
 
                     if(this.isToShuffleData) {
@@ -192,8 +190,8 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         paramsMap.put("sampleRate", modelConfig.getNormalizeSampleRate().toString());
         paramsMap.put("sampleNegOnly", ((Boolean) modelConfig.isNormalizeSampleNegOnly()).toString());
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
-        paramsMap.put("is_csv", String.valueOf(Boolean.TRUE.toString().equalsIgnoreCase(
-            Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_CSV, Boolean.FALSE.toString()))));
+        paramsMap.put("is_csv", String.valueOf(Boolean.TRUE.toString()
+                .equalsIgnoreCase(Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_CSV, Boolean.FALSE.toString()))));
 
         String expressionsAsString = super.modelConfig.getSegmentFilterExpressionsAsString();
         Environment.getProperties().put("shifu.segment.expressions", expressionsAsString);

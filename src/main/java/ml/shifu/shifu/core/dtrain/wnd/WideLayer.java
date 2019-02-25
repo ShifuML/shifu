@@ -15,14 +15,15 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
-import ml.shifu.guagua.io.Bytable;
-import ml.shifu.shifu.core.dtrain.AssertUtils;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import ml.shifu.guagua.io.Bytable;
+import ml.shifu.shifu.core.dtrain.AssertUtils;
+import ml.shifu.shifu.util.Tuple;
 
 /**
  * {@link WideLayer} defines wide part of WideAndDeep. It includes a list of {@link WideFieldLayer} instances (each one
@@ -33,13 +34,18 @@ import java.util.List;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideLayer
-        implements Layer<List<SparseInput>, float[], float[], List<float[]>>, WeightInitializer, Bytable {
+public class WideLayer implements Layer<Tuple<List<SparseInput>, float[]>, float[], float[], List<float[]>>,
+        WeightInitializer, Bytable {
 
     /**
      * Layers for all wide columns.
      */
     private List<WideFieldLayer> layers;
+
+    /**
+     * Layers for all wide columns.
+     */
+    private WideDenseLayer denseLayer;
 
     /**
      * Bias layer
@@ -51,24 +57,38 @@ public class WideLayer
         this.bias = bias;
     }
 
+    public WideLayer(List<WideFieldLayer> layers, WideDenseLayer denseLayer, BiasLayer bias) {
+        this.layers = layers;
+        this.bias = bias;
+        this.denseLayer = denseLayer;
+    }
+
     @Override
     public int getOutDim() {
         int len = 0;
         for(WideFieldLayer layer: getLayers()) {
             len += layer.getOutDim();
         }
+        len += 1; // bias
+        len += 1; // WideDenseLayer
         return len;
     }
 
     @Override
-    public float[] forward(List<SparseInput> inputList) {
-        AssertUtils.assertListNotNullAndSizeEqual(this.getLayers(), inputList);
+    public float[] forward(Tuple<List<SparseInput>, float[]> input) {
+        AssertUtils.assertListNotNullAndSizeEqual(this.getLayers(), input.getFirst());
         float[] results = new float[layers.get(0).getOutDim()];
         for(int i = 0; i < getLayers().size(); i++) {
-            float[] fOuts = this.getLayers().get(i).forward(inputList.get(i));
+            float[] fOuts = this.getLayers().get(i).forward(input.getFirst().get(i));
             for(int j = 0; j < results.length; j++) {
                 results[j] += fOuts[j];
             }
+        }
+
+        float[] denseForwards = this.denseLayer.forward(input.getSecond());
+        assert denseForwards.length == results.length;
+        for(int j = 0; j < results.length; j++) {
+            results[j] += denseForwards[j];
         }
 
         for(int j = 0; j < results.length; j++) {
@@ -85,6 +105,8 @@ public class WideLayer
         for(int i = 0; i < getLayers().size(); i++) {
             list.add(this.getLayers().get(i).backward(backInputs, sig));
         }
+
+        list.add(this.denseLayer.backward(backInputs, sig));
         list.add(new float[] { bias.backward(backInputs[0], sig) });
         return list;
     }
@@ -123,15 +145,36 @@ public class WideLayer
         for(WideFieldLayer layer: this.layers) {
             layer.initWeight(method);
         }
+        this.denseLayer.initWeight(method);
+        this.bias.initWeight(method);
     }
 
     public void initGrads() {
         for(WideFieldLayer layer: this.layers) {
             layer.initGrads();
         }
+        this.denseLayer.initGrads();
+        this.bias.initGrads();
     }
 
-    /* (non-Javadoc)
+    /**
+     * @return the denseLayer
+     */
+    public WideDenseLayer getDenseLayer() {
+        return denseLayer;
+    }
+
+    /**
+     * @param denseLayer
+     *            the denseLayer to set
+     */
+    public void setDenseLayer(WideDenseLayer denseLayer) {
+        this.denseLayer = denseLayer;
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
      */
     @Override
@@ -140,7 +183,9 @@ public class WideLayer
 
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
      */
     @Override
@@ -148,4 +193,5 @@ public class WideLayer
         // TODO Auto-generated method stub
 
     }
+
 }

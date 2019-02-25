@@ -61,6 +61,7 @@ public class AssertUtils {
      * @param a, the first list
      * @param b, the second list
      */
+    @SuppressWarnings("rawtypes")
     public static void assertListNotNullAndSizeEqual(List a, List b) {
         assertNotNull(a);
         assertNotNull(b);

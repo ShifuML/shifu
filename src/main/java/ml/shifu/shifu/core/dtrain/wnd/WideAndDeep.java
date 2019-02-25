@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.dtrain.wnd;
 
 import ml.shifu.guagua.io.Bytable;
+import ml.shifu.shifu.util.Tuple;
 import ml.shifu.shifu.core.dtrain.AssertUtils;
 import ml.shifu.shifu.core.dtrain.wnd.activation.Activation;
 import ml.shifu.shifu.core.dtrain.wnd.activation.ReLU;
@@ -135,7 +136,8 @@ public class WideAndDeep implements WeightInitializer, Bytable {
             wfLayers.add(wfl);
         }
 
-        this.wl = new WideLayer(wfLayers, new BiasLayer());
+        WideDenseLayer wdl = new WideDenseLayer(this.denseColumnIds, this.denseColumnIds.size(), l2reg);
+        this.wl = new WideLayer(wfLayers, wdl, new BiasLayer());
 
         int preHiddenInputs = dil.getOutDim() + ecl.getOutDim();
 
@@ -159,10 +161,10 @@ public class WideAndDeep implements WeightInitializer, Bytable {
         this.finalLayer = new DenseLayer(1, preHiddenInputs, l2reg);
     }
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     public float[] forward(float[] denseInputs, List<SparseInput> embedInputs, List<SparseInput> wideInputs) {
         // wide layer forward
-        float[] wlLogits = this.wl.forward(wideInputs);
+        float[] wlLogits = this.wl.forward(new Tuple(wideInputs, denseInputs));
 
         // deep layer forward
         float[] dilOuts = this.dil.forward(denseInputs);
@@ -502,7 +504,9 @@ public class WideAndDeep implements WeightInitializer, Bytable {
         this.wl.initWeight(method);
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
      */
     @Override
@@ -511,7 +515,9 @@ public class WideAndDeep implements WeightInitializer, Bytable {
 
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
      */
     @Override
