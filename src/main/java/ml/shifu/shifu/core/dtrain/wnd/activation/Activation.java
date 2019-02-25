@@ -13,13 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain.wnd;
+package ml.shifu.shifu.core.dtrain.wnd.activation;
+
+import ml.shifu.guagua.io.Bytable;
+import ml.shifu.shifu.core.dtrain.wnd.Layer;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
-import ml.shifu.guagua.io.Bytable;
 
 /**
  * {@link Activation} is basic abstraction for different kind of activation methods like sigmoid, ReLU, tanh ...
@@ -33,7 +34,6 @@ public abstract class Activation implements Layer<float[], float[], float[], flo
         // no need call output dimension, as Activation usually for 1:1 mapping between inputs and outputs.
         throw new UnsupportedOperationException();
     }
-    
 
     @Override
     public void write(DataOutput out) throws IOException {

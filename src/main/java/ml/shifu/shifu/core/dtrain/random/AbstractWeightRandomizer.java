@@ -24,7 +24,6 @@
 package ml.shifu.shifu.core.dtrain.random;
 
 import org.encog.mathutil.matrices.Matrix;
-import org.encog.mathutil.randomize.Randomizer;
 import org.encog.ml.MLMethod;
 import org.encog.neural.networks.BasicNetwork;
 
@@ -115,6 +114,32 @@ public abstract class AbstractWeightRandomizer implements Randomizer {
     public void randomize(double[] d, int begin, int size) {
         for(int i = 0; i < size; i++) {
             d[begin + i] = this.rnd.nextDouble();
+        }
+    }
+
+    @Override
+    public float randomize(float f) {
+        return this.rnd.nextFloat();
+    }
+
+    @Override
+    public void randomize(float[] f) {
+        randomize(f, 0, f.length);
+    }
+
+    @Override
+    public void randomize(float[][] f) {
+        for(int i = 0; i < f.length; i++) {
+            for(int j = 0; j < f[j].length; j++) {
+                f[i][j] = this.rnd.nextFloat();
+            }
+        }
+    }
+
+    @Override
+    public void randomize(float[] f, int begin, int size) {
+        for(int i = 0; i < size; i++) {
+            f[begin + i] = this.rnd.nextFloat();
         }
     }
 

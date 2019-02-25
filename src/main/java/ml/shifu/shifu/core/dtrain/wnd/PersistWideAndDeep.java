@@ -17,6 +17,8 @@ package ml.shifu.shifu.core.dtrain.wnd;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.core.dtrain.AssertUtils;
+import ml.shifu.shifu.core.dtrain.wnd.activation.ReLU;
+import ml.shifu.shifu.core.dtrain.wnd.activation.Sigmoid;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;

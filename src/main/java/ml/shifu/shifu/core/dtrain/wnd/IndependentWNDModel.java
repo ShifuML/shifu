@@ -294,7 +294,8 @@ public class IndependentWNDModel {
             cutoffMap.put(columnNum, cs.getCutoff());
         }
 
-        WideAndDeep wideAndDeep = PersistWideAndDeep.load(dis);
+        WideAndDeep wideAndDeep = new WideAndDeep();
+        wideAndDeep.readFields(dis);
         return new IndependentWNDModel(wideAndDeep, normType, cutoffMap, numNameMap, cateIndexMapping,
                 numerBinBoundaries, numerWoes, numerWgtWoes, numerMeanMap, numerStddevMap, woeMeanMap, woeStddevMap,
                 wgtWoeMeanMap, wgtWoeStddevMap);

@@ -15,19 +15,19 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import ml.shifu.guagua.io.Bytable;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
-
-import ml.shifu.guagua.io.Bytable;
 
 /**
  * TODO
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideDenseLayer implements Layer<float[], float[], float[], float[]>, WeightInitializable, Bytable {
+public class WideDenseLayer implements Layer<float[], float[], float[], float[]>, WeightInitializer, Bytable {
 
     /**
      * [in] float array of weights
@@ -148,10 +148,6 @@ public class WideDenseLayer implements Layer<float[], float[], float[], float[]>
         this.l2reg = l2reg;
     }
 
-    @Override
-    public void initWeight(String policy) {
-        // TODO
-    }
 
     /**
      * @return the columnIds
@@ -186,5 +182,10 @@ public class WideDenseLayer implements Layer<float[], float[], float[], float[]>
     @Override
     public void readFields(DataInput in) throws IOException {
         // TODO Auto-generated method stub
+    }
+
+    @Override
+    public void initWeight(InitMethod method) {
+        this.weights = method.getInitialisable().initWeight(this.in);
     }
 }
