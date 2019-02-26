@@ -607,6 +607,19 @@
                                 "defval": 45
                             }                            
                          ]
+                     }, {
+                        "name" : "NumEmbedColumnIds",
+                        "type" : "list",
+                        "directive": "input",
+                        "elementType" : "integer",
+                        "element": [
+                            {
+                                "name": "dummy",
+                                "type": "integer",
+                                "directive": "input",
+                                "defval": 1
+                            }                            
+                         ]
                     }, {
                         "name" : "LearningRate",
                         "type" : "number",

@@ -102,7 +102,7 @@ public interface CommonConstants {
 
     public static final String OUTPUT_ACTIVATION_FUNC = "OutputActivationFunc";
     
-    public static final String NUM_EMBED_COLUMN_IDS = "NumEmbedCoulmIds";
+    public static final String NUM_EMBED_COLUMN_IDS = "NumEmbedColumnIds";
     
     public static final String NUM_EMBED_OUTPUTS = "NumEmbedOuputs";
 
