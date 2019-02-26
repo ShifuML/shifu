@@ -149,7 +149,8 @@ public class WNDParams extends HaltBytable implements Combinable<WNDParams> {
     }
 
     /**
-     * @param wnd the wnd to set
+     * @param wnd
+     *            the wnd to set
      */
     public void setWnd(WideAndDeep wnd) {
         this.wnd = wnd;

@@ -20,14 +20,12 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
 
-import ml.shifu.guagua.io.Bytable;
-
 /**
  * TODO
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideDenseLayer implements Layer<float[], float[], float[], float[]>, WeightInitializable, Bytable {
+public class WideDenseLayer extends AbstractLayer<float[], float[], float[], float[]> implements WeightInitializable {
 
     /**
      * [in] float array of weights
@@ -58,6 +56,9 @@ public class WideDenseLayer implements Layer<float[], float[], float[], float[]>
      * Columns of IDs
      */
     private List<Integer> columnIds;
+
+    public WideDenseLayer() {
+    }
 
     public WideDenseLayer(List<Integer> columnIds, float[] weights, int in, float l2reg) {
         this.weights = weights;
@@ -175,7 +176,14 @@ public class WideDenseLayer implements Layer<float[], float[], float[], float[]>
      */
     @Override
     public void write(DataOutput out) throws IOException {
-        // TODO Auto-generated method stub
+        out.writeFloat(this.l2reg);
+        out.writeInt(this.in);
+        if(this.serializationType == SerializationType.WEIGHTS
+                || this.serializationType == SerializationType.MODEL_SPEC) {
+            SerializationUtil.writeFloatArray(out, this.weights, this.in);
+        } else if(this.serializationType == SerializationType.GRADIENTS) {
+            SerializationUtil.writeFloatArray(out, this.wGrads, this.in);
+        }
     }
 
     /*
@@ -185,6 +193,13 @@ public class WideDenseLayer implements Layer<float[], float[], float[], float[]>
      */
     @Override
     public void readFields(DataInput in) throws IOException {
-        // TODO Auto-generated method stub
+        this.l2reg = in.readFloat();
+        this.in = in.readInt();
+        if(this.serializationType == SerializationType.WEIGHTS
+                || this.serializationType == SerializationType.MODEL_SPEC) {
+            this.weights = SerializationUtil.readFloatArray(in, this.weights, this.in);
+        } else if(this.serializationType == SerializationType.GRADIENTS) {
+            this.wGrads = SerializationUtil.readFloatArray(in, this.wGrads, this.in);
+        }
     }
 }

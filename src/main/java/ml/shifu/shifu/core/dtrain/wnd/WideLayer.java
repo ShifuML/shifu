@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import ml.shifu.guagua.io.Bytable;
 import ml.shifu.shifu.core.dtrain.AssertUtils;
 import ml.shifu.shifu.util.Tuple;
 
@@ -34,8 +33,8 @@ import ml.shifu.shifu.util.Tuple;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideLayer implements Layer<Tuple<List<SparseInput>, float[]>, float[], float[], List<float[]>>,
-        WeightInitializable, Bytable {
+public class WideLayer extends AbstractLayer<Tuple<List<SparseInput>, float[]>, float[], float[], List<float[]>>
+        implements WeightInitializable {
 
     /**
      * Layers for all wide columns.
@@ -180,8 +179,28 @@ public class WideLayer implements Layer<Tuple<List<SparseInput>, float[]>, float
      */
     @Override
     public void write(DataOutput out) throws IOException {
-        // TODO Auto-generated method stub
+        if(this.layers == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(this.layers.size());
+            for(WideFieldLayer wideFieldLayer: this.layers) {
+                wideFieldLayer.write(out, this.serializationType);
+            }
+        }
 
+        if(this.denseLayer == null) {
+            out.writeBoolean(false);
+        } else {
+            out.writeBoolean(true);
+            this.denseLayer.write(out, this.serializationType);
+        }
+
+        if(this.bias == null) {
+            out.writeBoolean(false);
+        } else {
+            out.writeBoolean(true);
+            this.bias.write(out, this.serializationType);
+        }
     }
 
     /*
@@ -191,8 +210,39 @@ public class WideLayer implements Layer<Tuple<List<SparseInput>, float[]>, float
      */
     @Override
     public void readFields(DataInput in) throws IOException {
-        // TODO Auto-generated method stub
+        int layerSize = in.readInt();
+        if(this.layers == null) {
+            this.layers = new ArrayList<WideFieldLayer>();
+        }
+        for(int i = 0; i < layerSize; i++) {
+            if(this.layers.get(i) == null) {
+                this.layers.add(i, new WideFieldLayer());
+            }
+            this.layers.get(i).readFields(in, this.serializationType);
+        }
+        while(this.layers.size() > layerSize) {
+            this.layers.remove(layerSize);
+        }
 
+        boolean denseLayerExist = in.readBoolean();
+        if(!denseLayerExist) {
+            this.denseLayer = null;
+        } else {
+            if(this.denseLayer == null) {
+                this.denseLayer = new WideDenseLayer();
+            }
+            this.denseLayer.readFields(in, this.serializationType);
+        }
+
+        boolean biasExist = in.readBoolean();
+        if(!biasExist) {
+            this.bias = null;
+        } else {
+            if(this.bias == null) {
+                this.bias = new BiasLayer();
+            }
+            this.bias.readFields(in, this.serializationType);
+        }
     }
 
 }

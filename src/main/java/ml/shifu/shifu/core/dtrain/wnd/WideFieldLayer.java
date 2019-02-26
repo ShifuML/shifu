@@ -20,8 +20,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
-import ml.shifu.guagua.io.Bytable;
+import java.util.Map.Entry;
 
 /**
  * {@link WideFieldLayer} is wide part input of WideAndDeep architecture. Per each column a {@link WideFieldLayer}
@@ -29,7 +28,8 @@ import ml.shifu.guagua.io.Bytable;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitializable, Bytable {
+public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[], float[]>
+        implements WeightInitializable {
 
     /**
      * [in] float array of weights
@@ -60,6 +60,9 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
      * Last input used in backward computation
      */
     private SparseInput lastInput;
+
+    public WideFieldLayer() {
+    }
 
     public WideFieldLayer(int columnId, float[] weights, int in, float l2reg) {
         this.weights = weights;
@@ -193,8 +196,23 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
      */
     @Override
     public void write(DataOutput out) throws IOException {
-        // TODO Auto-generated method stub
-
+        out.writeInt(this.columnId);
+        out.writeFloat(this.l2reg);
+        out.writeInt(this.in);
+        if(this.serializationType == SerializationType.WEIGHTS
+                || this.serializationType == SerializationType.MODEL_SPEC) {
+            SerializationUtil.writeFloatArray(out, this.weights, this.in);
+        } else if(this.serializationType == SerializationType.GRADIENTS) {
+            if(this.wGrads == null) {
+                out.writeInt(0);
+            } else {
+                out.writeInt(this.wGrads.size());
+                for(Entry<Integer, Float> entry: this.wGrads.entrySet()) {
+                    out.writeInt(entry.getKey());
+                    out.writeFloat(entry.getValue());
+                }
+            }
+        }
     }
 
     /*
@@ -204,7 +222,22 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
      */
     @Override
     public void readFields(DataInput in) throws IOException {
-        // TODO Auto-generated method stub
-
+        this.columnId = in.readInt();
+        this.l2reg = in.readFloat();
+        this.in = in.readInt();
+        if(this.serializationType == SerializationType.WEIGHTS
+                || this.serializationType == SerializationType.MODEL_SPEC) {
+            this.weights = SerializationUtil.readFloatArray(in, this.weights, this.in);
+        } else if(this.serializationType == SerializationType.GRADIENTS) {
+            if(this.wGrads != null) {
+                this.wGrads.clear();
+            } else {
+                this.wGrads = new HashMap<Integer, Float>();
+            }
+            int size = in.readInt();
+            for(int i = 0; i < size; i++) {
+                this.wGrads.put(in.readInt(), in.readFloat());
+            }
+        }
     }
 }

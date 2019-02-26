@@ -20,8 +20,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
-import ml.shifu.guagua.io.Bytable;
+import java.util.Map.Entry;
 
 /**
  * {@link EmbedFieldLayer} is for each column like sparse categorical feature. The input of this layer is one-hot
@@ -36,7 +35,8 @@ import ml.shifu.guagua.io.Bytable;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitializable, Bytable {
+public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[], float[]>
+        implements WeightInitializable {
 
     /**
      * [in, out] array for deep matrix weights
@@ -67,6 +67,9 @@ public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], flo
      * Last input used for backward gradients computation
      */
     private SparseInput lastInput;
+
+    public EmbedFieldLayer() {
+    }
 
     public EmbedFieldLayer(int columnId, float[][] weights, int out, int in) {
         this.columnId = columnId;
@@ -206,8 +209,23 @@ public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], flo
      */
     @Override
     public void write(DataOutput out) throws IOException {
-        // TODO Auto-generated method stub
-
+        out.writeInt(this.columnId);
+        out.writeInt(this.in);
+        out.writeInt(this.out);
+        if(this.serializationType == SerializationType.WEIGHTS
+                || this.serializationType == SerializationType.MODEL_SPEC) {
+            SerializationUtil.write2DimFloatArray(out, this.weights, this.in, this.out);
+        } else if(this.serializationType == SerializationType.GRADIENTS) {
+            if(this.wGrads == null) {
+                out.writeInt(0);
+            } else {
+                out.writeInt(this.wGrads.size());
+                for(Entry<Integer, float[]> entry: this.wGrads.entrySet()) {
+                    out.writeInt(entry.getKey());
+                    SerializationUtil.writeFloatArray(out, entry.getValue(), this.out);
+                }
+            }
+        }
     }
 
     /*
@@ -217,7 +235,24 @@ public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], flo
      */
     @Override
     public void readFields(DataInput in) throws IOException {
-        // TODO Auto-generated method stub
-
+        this.columnId = in.readInt();
+        this.in = in.readInt();
+        this.out = in.readInt();
+        if(this.serializationType == SerializationType.WEIGHTS
+                || this.serializationType == SerializationType.MODEL_SPEC) {
+            this.weights = SerializationUtil.read2DimFloatArray(in, this.weights, this.in, this.out);
+        } else if(this.serializationType == SerializationType.GRADIENTS) {
+            if(this.wGrads != null) {
+                this.wGrads.clear();
+            } else {
+                this.wGrads = new HashMap<Integer, float[]>();
+            }
+            int gradSize = in.readInt();
+            for(int i = 0; i < gradSize; i++) {
+                int lineNumber = in.readInt();
+                float[] grad = SerializationUtil.readFloatArray(in, null, this.out);
+                this.wGrads.put(lineNumber, grad);
+            }
+        }
     }
 }

@@ -15,7 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
-import ml.shifu.guagua.io.Bytable;
 import ml.shifu.shifu.core.dtrain.AssertUtils;
 
 import java.io.DataInput;
@@ -28,12 +27,15 @@ import java.io.IOException;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class DenseInputLayer implements Layer<float[], float[], float[], float[]>, Bytable {
+public class DenseInputLayer extends AbstractLayer<float[], float[], float[], float[]> {
 
     /**
      * Output dimension.
      */
-    private final int out;
+    private int out;
+
+    public DenseInputLayer() {
+    }
 
     public DenseInputLayer(int out) {
         this.out = out;
@@ -56,22 +58,24 @@ public class DenseInputLayer implements Layer<float[], float[], float[], float[]
         throw new UnsupportedOperationException();
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
      */
     @Override
     public void write(DataOutput out) throws IOException {
-        // TODO Auto-generated method stub
-
+        out.writeInt(this.out);
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
      */
     @Override
     public void readFields(DataInput in) throws IOException {
-        // TODO Auto-generated method stub
-
+        this.out = in.readInt();
     }
 
 }

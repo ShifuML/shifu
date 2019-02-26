@@ -19,14 +19,12 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import ml.shifu.guagua.io.Bytable;
-
 /**
  * {@link BiasLayer} used in wide part of WideAndDeep architecture.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightInitializable, Bytable {
+public class BiasLayer extends AbstractLayer<Float, Float, Float, Float> implements WeightInitializable {
 
     private float weight;
 
@@ -95,8 +93,12 @@ public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightIniti
      */
     @Override
     public void write(DataOutput out) throws IOException {
-        // TODO Auto-generated method stub
-
+        if(this.serializationType == SerializationType.WEIGHTS
+                || this.serializationType == SerializationType.MODEL_SPEC) {
+            out.writeFloat(weight);
+        } else if(this.serializationType == SerializationType.GRADIENTS) {
+            out.writeFloat(this.wGrad);
+        }
     }
 
     /*
@@ -106,7 +108,11 @@ public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightIniti
      */
     @Override
     public void readFields(DataInput in) throws IOException {
-        // TODO Auto-generated method stub
-
+        if(this.serializationType == SerializationType.WEIGHTS
+                || this.serializationType == SerializationType.MODEL_SPEC) {
+            this.weight = in.readFloat();
+        } else if(this.serializationType == SerializationType.GRADIENTS) {
+            this.wGrad = in.readFloat();
+        }
     }
 }

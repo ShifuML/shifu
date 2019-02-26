@@ -25,6 +25,7 @@ import java.util.Map;
 import ml.shifu.guagua.io.Bytable;
 import ml.shifu.shifu.core.dtrain.AssertUtils;
 import ml.shifu.shifu.util.Tuple;
+
 /**
  * {@link WideAndDeep} graph definition which is for whole network including deep side and wide side.
  *
@@ -70,6 +71,8 @@ public class WideAndDeep implements WeightInitializable, Bytable {
 
     private float l2reg;
 
+    private SerializationType serializationType = SerializationType.MODEL_SPEC;
+
     public WideAndDeep(WideAndDeep wnd) {
         // TODO
     }
@@ -77,8 +80,9 @@ public class WideAndDeep implements WeightInitializable, Bytable {
     public WideAndDeep() {
     }
 
-    @SuppressWarnings("rawtypes") public WideAndDeep(List<Layer> hiddenLayers, DenseLayer finalLayer, EmbedLayer ecl,
-            WideLayer wl, Map<Integer, Integer> idBinCateSizeMap, int numericalSize, List<Integer> denseColumnIds,
+    @SuppressWarnings("rawtypes")
+    public WideAndDeep(List<Layer> hiddenLayers, DenseLayer finalLayer, EmbedLayer ecl, WideLayer wl,
+            Map<Integer, Integer> idBinCateSizeMap, int numericalSize, List<Integer> denseColumnIds,
             List<Integer> embedColumnIds, List<Integer> embedOutputs, List<Integer> wideColumnIds,
             List<Integer> hiddenNodes, List<String> actiFuncs, float l2reg) {
         this.hiddenLayers = hiddenLayers;
@@ -127,7 +131,7 @@ public class WideAndDeep implements WeightInitializable, Bytable {
         this.ecl = new EmbedLayer(embedLayers);
 
         List<WideFieldLayer> wfLayers = new ArrayList<>();
-        for(Integer columnId : wideColumnIds) {
+        for(Integer columnId: wideColumnIds) {
             WideFieldLayer wfl = new WideFieldLayer(columnId, this.idBinCateSizeMap.get(columnId) + 1, l2reg);
             wfLayers.add(wfl);
         }
