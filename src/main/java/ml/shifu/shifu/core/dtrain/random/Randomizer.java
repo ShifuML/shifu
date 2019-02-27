@@ -79,6 +79,42 @@ public interface Randomizer {
     void randomize(double[][] d);
 
     /**
+     * Starting with the specified number, randomize it to the degree specified
+     * by this randomizer. This could be a totally new random number, or it
+     * could be based on the specified number.
+     *
+     * @param f The number to randomize.
+     * @return A randomized number.
+     */
+    float randomize(float f);
+
+    /**
+     * Randomize the array based on an array, modify the array. Previous values
+     * may be used, or they may be discarded, depending on the randomizer.
+     *
+     * @param d An array to randomize.
+     */
+    void randomize(float[] f);
+
+    /**
+     * Randomize the 2d array based on an array, modify the array. Previous
+     * values may be used, or they may be discarded, depending on the
+     * randomizer.
+     *
+     * @param d An array to randomize.
+     */
+    void randomize(float[][] f);
+
+    /**
+     * Randomize an array.
+     *
+     * @param d     The array to randomize.
+     * @param begin The beginning element.
+     * @param size  The size of the array.
+     */
+    void randomize(final float[] f, int begin, int size);
+
+    /**
      * Randomize the matrix based on an array, modify the array. Previous values
      * may be used, or they may be discarded, depending on the randomizer.
      * 

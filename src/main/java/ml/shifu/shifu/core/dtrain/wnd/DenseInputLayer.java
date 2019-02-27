@@ -34,11 +34,12 @@ public class DenseInputLayer extends AbstractLayer<float[], float[], float[], fl
      */
     private int out;
 
-    public DenseInputLayer() {
-    }
-
     public DenseInputLayer(int out) {
         this.out = out;
+    }
+
+    public DenseInputLayer() {
+        this.out = 0;
     }
 
     @Override

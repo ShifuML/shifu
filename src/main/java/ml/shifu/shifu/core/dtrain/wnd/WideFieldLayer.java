@@ -28,8 +28,7 @@ import java.util.Map.Entry;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[], float[]>
-        implements WeightInitializable {
+public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[], float[]> implements WeightInitializer {
 
     /**
      * [in] float array of weights
@@ -185,8 +184,8 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
     }
 
     @Override
-    public void initWeight(String policy) {
-        // TODO
+    public void initWeight(InitMethod method) {
+        this.weights = method.getInitialisable().initWeight(this.in);
     }
 
     /*

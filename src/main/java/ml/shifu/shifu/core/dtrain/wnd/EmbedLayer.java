@@ -30,7 +30,7 @@ import ml.shifu.shifu.core.dtrain.AssertUtils;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class EmbedLayer extends AbstractLayer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>>
-        implements WeightInitializable {
+        implements WeightInitializer {
 
     /**
      * List of embed layer which is for each embed column.
@@ -89,9 +89,9 @@ public class EmbedLayer extends AbstractLayer<List<SparseInput>, List<float[]>, 
     }
 
     @Override
-    public void initWeight(String policy) {
+    public void initWeight(InitMethod method) {
         for(EmbedFieldLayer embedFieldLayer: this.embedLayers) {
-            embedFieldLayer.initWeight(policy);
+            embedFieldLayer.initWeight(method);
         }
     }
 

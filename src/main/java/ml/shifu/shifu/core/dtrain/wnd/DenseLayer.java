@@ -15,11 +15,11 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import ml.shifu.guagua.io.Bytable;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
-import ml.shifu.guagua.io.Bytable;
 
 /**
  * {@link DenseLayer} defines normal hidden layer in neural network while activation is not included but in one
@@ -29,7 +29,7 @@ import ml.shifu.guagua.io.Bytable;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]> implements WeightInitializable {
+public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]> implements WeightInitializer {
 
     /**
      * [in, out] array for deep matrix weights
@@ -257,8 +257,8 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
     }
 
     @Override
-    public void initWeight(String policy) {
-        // TODO
+    public void initWeight(InitMethod method) {
+        method.getInitialisable().initWeight(this.in, this.out);
     }
 
     /*

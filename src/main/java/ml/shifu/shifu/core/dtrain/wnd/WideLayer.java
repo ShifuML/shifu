@@ -34,7 +34,7 @@ import ml.shifu.shifu.util.Tuple;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class WideLayer extends AbstractLayer<Tuple<List<SparseInput>, float[]>, float[], float[], List<float[]>>
-        implements WeightInitializable {
+        implements WeightInitializer {
 
     /**
      * Layers for all wide columns.
@@ -144,12 +144,12 @@ public class WideLayer extends AbstractLayer<Tuple<List<SparseInput>, float[]>, 
     }
 
     @Override
-    public void initWeight(String policy) {
+    public void initWeight(InitMethod method) {
         for(WideFieldLayer layer: this.layers) {
-            layer.initWeight(policy);
+            layer.initWeight(method);
         }
-        this.denseLayer.initWeight(policy);
-        this.bias.initWeight(policy);
+        this.denseLayer.initWeight(method);
+        this.bias.initWeight(method);
     }
 
     public void initGrads() {

@@ -25,7 +25,7 @@ import java.util.List;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideDenseLayer extends AbstractLayer<float[], float[], float[], float[]> implements WeightInitializable {
+public class WideDenseLayer extends AbstractLayer<float[], float[], float[], float[]> implements WeightInitializer {
 
     /**
      * [in] float array of weights
@@ -63,7 +63,7 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
     public WideDenseLayer(List<Integer> columnIds, float[] weights, int in, float l2reg) {
         this.weights = weights;
         this.in = in;
-        this.setColumnIds(columnIds);
+        this.columnIds = columnIds;
         this.l2reg = l2reg;
     }
 
@@ -149,11 +149,6 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
         this.l2reg = l2reg;
     }
 
-    @Override
-    public void initWeight(String policy) {
-        // TODO
-    }
-
     /**
      * @return the columnIds
      */
@@ -201,5 +196,10 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
         } else if(this.serializationType == SerializationType.GRADIENTS) {
             this.wGrads = SerializationUtil.readFloatArray(in, this.wGrads, this.in);
         }
+    }
+
+    @Override
+    public void initWeight(InitMethod method) {
+        this.weights = method.getInitialisable().initWeight(this.in);
     }
 }

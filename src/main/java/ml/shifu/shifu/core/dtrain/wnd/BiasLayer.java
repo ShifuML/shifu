@@ -24,7 +24,7 @@ import java.io.IOException;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class BiasLayer extends AbstractLayer<Float, Float, Float, Float> implements WeightInitializable {
+public class BiasLayer extends AbstractLayer<Float, Float, Float, Float> implements WeightInitializer {
 
     private float weight;
 
@@ -63,8 +63,8 @@ public class BiasLayer extends AbstractLayer<Float, Float, Float, Float> impleme
     }
 
     @Override
-    public void initWeight(String policy) {
-        // TODO
+    public void initWeight(InitMethod method) {
+        this.weight = method.getInitialisable().initWeight();
     }
 
     /**

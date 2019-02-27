@@ -15,6 +15,13 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
+import ml.shifu.guagua.io.Bytable;
+import ml.shifu.shifu.util.Tuple;
+import ml.shifu.shifu.core.dtrain.AssertUtils;
+import ml.shifu.shifu.core.dtrain.wnd.activation.Activation;
+import ml.shifu.shifu.core.dtrain.wnd.activation.ReLU;
+import ml.shifu.shifu.core.dtrain.wnd.activation.Sigmoid;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -42,7 +49,7 @@ import ml.shifu.shifu.util.Tuple;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideAndDeep implements WeightInitializable, Bytable {
+public class WideAndDeep implements WeightInitializer, Bytable {
 
     private DenseInputLayer dil;
 
@@ -503,23 +510,22 @@ public class WideAndDeep implements WeightInitializable, Bytable {
      * TODO: init the weights in WideAndDeeep Model and it's sub module
      */
     public void initWeights() {
-        // TODO
-        String defaultMode = "get_from_configuration";
+        InitMethod defaultMode = InitMethod.ZERO_ONE_RANGE_RANDOM;
         initWeight(defaultMode);
     }
 
     @SuppressWarnings("rawtypes")
     @Override
-    public void initWeight(String policy) {
+    public void initWeight(InitMethod method) {
         for(Layer layer: this.hiddenLayers) {
             // There are two type of layer: DenseLayer, Activation. We only need to init DenseLayer
             if(layer instanceof DenseLayer) {
-                ((DenseLayer) layer).initWeight(policy);
+                ((DenseLayer) layer).initWeight(method);
             }
         }
-        this.finalLayer.initWeight(policy);
-        this.ecl.initWeight(policy);
-        this.wl.initWeight(policy);
+        this.finalLayer.initWeight(method);
+        this.ecl.initWeight(method);
+        this.wl.initWeight(method);
     }
 
     /*
