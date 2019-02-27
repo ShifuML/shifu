@@ -37,6 +37,9 @@ public class EmbedLayer extends AbstractLayer<List<SparseInput>, List<float[]>, 
      */
     private List<EmbedFieldLayer> embedLayers;
 
+    public EmbedLayer() {
+    }
+
     public EmbedLayer(List<EmbedFieldLayer> embedLayers) {
         this.embedLayers = embedLayers;
     }

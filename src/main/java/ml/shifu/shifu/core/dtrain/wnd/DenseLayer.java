@@ -71,6 +71,9 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
      */
     private float[] lastInput = null;
 
+    public DenseLayer() {
+    }
+
     public DenseLayer(float[][] weights, float[] bias, int out, int in, float l2reg) {
         this.weights = weights;
         this.bias = bias;

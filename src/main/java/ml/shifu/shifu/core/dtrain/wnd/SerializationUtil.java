@@ -3,6 +3,8 @@ package ml.shifu.shifu.core.dtrain.wnd;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class SerializationUtil {
 
@@ -93,6 +95,47 @@ public class SerializationUtil {
             }
         }
         return array;
+    }
+
+    /**
+     * Serialize Integer list with null check.
+     * 
+     * @param out
+     * @param list
+     * @throws IOException
+     */
+    public static void writeIntList(DataOutput out, List<Integer> list) throws IOException {
+        if(list == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(list.size());
+            for(Integer value: list) {
+                out.writeInt(value);
+            }
+        }
+    }
+
+    /**
+     * De-serialize Integer list. Try using provided list to save memory.
+     * 
+     * @param in
+     * @param list
+     * @return
+     * @throws IOException
+     */
+    public static List<Integer> readIntList(DataInput in, List<Integer> list) throws IOException {
+        int size = in.readInt();
+        if(size > 0) {
+            if(list == null) {
+                list = new ArrayList<Integer>();
+            } else {
+                list.clear();
+            }
+            for(int i = 0; i < size; i++) {
+                list.add(in.readInt());
+            }
+        }
+        return list;
     }
 
 }

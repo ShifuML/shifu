@@ -88,4 +88,8 @@ enum SerializationType {
     public static SerializationType getSerializationType(int value) {
         return Arrays.stream(values()).filter(type -> type.value == value).findFirst().orElse(SerializationType.ERROR);
     }
+
+    public int getValue() {
+        return this.value;
+    }
 }

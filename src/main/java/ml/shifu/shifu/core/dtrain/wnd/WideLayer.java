@@ -51,6 +51,9 @@ public class WideLayer extends AbstractLayer<Tuple<List<SparseInput>, float[]>, 
      */
     private BiasLayer bias;
 
+    public WideLayer() {
+    }
+
     public WideLayer(List<WideFieldLayer> layers, BiasLayer bias) {
         this.layers = layers;
         this.bias = bias;
