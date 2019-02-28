@@ -13,7 +13,9 @@ public class SerializationUtil {
      * 
      * @param out
      * @param array
+     *            the array to be serialized
      * @param size
+     *            the expected length of array
      * @throws IOException
      */
     public static void writeFloatArray(DataOutput out, float[] array, int size) throws IOException {
@@ -33,8 +35,11 @@ public class SerializationUtil {
      * 
      * @param in
      * @param array
+     *            the array to hold data from DataInput. Will be ignored if null or length not match size param.
      * @param size
-     * @return
+     *            the expected length of array
+     * @return de-serialized array. The returned value will reuse memory of provided array if it is not null and its
+     *         length is size.
      * @throws IOException
      */
     public static float[] readFloatArray(DataInput in, float[] array, int size) throws IOException {
@@ -54,8 +59,12 @@ public class SerializationUtil {
      * 
      * @param out
      * @param array
+     *            the array to be serialized. The size should match [width][length]. The array will be treated as null
+     *            otherwise.
      * @param width
+     *            array width
      * @param length
+     *            array length
      * @throws IOException
      */
     public static void write2DimFloatArray(DataOutput out, float[][] array, int width, int length) throws IOException {
@@ -77,9 +86,13 @@ public class SerializationUtil {
      * 
      * @param in
      * @param array
+     *            the array to hold de-serialized data.Will be ignored if null or not sized as [width][length].
      * @param width
+     *            array width
      * @param length
-     * @return
+     *            array length
+     * @return de-serialized 2-dim array. The returned value will reuse memory of provided array if it is not null and
+     *         size match with [width][length].
      * @throws IOException
      */
     public static float[][] read2DimFloatArray(DataInput in, float[][] array, int width, int length)
@@ -102,6 +115,7 @@ public class SerializationUtil {
      * 
      * @param out
      * @param list
+     *            the List to serialize.
      * @throws IOException
      */
     public static void writeIntList(DataOutput out, List<Integer> list) throws IOException {
@@ -120,7 +134,8 @@ public class SerializationUtil {
      * 
      * @param in
      * @param list
-     * @return
+     *            the list to hold de-serialized data.
+     * @return de-serialized list. Will reuse provided list if it is not null.
      * @throws IOException
      */
     public static List<Integer> readIntList(DataInput in, List<Integer> list) throws IOException {

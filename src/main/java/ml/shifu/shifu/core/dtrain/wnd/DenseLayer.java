@@ -271,13 +271,19 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
         out.writeFloat(this.l2reg);
         out.writeInt(this.in);
         out.writeInt(this.out);
-        if(this.serializationType == SerializationType.WEIGHTS
-                || this.serializationType == SerializationType.MODEL_SPEC) {
-            SerializationUtil.write2DimFloatArray(out, this.weights, this.in, this.out);
-            SerializationUtil.writeFloatArray(out, this.bias, this.out);
-        } else if(this.serializationType == SerializationType.GRADIENTS) {
-            SerializationUtil.write2DimFloatArray(out, this.wGrads, this.in, this.out);
-            SerializationUtil.writeFloatArray(out, this.bGrads, this.out);
+
+        switch(this.serializationType) {
+            case WEIGHTS:
+            case MODEL_SPEC:
+                SerializationUtil.write2DimFloatArray(out, this.weights, this.in, this.out);
+                SerializationUtil.writeFloatArray(out, this.bias, this.out);
+                break;
+            case GRADIENTS:
+                SerializationUtil.write2DimFloatArray(out, this.wGrads, this.in, this.out);
+                SerializationUtil.writeFloatArray(out, this.bGrads, this.out);
+                break;
+            default:
+                break;
         }
     }
 
@@ -291,13 +297,19 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
         this.l2reg = in.readFloat();
         this.in = in.readInt();
         this.out = in.readInt();
-        if(this.serializationType == SerializationType.WEIGHTS
-                || this.serializationType == SerializationType.MODEL_SPEC) {
-            this.weights = SerializationUtil.read2DimFloatArray(in, this.weights, this.in, this.out);
-            this.bias = SerializationUtil.readFloatArray(in, this.bias, this.out);
-        } else if(this.serializationType == SerializationType.GRADIENTS) {
-            this.wGrads = SerializationUtil.read2DimFloatArray(in, this.wGrads, this.in, this.out);
-            this.bGrads = SerializationUtil.readFloatArray(in, this.bGrads, this.out);
+
+        switch(this.serializationType) {
+            case WEIGHTS:
+            case MODEL_SPEC:
+                this.weights = SerializationUtil.read2DimFloatArray(in, this.weights, this.in, this.out);
+                this.bias = SerializationUtil.readFloatArray(in, this.bias, this.out);
+                break;
+            case GRADIENTS:
+                this.wGrads = SerializationUtil.read2DimFloatArray(in, this.wGrads, this.in, this.out);
+                this.bGrads = SerializationUtil.readFloatArray(in, this.bGrads, this.out);
+                break;
+            default:
+                break;
         }
     }
 }

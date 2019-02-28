@@ -663,10 +663,6 @@ public class WideAndDeep implements WeightInitializer, Bytable {
 
     /**
      * Write layer with null check.
-     * 
-     * @param out
-     * @param layer
-     * @throws IOException
      */
     @SuppressWarnings("rawtypes")
     private void writeLayerWithNuLLCheck(DataOutput out, AbstractLayer layer) throws IOException {
@@ -683,8 +679,10 @@ public class WideAndDeep implements WeightInitializer, Bytable {
      * 
      * @param in
      * @param layer
+     *            the layer to hold serialized data. It should be an instance of clazz.
      * @param clazz
-     * @return
+     *            The layer class should have instantiation method of empty argument list.
+     * @return de-serialized layer instance
      * @throws IOException
      */
     @SuppressWarnings("rawtypes")
@@ -695,7 +693,6 @@ public class WideAndDeep implements WeightInitializer, Bytable {
                 try {
                     layer = clazz.newInstance();
                 } catch (InstantiationException | IllegalAccessException e) { // should not happen
-                    e.printStackTrace();
                     return null;
                 }
             }

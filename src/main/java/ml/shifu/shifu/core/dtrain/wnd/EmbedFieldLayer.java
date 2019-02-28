@@ -212,19 +212,25 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
         out.writeInt(this.columnId);
         out.writeInt(this.in);
         out.writeInt(this.out);
-        if(this.serializationType == SerializationType.WEIGHTS
-                || this.serializationType == SerializationType.MODEL_SPEC) {
-            SerializationUtil.write2DimFloatArray(out, this.weights, this.in, this.out);
-        } else if(this.serializationType == SerializationType.GRADIENTS) {
-            if(this.wGrads == null) {
-                out.writeInt(0);
-            } else {
-                out.writeInt(this.wGrads.size());
-                for(Entry<Integer, float[]> entry: this.wGrads.entrySet()) {
-                    out.writeInt(entry.getKey());
-                    SerializationUtil.writeFloatArray(out, entry.getValue(), this.out);
+
+        switch(this.serializationType) {
+            case WEIGHTS:
+            case MODEL_SPEC:
+                SerializationUtil.write2DimFloatArray(out, this.weights, this.in, this.out);
+                break;
+            case GRADIENTS:
+                if(this.wGrads == null) {
+                    out.writeInt(0);
+                } else {
+                    out.writeInt(this.wGrads.size());
+                    for(Entry<Integer, float[]> entry: this.wGrads.entrySet()) {
+                        out.writeInt(entry.getKey());
+                        SerializationUtil.writeFloatArray(out, entry.getValue(), this.out);
+                    }
                 }
-            }
+                break;
+            default:
+                break;
         }
     }
 
@@ -238,21 +244,27 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
         this.columnId = in.readInt();
         this.in = in.readInt();
         this.out = in.readInt();
-        if(this.serializationType == SerializationType.WEIGHTS
-                || this.serializationType == SerializationType.MODEL_SPEC) {
-            this.weights = SerializationUtil.read2DimFloatArray(in, this.weights, this.in, this.out);
-        } else if(this.serializationType == SerializationType.GRADIENTS) {
-            if(this.wGrads != null) {
-                this.wGrads.clear();
-            } else {
-                this.wGrads = new HashMap<Integer, float[]>();
-            }
-            int gradSize = in.readInt();
-            for(int i = 0; i < gradSize; i++) {
-                int lineNumber = in.readInt();
-                float[] grad = SerializationUtil.readFloatArray(in, null, this.out);
-                this.wGrads.put(lineNumber, grad);
-            }
+
+        switch(this.serializationType) {
+            case WEIGHTS:
+            case MODEL_SPEC:
+                this.weights = SerializationUtil.read2DimFloatArray(in, this.weights, this.in, this.out);
+                break;
+            case GRADIENTS:
+                if(this.wGrads != null) {
+                    this.wGrads.clear();
+                } else {
+                    this.wGrads = new HashMap<Integer, float[]>();
+                }
+                int gradSize = in.readInt();
+                for(int i = 0; i < gradSize; i++) {
+                    int lineNumber = in.readInt();
+                    float[] grad = SerializationUtil.readFloatArray(in, null, this.out);
+                    this.wGrads.put(lineNumber, grad);
+                }
+                break;
+            default:
+                break;
         }
     }
 }

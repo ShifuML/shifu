@@ -198,19 +198,25 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
         out.writeInt(this.columnId);
         out.writeFloat(this.l2reg);
         out.writeInt(this.in);
-        if(this.serializationType == SerializationType.WEIGHTS
-                || this.serializationType == SerializationType.MODEL_SPEC) {
-            SerializationUtil.writeFloatArray(out, this.weights, this.in);
-        } else if(this.serializationType == SerializationType.GRADIENTS) {
-            if(this.wGrads == null) {
-                out.writeInt(0);
-            } else {
-                out.writeInt(this.wGrads.size());
-                for(Entry<Integer, Float> entry: this.wGrads.entrySet()) {
-                    out.writeInt(entry.getKey());
-                    out.writeFloat(entry.getValue());
+
+        switch(this.serializationType) {
+            case WEIGHTS:
+            case MODEL_SPEC:
+                SerializationUtil.writeFloatArray(out, this.weights, this.in);
+                break;
+            case GRADIENTS:
+                if(this.wGrads == null) {
+                    out.writeInt(0);
+                } else {
+                    out.writeInt(this.wGrads.size());
+                    for(Entry<Integer, Float> entry: this.wGrads.entrySet()) {
+                        out.writeInt(entry.getKey());
+                        out.writeFloat(entry.getValue());
+                    }
                 }
-            }
+                break;
+            default:
+                break;
         }
     }
 
@@ -224,19 +230,25 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
         this.columnId = in.readInt();
         this.l2reg = in.readFloat();
         this.in = in.readInt();
-        if(this.serializationType == SerializationType.WEIGHTS
-                || this.serializationType == SerializationType.MODEL_SPEC) {
-            this.weights = SerializationUtil.readFloatArray(in, this.weights, this.in);
-        } else if(this.serializationType == SerializationType.GRADIENTS) {
-            if(this.wGrads != null) {
-                this.wGrads.clear();
-            } else {
-                this.wGrads = new HashMap<Integer, Float>();
-            }
-            int size = in.readInt();
-            for(int i = 0; i < size; i++) {
-                this.wGrads.put(in.readInt(), in.readFloat());
-            }
+
+        switch(this.serializationType) {
+            case WEIGHTS:
+            case MODEL_SPEC:
+                this.weights = SerializationUtil.readFloatArray(in, this.weights, this.in);
+                break;
+            case GRADIENTS:
+                if(this.wGrads != null) {
+                    this.wGrads.clear();
+                } else {
+                    this.wGrads = new HashMap<Integer, Float>();
+                }
+                int size = in.readInt();
+                for(int i = 0; i < size; i++) {
+                    this.wGrads.put(in.readInt(), in.readFloat());
+                }
+                break;
+            default:
+                break;
         }
     }
 }

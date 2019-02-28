@@ -51,10 +51,6 @@ public abstract class AbstractLayer<FIN, FOUT, BIN, BOUT> implements Layer<FIN, 
     /**
      * Serialize layer based on provided SerializationType. The implementation of {@link #write(DataOutput)} should use
      * {@link #serializationType} to determine what to serialize.
-     * 
-     * @param out
-     * @param serializationType
-     * @throws IOException
      */
     public void write(DataOutput out, SerializationType serializationType) throws IOException {
         setSerializationType(serializationType);
@@ -64,10 +60,6 @@ public abstract class AbstractLayer<FIN, FOUT, BIN, BOUT> implements Layer<FIN, 
     /**
      * De-serialize layer based on provided SerializationType. The implementation of {@link #readFields(DataInput)}
      * should use {@link #serializationType} to determine what to de-serialize.
-     * 
-     * @param in
-     * @param serializationType
-     * @throws IOException
      */
     public void readFields(DataInput in, SerializationType serializationType) throws IOException {
         setSerializationType(serializationType);

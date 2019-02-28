@@ -93,11 +93,16 @@ public class BiasLayer extends AbstractLayer<Float, Float, Float, Float> impleme
      */
     @Override
     public void write(DataOutput out) throws IOException {
-        if(this.serializationType == SerializationType.WEIGHTS
-                || this.serializationType == SerializationType.MODEL_SPEC) {
-            out.writeFloat(weight);
-        } else if(this.serializationType == SerializationType.GRADIENTS) {
-            out.writeFloat(this.wGrad);
+        switch(this.serializationType) {
+            case WEIGHTS:
+            case MODEL_SPEC:
+                out.writeFloat(weight);
+                break;
+            case GRADIENTS:
+                out.writeFloat(this.wGrad);
+                break;
+            default:
+                break;
         }
     }
 
@@ -108,11 +113,16 @@ public class BiasLayer extends AbstractLayer<Float, Float, Float, Float> impleme
      */
     @Override
     public void readFields(DataInput in) throws IOException {
-        if(this.serializationType == SerializationType.WEIGHTS
-                || this.serializationType == SerializationType.MODEL_SPEC) {
-            this.weight = in.readFloat();
-        } else if(this.serializationType == SerializationType.GRADIENTS) {
-            this.wGrad = in.readFloat();
+        switch(this.serializationType) {
+            case WEIGHTS:
+            case MODEL_SPEC:
+                this.weight = in.readFloat();
+                break;
+            case GRADIENTS:
+                this.wGrad = in.readFloat();
+                break;
+            default:
+                break;
         }
     }
 }
