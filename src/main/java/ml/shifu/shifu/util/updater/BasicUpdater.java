@@ -15,8 +15,11 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.validator.ModelInspector;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
+import parquet.Log;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by zhanhu on 2/22/17.
@@ -36,6 +39,10 @@ public class BasicUpdater {
 
     protected Set<NSColumn> setHybridColumns;
     protected Map<String, Double> hybridColumnNames;
+    protected Map<String, Integer> categoricalColumnHashSeeds;
+    
+    private final static Logger LOG = LoggerFactory.getLogger(BasicUpdater.class);
+
 
     public BasicUpdater(ModelConfig modelConfig) throws IOException {
         this.modelConfig = modelConfig;
@@ -47,6 +54,7 @@ public class BasicUpdater {
             for(String column: modelConfig.getCategoricalColumnNames()) {
                 setCategorialColumns.add(new NSColumn(column));
             }
+            this.categoricalColumnHashSeeds = modelConfig.getCategoricalColumnHashSeedConf();  
         }
 
         this.setMeta = new HashSet<NSColumn>();
@@ -144,6 +152,10 @@ public class BasicUpdater {
         } else {
             // meta and other columns are set to numerical if user not set it in categorical column configuration file
             columnConfig.setColumnType(ColumnType.N);
+        }
+        if(this.categoricalColumnHashSeeds!=null&&this.categoricalColumnHashSeeds.containsKey(varName)) {
+        	LOG.info("hash seed for column "+varName+":"+this.categoricalColumnHashSeeds.get(varName));
+        	columnConfig.setHashSeed(this.categoricalColumnHashSeeds.get(varName));
         }
     }
 

@@ -97,6 +97,11 @@ public class ColumnConfig {
      * Sample values of such column.
      */
     private List<String> sampleValues;
+    
+    /**
+     * hash seed for categorical column enabled hash feature.
+     */
+    private int hashSeed = 0;
 
     /*
      * ---------------------------------------------------------------------------
@@ -104,7 +109,16 @@ public class ColumnConfig {
      * ---------------------------------------------------------------------------
      */
 
-    public Integer getColumnNum() {
+    @JsonIgnore
+    public int getHashSeed() {
+		return hashSeed;
+	}
+
+	public void setHashSeed(int hashSeed) {
+		this.hashSeed = hashSeed;
+	}
+
+	public Integer getColumnNum() {
         return columnNum;
     }
 

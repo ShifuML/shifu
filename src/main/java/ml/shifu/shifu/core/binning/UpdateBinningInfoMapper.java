@@ -463,6 +463,10 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 binNum = binningInfoWritable.getBinCategories().size() + binningInfoWritable.getBinBoundaries().size();
             } else if(isCategory) {
                 // get categorical bin number in category list
+//            	if(columnConfig.getHashSeed() >0)
+//            	{
+//            		str = str.hashCode()%columnConfig.getHashSeed()+"";
+//            	}
                 binNum = quickLocateCategoricalBin(this.categoricalBinMap.get(newCCIndex), str);
                 if(binNum < 0) {
                     isInvalidValue = true;
@@ -511,6 +515,10 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 isMissingValue = true;
             } else {
                 String str = units[columnIndex];
+            	if(columnConfig.getHashSeed() >0)
+            	{
+            		str = str.hashCode()%columnConfig.getHashSeed()+"";
+            	}
                 binNum = quickLocateCategoricalBin(this.categoricalBinMap.get(newCCIndex), str);
                 if(binNum < 0) {
                     isInvalidValue = true;
