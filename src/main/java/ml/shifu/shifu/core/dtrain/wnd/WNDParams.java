@@ -57,6 +57,11 @@ public class WNDParams extends HaltBytable implements Combinable<WNDParams> {
      */
     private double validationError;
 
+    /**
+     * Serialization type. Default to MODEL_SPEC.
+     */
+    private SerializationType serializationType = SerializationType.MODEL_SPEC;
+
     private WideAndDeep wnd;
 
     // TODO: add wide. dnn, embedding weights/gradients here
@@ -125,6 +130,21 @@ public class WNDParams extends HaltBytable implements Combinable<WNDParams> {
         this.validationError = validationError;
     }
 
+    /**
+     * @return the serializationType
+     */
+    public SerializationType getSerializationType() {
+        return serializationType;
+    }
+
+    /**
+     * @param serializationType
+     *            the serializationType to set
+     */
+    public void setSerializationType(SerializationType serializationType) {
+        this.serializationType = serializationType;
+    }
+
     @Override
     public WNDParams combine(WNDParams from) {
         // TODO How to combine workers into one to save memory
@@ -133,12 +153,19 @@ public class WNDParams extends HaltBytable implements Combinable<WNDParams> {
 
     @Override
     public void doWrite(DataOutput out) throws IOException {
-        // TODO serialization
+        if(this.wnd == null) {
+            throw new IOException("WideAndDeep instance is null.");
+        }
+        this.wnd.setSerializationType(serializationType);
+        this.wnd.write(out);
     }
 
     @Override
     public void doReadFields(DataInput in) throws IOException {
-        // TODO de-serialization
+        if(this.wnd == null) {
+            this.wnd = new WideAndDeep();
+        }
+        this.wnd.readFields(in);
     }
 
     /**
@@ -149,7 +176,8 @@ public class WNDParams extends HaltBytable implements Combinable<WNDParams> {
     }
 
     /**
-     * @param wnd the wnd to set
+     * @param wnd
+     *            the wnd to set
      */
     public void setWnd(WideAndDeep wnd) {
         this.wnd = wnd;

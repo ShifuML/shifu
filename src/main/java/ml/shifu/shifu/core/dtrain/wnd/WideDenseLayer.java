@@ -15,8 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
-import ml.shifu.guagua.io.Bytable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -27,7 +25,7 @@ import java.util.List;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideDenseLayer implements Layer<float[], float[], float[], float[]>, WeightInitializer, Bytable {
+public class WideDenseLayer extends AbstractLayer<float[], float[], float[], float[]> implements WeightInitializer {
 
     /**
      * [in] float array of weights
@@ -61,7 +59,7 @@ public class WideDenseLayer implements Layer<float[], float[], float[], float[]>
 
     public WideDenseLayer() {
     }
-    
+
     public WideDenseLayer(List<Integer> columnIds, float[] weights, int in, float l2reg) {
         this.weights = weights;
         this.in = in;
@@ -151,7 +149,6 @@ public class WideDenseLayer implements Layer<float[], float[], float[], float[]>
         this.l2reg = l2reg;
     }
 
-
     /**
      * @return the columnIds
      */
@@ -174,7 +171,20 @@ public class WideDenseLayer implements Layer<float[], float[], float[], float[]>
      */
     @Override
     public void write(DataOutput out) throws IOException {
-        // TODO Auto-generated method stub
+        out.writeFloat(this.l2reg);
+        out.writeInt(this.in);
+
+        switch(this.serializationType) {
+            case WEIGHTS:
+            case MODEL_SPEC:
+                SerializationUtil.writeFloatArray(out, this.weights, this.in);
+                break;
+            case GRADIENTS:
+                SerializationUtil.writeFloatArray(out, this.wGrads, this.in);
+                break;
+            default:
+                break;
+        }
     }
 
     /*
@@ -184,7 +194,20 @@ public class WideDenseLayer implements Layer<float[], float[], float[], float[]>
      */
     @Override
     public void readFields(DataInput in) throws IOException {
-        // TODO Auto-generated method stub
+        this.l2reg = in.readFloat();
+        this.in = in.readInt();
+
+        switch(this.serializationType) {
+            case WEIGHTS:
+            case MODEL_SPEC:
+                this.weights = SerializationUtil.readFloatArray(in, this.weights, this.in);
+                break;
+            case GRADIENTS:
+                this.wGrads = SerializationUtil.readFloatArray(in, this.wGrads, this.in);
+                break;
+            default:
+                break;
+        }
     }
 
     @Override

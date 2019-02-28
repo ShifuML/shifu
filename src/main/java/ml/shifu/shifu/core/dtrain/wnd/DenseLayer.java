@@ -29,7 +29,7 @@ import java.io.IOException;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class DenseLayer implements Layer<float[], float[], float[], float[]>, WeightInitializer, Bytable {
+public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]> implements WeightInitializer {
 
     /**
      * [in, out] array for deep matrix weights
@@ -70,7 +70,7 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]>, We
      * Layer inputs used for backward gradients computation, tmp use for computation
      */
     private float[] lastInput = null;
-    
+
     public DenseLayer() {
     }
 
@@ -211,9 +211,6 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]>, We
     public void initGrads() {
         if(this.wGrads == null) {// reuse same array
             this.wGrads = new float[this.in][this.out];
-            for(int i = 0; i < this.in; i++) {
-                this.wGrads[i] = new float[this.out];
-            }
         }
         for(int i = 0; i < this.in; i++) {
             for(int j = 0; j < this.out; j++) {
@@ -259,25 +256,60 @@ public class DenseLayer implements Layer<float[], float[], float[], float[]>, We
         this.bGrads = bGrads;
     }
 
-    @Override public void initWeight(InitMethod method) {
+    @Override
+    public void initWeight(InitMethod method) {
         method.getInitialisable().initWeight(this.in, this.out);
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
      */
     @Override
     public void write(DataOutput out) throws IOException {
-        // TODO Auto-generated method stub
-        
+        out.writeFloat(this.l2reg);
+        out.writeInt(this.in);
+        out.writeInt(this.out);
+
+        switch(this.serializationType) {
+            case WEIGHTS:
+            case MODEL_SPEC:
+                SerializationUtil.write2DimFloatArray(out, this.weights, this.in, this.out);
+                SerializationUtil.writeFloatArray(out, this.bias, this.out);
+                break;
+            case GRADIENTS:
+                SerializationUtil.write2DimFloatArray(out, this.wGrads, this.in, this.out);
+                SerializationUtil.writeFloatArray(out, this.bGrads, this.out);
+                break;
+            default:
+                break;
+        }
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
      */
     @Override
     public void readFields(DataInput in) throws IOException {
-        // TODO Auto-generated method stub
-        
+        this.l2reg = in.readFloat();
+        this.in = in.readInt();
+        this.out = in.readInt();
+
+        switch(this.serializationType) {
+            case WEIGHTS:
+            case MODEL_SPEC:
+                this.weights = SerializationUtil.read2DimFloatArray(in, this.weights, this.in, this.out);
+                this.bias = SerializationUtil.readFloatArray(in, this.bias, this.out);
+                break;
+            case GRADIENTS:
+                this.wGrads = SerializationUtil.read2DimFloatArray(in, this.wGrads, this.in, this.out);
+                this.bGrads = SerializationUtil.readFloatArray(in, this.bGrads, this.out);
+                break;
+            default:
+                break;
+        }
     }
 }

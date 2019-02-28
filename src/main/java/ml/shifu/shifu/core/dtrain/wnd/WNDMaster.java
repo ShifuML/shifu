@@ -173,6 +173,7 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
         params.setValidationCount(aggregation.getValidationCount());
         params.setTrainError(aggregation.getTrainError());
         params.setValidationError(aggregation.getValidationError());
+        params.setSerializationType(SerializationType.WEIGHTS);
         params.setWnd(this.wnd);
         return params;
     }
@@ -213,7 +214,7 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
         try {
             inputStream = fileSystem.open(modelPath);
             return IndependentWNDModel.loadFromStream(inputStream).getWnd();
-        } catch(IOException e) {
+        } catch (IOException e) {
             LOG.error("IOException happen when load WideAndDeep from HDFS", e);
         } finally {
             IOUtils.closeQuietly(inputStream);

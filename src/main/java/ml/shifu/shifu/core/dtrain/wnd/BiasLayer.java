@@ -15,8 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
-import ml.shifu.guagua.io.Bytable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -26,7 +24,7 @@ import java.io.IOException;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightInitializer, Bytable {
+public class BiasLayer extends AbstractLayer<Float, Float, Float, Float> implements WeightInitializer {
 
     private float weight;
 
@@ -64,7 +62,8 @@ public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightIniti
         this.weight = weight;
     }
 
-    @Override public void initWeight(InitMethod method) {
+    @Override
+    public void initWeight(InitMethod method) {
         this.weight = method.getInitialisable().initWeight();
     }
 
@@ -94,8 +93,17 @@ public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightIniti
      */
     @Override
     public void write(DataOutput out) throws IOException {
-        // TODO Auto-generated method stub
-
+        switch(this.serializationType) {
+            case WEIGHTS:
+            case MODEL_SPEC:
+                out.writeFloat(weight);
+                break;
+            case GRADIENTS:
+                out.writeFloat(this.wGrad);
+                break;
+            default:
+                break;
+        }
     }
 
     /*
@@ -105,7 +113,16 @@ public class BiasLayer implements Layer<Float, Float, Float, Float>, WeightIniti
      */
     @Override
     public void readFields(DataInput in) throws IOException {
-        // TODO Auto-generated method stub
-
+        switch(this.serializationType) {
+            case WEIGHTS:
+            case MODEL_SPEC:
+                this.weight = in.readFloat();
+                break;
+            case GRADIENTS:
+                this.wGrad = in.readFloat();
+                break;
+            default:
+                break;
+        }
     }
 }

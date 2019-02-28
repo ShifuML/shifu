@@ -714,6 +714,7 @@ public class WNDWorker extends
         params.setValidationCount(validCnt);
         params.setTrainError(trainSumError);
         params.setValidationError(validSumError);
+        params.setSerializationType(SerializationType.GRADIENTS);
         params.setWnd(this.wnd);
         return params;
     }

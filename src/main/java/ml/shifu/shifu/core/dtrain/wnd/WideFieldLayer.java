@@ -15,13 +15,12 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
-import ml.shifu.guagua.io.Bytable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * {@link WideFieldLayer} is wide part input of WideAndDeep architecture. Per each column a {@link WideFieldLayer}
@@ -29,7 +28,7 @@ import java.util.Map;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitializer, Bytable {
+public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[], float[]> implements WeightInitializer {
 
     /**
      * [in] float array of weights
@@ -196,8 +195,29 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
      */
     @Override
     public void write(DataOutput out) throws IOException {
-        // TODO Auto-generated method stub
+        out.writeInt(this.columnId);
+        out.writeFloat(this.l2reg);
+        out.writeInt(this.in);
 
+        switch(this.serializationType) {
+            case WEIGHTS:
+            case MODEL_SPEC:
+                SerializationUtil.writeFloatArray(out, this.weights, this.in);
+                break;
+            case GRADIENTS:
+                if(this.wGrads == null) {
+                    out.writeInt(0);
+                } else {
+                    out.writeInt(this.wGrads.size());
+                    for(Entry<Integer, Float> entry: this.wGrads.entrySet()) {
+                        out.writeInt(entry.getKey());
+                        out.writeFloat(entry.getValue());
+                    }
+                }
+                break;
+            default:
+                break;
+        }
     }
 
     /*
@@ -207,7 +227,28 @@ public class WideFieldLayer implements Layer<SparseInput, float[], float[], floa
      */
     @Override
     public void readFields(DataInput in) throws IOException {
-        // TODO Auto-generated method stub
+        this.columnId = in.readInt();
+        this.l2reg = in.readFloat();
+        this.in = in.readInt();
 
+        switch(this.serializationType) {
+            case WEIGHTS:
+            case MODEL_SPEC:
+                this.weights = SerializationUtil.readFloatArray(in, this.weights, this.in);
+                break;
+            case GRADIENTS:
+                if(this.wGrads != null) {
+                    this.wGrads.clear();
+                } else {
+                    this.wGrads = new HashMap<Integer, Float>();
+                }
+                int size = in.readInt();
+                for(int i = 0; i < size; i++) {
+                    this.wGrads.put(in.readInt(), in.readFloat());
+                }
+                break;
+            default:
+                break;
+        }
     }
 }

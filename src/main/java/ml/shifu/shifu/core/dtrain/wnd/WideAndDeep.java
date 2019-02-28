@@ -26,8 +26,14 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+
+import ml.shifu.guagua.io.Bytable;
+import ml.shifu.shifu.core.dtrain.AssertUtils;
+import ml.shifu.shifu.util.Tuple;
 
 /**
  * {@link WideAndDeep} graph definition which is for whole network including deep side and wide side.
@@ -74,6 +80,8 @@ public class WideAndDeep implements WeightInitializer, Bytable {
 
     private float l2reg;
 
+    private SerializationType serializationType = SerializationType.MODEL_SPEC;
+
     public WideAndDeep(WideAndDeep wnd) {
         // TODO
     }
@@ -81,8 +89,9 @@ public class WideAndDeep implements WeightInitializer, Bytable {
     public WideAndDeep() {
     }
 
-    @SuppressWarnings("rawtypes") public WideAndDeep(List<Layer> hiddenLayers, DenseLayer finalLayer, EmbedLayer ecl,
-            WideLayer wl, Map<Integer, Integer> idBinCateSizeMap, int numericalSize, List<Integer> denseColumnIds,
+    @SuppressWarnings("rawtypes")
+    public WideAndDeep(List<Layer> hiddenLayers, DenseLayer finalLayer, EmbedLayer ecl, WideLayer wl,
+            Map<Integer, Integer> idBinCateSizeMap, int numericalSize, List<Integer> denseColumnIds,
             List<Integer> embedColumnIds, List<Integer> embedOutputs, List<Integer> wideColumnIds,
             List<Integer> hiddenNodes, List<String> actiFuncs, float l2reg) {
         this.hiddenLayers = hiddenLayers;
@@ -131,7 +140,7 @@ public class WideAndDeep implements WeightInitializer, Bytable {
         this.ecl = new EmbedLayer(embedLayers);
 
         List<WideFieldLayer> wfLayers = new ArrayList<>();
-        for(Integer columnId : wideColumnIds) {
+        for(Integer columnId: wideColumnIds) {
             WideFieldLayer wfl = new WideFieldLayer(columnId, this.idBinCateSizeMap.get(columnId) + 1, l2reg);
             wfLayers.add(wfl);
         }
@@ -472,6 +481,21 @@ public class WideAndDeep implements WeightInitializer, Bytable {
         this.l2reg = l2reg;
     }
 
+    /**
+     * @return the serializationType
+     */
+    public SerializationType getSerializationType() {
+        return serializationType;
+    }
+
+    /**
+     * @param serializationType
+     *            the serializationType to set
+     */
+    public void setSerializationType(SerializationType serializationType) {
+        this.serializationType = serializationType;
+    }
+
     public void updateWeights(WideAndDeep wnd) {
         // TODO copy weights from wnd object and set it in current wide and deep, update weights from master
     }
@@ -509,10 +533,54 @@ public class WideAndDeep implements WeightInitializer, Bytable {
      * 
      * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
      */
+    @SuppressWarnings("rawtypes")
     @Override
     public void write(DataOutput out) throws IOException {
-        // TODO Auto-generated method stub
+        out.writeInt(this.serializationType.getValue());
+        writeLayerWithNuLLCheck(out, dil);
 
+        if(actiFuncs == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(actiFuncs.size());
+            for(String acti: actiFuncs) {
+                out.writeUTF(acti);
+            }
+        }
+        if(this.hiddenLayers == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(hiddenLayers.size());
+            for(Layer layer: hiddenLayers) {
+                if(layer instanceof DenseLayer) { // Activation is constructed from actiFuncs
+                    DenseLayer denseLayer = (DenseLayer) layer;
+                    denseLayer.write(out, serializationType);
+                }
+            }
+        }
+
+        writeLayerWithNuLLCheck(out, finalLayer);
+        writeLayerWithNuLLCheck(out, ecl);
+        writeLayerWithNuLLCheck(out, wl);
+
+        if(this.serializationType == SerializationType.MODEL_SPEC) {
+            if(idBinCateSizeMap == null) {
+                out.writeInt(0);
+            } else {
+                out.writeInt(idBinCateSizeMap.size());
+                for(Entry<Integer, Integer> entry: idBinCateSizeMap.entrySet()) {
+                    out.writeInt(entry.getKey());
+                    out.writeInt(entry.getValue());
+                }
+            }
+            out.writeInt(numericalSize);
+            SerializationUtil.writeIntList(out, denseColumnIds);
+            SerializationUtil.writeIntList(out, embedColumnIds);
+            SerializationUtil.writeIntList(out, embedOutputs);
+            SerializationUtil.writeIntList(out, wideColumnIds);
+            SerializationUtil.writeIntList(out, hiddenNodes);
+            out.writeFloat(l2reg);
+        }
     }
 
     /*
@@ -520,9 +588,117 @@ public class WideAndDeep implements WeightInitializer, Bytable {
      * 
      * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
      */
+    @SuppressWarnings("rawtypes")
     @Override
     public void readFields(DataInput in) throws IOException {
-        // TODO Auto-generated method stub
+        this.serializationType = SerializationType.getSerializationType(in.readInt());
 
+        if(this.dil == null) {
+            this.dil = new DenseInputLayer();
+        }
+        this.dil.readFields(in, serializationType);
+
+        if(actiFuncs == null) {
+            actiFuncs = new ArrayList<String>();
+        }
+        actiFuncs.clear();
+        for(int i = 0; i < in.readInt(); i++) {
+            actiFuncs.add(in.readUTF());
+        }
+
+        List<DenseLayer> hiddenDenseLayers = new ArrayList<DenseLayer>();
+        if(hiddenLayers != null) {
+            // get existing dense hidden layers to save memory
+            for(Layer layer: hiddenLayers) {
+                if(layer instanceof DenseLayer) {
+                    hiddenDenseLayers.add((DenseLayer) layer);
+                }
+            }
+            hiddenLayers.clear();
+        } else {
+            hiddenLayers = new ArrayList<Layer>();
+        }
+        for(int i = 0; i < in.readInt(); i++) {
+            if(hiddenDenseLayers.size() > i) {
+                hiddenDenseLayers.get(i).readFields(in, serializationType);
+            } else {
+                DenseLayer tmpLayer = new DenseLayer();
+                tmpLayer.readFields(in, serializationType);
+                hiddenDenseLayers.add(tmpLayer);
+            }
+        }
+        hiddenLayers = new ArrayList<Layer>();
+        for(int i = 0; i < hiddenDenseLayers.size(); i++) {
+            hiddenLayers.add(hiddenDenseLayers.get(i));
+            String acti = actiFuncs.get(i);
+
+            if("relu".equalsIgnoreCase(acti)) {
+                this.hiddenLayers.add(new ReLU());
+            } else if("sigmoid".equalsIgnoreCase(acti)) {
+                this.hiddenLayers.add(new Sigmoid());
+            }
+        }
+
+        finalLayer = (DenseLayer) readLayerWithNullCheck(in, finalLayer, DenseLayer.class);
+        ecl = (EmbedLayer) readLayerWithNullCheck(in, ecl, EmbedLayer.class);
+        wl = (WideLayer) readLayerWithNullCheck(in, wl, WideLayer.class);
+
+        if(serializationType == SerializationType.MODEL_SPEC) {
+            if(idBinCateSizeMap == null) {
+                idBinCateSizeMap = new HashMap<Integer, Integer>();
+            }
+            idBinCateSizeMap.clear();
+            for(int i = 0; i < in.readInt(); i++) {
+                idBinCateSizeMap.put(in.readInt(), in.readInt());
+            }
+            numericalSize = in.readInt();
+            denseColumnIds = SerializationUtil.readIntList(in, denseColumnIds);
+            embedColumnIds = SerializationUtil.readIntList(in, embedColumnIds);
+            embedOutputs = SerializationUtil.readIntList(in, embedOutputs);
+            wideColumnIds = SerializationUtil.readIntList(in, wideColumnIds);
+            hiddenNodes = SerializationUtil.readIntList(in, hiddenNodes);
+            l2reg = in.readFloat();
+        }
     }
+
+    /**
+     * Write layer with null check.
+     */
+    @SuppressWarnings("rawtypes")
+    private void writeLayerWithNuLLCheck(DataOutput out, AbstractLayer layer) throws IOException {
+        if(layer == null) {
+            out.writeBoolean(false);
+        } else {
+            out.writeBoolean(true);
+            layer.write(out, this.serializationType);
+        }
+    }
+
+    /**
+     * Read layer with null check. The layer class should have instantiation method of empty argument list.
+     * 
+     * @param in
+     * @param layer
+     *            the layer to hold serialized data. It should be an instance of clazz.
+     * @param clazz
+     *            The layer class should have instantiation method of empty argument list.
+     * @return de-serialized layer instance
+     * @throws IOException
+     */
+    @SuppressWarnings("rawtypes")
+    private AbstractLayer readLayerWithNullCheck(DataInput in, AbstractLayer layer,
+            Class<? extends AbstractLayer> clazz) throws IOException {
+        if(in.readBoolean()) {
+            if(layer == null) {
+                try {
+                    layer = clazz.newInstance();
+                } catch (InstantiationException | IllegalAccessException e) { // should not happen
+                    return null;
+                }
+            }
+            layer.readFields(in, serializationType);
+        }
+        return layer;
+    }
+
 }

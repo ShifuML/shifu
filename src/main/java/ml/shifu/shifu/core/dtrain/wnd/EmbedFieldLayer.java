@@ -15,13 +15,12 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
-import ml.shifu.guagua.io.Bytable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * {@link EmbedFieldLayer} is for each column like sparse categorical feature. The input of this layer is one-hot
@@ -36,7 +35,8 @@ import java.util.Map;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], float[]>, WeightInitializer, Bytable {
+public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[], float[]>
+        implements WeightInitializer {
 
     /**
      * [in, out] array for deep matrix weights
@@ -209,8 +209,29 @@ public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], flo
      */
     @Override
     public void write(DataOutput out) throws IOException {
-        // TODO Auto-generated method stub
+        out.writeInt(this.columnId);
+        out.writeInt(this.in);
+        out.writeInt(this.out);
 
+        switch(this.serializationType) {
+            case WEIGHTS:
+            case MODEL_SPEC:
+                SerializationUtil.write2DimFloatArray(out, this.weights, this.in, this.out);
+                break;
+            case GRADIENTS:
+                if(this.wGrads == null) {
+                    out.writeInt(0);
+                } else {
+                    out.writeInt(this.wGrads.size());
+                    for(Entry<Integer, float[]> entry: this.wGrads.entrySet()) {
+                        out.writeInt(entry.getKey());
+                        SerializationUtil.writeFloatArray(out, entry.getValue(), this.out);
+                    }
+                }
+                break;
+            default:
+                break;
+        }
     }
 
     /*
@@ -220,7 +241,30 @@ public class EmbedFieldLayer implements Layer<SparseInput, float[], float[], flo
      */
     @Override
     public void readFields(DataInput in) throws IOException {
-        // TODO Auto-generated method stub
+        this.columnId = in.readInt();
+        this.in = in.readInt();
+        this.out = in.readInt();
 
+        switch(this.serializationType) {
+            case WEIGHTS:
+            case MODEL_SPEC:
+                this.weights = SerializationUtil.read2DimFloatArray(in, this.weights, this.in, this.out);
+                break;
+            case GRADIENTS:
+                if(this.wGrads != null) {
+                    this.wGrads.clear();
+                } else {
+                    this.wGrads = new HashMap<Integer, float[]>();
+                }
+                int gradSize = in.readInt();
+                for(int i = 0; i < gradSize; i++) {
+                    int lineNumber = in.readInt();
+                    float[] grad = SerializationUtil.readFloatArray(in, null, this.out);
+                    this.wGrads.put(lineNumber, grad);
+                }
+                break;
+            default:
+                break;
+        }
     }
 }

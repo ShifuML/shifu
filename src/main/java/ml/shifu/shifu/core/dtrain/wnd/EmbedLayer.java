@@ -15,14 +15,13 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
-import ml.shifu.guagua.io.Bytable;
-import ml.shifu.shifu.core.dtrain.AssertUtils;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import ml.shifu.shifu.core.dtrain.AssertUtils;
 
 /**
  * {@link EmbedLayer} merges all embedding layers together and distributes forward and backward computation to
@@ -30,8 +29,8 @@ import java.util.List;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class EmbedLayer
-        implements Layer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>>, WeightInitializer, Bytable {
+public class EmbedLayer extends AbstractLayer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>>
+        implements WeightInitializer {
 
     /**
      * List of embed layer which is for each embed column.
@@ -109,8 +108,14 @@ public class EmbedLayer
      */
     @Override
     public void write(DataOutput out) throws IOException {
-        // TODO Auto-generated method stub
-
+        if(this.embedLayers == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(this.embedLayers.size());
+            for(EmbedFieldLayer embedFieldLayer: embedLayers) {
+                embedFieldLayer.write(out, this.serializationType);
+            }
+        }
     }
 
     /*
@@ -120,7 +125,19 @@ public class EmbedLayer
      */
     @Override
     public void readFields(DataInput in) throws IOException {
-        // TODO Auto-generated method stub
+        int embedLayerSize = in.readInt();
+        if(this.embedLayers == null) {
+            this.embedLayers = new ArrayList<EmbedFieldLayer>();
+        }
+        for(int i = 0; i < embedLayerSize; i++) {
+            if(this.embedLayers.get(i) == null) {
+                this.embedLayers.add(i, new EmbedFieldLayer());
+            }
+            this.embedLayers.get(i).readFields(in, this.serializationType);
+        }
 
+        while(this.embedLayers.size() > embedLayerSize) {
+            this.embedLayers.remove(embedLayerSize);
+        }
     }
 }
