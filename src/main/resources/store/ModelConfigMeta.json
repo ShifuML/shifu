@@ -397,7 +397,11 @@
                     {"label":"OneHot for categorical and numerical", "value":"ONEHOT"},
                     {"label":"zscore and OneHot for categorical", "value":"ZSCALE_ONEHOT"},
                     {"label":"Discrete numerical feature in each bin and positive rate for categorical feature", "value":"DISCRETE_ZSCALE"},
-                    {"label":"Discrete numerical feature in each bin and positive rate for categorical feature", "value":"DISCRETE_ZSCORE"}
+                    {"label":"Discrete numerical feature in each bin and positive rate for categorical feature", "value":"DISCRETE_ZSCORE"},
+                    {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCALE_INDEX"},
+                    {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCORE_INDEX"},
+                    {"label":"numerical variable using woe, categorical variable, using cate index", "value":"WOE_INDEX"},
+                    {"label":"numerical variable using zscaled woe, categorical variable using cate index", "value":"WOE_ZSCALE_INDEX"}
                 ]
             }, {
                 "name": "stdDevCutOff",
@@ -538,6 +542,7 @@
                     {"label": "Random Forest", "value":"RF"},
                     {"label": "Gradient Boost Decision Tree", "value":"GBT"},
                     {"label": "Tensorflow", "value":"Tensorflow"},
+                    {"label": "Wide And Deep", "value":"WND"},
                     {"label": "Generic", "value":"generic"}
                 ]
             }, {
@@ -574,6 +579,7 @@
                                 "options": [
                                     {"label": "Sigmoid", "value":"Sigmoid"},
                                     {"label": "Tanh", "value":"Tanh"},
+                                    {"label": "Penalized Tanh", "value":"PTanh"},
                                     {"label": "Log", "value":"Log"},
                                     {"label": "Sin", "value":"Sin"},
                                     {"label": "Linear", "value":"Linear"},
@@ -601,11 +607,29 @@
                                 "defval": 45
                             }                            
                          ]
+                     }, {
+                        "name" : "NumEmbedColumnIds",
+                        "type" : "list",
+                        "directive": "input",
+                        "elementType" : "integer",
+                        "element": [
+                            {
+                                "name": "dummy",
+                                "type": "integer",
+                                "directive": "input",
+                                "defval": 1
+                            }                            
+                         ]
                     }, {
                         "name" : "LearningRate",
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.1
+                    }, {
+                        "name" : "WNDL2Reg",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 0.01
                     }, {
                     	"name" : "TF.optimizer",
                     	"type" : "text",
@@ -818,7 +842,9 @@
                         "defval": "Linear",
                         "options": [
                             {"label": "Linear", "value":"Linear"},
-                            {"label": "ReLU", "value":"ReLU"}
+                            {"label": "ReLU", "value":"ReLU"},
+                            {"label": "LeakyReLU", "value":"LeakyReLU"},
+                            {"label": "Swish", "value":"Swish"}
                         ]
                     }
                 ]

@@ -15,42 +15,28 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Splitter;
-import ml.shifu.guagua.GuaguaConstants;
-import ml.shifu.guagua.hadoop.util.HDPUtils;
-import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
-import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
-import ml.shifu.shifu.actor.AkkaSystemExecutor;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
-import ml.shifu.shifu.container.obj.ModelTrainConf.MultipleClassification;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.AbstractTrainer;
-import ml.shifu.shifu.core.TreeModel;
-import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
-import ml.shifu.shifu.core.alg.NNTrainer;
-import ml.shifu.shifu.core.alg.SVMTrainer;
-import ml.shifu.shifu.core.alg.TensorflowTrainer;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.core.dtrain.FeatureSubsetStrategy;
-import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
-import ml.shifu.shifu.core.dtrain.dt.*;
-import ml.shifu.shifu.core.dtrain.gs.GridSearch;
-import ml.shifu.shifu.core.dtrain.lr.*;
-import ml.shifu.shifu.core.dtrain.nn.*;
-import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
-import ml.shifu.shifu.exception.ShifuErrorCode;
-import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.fs.PathFinder;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.guagua.GuaguaParquetMapReduceClient;
-import ml.shifu.shifu.guagua.ShifuInputFormat;
-import ml.shifu.shifu.util.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Reader;
+import java.lang.Thread.UncaughtExceptionHandler;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Scanner;
+import java.util.Set;
 
+import ml.shifu.shifu.core.dtrain.nn.*;
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
@@ -71,7 +57,12 @@ import org.apache.pig.impl.PigContext;
 import org.apache.pig.impl.util.JarManager;
 import org.apache.pig.impl.util.ObjectSerializer;
 import org.apache.zookeeper.ZooKeeper;
-import org.encog.engine.network.activation.*;
+import org.encog.engine.network.activation.ActivationFunction;
+import org.encog.engine.network.activation.ActivationLOG;
+import org.encog.engine.network.activation.ActivationLinear;
+import org.encog.engine.network.activation.ActivationSIN;
+import org.encog.engine.network.activation.ActivationSigmoid;
+import org.encog.engine.network.activation.ActivationTANH;
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLDataSet;
 import org.jboss.netty.bootstrap.ServerBootstrap;
@@ -79,6 +70,62 @@ import org.joda.time.ReadableInstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xerial.snappy.Snappy;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Splitter;
+
+import ml.shifu.guagua.GuaguaConstants;
+import ml.shifu.guagua.hadoop.util.HDPUtils;
+import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
+import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
+import ml.shifu.shifu.actor.AkkaSystemExecutor;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
+import ml.shifu.shifu.container.obj.ModelTrainConf.MultipleClassification;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.AbstractTrainer;
+import ml.shifu.shifu.core.TreeModel;
+import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
+import ml.shifu.shifu.core.alg.NNTrainer;
+import ml.shifu.shifu.core.alg.SVMTrainer;
+import ml.shifu.shifu.core.alg.TensorflowTrainer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.FeatureSubsetStrategy;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dt.DTMaster;
+import ml.shifu.shifu.core.dtrain.dt.DTMasterParams;
+import ml.shifu.shifu.core.dtrain.dt.DTOutput;
+import ml.shifu.shifu.core.dtrain.dt.DTWorker;
+import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
+import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
+import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionMaster;
+import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionOutput;
+import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionParams;
+import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionWorker;
+import ml.shifu.shifu.core.dtrain.wnd.WNDMaster;
+import ml.shifu.shifu.core.dtrain.wnd.WNDOutput;
+import ml.shifu.shifu.core.dtrain.wnd.WNDParams;
+import ml.shifu.shifu.core.dtrain.wnd.WNDWorker;
+import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
+import ml.shifu.shifu.exception.ShifuErrorCode;
+import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.guagua.GuaguaParquetMapReduceClient;
+import ml.shifu.shifu.guagua.ShifuInputFormat;
+import ml.shifu.shifu.util.*;
+
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.HDFSUtils;
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
+import ml.shifu.shifu.util.NormalUtils;
+import ml.shifu.shifu.util.ValueVisitor;
 import parquet.ParquetRuntimeException;
 import parquet.column.ParquetProperties;
 import parquet.column.values.bitpacking.Packer;
@@ -88,11 +135,9 @@ import parquet.hadoop.ParquetRecordReader;
 import parquet.org.codehaus.jackson.Base64Variant;
 
 import java.io.*;
-import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.nio.charset.Charset;
 import java.util.*;
 
 /**
@@ -525,7 +570,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     protected int runDistributedTrain() throws IOException, InterruptedException, ClassNotFoundException {
         LOG.info("Started {}distributed training.", isDryTrain ? "dry " : "");
         int status = 0;
-
+        
         Configuration conf = new Configuration();
 
         SourceType sourceType = super.getModelConfig().getDataSet().getSource();
@@ -590,7 +635,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         boolean isAfterVarSelect = (inputOutputIndex[0] != 0);
         // cache all feature list for sampling features
-        List<Integer> allFeatures = CommonUtils.getAllFeatureList(this.columnConfigList, isAfterVarSelect);
+        List<Integer> allFeatures = NormalUtils.getAllFeatureList(this.columnConfigList, isAfterVarSelect);
 
         if(modelConfig.getNormalize().getIsParquet()) {
             guaguaClient = new GuaguaParquetMapReduceClient();
@@ -740,8 +785,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
                     Set<Integer> subFeatures = null;
                     if(isContinuous) {
-                        BasicFloatNetwork existingModel = (BasicFloatNetwork) CommonUtils
-                                .getBasicNetwork(CommonUtils.loadModel(modelConfig, modelPath, ShifuFileUtils
+                        BasicFloatNetwork existingModel = (BasicFloatNetwork) ModelSpecLoaderUtils
+                                .getBasicNetwork(ModelSpecLoaderUtils.loadModel(modelConfig, modelPath, ShifuFileUtils
                                         .getFileSystemBySourceType(this.modelConfig.getDataSet().getSource())));
                         if(existingModel == null) {
                             subFeatures = new HashSet<Integer>(getSubsamplingFeatures(allFeatures,
@@ -849,46 +894,41 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             }
             LOG.info("The best parameters in grid search is {}", params);
             LOG.info("Grid search on distributed training finished in {}ms.", System.currentTimeMillis() - start);
-        } else {
-            // copy all models to local after all jobs are finished
-            if(!gs.hasHyperParam()) {
-                // copy model files at last.
-                for(int i = 0; i < baggingNum; i++) {
-                    String modelName = getModelName(i);
-                    Path modelPath = fileSystem
-                            .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
-                    if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath) && (status == 0)) {
-                        copyModelToLocal(modelName, modelPath, sourceType);
-                    } else {
-                        LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
-                                modelPath.toString());
-                    }
-                }
-
-                // copy temp model files, for RF/GBT, not to copy tmp models because of larger space needed, for others
-                // by default copy tmp models to local
-                boolean copyTmpModelsToLocal = Boolean.TRUE.toString()
-                        .equalsIgnoreCase(Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "true"));
-                if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
-                    copyTmpModelsToLocal = Boolean.TRUE.toString()
-                            .equalsIgnoreCase(Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "false"));
-                    List<BasicML> models = CommonUtils.loadBasicModels(this.modelConfig, this.columnConfigList, null);
-                    // compute feature importance and write to local file after models are trained
-                    Map<Integer, MutablePair<String, Double>> featureImportances = CommonUtils
-                            .computeTreeModelFeatureImportance(models);
-                    String localFsFolder = pathFinder.getLocalFeatureImportanceFolder();
-                    String localFIPath = pathFinder.getLocalFeatureImportancePath();
-                    processRollupForFIFiles(localFsFolder, localFIPath);
-                    CommonUtils.writeFeatureImportance(localFIPath, featureImportances);
-                }
-
-                if(copyTmpModelsToLocal) {
-                    copyTmpModelsToLocal(tmpModelsPath, sourceType);
+        } else { // if(!gs.hasHyperParam())
+            // copy model files at last.
+            for(int i = 0; i < baggingNum; i++) {
+                String modelName = getModelName(i);
+                Path modelPath = fileSystem
+                        .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
+                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath) && (status == 0)) {
+                    copyModelToLocal(modelName, modelPath, sourceType);
                 } else {
-                    LOG.info("Tmp models are not copied into local, please find them in hdfs path: {}", tmpModelsPath);
+                    LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
+                            modelPath.toString());
                 }
-                LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
             }
+
+            // copy temp model files, for RF/GBT, not to copy tmp models because of larger space needed, for others
+            // by default copy tmp models to local
+            boolean copyTmpModelsToLocal = Boolean.TRUE.toString()
+                    .equalsIgnoreCase(Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "true"));
+            if(copyTmpModelsToLocal) {
+                copyTmpModelsToLocal(tmpModelsPath, sourceType);
+            } else {
+                LOG.info("Tmp models are not copied into local, please find them in hdfs path: {}", tmpModelsPath);
+            }
+            LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
+        }
+
+        if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
+            List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(this.modelConfig, null);
+            // compute feature importance and write to local file after models are trained
+            Map<Integer, MutablePair<String, Double>> featureImportances = CommonUtils
+                    .computeTreeModelFeatureImportance(models);
+            String localFsFolder = pathFinder.getLocalFeatureImportanceFolder();
+            String localFIPath = pathFinder.getLocalFeatureImportancePath();
+            processRollupForFIFiles(localFsFolder, localFIPath);
+            CommonUtils.writeFeatureImportance(localFIPath, featureImportances);
         }
 
         if(status != 0) {
@@ -1033,7 +1073,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 LOG.warn(
                         "!!! Model training parameters like hidden nodes, activation and others  are not consistent with settings, model training will start from scratch.");
             } else if(CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
-                TreeModel model = (TreeModel) CommonUtils.loadModel(this.modelConfig, modelPath, fileSystem);
+                TreeModel model = (TreeModel) ModelSpecLoaderUtils.loadModel(this.modelConfig, modelPath, fileSystem);
 
                 if(!model.getAlgorithm().equalsIgnoreCase(modelConfig.getAlgorithm())) {
                     finalContinuous = 0;
@@ -1068,8 +1108,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     @SuppressWarnings("unchecked")
     private boolean inputOutputModelCheckSuccess(FileSystem fileSystem, Path modelPath, Map<String, Object> modelParams)
             throws IOException {
-        BasicML basicML = CommonUtils.loadModel(this.modelConfig, modelPath, fileSystem);
-        BasicFloatNetwork model = (BasicFloatNetwork) CommonUtils.getBasicNetwork(basicML);
+        BasicML basicML = ModelSpecLoaderUtils.loadModel(this.modelConfig, modelPath, fileSystem);
+        BasicFloatNetwork model = (BasicFloatNetwork) ModelSpecLoaderUtils.getBasicNetwork(basicML);
 
         int[] outputCandidateCounts = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
                 getColumnConfigList());
@@ -1118,6 +1158,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 isHasSameHiddenActivation = ActivationLeakyReLU.class == activation.getClass();
             } else if(actFunc.equalsIgnoreCase(NNConstants.NN_SWISH)) {
                 isHasSameHiddenActivation = ActivationSwish.class == activation.getClass();
+            } else if(actFunc.equalsIgnoreCase(NNConstants.NN_PTANH)) {
+                isHasSameHiddenActivation = ActivationPTANH.class == activation.getClass();
             } else {
                 isHasSameHiddenActivation = ActivationSigmoid.class == activation.getClass();
             }
@@ -1258,6 +1300,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             this.prepareNNParams(args, sourceType);
         } else if(CommonUtils.isTreeModel(alg)) {
             this.prepareDTParams(args, sourceType);
+        } else if(Constants.WND_ALG_NAME.equalsIgnoreCase(alg)) {
+            this.prepareWNDParams(args, sourceType);
         }
 
         args.add("-c");
@@ -1334,6 +1378,25 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, key.toString(), value.toString()));
             }
         });
+    }
+
+    private void prepareWNDParams(List<String> args, SourceType sourceType) {
+        args.add("-w");
+        args.add(WNDWorker.class.getName());
+
+        args.add("-m");
+        args.add(WNDMaster.class.getName());
+
+        args.add("-mr");
+        args.add(WNDParams.class.getName());
+
+        args.add("-wr");
+        args.add(WNDParams.class.getName());
+
+        // TODO, add WNDOutput here
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
+                WNDOutput.class.getName()));
+
     }
 
     private int vcoresSetting() {

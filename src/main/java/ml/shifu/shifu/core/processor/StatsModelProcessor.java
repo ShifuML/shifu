@@ -157,6 +157,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
                 if(StringUtils.isNotEmpty(modelConfig.getPsiColumnName())) {
                     new MapReducerStatsWorker(this, modelConfig, columnConfigList).runPSI();
+                    // save column config list after running PSI successfully
+                    saveColumnConfigList();
                 } else {
                     log.warn("To Run PSI please set your PSI column in dataSet::psiColumnName.");
                 }

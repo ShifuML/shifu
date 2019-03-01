@@ -332,6 +332,8 @@ public class DTWorker extends
      */
     private Random sampelNegOnlyRandom = new Random(System.currentTimeMillis() + 1000L);
 
+    private boolean hasCandidates;
+
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
@@ -372,6 +374,8 @@ public class DTWorker extends
                 }
             }
         }
+        
+        this.hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
 
         // create Splitter
         String delimiter = context.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
@@ -530,7 +534,7 @@ public class DTWorker extends
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             TreeModel existingModel = null;
             try {
-                existingModel = (TreeModel) CommonUtils.loadModel(modelConfig, modelPath,
+                existingModel = (TreeModel) ModelSpecLoaderUtils.loadModel(modelConfig, modelPath,
                         ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
             } catch (IOException e) {
                 LOG.error("Error in get existing model, will ignore and start from scratch", e);
@@ -1109,7 +1113,6 @@ public class DTWorker extends
         // use NNConstants.NN_DEFAULT_COLUMN_SEPARATOR to replace getModelConfig().getDataSetDelimiter(), super follows
         // the function in akka mode.
         int index = 0, inputIndex = 0;
-        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for(String input: this.splitter.split(currentValue.getWritable().toString())) {
             if(index == this.columnConfigList.size()) {
                 // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
@@ -1136,7 +1139,7 @@ public class DTWorker extends
                     if(!isAfterVarSelect) {
                         // no variable selected, good candidate but not meta and not target chose
                         if(!columnConfig.isMeta() && !columnConfig.isTarget()
-                                && CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
+                                && CommonUtils.isGoodCandidate(columnConfig, this.hasCandidates)) {
                             if(columnConfig.isNumerical()) {
                                 float floatValue = getFloatValue(input);
                                 // cast is safe as we limit max bin to Short.MAX_VALUE

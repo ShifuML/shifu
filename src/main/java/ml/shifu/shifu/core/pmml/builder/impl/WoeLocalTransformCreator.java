@@ -15,16 +15,22 @@
  */
 package ml.shifu.shifu.core.pmml.builder.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.dmg.pmml.DataType;
+import org.dmg.pmml.DerivedField;
+import org.dmg.pmml.Discretize;
+import org.dmg.pmml.DiscretizeBin;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.Interval;
+import org.dmg.pmml.OpType;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.util.CommonUtils;
-
-import org.dmg.pmml.*;
-
-import java.util.ArrayList;
-import java.util.List;
+import ml.shifu.shifu.util.NormalUtils;
 
 /**
  * Created by zhanhu on 3/29/16.
@@ -85,7 +91,7 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
         discretize
                 .setDataType(DataType.DOUBLE)
                 .setField(
-                        FieldName.create(CommonUtils.getSimpleColumnName(config, columnConfigList, segmentExpansions,
+                        FieldName.create(NormalUtils.getSimpleColumnName(config, columnConfigList, segmentExpansions,
                                 datasetHeaders)))
                 .setMapMissingTo(Normalizer.normalize(config, null, cutoff, normType).get(0).toString())
                 .setDefaultValue(Normalizer.normalize(config, null, cutoff, normType).get(0).toString())
@@ -94,7 +100,7 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
         // derived field name is consisted of FieldName and "_zscl"
         List<DerivedField> derivedFields = new ArrayList<DerivedField>();
         derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).setName(
-                FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config.getColumnName()), normType)))
+                FieldName.create(genPmmlColumnName(NormalUtils.getSimpleColumnName(config.getColumnName()), normType)))
                 .setExpression(discretize));
         return derivedFields;
     }

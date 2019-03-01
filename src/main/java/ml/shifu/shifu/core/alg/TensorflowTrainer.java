@@ -259,6 +259,8 @@ public class TensorflowTrainer {
         commands.add(miniBatch.toString());
         commands.add("-checkppointinterval");
         commands.add(String.valueOf(DTrainUtils.tmpModelFactor(modelConfig.getTrain().getNumTrainEpochs())));
+        commands.add("-iscontinuous");
+        commands.add(String.valueOf(modelConfig.getTrain().getIsContinuous()));
         return commands;
     }
 

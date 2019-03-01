@@ -16,14 +16,15 @@
 package ml.shifu.shifu;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
+import ml.shifu.shifu.core.TreeModel;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.util.*;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -31,8 +32,11 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.pig.impl.util.JarManager;
+import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,9 +59,6 @@ import ml.shifu.shifu.core.processor.StatsModelProcessor;
 import ml.shifu.shifu.core.processor.TrainModelProcessor;
 import ml.shifu.shifu.core.processor.VarSelectModelProcessor;
 import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-import ml.shifu.shifu.util.IndependentTreeModelUtils;
 
 /**
  * ShifuCLI class is the MAIN class for whole project
@@ -92,6 +93,7 @@ public class ShifuCLI {
     private static final String CMD_ENCODE = "encode";
     private static final String CMD_TEST = "test";
     private static final String CMD_CONVERT = "convert";
+    private static final String CMD_ANALYSIS = "analysis";
 
     // options for stats
     private static final String CORRELATION = "correlation";
@@ -120,6 +122,7 @@ public class ShifuCLI {
     private static final String NORM = "norm";
     private static final String NOSORT = "nosort";
     private static final String REF = "ref";
+    private static final String STRICT = "strict";
 
     private static final String SAVE = "save";
     private static final String SWITCH = "switch";
@@ -134,6 +137,8 @@ public class ShifuCLI {
     // for model spec convert
     private static final String TO_ZIPB = "tozipb";
     private static final String TO_TREEB = "totreeb";
+    // for model spec analysis
+    private static final String FI = "fi";
 
     static private final Logger log = LoggerFactory.getLogger(ShifuCLI.class);
 
@@ -191,9 +196,9 @@ public class ShifuCLI {
                         status = initializeModel();
                         if(status == 0) {
                             log.info(
-                                    "ModelSet initilization is successful. Please continue next step by using 'shifu stats'.");
+                                    "ModelSet initialization is successful. Please continue next step by using 'shifu stats'.");
                         } else {
-                            log.warn("Error in ModelSet initilization, please check your shifu config or report issue");
+                            log.warn("Error in ModelSet initialization, please check your shifu config or report issue");
                         }
                     } else if(cmd.hasOption(INIT_CMD_MODEL)) {
                         initializeModelParam();
@@ -351,7 +356,7 @@ public class ShifuCLI {
                         // delete some evaluation set
                         deleteEvalSet(cmd.getOptionValue(DELETE));
                     } else if(cmd.hasOption(NORM)) {
-                        runEvalNorm(cmd.getOptionValue(NORM));
+                        runEvalNorm(cmd.getOptionValue(NORM), cmd.hasOption(STRICT));
                     } else {
                         log.error("Invalid command, please check help message.");
                         printUsage();
@@ -400,6 +405,11 @@ public class ShifuCLI {
                         printUsage();
                     } else {
                         status = runShifuConvert(optType, convertArgs[0], convertArgs[1]);
+                    }
+                } else if (cleanedArgs[0].equals(CMD_ANALYSIS)) {
+                    if (cmd.hasOption(FI)) {
+                        String modelPath = cmd.getOptionValue(FI);
+                        analysisModelFi(modelPath);
                     }
                 } else {
                     log.error("Invalid command, please check help message.");
@@ -570,8 +580,10 @@ public class ShifuCLI {
         return p.run();
     }
 
-    private static int runEvalNorm(String evalSetNames) throws Exception {
-        EvalModelProcessor p = new EvalModelProcessor(EvalStep.NORM, evalSetNames);
+    private static int runEvalNorm(String evalSetNames, boolean strictMode) throws Exception {
+        Map<String, Object> params = new HashMap<>();
+        params.put(Constants.STRICT_MODE, strictMode);
+        EvalModelProcessor p = new EvalModelProcessor(EvalStep.NORM, evalSetNames, params);
         return p.run();
     }
 
@@ -645,6 +657,33 @@ public class ShifuCLI {
         return (status ? 0 : 1);
     }
 
+    public static int analysisModelFi(String modelPath) {
+        File modelFile = new File(modelPath);
+        if (!modelFile.exists() || !(modelPath.toUpperCase().endsWith("." + CommonConstants.GBT_ALG_NAME)
+                || modelPath.toUpperCase().endsWith("." + CommonConstants.RF_ALG_NAME))) {
+            log.error("The model {} doesn't exist or it isn't GBT/RF model.", modelPath);
+            return 1;
+        }
+
+        FileInputStream inputStream =  null;
+        String fiFileName = modelFile.getName() + ".fi";
+
+        try {
+            inputStream = new FileInputStream(modelFile);
+            BasicML basicML = TreeModel.loadFromStream(inputStream);
+            Map<Integer, MutablePair<String, Double>> featureImportances = CommonUtils
+                    .computeTreeModelFeatureImportance(Arrays.asList(new BasicML[]{basicML}));
+            CommonUtils.writeFeatureImportance(fiFileName, featureImportances);
+        } catch (IOException e)  {
+            log.error("Fail to analysis model FI for {}", modelPath);
+            return 1;
+        } finally {
+            IOUtils.closeQuietly(inputStream);
+        }
+
+        return 0;
+    }
+
     private static void printModelSetCopiedSuccessfulLog(String newModelSetName) {
         log.info(String.format("ModelSet %s is copied successfully with ModelConfig.json in %s folder.",
                 newModelSetName, newModelSetName));
@@ -706,6 +745,7 @@ public class ShifuCLI {
         Option opt_nosort = OptionBuilder.hasArg(false).create(NOSORT);
         Option opt_ref = OptionBuilder.hasArg(true).create(REF);
         Option opt_filter = OptionBuilder.hasOptionalArg().create(FILTER);
+        Option opt_strict = OptionBuilder.hasArg(false).create(STRICT);
 
         // options for variable re-binning
         Option opt_rebin = OptionBuilder.hasArg(false).create(REBIN);
@@ -721,6 +761,8 @@ public class ShifuCLI {
         Option opt_tozipb = OptionBuilder.hasArg(false).create(TO_ZIPB);
         Option opt_totreeb = OptionBuilder.hasArg(false).create(TO_TREEB);
 
+        Option opt_fi = OptionBuilder.hasArg(true).create(FI);
+
         opts.addOption(opt_cmt);
         opts.addOption(opt_new);
         opts.addOption(opt_type);
@@ -734,6 +776,7 @@ public class ShifuCLI {
         opts.addOption(opt_nosort);
         opts.addOption(opt_ref);
         opts.addOption(opt_filter);
+        opts.addOption(opt_strict);
 
         opts.addOption(opt_reset);
         opts.addOption(opt_filter_auto);
@@ -765,6 +808,8 @@ public class ShifuCLI {
 
         opts.addOption(opt_tozipb);
         opts.addOption(opt_totreeb);
+
+        opts.addOption(opt_fi);
 
         return opts;
     }

@@ -15,10 +15,7 @@
  */
 package ml.shifu.shifu.core.pmml.builder.impl;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
-import ml.shifu.shifu.util.CommonUtils;
+import java.util.List;
 
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.MiningField;
@@ -26,7 +23,10 @@ import org.dmg.pmml.MiningField.UsageType;
 import org.dmg.pmml.MiningSchema;
 import org.encog.ml.BasicML;
 
-import java.util.List;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
+import ml.shifu.shifu.util.NormalUtils;
 
 public class TreeModelMiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema> {
 
@@ -46,7 +46,7 @@ public class TreeModelMiningSchemaCreator extends AbstractPmmlElementCreator<Min
             if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
                 MiningField miningField = new MiningField();
                 // TODO, how to support segment variable in tree model, here should be changed
-                miningField.setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig.getColumnName())));
+                miningField.setName(FieldName.create(NormalUtils.getSimpleColumnName(columnConfig.getColumnName())));
                 miningField.setOpType(getOptype(columnConfig));
                 if(columnConfig.isNumerical()) {
                     miningField.setMissingValueReplacement(String.valueOf(columnConfig.getColumnStats().getMean()));

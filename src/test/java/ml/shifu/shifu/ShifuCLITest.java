@@ -347,4 +347,14 @@ public class ShifuCLITest {
     public void testConvert() {
         ShifuCLI.runShifuConvert(1, "src/test/resources/example/readablespec/model0.gbt", "/tmp/model0_1.zip");
     }
+
+    @Test
+    public void testAnalysis() {
+        int ret = ShifuCLI.analysisModelFi("src/test/resources/example/readablespec/model0.gbt");
+        Assert.assertEquals(ret, 0);
+
+        File file = new File("model0.gbt.fi");
+        Assert.assertTrue(file.exists());
+        FileUtils.deleteQuietly(file);
+    }
 }
