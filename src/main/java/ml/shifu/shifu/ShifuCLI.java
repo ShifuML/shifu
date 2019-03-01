@@ -527,6 +527,8 @@ public class ShifuCLI {
     }
 
     public static int trainModel(boolean isDryTrain, boolean isDebug, boolean isToShuffle) throws Exception {
+        
+        
         TrainModelProcessor p = new TrainModelProcessor(isDryTrain, isDebug);
         p.setToShuffle(isToShuffle);
         return p.run();
