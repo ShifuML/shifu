@@ -639,9 +639,9 @@ public class WideAndDeep implements WeightInitializer, Bytable {
             }
         }
 
-        finalLayer = (DenseLayer) readLayerWithNullCheck(in, finalLayer, DenseLayer.class);
-        ecl = (EmbedLayer) readLayerWithNullCheck(in, ecl, EmbedLayer.class);
-        wl = (WideLayer) readLayerWithNullCheck(in, wl, WideLayer.class);
+        finalLayer = (DenseLayer) readLayerWithNullCheck(in, finalLayer == null ? new DenseLayer() : finalLayer);
+        ecl = (EmbedLayer) readLayerWithNullCheck(in, ecl == null ? new EmbedLayer() : ecl);
+        wl = (WideLayer) readLayerWithNullCheck(in, wl == null ? new WideLayer() : wl);
 
         if(serializationType == SerializationType.MODEL_SPEC) {
             if(idBinCateSizeMap == null) {
@@ -675,27 +675,17 @@ public class WideAndDeep implements WeightInitializer, Bytable {
     }
 
     /**
-     * Read layer with null check. The layer class should have instantiation method of empty argument list.
+     * Read layer with null check.
      * 
      * @param in
      * @param layer
-     *            the layer to hold serialized data. It should be an instance of clazz.
-     * @param clazz
-     *            The layer class should have instantiation method of empty argument list.
+     *            the layer to hold serialized data. This value should not be null.
      * @return de-serialized layer instance
      * @throws IOException
      */
     @SuppressWarnings("rawtypes")
-    private AbstractLayer readLayerWithNullCheck(DataInput in, AbstractLayer layer,
-            Class<? extends AbstractLayer> clazz) throws IOException {
+    private AbstractLayer readLayerWithNullCheck(DataInput in, AbstractLayer layer) throws IOException {
         if(in.readBoolean()) {
-            if(layer == null) {
-                try {
-                    layer = clazz.newInstance();
-                } catch (InstantiationException | IllegalAccessException e) { // should not happen
-                    return null;
-                }
-            }
             layer.readFields(in, serializationType);
         }
         return layer;
