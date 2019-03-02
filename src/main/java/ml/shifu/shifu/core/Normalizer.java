@@ -15,18 +15,17 @@
  */
 package ml.shifu.shifu.core;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.udf.NormalizeUDF.CategoryMissingNormType;
 import ml.shifu.shifu.util.BinUtils;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Util normalization class which is used for any kind of transformation.
@@ -37,7 +36,10 @@ public class Normalizer {
     public static final double STD_DEV_CUTOFF = 4.0d;
 
     public enum NormalizeMethod {
-        ZScore, MaxMin;
+        /**
+         * Normalize methods.
+         */
+        ZScore, MaxMin
     }
 
     private ColumnConfig config;
@@ -268,6 +270,19 @@ public class Normalizer {
 
     /**
      * Adding new API with cateIndeMap parameter without change normalize API.
+     * @param config
+     *              the ColumnConfig
+     * @param raw
+     *              the raw input
+     * @param cutoff
+     *              the cutoff value
+     * @param type
+     *              normalize type
+     * @param categoryMissingNormType
+     *              the category missing normal type
+     * @param cateIndexMap
+     *              the cateIndexMap map from category to index
+     * @return normalized value
      */
     public static List<Double> fullNormalize(ColumnConfig config, Object raw, Double cutoff,
             ModelNormalizeConf.NormType type, CategoryMissingNormType categoryMissingNormType,
@@ -282,7 +297,8 @@ public class Normalizer {
                 } else if(config.isCategorical()) {
                     Integer index = cateIndexMap.get(raw == null ? "" : raw.toString());
                     if(index == null || index == -1) {
-                        index = config.getBinCategory().size(); // last index for null category
+                        // last index for null category
+                        index = config.getBinCategory().size();
                     }
                     return Arrays.asList((double) index);
                 }
@@ -292,11 +308,13 @@ public class Normalizer {
                 } else if(config.isCategorical()) {
                     Integer index = cateIndexMap.get(raw == null ? "" : raw.toString());
                     if(index == null || index == -1) {
-                        index = config.getBinCategory().size(); // last index for null category
+                        // last index for null category
+                        index = config.getBinCategory().size();
                     }
                     return Arrays.asList((double) index);
                 }
-            default: // others use old normlize API to reuse code
+            default:
+                // others use old normalize API to reuse code
                 return normalize(config, raw, cutoff, type, categoryMissingNormType);
         }
     }

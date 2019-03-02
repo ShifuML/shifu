@@ -37,6 +37,8 @@ import java.util.Scanner;
 import java.util.Set;
 
 import ml.shifu.shifu.core.dtrain.nn.*;
+import ml.shifu.shifu.core.dtrain.wdl.WDLMaster;
+import ml.shifu.shifu.core.dtrain.wdl.WDLOutput;
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
@@ -106,10 +108,8 @@ import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionMaster;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionOutput;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionParams;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionWorker;
-import ml.shifu.shifu.core.dtrain.wnd.WNDMaster;
-import ml.shifu.shifu.core.dtrain.wnd.WNDOutput;
-import ml.shifu.shifu.core.dtrain.wnd.WNDParams;
-import ml.shifu.shifu.core.dtrain.wnd.WNDWorker;
+import ml.shifu.shifu.core.dtrain.wdl.WDLParams;
+import ml.shifu.shifu.core.dtrain.wdl.WDLWorker;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -117,7 +117,6 @@ import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.guagua.GuaguaParquetMapReduceClient;
 import ml.shifu.shifu.guagua.ShifuInputFormat;
-import ml.shifu.shifu.util.*;
 
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -138,7 +137,6 @@ import java.io.*;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.*;
 
 /**
  * Train processor, produce model based on the normalized dataset
@@ -1300,8 +1298,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             this.prepareNNParams(args, sourceType);
         } else if(CommonUtils.isTreeModel(alg)) {
             this.prepareDTParams(args, sourceType);
-        } else if(Constants.WND_ALG_NAME.equalsIgnoreCase(alg)) {
-            this.prepareWNDParams(args, sourceType);
+        } else if(Constants.WDL_ALG_NAME.equalsIgnoreCase(alg)) {
+            this.prepareWDLParams(args, sourceType);
         }
 
         args.add("-c");
@@ -1380,22 +1378,22 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         });
     }
 
-    private void prepareWNDParams(List<String> args, SourceType sourceType) {
+    private void prepareWDLParams(List<String> args, SourceType sourceType) {
         args.add("-w");
-        args.add(WNDWorker.class.getName());
+        args.add(WDLWorker.class.getName());
 
         args.add("-m");
-        args.add(WNDMaster.class.getName());
+        args.add(WDLMaster.class.getName());
 
         args.add("-mr");
-        args.add(WNDParams.class.getName());
+        args.add(WDLParams.class.getName());
 
         args.add("-wr");
-        args.add(WNDParams.class.getName());
+        args.add(WDLParams.class.getName());
 
-        // TODO, add WNDOutput here
+        // TODO, add WDLOutput here
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
-                WNDOutput.class.getName()));
+                WDLOutput.class.getName()));
 
     }
 

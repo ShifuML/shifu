@@ -355,6 +355,6 @@ public interface Constants {
     /**
      * Wide and deep model name
      */
-    public static final String WND_ALG_NAME = "WND";
+    public static final String WDL_ALG_NAME = "WDL";
 
 }
