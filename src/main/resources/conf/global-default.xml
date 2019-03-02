@@ -23,12 +23,6 @@
   </property>
 
   <property>
-    <description>The path of app master in local</description>
-    <name>shifu.application.app-jar-path</name>
-    <value>/x/home/webai/tensorflow/shifu-tensorflow-on-yarn-0.0.1-SNAPSHOT.jar</value>
-  </property>
-
-  <property>
     <description>python env path in hdfs</description>
     <name>shifu.application.python-env-zip</name>
     <value>/user/website/.tensorflow_yarn/python_env.zip</value>

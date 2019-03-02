@@ -117,7 +117,6 @@ import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.guagua.GuaguaParquetMapReduceClient;
 import ml.shifu.shifu.guagua.ShifuInputFormat;
-import ml.shifu.shifu.util.*;
 
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -138,7 +137,6 @@ import java.io.*;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.*;
 
 /**
  * Train processor, produce model based on the normalized dataset
@@ -425,13 +423,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
     }
 
-    private static final Path GLOBAL_DEFAULT = new Path("../conf/global-default.xml");
-    public static void main(String[] args) throws NoSuchMethodException, SecurityException, ClassNotFoundException, NegativeArraySizeException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+    private static final Path GLOBAL_DEFAULT = new Path(
+            Environment.getProperty(Environment.SHIFU_HOME) + File.separator + "conf" + File.separator
+            + "global-default.xml");
 
-        
-    }
     protected int runTensorflowDistributedTrain() throws Exception {
         LOG.info("Started {} tensorflow distributed training.", isDryTrain ? "dry " : "");
+        LOG.info("GLOBAL_DEFAULT: " + GLOBAL_DEFAULT);
         final List<String> args = new ArrayList<String>();
         
         args.add("-libjars");
@@ -456,16 +454,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
         
         return 0;
-//        
-//        TensorflowClient client = new TensorflowClient(new Configuration(false));
-//        
-//        boolean sanityCheck = client.init(args.toArray(new String[0]));
-//        if (!sanityCheck) {
-//            LOG.error("Failed to init client.");
-//            return -1;
-//        }
-//        
-//        return client.start();
     }
     
     private void setSelectedTargetAndWeightColumnNumber(Configuration globalConf) {
@@ -521,7 +509,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         globalConf.set("shifu.application.column-conf", super.getPathFinder().getColumnConfigPath(SourceType.HDFS));
         
         // set application name
-        globalConf.set("shifu.application.name", modelConfig.getBasic().getName());
+        globalConf.set("shifu.application.name", "Shifu_Tensorflow:" + modelConfig.getBasic().getName());
+        
+        // set yarn queue
+        globalConf.set("shifu.yarn.queue", Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         
         // set selected column number; target column number; weight column number
         setSelectedTargetAndWeightColumnNumber(globalConf);

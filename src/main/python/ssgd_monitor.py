@@ -22,13 +22,12 @@ import json
 import socket
 
 REPLICAS_TO_AGGREGATE_RATIO = 1
-FEATURE_COUNT = 30
+
 HIDDEN_NODES_COUNT = 20
 VALID_TRAINING_DATA_RATIO = 0.3
 DELIMITER = '|'
 BATCH_SIZE = 10
 EPOCH = 10 # TODO: should consider recovery from checkpoint, we need to reduce current global step
-
 
 #WORKING_DIR = "hdfs://horton/user/webai/.yarn_cancer/"
 
@@ -41,6 +40,7 @@ task_index = int(os.environ["TASK_ID"])
 socket_server_port = int(os.environ["SOCKET_SERVER_PORT"])  # The port of local java socket server listening
 total_training_data_number = int(os.environ["TOTAL_TRAINING_DATA_NUMBER"]) # total data
 feature_column_nums = [int(s) for s in str(os.environ["SELECTED_COLUMN_NUMS"]).split(' ')]  # selected column numbers
+FEATURE_COUNT = len(feature_column_nums)
 
 sample_weight_column_num = int(os.environ["WEIGHT_COLUMN_NUM"])  # weight column number, default is -1
 target_column_num = int(os.environ["TARGET_COLUMN_NUM"])  # target column number, default is -1
