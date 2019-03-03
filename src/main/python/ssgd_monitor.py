@@ -411,7 +411,7 @@ def export_generic_config(export_dir):
     config_json_str += "         \"normtype\": \"ZSCALE\"\n"
     config_json_str += "      }\n"
     config_json_str += "}"
-    f = tf.gfile.GFile(export_dir + "GenericModelConfig.json", mode="w+")
+    f = tf.gfile.GFile(export_dir + "/GenericModelConfig.json", mode="w+")
     f.write(config_json_str)
 
 

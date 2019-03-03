@@ -453,6 +453,19 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             return -1;
         }
         
+        Path modelPath = HDFSUtils.getFS()
+                .makeQualified(new Path(super.getPathFinder().getModelsPath(SourceType.HDFS)));
+        if(ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS).exists(modelPath)) {
+            Path localModelsPath = new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL));
+            if (HDFSUtils.getLocalFS().exists(localModelsPath)) {
+                HDFSUtils.getLocalFS().delete(localModelsPath, true);
+            }
+            copyModelToLocal(null, modelPath, SourceType.HDFS);
+        } else {
+            LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
+                    modelPath.toString());
+        }
+        
         return 0;
     }
     
@@ -1562,6 +1575,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     private void copyModelToLocal(String modelName, Path modelPath, SourceType sourceType) throws IOException {
         if(!this.isDryTrain()) {
             ShifuFileUtils.getFileSystemBySourceType(sourceType).copyToLocalFile(modelPath,
+                    StringUtils.isBlank(modelName) ? 
+                    new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL)) :
                     new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL), modelName));
         }
     }
