@@ -89,6 +89,7 @@ public interface Constants {
     public static final String GBT = "GBT";
     public static final String GENERIC = "generic";
     public static final String TENSORFLOW = "tensorflow";
+    public static final String WDL = "WDL";
 
     public static final String BZ2_SUFFIX = ".bz2";
     public static final String GZ_SUFFIX = ".gz";
