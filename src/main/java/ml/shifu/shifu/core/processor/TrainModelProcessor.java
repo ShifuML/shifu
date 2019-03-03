@@ -502,6 +502,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // set training data path
         globalConf.set("shifu.application.training-data-path", super.getPathFinder().getNormalizedDataPath());
         
+        // set workers instance number based on training data files number
+        int fileNumber = HDFSUtils.getFileNumber(HDFSUtils.getFS(),
+                new Path(super.getPathFinder().getNormalizedDataPath()));
+        globalConf.set("shifu.worker.instances", Integer.toString(fileNumber));
+        
+        // set backup workers as 1:10
+        int backupWorkerNumber = (fileNumber/10) > 0 ? fileNumber/10 : 1;
+        globalConf.set("shifu.worker.instances.backup", Integer.toString(backupWorkerNumber));
+        
         // set model conf
         globalConf.set("shifu.application.model-conf", super.getPathFinder().getModelConfigPath(SourceType.HDFS));
         
