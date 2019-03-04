@@ -49,6 +49,9 @@ public abstract class AbstractLayer<FIN, FOUT, BIN, BOUT> implements Layer<FIN, 
     }
 
     /**
+
+     */
+    /**
      * Serialize layer based on provided SerializationType. The implementation of {@link #write(DataOutput)} should use
      * {@link #serializationType} to determine what to serialize.
      * @param out

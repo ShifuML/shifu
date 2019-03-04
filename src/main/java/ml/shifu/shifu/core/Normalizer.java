@@ -341,7 +341,8 @@ public class Normalizer {
         } else if(config.isCategorical()) {
             Integer index = cateIndexMap.get(raw == null ? "" : raw.toString());
             if(index == null || index == -1) {
-                index = config.getBinCategory().size(); // last index for null category
+                // last index for null category
+                index = config.getBinCategory().size();
             }
             return Arrays.asList(((double) index));
         } else {

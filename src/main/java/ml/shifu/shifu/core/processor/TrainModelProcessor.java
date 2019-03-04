@@ -423,13 +423,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
     }
 
-    private static final Path GLOBAL_DEFAULT = new Path("../conf/global-default.xml");
-    public static void main(String[] args) throws NoSuchMethodException, SecurityException, ClassNotFoundException, NegativeArraySizeException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+    private static final Path GLOBAL_DEFAULT = new Path(
+            Environment.getProperty(Environment.SHIFU_HOME) + File.separator + "conf" + File.separator
+            + "global-default.xml");
 
-        
-    }
     protected int runTensorflowDistributedTrain() throws Exception {
         LOG.info("Started {} tensorflow distributed training.", isDryTrain ? "dry " : "");
+        LOG.info("GLOBAL_DEFAULT: " + GLOBAL_DEFAULT);
         final List<String> args = new ArrayList<String>();
         
         args.add("-libjars");
@@ -453,17 +453,20 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             return -1;
         }
         
+        Path modelPath = HDFSUtils.getFS()
+                .makeQualified(new Path(super.getPathFinder().getModelsPath(SourceType.HDFS)));
+        if(ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS).exists(modelPath)) {
+            Path localModelsPath = new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL));
+            if (HDFSUtils.getLocalFS().exists(localModelsPath)) {
+                HDFSUtils.getLocalFS().delete(localModelsPath, true);
+            }
+            copyModelToLocal(null, modelPath, SourceType.HDFS);
+        } else {
+            LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
+                    modelPath.toString());
+        }
+        
         return 0;
-//        
-//        TensorflowClient client = new TensorflowClient(new Configuration(false));
-//        
-//        boolean sanityCheck = client.init(args.toArray(new String[0]));
-//        if (!sanityCheck) {
-//            LOG.error("Failed to init client.");
-//            return -1;
-//        }
-//        
-//        return client.start();
     }
     
     private void setSelectedTargetAndWeightColumnNumber(Configuration globalConf) {
@@ -512,6 +515,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // set training data path
         globalConf.set("shifu.application.training-data-path", super.getPathFinder().getNormalizedDataPath());
         
+        // set workers instance number based on training data files number
+        int fileNumber = HDFSUtils.getFileNumber(HDFSUtils.getFS(),
+                new Path(super.getPathFinder().getNormalizedDataPath()));
+        globalConf.set("shifu.worker.instances", Integer.toString(fileNumber));
+        
+        // set backup workers as 1:10
+        int backupWorkerNumber = (fileNumber/10) > 0 ? fileNumber/10 : 1;
+        globalConf.set("shifu.worker.instances.backup", Integer.toString(backupWorkerNumber));
+        
         // set model conf
         globalConf.set("shifu.application.model-conf", super.getPathFinder().getModelConfigPath(SourceType.HDFS));
         
@@ -519,7 +531,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         globalConf.set("shifu.application.column-conf", super.getPathFinder().getColumnConfigPath(SourceType.HDFS));
         
         // set application name
-        globalConf.set("shifu.application.name", modelConfig.getBasic().getName());
+        globalConf.set("shifu.application.name", "Shifu_Tensorflow:" + modelConfig.getBasic().getName());
+        
+        // set yarn queue
+        globalConf.set("shifu.yarn.queue", Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         
         // set selected column number; target column number; weight column number
         setSelectedTargetAndWeightColumnNumber(globalConf);
@@ -1560,6 +1575,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     private void copyModelToLocal(String modelName, Path modelPath, SourceType sourceType) throws IOException {
         if(!this.isDryTrain()) {
             ShifuFileUtils.getFileSystemBySourceType(sourceType).copyToLocalFile(modelPath,
+                    StringUtils.isBlank(modelName) ? 
+                    new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL)) :
                     new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL), modelName));
         }
     }

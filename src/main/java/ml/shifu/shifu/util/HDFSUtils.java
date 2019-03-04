@@ -20,9 +20,13 @@ import ml.shifu.shifu.exception.ShifuException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 /**
@@ -125,5 +129,18 @@ public final class HDFSUtils {
             }
         }
         return lfs;
+    }
+    
+    public static int getFileNumber(FileSystem fs, Path src) throws FileNotFoundException, IOException {
+        RemoteIterator<LocatedFileStatus> itr = fs.listFiles(src, true);
+        int total = 0;
+        while(itr.hasNext()) {
+            LocatedFileStatus cur = itr.next();
+            String fileName = cur.getPath().getName();
+            if (!fileName.startsWith("_") && !fileName.startsWith(".")) {
+                total += 1;
+            }
+        }
+        return total;
     }
 }
