@@ -97,7 +97,6 @@ import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.util.*;
 
-
 /**
  * Train processor, produce model based on the normalized dataset
  */
@@ -228,7 +227,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     private void runTensorflowLocalTrain() throws IOException {
         List<Scanner> scanners = null;
         TensorflowTrainer trainer = new TensorflowTrainer(modelConfig, columnConfigList);
-        LOG.info("Normalized Data: " + pathFinder.getNormalizedDataPath());
+        LOG.info("Normalized data for training {}.", pathFinder.getNormalizedDataPath());
         try {
             scanners = ShifuFileUtils.getDataScanners(pathFinder.getNormalizedDataPath(),
                     modelConfig.getDataSet().getSource());
@@ -390,7 +389,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         LOG.info("Started {} tensorflow distributed training.", isDryTrain ? "dry " : "");
         globalDefaultConfFile = new Path(
                 super.pathFinder.getAbsolutePath(new Path("conf" + File.separator + "global-default.xml").toString()));
-        LOG.info("GLOBAL_DEFAULT file is found in: " + globalDefaultConfFile);
+        LOG.info("Shifu tensorflow on yarn global default file is found in: {}.", globalDefaultConfFile);
         final List<String> args = new ArrayList<String>();
 
         args.add("-libjars");
@@ -433,6 +432,21 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             } catch (Exception e) {
                 LOG.warn("Failed to move tf-yarn conf file, such message can be ignored!");
             }
+
+            if(!modelConfig.getTrain().getIsContinuous()) { // not cont, remove tmp models to not load it in tf python
+                try {
+                    FileSystem fs = HDFSUtils.getFS();
+                    // delete all old models if not continuous
+                    Path srcTmpModelPath = fs.makeQualified(new Path(super.getPathFinder().getPathBySourceType(
+                            new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), SourceType.HDFS)));
+                    Path mvTmpModelPath = new Path(srcTmpModelPath.toString() + "_" + System.currentTimeMillis());
+                    LOG.info("Tmp tensorflow model path has been moved to folder: {}.", mvTmpModelPath);
+                    fs.rename(srcTmpModelPath, mvTmpModelPath);
+                    fs.mkdirs(srcTmpModelPath);
+                } catch (Exception e) {
+                    LOG.warn("Failed to move tmp HDFS path", e);
+                }
+            }
         }
 
         return 0;
@@ -443,7 +457,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         int weightColumnNum = -1;
         List<Integer> seletectedColumnNums = new ArrayList<Integer>();
         String weightColumnName = this.modelConfig.getDataSet().getWeightColumnName();
-        
+
         for(int i = 0; i < columnConfigList.size(); i++) {
             ColumnConfig cc = columnConfigList.get(i);
             if(cc.isTarget()) {
@@ -451,7 +465,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             } else if(cc.isFinalSelect()) {
                 seletectedColumnNums.add(i);
             }
-            
+
             if(weightColumnName.equalsIgnoreCase(cc.getColumnName())) {
                 weightColumnNum = i;
             }
@@ -676,7 +690,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         int parallelGroups = 1;
         if(gs.hasHyperParam()) {
             parallelGroups = (gs.getFlattenParams().size() % parallelNum == 0
-                    ? gs.getFlattenParams().size() / parallelNum : gs.getFlattenParams().size() / parallelNum + 1);
+                    ? gs.getFlattenParams().size() / parallelNum
+                    : gs.getFlattenParams().size() / parallelNum + 1);
             baggingNum = gs.getFlattenParams().size();
             LOG.warn("'train:baggingNum' is set to {} because of grid search enabled by settings in 'train#params'.",
                     gs.getFlattenParams().size());
@@ -1330,18 +1345,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         if(CommonUtils.isTreeModel(alg)) {
             // for tree models, using cleaned validation data path
-            args.add(
-                    String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.CROSS_VALIDATION_DIR,
-                            ShifuFileUtils.getFileSystemBySourceType(sourceType)
-                                    .makeQualified(
-                                            new Path(super.getPathFinder().getCleanedValidationDataPath(sourceType)))
+            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.CROSS_VALIDATION_DIR,
+                    ShifuFileUtils.getFileSystemBySourceType(sourceType)
+                            .makeQualified(new Path(super.getPathFinder().getCleanedValidationDataPath(sourceType)))
                             .toString()));
         } else {
-            args.add(
-                    String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.CROSS_VALIDATION_DIR,
-                            ShifuFileUtils.getFileSystemBySourceType(sourceType)
-                                    .makeQualified(
-                                            new Path(super.getPathFinder().getNormalizedValidationDataPath(sourceType)))
+            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.CROSS_VALIDATION_DIR,
+                    ShifuFileUtils.getFileSystemBySourceType(sourceType)
+                            .makeQualified(new Path(super.getPathFinder().getNormalizedValidationDataPath(sourceType)))
                             .toString()));
         }
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,

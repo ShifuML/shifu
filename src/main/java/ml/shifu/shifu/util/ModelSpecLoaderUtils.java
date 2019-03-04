@@ -232,8 +232,8 @@ public class ModelSpecLoaderUtils {
                     fst.getPath().toString(), sourceType, GenericModelConfig.class);
             String alg = (String) gmc.getProperties().get(Constants.GENERIC_ALGORITHM);
             String genericModelPath = System.getProperty(Constants.USER_DIR) // <usr.dir>
-                    + File.separator + Constants.MODELS // + /models
-                    + File.separator + modelConfig.getBasic().getName(); // + /ModelName
+                    + File.separator + Constants.MODELS; // + /models
+            // + File.separator + modelConfig.getBasic().getName(); // + /ModelName
             gmc.getProperties().put(Constants.GENERIC_MODEL_PATH, genericModelPath);
             log.info("Generic model path is : {}.", gmc.getProperties().get(Constants.GENERIC_MODEL_PATH));
             if(Constants.TENSORFLOW.equals(alg)) {
