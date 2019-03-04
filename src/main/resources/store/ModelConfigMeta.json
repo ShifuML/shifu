@@ -542,7 +542,7 @@
                     {"label": "Random Forest", "value":"RF"},
                     {"label": "Gradient Boost Decision Tree", "value":"GBT"},
                     {"label": "Tensorflow", "value":"Tensorflow"},
-                    {"label": "Wide And Deep", "value":"WND"},
+                    {"label": "Wide And Deep", "value":"WDL"},
                     {"label": "Generic", "value":"generic"}
                 ]
             }, {
@@ -626,7 +626,7 @@
                         "directive": "input",
                         "defval" : 0.1
                     }, {
-                        "name" : "WNDL2Reg",
+                        "name" : "WDLL2Reg",
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.01
