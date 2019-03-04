@@ -45,25 +45,6 @@
     <name>shifu.application.glibc-binary-path</name>
     <value>/x/home/website/glibc2.17</value>
   </property>
-  
-    <property>
-    <description>The trining python code path</description>
-    <name>shifu.application.python-script-path</name>
-    <value>../scripts/ssgd_monitor.py</value>
-  </property>
-
-	<property>
-    <description>shell to trigger python script</description>
-    <name>shifu.application.python-shell-path</name>
-    <value>../bin/dist_pytrain.sh</value>
-  </property>
-
-    <property>
-    <description>Training data path on hdfs</description>
-    <name>shifu.application.training-data-path</name>
-    <!-- <value>/user/pengzhang/ModelSets/cam2015-BNN/tmp/NormalizedData/</value> -->
-    <value>/user/webai/tmp/data/</value>
-  </property>
 
   <!-- Task configurations -->
   <property>
