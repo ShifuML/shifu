@@ -390,6 +390,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         globalDefaultConfFile = new Path(
                 super.pathFinder.getAbsolutePath(new Path("conf" + File.separator + "global-default.xml").toString()));
         LOG.info("Shifu tensorflow on yarn global default file is found in: {}.", globalDefaultConfFile);
+
+        // if not continuous mode, remove tmp models to not load it in tf python, continuous mode here there is a bug
+        cleanTmpModelPath();
+
         final List<String> args = new ArrayList<String>();
 
         args.add("-libjars");
@@ -432,24 +436,26 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             } catch (Exception e) {
                 LOG.warn("Failed to move tf-yarn conf file, such message can be ignored!");
             }
-
-            if(!modelConfig.getTrain().getIsContinuous()) { // not cont, remove tmp models to not load it in tf python
-                try {
-                    FileSystem fs = HDFSUtils.getFS();
-                    // delete all old models if not continuous
-                    Path srcTmpModelPath = fs.makeQualified(new Path(super.getPathFinder().getPathBySourceType(
-                            new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), SourceType.HDFS)));
-                    Path mvTmpModelPath = new Path(srcTmpModelPath.toString() + "_" + System.currentTimeMillis());
-                    LOG.info("Tmp tensorflow model path has been moved to folder: {}.", mvTmpModelPath);
-                    fs.rename(srcTmpModelPath, mvTmpModelPath);
-                    fs.mkdirs(srcTmpModelPath);
-                } catch (Exception e) {
-                    LOG.warn("Failed to move tmp HDFS path", e);
-                }
-            }
         }
 
         return 0;
+    }
+
+    private void cleanTmpModelPath() {
+        if(!modelConfig.getTrain().getIsContinuous()) {
+            try {
+                FileSystem fs = HDFSUtils.getFS();
+                // delete all old models if not continuous
+                Path srcTmpModelPath = fs.makeQualified(new Path(super.getPathFinder().getPathBySourceType(
+                        new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), SourceType.HDFS)));
+                Path mvTmpModelPath = new Path(srcTmpModelPath.toString() + "_" + System.currentTimeMillis());
+                LOG.info("Tmp tensorflow model path has been moved to folder: {}.", mvTmpModelPath);
+                fs.rename(srcTmpModelPath, mvTmpModelPath);
+                fs.mkdirs(srcTmpModelPath);
+            } catch (Exception e) {
+                LOG.warn("Failed to move tmp HDFS path", e);
+            }
+        }
     }
 
     private void setSelectedTargetAndWeightColumnNumber(Configuration globalConf) {
