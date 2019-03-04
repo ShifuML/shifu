@@ -90,7 +90,7 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> implements
             }
         } else {
             binning = new CategoricalBinning(this.scaleFactor, super.modelConfig.getMissingOrInvalidValues(),
-                    this.maxCategorySize);
+                    this.maxCategorySize,columnConfig.getHashSeed());
         }
 
         return binning;

@@ -71,6 +71,7 @@ public class CategoricalBinning extends AbstractBinning<String> {
     public CategoricalBinning(int binningNum, List<String> missingValList, int maxCategorySize, int hashSeed) {
         this(binningNum, missingValList, maxCategorySize);
         this.hashSeed =  hashSeed;
+        log.info("categoricalhashseed:"+hashSeed);
     }
 
     /*
@@ -91,7 +92,6 @@ public class CategoricalBinning extends AbstractBinning<String> {
             }
             else if(isValid&&this.hashSeed>0) {
             	categoricalVals.add(fval.hashCode()%this.hashSeed+"");
-            	log.info(fval.hashCode()%10+"");
             }
 
             if(categoricalVals.size() > maxCategorySize) {

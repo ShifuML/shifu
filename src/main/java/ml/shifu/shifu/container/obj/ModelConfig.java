@@ -665,8 +665,7 @@ public class ModelConfig {
     }
     
     @JsonIgnore
-    public Map<String,Integer> getCategoricalColumnHashSeedConf() throws IOException {
-
+	public Map<String, Integer> getCategoricalColumnHashSeedConf() throws IOException {
 		String defaultCategoricalColumnHashFile = Constants.COLUMN_META_FOLDER_NAME + File.separator
 				+ Constants.DEFAULT_CATEGORICAL_HASH_FILE;
 		if (ShifuFileUtils.isFileExists(defaultCategoricalColumnHashFile, SourceType.LOCAL)) {
@@ -679,8 +678,8 @@ public class ModelConfig {
 					defaultCategoricalColumnHashFile);
 			return new HashMap<String, Integer>();
 		}
-        List<String> hashPairs = CommonUtils.readConfFileIntoList(defaultCategoricalColumnHashFile, SourceType.LOCAL);
-        Map<String,Integer> columnHashSeeds = new HashMap<String,Integer>();
+		List<String> hashPairs = CommonUtils.readConfFileIntoList(defaultCategoricalColumnHashFile, SourceType.LOCAL);
+		Map<String, Integer> columnHashSeeds = new HashMap<String, Integer>();
 		try {
 			for (String pair : hashPairs) {
 				if (StringUtil.isEmpty(pair))
@@ -693,9 +692,9 @@ public class ModelConfig {
 		} catch (NumberFormatException e) {
 			LOG.error("Hash value must be integer", e);
 		}
-        return columnHashSeeds;
-        
-    }
+		return columnHashSeeds;
+
+	}
 
     @JsonIgnore
     public List<String> getSegmentFilterExpressions() throws IOException {
