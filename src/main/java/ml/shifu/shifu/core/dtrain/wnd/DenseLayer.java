@@ -15,8 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
-import ml.shifu.guagua.io.Bytable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;

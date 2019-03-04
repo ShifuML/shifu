@@ -21,10 +21,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.lang.reflect.Array;
+import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,7 +40,6 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 
-import ml.shifu.shifu.core.dtrain.nn.*;
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
@@ -106,6 +109,16 @@ import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionMaster;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionOutput;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionParams;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionWorker;
+import ml.shifu.shifu.core.dtrain.nn.ActivationLeakyReLU;
+import ml.shifu.shifu.core.dtrain.nn.ActivationPTANH;
+import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
+import ml.shifu.shifu.core.dtrain.nn.ActivationSwish;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.core.dtrain.nn.NNMaster;
+import ml.shifu.shifu.core.dtrain.nn.NNOutput;
+import ml.shifu.shifu.core.dtrain.nn.NNParams;
+import ml.shifu.shifu.core.dtrain.nn.NNParquetWorker;
+import ml.shifu.shifu.core.dtrain.nn.NNWorker;
 import ml.shifu.shifu.core.dtrain.wnd.WNDMaster;
 import ml.shifu.shifu.core.dtrain.wnd.WNDOutput;
 import ml.shifu.shifu.core.dtrain.wnd.WNDParams;
@@ -117,7 +130,6 @@ import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.guagua.GuaguaParquetMapReduceClient;
 import ml.shifu.shifu.guagua.ShifuInputFormat;
-
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
@@ -132,11 +144,6 @@ import parquet.encoding.Generator;
 import parquet.format.PageType;
 import parquet.hadoop.ParquetRecordReader;
 import parquet.org.codehaus.jackson.Base64Variant;
-
-import java.io.*;
-import java.lang.reflect.Array;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 
 /**
  * Train processor, produce model based on the normalized dataset
@@ -170,6 +177,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      * Random generator for get sampling features per each iteration.
      */
     private Random featureSamplingRandom = new Random();
+
+    private Path globalDefaultConfFile = new Path(Environment.getProperty(Environment.SHIFU_HOME) + File.separator
+            + "conf" + File.separator + "global-default.xml");
 
     public TrainModelProcessor() {
     }
@@ -423,57 +433,63 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
     }
 
-    private static final Path GLOBAL_DEFAULT = new Path(
-            Environment.getProperty(Environment.SHIFU_HOME) + File.separator + "conf" + File.separator
-            + "global-default.xml");
-
     protected int runTensorflowDistributedTrain() throws Exception {
         LOG.info("Started {} tensorflow distributed training.", isDryTrain ? "dry " : "");
-        LOG.info("GLOBAL_DEFAULT: " + GLOBAL_DEFAULT);
+        globalDefaultConfFile = new Path(
+                super.pathFinder.getAbsolutePath(new Path("conf" + File.separator + "global-default.xml").toString()));
+        LOG.info("GLOBAL_DEFAULT file is found in: " + globalDefaultConfFile);
         final List<String> args = new ArrayList<String>();
-        
+
         args.add("-libjars");
         addTensorflowRuntimeJars(args);
-        
+
         // copy globalconfig example from common conf path to project folder for user to update and modify
         generateGlobalConf();
-        
-        args.add("-globalconfig"); // include python env path, 
-        args.add(GLOBAL_DEFAULT.getName());
 
-        String clazz = "ml.shifu.shifu.core.yarn.client.TensorflowClient";
-        Method main = Class.forName(clazz).getMethod("main", new Class[] {
-                Array.newInstance(String.class, 0).getClass()
-              });
-        
+        args.add("-globalconfig"); // include python env path,
+        args.add(globalDefaultConfFile.getName());
+
         try {
-            main.invoke(null, (Object)args.toArray(new String[0]));
-        } catch (Exception e) {
-            LOG.error("executing tensorflow client fails" , e);
-            return -1;
-        }
-        
-        Path modelPath = HDFSUtils.getFS()
-                .makeQualified(new Path(super.getPathFinder().getModelsPath(SourceType.HDFS)));
-        if(ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS).exists(modelPath)) {
-            Path localModelsPath = new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL));
-            if (HDFSUtils.getLocalFS().exists(localModelsPath)) {
-                HDFSUtils.getLocalFS().delete(localModelsPath, true);
+            String clazz = "ml.shifu.shifu.core.yarn.client.TensorflowClient";
+            Method main = Class.forName(clazz).getMethod("main",
+                    new Class[] { Array.newInstance(String.class, 0).getClass() });
+
+            try {
+                main.invoke(null, (Object) args.toArray(new String[0]));
+            } catch (Exception e) {
+                LOG.error("executing tensorflow client fails", e);
+                return -1;
             }
-            copyModelToLocal(null, modelPath, SourceType.HDFS);
-        } else {
-            LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
-                    modelPath.toString());
+
+            Path modelPath = HDFSUtils.getFS()
+                    .makeQualified(new Path(super.getPathFinder().getModelsPath(SourceType.HDFS)));
+            if(ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS).exists(modelPath)) {
+                Path localModelsPath = new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL));
+                if(HDFSUtils.getLocalFS().exists(localModelsPath)) {
+                    HDFSUtils.getLocalFS().delete(localModelsPath, true);
+                }
+                copyModelToLocal(null, modelPath, SourceType.HDFS);
+            } else {
+                LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
+                        modelPath.toString());
+            }
+        } finally {
+            try {
+                FileUtils.moveFile(new File(globalDefaultConfFile.getName().toString()),
+                        new File(globalDefaultConfFile.getName() + System.currentTimeMillis()));
+            } catch (Exception e) {
+                LOG.warn("Failed to move tf-yarn conf file, such message can be ignored!");
+            }
         }
-        
+
         return 0;
     }
-    
+
     private void setSelectedTargetAndWeightColumnNumber(Configuration globalConf) {
         int targetColumnNum = -1;
         int weightColumnNum = -1;
         List<Integer> seletectedColumnNums = new ArrayList<Integer>();
-        
+
         for(int i = 0; i < columnConfigList.size(); i++) {
             ColumnConfig cc = columnConfigList.get(i);
             if(cc.isTarget()) {
@@ -493,69 +509,71 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 seletectedColumnNums.add(i);
             }
         }
-        
+
         globalConf.set("shifu.application.target-column-number", Integer.toString(targetColumnNum));
         globalConf.set("shifu.application.weight-column-number", Integer.toString(weightColumnNum));
         globalConf.set("shifu.application.selected-column-numbers", StringUtils.join(seletectedColumnNums, ' '));
     }
-    
+
     /**
      * update some fields of conf based on current project
-     * @throws IOException 
+     * 
+     * @throws IOException
      */
     private void generateGlobalConf() throws IOException {
-        if (HDFSUtils.getLocalFS().exists(new Path(GLOBAL_DEFAULT.getName()))) {
+        if(HDFSUtils.getLocalFS().exists(new Path(globalDefaultConfFile.getName()))) {
             // local project already have global conf, so we do not copy it again
             return;
         }
-        
+
         Configuration globalConf = new Configuration(false);
-        globalConf.addResource(GLOBAL_DEFAULT);
-        
+        globalConf.addResource(globalDefaultConfFile);
+
         // set training data path
         globalConf.set("shifu.application.training-data-path", super.getPathFinder().getNormalizedDataPath());
-        
+
         // set workers instance number based on training data files number
         int fileNumber = HDFSUtils.getFileNumber(HDFSUtils.getFS(),
                 new Path(super.getPathFinder().getNormalizedDataPath()));
         globalConf.set("shifu.worker.instances", Integer.toString(fileNumber));
-        
+
         // set backup workers as 1:10
-        int backupWorkerNumber = (fileNumber/10) > 0 ? fileNumber/10 : 1;
+        int backupWorkerNumber = (fileNumber / 10) > 0 ? fileNumber / 10 : 1;
         globalConf.set("shifu.worker.instances.backup", Integer.toString(backupWorkerNumber));
-        
+
         // set model conf
         globalConf.set("shifu.application.model-conf", super.getPathFinder().getModelConfigPath(SourceType.HDFS));
-        
+
         // set column conf
         globalConf.set("shifu.application.column-conf", super.getPathFinder().getColumnConfigPath(SourceType.HDFS));
-        
+
         // set application name
         globalConf.set("shifu.application.name", "Shifu_Tensorflow:" + modelConfig.getBasic().getName());
-        
+
         // set yarn queue
         globalConf.set("shifu.yarn.queue", Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
-        
+
         // set selected column number; target column number; weight column number
         setSelectedTargetAndWeightColumnNumber(globalConf);
 
         // set data total count
-        globalConf.set("shifu.application.total-training-data-number", 
+        globalConf.set("shifu.application.total-training-data-number",
                 Long.toString(columnConfigList.get(0).getTotalCount()));
-        
+
         // set hdfs tmp model path
         globalConf.set("shifu.application.tmp-model-path", super.getPathFinder().getTmpModelsPath(SourceType.HDFS));
-        
+
         // set hdfs final model path
         globalConf.set("shifu.application.final-model-path", super.getPathFinder().getModelsPath(SourceType.HDFS));
-        
+
         OutputStream os = null;
         try {
             // Write user's overridden conf to an xml to be localized.
-            os = new FileOutputStream(GLOBAL_DEFAULT.getName());
+            os = new FileOutputStream(globalDefaultConfFile.getName());
             globalConf.writeXml(os);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to create " + GLOBAL_DEFAULT.getName() + " conf file. Exiting.", e);
+            throw new RuntimeException("Failed to create " + globalDefaultConfFile.getName() + " conf file. Exiting.",
+                    e);
         } finally {
             if(os != null) {
                 os.close();
@@ -578,12 +596,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         args.add(StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR));
     }
-    
-    
+
     protected int runDistributedTrain() throws IOException, InterruptedException, ClassNotFoundException {
         LOG.info("Started {}distributed training.", isDryTrain ? "dry " : "");
         int status = 0;
-        
+
         Configuration conf = new Configuration();
 
         SourceType sourceType = super.getModelConfig().getDataSet().getSource();
@@ -1575,9 +1592,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     private void copyModelToLocal(String modelName, Path modelPath, SourceType sourceType) throws IOException {
         if(!this.isDryTrain()) {
             ShifuFileUtils.getFileSystemBySourceType(sourceType).copyToLocalFile(modelPath,
-                    StringUtils.isBlank(modelName) ? 
-                    new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL)) :
-                    new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL), modelName));
+                    StringUtils.isBlank(modelName) ? new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL))
+                            : new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL), modelName));
         }
     }
 
