@@ -26,7 +26,7 @@ REPLICAS_TO_AGGREGATE_RATIO = 1
 HIDDEN_NODES_COUNT = 20
 VALID_TRAINING_DATA_RATIO = 0.3
 DELIMITER = '|'
-BATCH_SIZE = 10
+BATCH_SIZE = 100
 EPOCH = 10 # TODO: should consider recovery from checkpoint, we need to reduce current global step
 
 #WORKING_DIR = "hdfs://horton/user/webai/.yarn_cancer/"
@@ -336,7 +336,11 @@ def load_data(data_file):
                         train_neg_cnt += 1
                     single_train_data = []
                     for feature_column_num in feature_column_nums:
-                        single_train_data.append(float(columns[feature_column_num].strip('\n')))
+                        try:
+                            single_train_data.append(float(columns[feature_column_num].strip('\n')))
+                        except:
+                            logging.info("Could not convert " + str(columns[feature_column_num].strip('\n') + " to float"))
+                            logging.info("feature_column_num: " + str(feature_column_num))
                     train_data.append(single_train_data)
 
                     if sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):
@@ -356,7 +360,12 @@ def load_data(data_file):
                         valid_neg_cnt += 1
                     single_valid_data = []
                     for feature_column_num in feature_column_nums:
-                        single_valid_data.append(float(columns[feature_column_num].strip('\n')))
+                        try:
+                            single_valid_data.append(float(columns[feature_column_num].strip('\n')))
+                        except:
+                            logging.info("Could not convert " + str(columns[feature_column_num].strip('\n') + " to float"))
+                            logging.info("feature_column_num: " + str(feature_column_num))
+
                     valid_data.append(single_valid_data)
 
                     if  sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):

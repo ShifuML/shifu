@@ -100,7 +100,7 @@
   <property>
     <description>Number of parameter servers to request.</description>
     <name>shifu.ps.instances</name>
-    <value>2</value>
+    <value>8</value>
   </property>
 <!-- 
   <property>

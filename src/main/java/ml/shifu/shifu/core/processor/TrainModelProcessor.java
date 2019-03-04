@@ -442,24 +442,30 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         int targetColumnNum = -1;
         int weightColumnNum = -1;
         List<Integer> seletectedColumnNums = new ArrayList<Integer>();
-
+        String weightColumnName = this.modelConfig.getDataSet().getWeightColumnName();
+        
         for(int i = 0; i < columnConfigList.size(); i++) {
             ColumnConfig cc = columnConfigList.get(i);
             if(cc.isTarget()) {
                 targetColumnNum = i;
             } else if(cc.isFinalSelect()) {
                 seletectedColumnNums.add(i);
-            } else if(cc.isWeight()) {
+            }
+            
+            if(weightColumnName.equalsIgnoreCase(cc.getColumnName())) {
                 weightColumnNum = i;
             }
         }
         if(seletectedColumnNums.size() == 0) {
+            boolean hasCandidate = CommonUtils.hasCandidateColumns(columnConfigList);
             for(int i = 0; i < columnConfigList.size(); i++) {
                 ColumnConfig cc = columnConfigList.get(i);
-                if(cc.isTarget()) {
+                if(cc.isTarget() || cc.isMeta()) {
                     continue;
                 }
-                seletectedColumnNums.add(i);
+                if(CommonUtils.isGoodCandidate(cc, hasCandidate)) {
+                    seletectedColumnNums.add(i);
+                }
             }
         }
 
@@ -501,11 +507,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         globalConf.set("shifu.application.column-conf", super.getPathFinder().getColumnConfigPath(SourceType.HDFS));
 
         // set python script
-        globalConf.set("shifu.application.python-script-path", super.getPathFinder().getScriptPath("scripts/ssgd_monitor.py"));
-        
+        globalConf.set("shifu.application.python-script-path",
+                super.getPathFinder().getScriptPath("scripts/ssgd_monitor.py"));
+
         // set shell to lauch python
-        globalConf.set("shifu.application.python-shell-path", super.getPathFinder().getScriptPath("bin/dist_pytrain.sh"));        
-        
+        globalConf.set("shifu.application.python-shell-path",
+                super.getPathFinder().getScriptPath("bin/dist_pytrain.sh"));
+
         // set application name
         globalConf.set("shifu.application.name", "Shifu_Tensorflow:" + modelConfig.getBasic().getName());
 
@@ -668,8 +676,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         int parallelGroups = 1;
         if(gs.hasHyperParam()) {
             parallelGroups = (gs.getFlattenParams().size() % parallelNum == 0
-                    ? gs.getFlattenParams().size() / parallelNum
-                    : gs.getFlattenParams().size() / parallelNum + 1);
+                    ? gs.getFlattenParams().size() / parallelNum : gs.getFlattenParams().size() / parallelNum + 1);
             baggingNum = gs.getFlattenParams().size();
             LOG.warn("'train:baggingNum' is set to {} because of grid search enabled by settings in 'train#params'.",
                     gs.getFlattenParams().size());
@@ -1323,14 +1330,18 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         if(CommonUtils.isTreeModel(alg)) {
             // for tree models, using cleaned validation data path
-            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.CROSS_VALIDATION_DIR,
-                    ShifuFileUtils.getFileSystemBySourceType(sourceType)
-                            .makeQualified(new Path(super.getPathFinder().getCleanedValidationDataPath(sourceType)))
+            args.add(
+                    String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.CROSS_VALIDATION_DIR,
+                            ShifuFileUtils.getFileSystemBySourceType(sourceType)
+                                    .makeQualified(
+                                            new Path(super.getPathFinder().getCleanedValidationDataPath(sourceType)))
                             .toString()));
         } else {
-            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.CROSS_VALIDATION_DIR,
-                    ShifuFileUtils.getFileSystemBySourceType(sourceType)
-                            .makeQualified(new Path(super.getPathFinder().getNormalizedValidationDataPath(sourceType)))
+            args.add(
+                    String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.CROSS_VALIDATION_DIR,
+                            ShifuFileUtils.getFileSystemBySourceType(sourceType)
+                                    .makeQualified(
+                                            new Path(super.getPathFinder().getNormalizedValidationDataPath(sourceType)))
                             .toString()));
         }
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
