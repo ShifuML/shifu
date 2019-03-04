@@ -547,6 +547,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // set column conf
         globalConf.set("shifu.application.column-conf", super.getPathFinder().getColumnConfigPath(SourceType.HDFS));
 
+        // set python script
+        globalConf.set("shifu.application.python-script-path", super.getPathFinder().getScriptPath("scripts/ssgd_monitor.py"));
+        
+        // set shell to lauch python
+        globalConf.set("shifu.application.python-shell-path", super.getPathFinder().getScriptPath("bin/dist_pytrain.sh"));        
+        
         // set application name
         globalConf.set("shifu.application.name", "Shifu_Tensorflow:" + modelConfig.getBasic().getName());
 
