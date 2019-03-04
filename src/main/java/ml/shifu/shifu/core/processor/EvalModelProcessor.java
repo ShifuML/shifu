@@ -28,6 +28,7 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
@@ -548,6 +549,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         paramsMap.put("delimiter", evalConfig.getDataSet().getDataDelimiter());
         paramsMap.put("scale",
                 Environment.getProperty(Constants.SHIFU_SCORE_SCALE, Integer.toString(Scorer.DEFAULT_SCORE_SCALE)));
+        paramsMap.put(Constants.STRICT_MODE, Boolean.toString(isStrict()));
 
         String pigScript = "scripts/EvalNorm.pig";
 
@@ -788,7 +790,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             // TODO correct this logic
             return;
         }
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig,
+        List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(modelConfig, evalConfig,
                 SourceType.LOCAL, evalConfig.getGbtConvertToProb(),
                 evalConfig.getGbtScoreConvertStrategy());
         if (CollectionUtils.isNotEmpty(models)) {
@@ -810,7 +812,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                     + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
         }
 
-        List<ModelSpec> subModels = CommonUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
+        List<ModelSpec> subModels = ModelSpecLoaderUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
                 SourceType.LOCAL, evalConfig.getGbtConvertToProb(),
                 evalConfig.getGbtScoreConvertStrategy());
         if (CollectionUtils.isNotEmpty(subModels)) {
@@ -1224,6 +1226,15 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private boolean isNoSort() {
         return getBooleanParam(this.params, NOSORT);
+    }
+
+    /**
+     * Check "-strict" is specified or not. This is used when normalize the evaluation data set.
+     * The Strict model - means output the data just as input, and append weight column only.
+     * @return true if strict is specified, or false
+     */
+    private boolean isStrict() {
+        return getBooleanParam(this.params, Constants.STRICT_MODE);
     }
 
     private static class ScoreStatus {

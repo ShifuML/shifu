@@ -28,6 +28,7 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.message.EvalResultMessage;
 import ml.shifu.shifu.message.RunModelResultMessage;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
@@ -83,7 +84,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
 
         subModelsCnt = new TreeMap<String, Integer>();
         @SuppressWarnings("deprecation")
-        List<ModelSpec> subModels = CommonUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
+        List<ModelSpec> subModels = ModelSpecLoaderUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
                 evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb());
         if(CollectionUtils.isNotEmpty(subModels)) {
             for(ModelSpec modelSpec: subModels) {
@@ -211,7 +212,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
         buf.append("|" + (StringUtils.isBlank(evalConfig.getDataSet().getWeightColumnName())
                 ? "weight" : evalConfig.getDataSet().getWeightColumnName()));
 
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig, SourceType.LOCAL);
+        List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(modelConfig, evalConfig, SourceType.LOCAL);
         if ( CollectionUtils.isNotEmpty(models) ) {
             addModelScoreHeader(buf, models.size(), "");
         }

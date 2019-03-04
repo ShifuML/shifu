@@ -18,7 +18,6 @@ package ml.shifu.shifu.udf;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.util.Constants;
-
 import org.apache.pig.data.Tuple;
 import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;

@@ -277,7 +277,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         // data sampling only for normalization, for data cleaning, shouldn't do data sampling
-        //if(!isLinearTarget && !this.isForClean) {
+        // if(!isLinearTarget && !this.isForClean) {
         if(!isLinearTarget) {
             // do data sampling. Unselected data or data with invalid tag will be filtered out.
             boolean isNotSampled = DataSampler.isNotSampled(modelConfig.isRegression(), super.tagSet, super.posTagSet,
@@ -398,8 +398,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         if(!config.isMeta() && config.isFinalSelect()) {
                             // for multiple classification, binPosRate means rate of such category over all counts,
                             // reuse binPosRate for normalize
-                            List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
-                                    this.categoryMissingNormType);
+                            List<Double> normVals = Normalizer.fullNormalize(config, val, cutoff, normType,
+                                    this.categoryMissingNormType, this.categoricalIndexMap.get(config.getColumnNum()));
                             for(Double normVal: normVals) {
                                 String formatVal = getOutputValue(normVal, true);
                                 compactVarMap.put(CommonUtils.normColumnName(config.getColumnName()), formatVal);
@@ -420,8 +420,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                             // for multiple classification, binPosRate means rate of such category over all counts,
                             // reuse binPosRate for normalize
 
-                            List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
-                                    this.categoryMissingNormType);
+                            List<Double> normVals = Normalizer.fullNormalize(config, val, cutoff, normType,
+                                    this.categoryMissingNormType, this.categoricalIndexMap.get(config.getColumnNum()));
 
                             for(Double normVal: normVals) {
                                 appendOutputValue(tuple, normVal, true);
@@ -488,8 +488,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     if(!config.isMeta() && config.isFinalSelect()) {
                         // for multiple classification, binPosRate means rate of such category over all counts,
                         // reuse binPosRate for normalize
-                        List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
-                                this.categoryMissingNormType);
+                        List<Double> normVals = Normalizer.fullNormalize(config, val, cutoff, normType,
+                                this.categoryMissingNormType, this.categoricalIndexMap.get(config.getColumnNum()));
                         for(Double normVal: normVals) {
                             String formatVal = getOutputValue(normVal, true);
                             compactVarMap.put(CommonUtils.normColumnName(config.getColumnName()), formatVal);
@@ -504,8 +504,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 } else {
                     // for others
                     if(CommonUtils.isToNormVariable(config, super.hasCandidates, modelConfig.isRegression())) {
-                        List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
-                                this.categoryMissingNormType);
+                        List<Double> normVals = Normalizer.fullNormalize(config, val, cutoff, normType,
+                                this.categoryMissingNormType, this.categoricalIndexMap.get(config.getColumnNum()));
                         for(Double normVal: normVals) {
                             appendOutputValue(tuple, normVal, true);
                         }
@@ -687,6 +687,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         switch(this.getPrecisionType()) {
                             case DOUBLE64:
                                 tupleSchema.add(new Schema.FieldSchema(normName, DataType.DOUBLE));
+                                break;
                             case FLOAT7:
                             case FLOAT16:
                             case FLOAT32:
@@ -758,6 +759,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 switch(this.getPrecisionType()) {
                     case DOUBLE64:
                         tupleSchema.add(new Schema.FieldSchema("weight", DataType.DOUBLE));
+                        break;
                     case FLOAT7:
                     case FLOAT16:
                     case FLOAT32:

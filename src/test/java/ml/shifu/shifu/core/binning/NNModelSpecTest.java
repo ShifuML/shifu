@@ -36,7 +36,7 @@ import ml.shifu.shifu.core.dtrain.nn.NNStructureComparator;
 
 public class NNModelSpecTest {
 
-    @Test
+    //@Test
     public void testModelTraverse() {
         BasicML basicML = BasicML.class.cast(
                 EncogDirectoryPersistence.loadObject(new File("src/test/resources/model/model0.nn")));

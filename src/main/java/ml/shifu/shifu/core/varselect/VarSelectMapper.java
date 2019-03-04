@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import ml.shifu.shifu.util.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -48,9 +49,6 @@ import ml.shifu.shifu.core.dtrain.dataset.CacheBasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.CacheFlatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.MapReduceUtils;
 
 /**
  * Mapper implementation to accumulate MSE value when remove one column.
@@ -185,7 +183,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.LOCAL);
         // load model from local d-cache model file
-        model = (MLRegression) CommonUtils.loadModel(modelConfig,
+        model = (MLRegression) ModelSpecLoaderUtils.loadModel(modelConfig,
                 new Path("model0." + modelConfig.getAlgorithm().toLowerCase()), fs);
         LOG.debug("After load model class {} with time {}ms and memory {} in thread {}.", model.getClass().getName(),
                 (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(),
@@ -255,7 +253,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         boolean isAfterVarSelect = (inputOutputIndex[0] != 0);
         // cache all feature list for sampling features
         if(this.featureSet == null || this.featureSet.size() == 0) {
-            this.featureSet = new HashSet<Integer>(CommonUtils.getAllFeatureList(columnConfigList, isAfterVarSelect));
+            this.featureSet = new HashSet<Integer>(NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect));
             this.inputs = new double[this.featureSet.size()];
         }
 

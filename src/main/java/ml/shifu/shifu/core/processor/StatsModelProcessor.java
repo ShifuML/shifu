@@ -124,15 +124,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
             if(getBooleanParam(this.params, Constants.IS_COMPUTE_CORR)) {
                 // 1. validate if run stats before run stats -correlation
-                boolean foundValidMeanValueColumn = false;
-                for(ColumnConfig config: this.columnConfigList) {
-                    if(!config.isMeta() && !config.isTarget()) {
-                        if(config.getMean() != null) {
-                            foundValidMeanValueColumn = true;
-                            break;
-                        }
-                    }
-                }
+                boolean foundValidMeanValueColumn = isMeanCalculated();
 
                 if(!foundValidMeanValueColumn) {
                     log.warn("Some mean value of column is null, could you check if you run 'shifu stats'.");
@@ -148,7 +140,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 // check if can start from existing output
                 boolean reuseCorrResult = Environment.getBoolean("shifu.stats.corr.reuse", Boolean.FALSE);
                 if(reuseCorrResult && ShifuFileUtils.isFileExists(corrPath, SourceType.HDFS)) {
-                    dumpCorrelationResult(source, corrPath);
+                    dumpAndCalculateCorrelationResult(source, corrPath);
                 } else {
                     runCorrMapReduceJob();
                 }
@@ -156,16 +148,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 // 3. save column config list
                 saveColumnConfigList();
             } else if(getBooleanParam(this.params, Constants.IS_COMPUTE_PSI)) {
-                // 1. validate if run stats before run stats -correlation
-                boolean foundValidMeanValueColumn = false;
-                for(ColumnConfig config: this.columnConfigList) {
-                    if(!config.isMeta() && !config.isTarget()) {
-                        if(config.getMean() != null) {
-                            foundValidMeanValueColumn = true;
-                            break;
-                        }
-                    }
-                }
+                boolean foundValidMeanValueColumn = isMeanCalculated();
 
                 if(!foundValidMeanValueColumn) {
                     log.warn("Some mean value of column is null, could you check if you run 'shifu stats'.");
@@ -174,6 +157,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
                 if(StringUtils.isNotEmpty(modelConfig.getPsiColumnName())) {
                     new MapReducerStatsWorker(this, modelConfig, columnConfigList).runPSI();
+                    // save column config list after running PSI successfully
+                    saveColumnConfigList();
                 } else {
                     log.warn("To Run PSI please set your PSI column in dataSet::psiColumnName.");
                 }
@@ -263,6 +248,20 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
         log.info("Step Finished: stats with {} ms", (System.currentTimeMillis() - start));
         return 0;
+    }
+
+    private boolean isMeanCalculated() {
+        // 1. validate if run stats before run stats -correlation
+        boolean foundValidMeanValueColumn = false;
+        for (ColumnConfig config : this.columnConfigList) {
+            if (!config.isMeta() && !config.isTarget()) {
+                if (config.getMean() != null) {
+                    foundValidMeanValueColumn = true;
+                    break;
+                }
+            }
+        }
+        return foundValidMeanValueColumn;
     }
 
     // OptionsParser doesn't to support *.jar currently.
@@ -405,7 +404,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
         // submit job
         if(job.waitForCompletion(true)) {
-            dumpCorrelationResult(source, corrPath);
+            dumpAndCalculateCorrelationResult(source, corrPath);
         } else {
             throw new RuntimeException("MapReduce Correlation Computing Job failed.");
         }
@@ -472,7 +471,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         return threads;
     }
 
-    private void dumpCorrelationResult(SourceType source, String corrPath) throws IOException {
+    private void dumpAndCalculateCorrelationResult(SourceType source, String corrPath) throws IOException {
         String outputFilePattern = corrPath + Path.SEPARATOR + "part-*";
         if(!ShifuFileUtils.isFileExists(outputFilePattern, source)) {
             throw new RuntimeException("Correlation computing output file not exist.");
@@ -493,7 +492,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         String localCorrelationCsv = super.pathFinder.getLocalCorrelationCsvPath();
         ShifuFileUtils.createFileIfNotExists(localCorrelationCsv, SourceType.LOCAL);
         BufferedWriter writer = null;
-        Map<Integer, double[]> finalCorrMap = new HashMap<Integer, double[]>();
+        Map<Integer, double[]> finalCorrMap = new HashMap<>();
         try {
             writer = ShifuFileUtils.getWriter(localCorrelationCsv, SourceType.LOCAL);
             writer.write(getColumnIndexes());
@@ -507,7 +506,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                         || (hasCandidates && !ColumnFlag.Candidate.equals(xColumnConfig.getColumnFlag()))) {
                     continue;
                 }
-                CorrelationWritable xCw = corrMap.get(entry.getKey());
+                CorrelationWritable xCw = entry.getValue();
                 double[] corrArray = new double[this.columnConfigList.size()];
                 for(int i = 0; i < corrArray.length; i++) {
                     ColumnConfig yColumnConfig = this.columnConfigList.get(i);
@@ -618,7 +617,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * De-serialize from bytes to object. One should provide the class name before de-serializing the object.
-     * 
+     *
      * @param data
      *            byte array for deserialization
      * @return {@link CorrelationWritable} instance after deserialization
@@ -631,7 +630,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         if(data == null) {
             throw new NullPointerException(String.format("data should not be null. data:%s", Arrays.toString(data)));
         }
-        CorrelationWritable result = (CorrelationWritable) ReflectionUtils
+        CorrelationWritable result =  ReflectionUtils
                 .newInstance(CorrelationWritable.class.getName());
         DataInputStream dataIn = null;
         try {

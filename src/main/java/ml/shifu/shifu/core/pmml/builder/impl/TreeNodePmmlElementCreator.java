@@ -18,14 +18,6 @@ package ml.shifu.shifu.core.pmml.builder.impl;
 import java.util.List;
 import java.util.Set;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
-import ml.shifu.shifu.core.dtrain.dt.Node;
-import ml.shifu.shifu.core.dtrain.dt.Split;
-import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
-import ml.shifu.shifu.util.CommonUtils;
-
 import org.dmg.pmml.Array;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.Predicate;
@@ -33,6 +25,14 @@ import org.dmg.pmml.SimplePredicate;
 import org.dmg.pmml.SimpleSetPredicate;
 import org.dmg.pmml.True;
 import org.encog.ml.BasicML;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
+import ml.shifu.shifu.core.dtrain.dt.Node;
+import ml.shifu.shifu.core.dtrain.dt.Split;
+import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
+import ml.shifu.shifu.util.NormalUtils;
 
 public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.dmg.pmml.tree.Node> {
 
@@ -87,7 +87,7 @@ public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.d
             SimplePredicate p = new SimplePredicate();
             p.setValue(String.valueOf(split.getThreshold()));
             // TODO, how to support segment variable in tree model, here should be changed
-            p.setField(new FieldName(CommonUtils.getSimpleColumnName(columnConfig.getColumnName())));
+            p.setField(new FieldName(NormalUtils.getSimpleColumnName(columnConfig.getColumnName())));
             if(isLeft) {
                 p.setOperator(SimplePredicate.Operator.fromValue("lessThan"));
             } else {
@@ -98,7 +98,7 @@ public class TreeNodePmmlElementCreator extends AbstractPmmlElementCreator<org.d
             SimpleSetPredicate p = new SimpleSetPredicate();
             Set<Short> childCategories = split.getLeftOrRightCategories();
             // TODO, how to support segment variable in tree model, here should be changed
-            p.setField(new FieldName(CommonUtils.getSimpleColumnName(columnConfig.getColumnName())));
+            p.setField(new FieldName(NormalUtils.getSimpleColumnName(columnConfig.getColumnName())));
             StringBuilder arrayStr = new StringBuilder();
             List<String> valueList = treeModel.getCategoricalColumnNameNames().get(columnConfig.getColumnNum());
             for(Short sh: childCategories) {

@@ -15,18 +15,30 @@
  */
 package ml.shifu.shifu.core.pmml.builder.impl;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.dmg.pmml.Array;
+import org.dmg.pmml.ContStats;
+import org.dmg.pmml.DiscrStats;
+import org.dmg.pmml.Extension;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.Interval;
+import org.dmg.pmml.ModelStats;
+import org.dmg.pmml.NumericInfo;
+import org.dmg.pmml.UnivariateStats;
+import org.encog.ml.BasicML;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
-import ml.shifu.shifu.util.CommonUtils;
-
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
-import org.dmg.pmml.*;
-import org.encog.ml.BasicML;
-
-import java.util.*;
+import ml.shifu.shifu.util.NormalUtils;
 
 /**
  * Created by zhanhu on 3/29/16.
@@ -54,10 +66,10 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
                 if(columnConfig.isFinalSelect()
                         && (CollectionUtils.isEmpty(featureSet) || featureSet.contains(columnConfig.getColumnNum()))) {
                     UnivariateStats univariateStats = new UnivariateStats();
-                    // here, no need to consider if column is in segment expansion as we need to address new stats
-                    // variable
-                    univariateStats.setField(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig
-                            .getColumnName())));
+                    // here, no need to consider if column is in segment expansion
+                    // as we need to address new stats variable
+                    univariateStats.setField( // set simple column name in PMML
+                            FieldName.create(NormalUtils.getSimpleColumnName(columnConfig.getColumnName())));
 
                     if(columnConfig.isCategorical()) {
                         DiscrStats discrStats = new DiscrStats();
@@ -88,7 +100,7 @@ public class ModelStatsCreator extends AbstractPmmlElementCreator<ModelStats> {
                     UnivariateStats univariateStats = new UnivariateStats();
                     // here, no need to consider if column is in segment expansion as we need to address new stats
                     // variable
-                    univariateStats.setField(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig
+                    univariateStats.setField(FieldName.create(NormalUtils.getSimpleColumnName(columnConfig
                             .getColumnName())));
 
                     if(columnConfig.isCategorical()) {

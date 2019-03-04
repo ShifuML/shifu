@@ -26,6 +26,7 @@ import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.message.RunModelDataMessage;
 import ml.shifu.shifu.message.RunModelResultMessage;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.encog.ml.BasicML;
 
@@ -44,7 +45,7 @@ public class RunModelWorker extends AbstractWorkerActor {
             ActorRef parentActorRef, ActorRef nextActorRef) throws IOException {
         super(modelConfig, columnConfigList, parentActorRef, nextActorRef);
 
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig, SourceType.LOCAL);
+        List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(modelConfig, evalConfig, SourceType.LOCAL);
 
         String[] header = null;
         String delimiter = null;
@@ -65,7 +66,7 @@ public class RunModelWorker extends AbstractWorkerActor {
         boolean gbtConvertToProp = ((evalConfig == null) ? false :  evalConfig.getGbtConvertToProb());
         SourceType sourceType = ((evalConfig == null) ?
                 modelConfig.getDataSet().getSource() : evalConfig.getDataSet().getSource());
-        List<ModelSpec> subModels = CommonUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
+        List<ModelSpec> subModels = ModelSpecLoaderUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
                 sourceType, gbtConvertToProp);
         if(CollectionUtils.isNotEmpty(subModels)) {
             for(ModelSpec modelSpec: subModels) {

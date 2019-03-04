@@ -30,6 +30,7 @@ import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 import ml.shifu.shifu.util.CommonUtils;
 
+import ml.shifu.shifu.util.NormalUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.dmg.pmml.DataType;
 import org.dmg.pmml.DerivedField;
@@ -145,12 +146,12 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
                 .setDataType(DataType.DOUBLE)
                 .setDefaultValue(defaultValue)
                 .addFieldColumnPairs(
-                        new FieldColumnPair(new FieldName(CommonUtils.getSimpleColumnName(config, columnConfigList,
+                        new FieldColumnPair(new FieldName(NormalUtils.getSimpleColumnName(config, columnConfigList,
                                 segmentExpansions, datasetHeaders)), ELEMENT_ORIGIN)).setInlineTable(inlineTable)
                 .setMapMissingTo(missingValue);
         List<DerivedField> derivedFields = new ArrayList<DerivedField>();
         derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).setName(
-                FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config.getColumnName()), normType)))
+                FieldName.create(genPmmlColumnName(NormalUtils.getSimpleColumnName(config.getColumnName()), normType)))
                 .setExpression(mapValues));
         return derivedFields;
     }
@@ -173,7 +174,7 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
         LinearNorm to = new LinearNorm().setOrig(config.getMean() + config.getStdDev() * cutoff).setNorm(cutoff);
 
         NormContinuous normContinuous = new NormContinuous();
-        normContinuous.setField(FieldName.create(CommonUtils.getSimpleColumnName(config,
+        normContinuous.setField(FieldName.create(NormalUtils.getSimpleColumnName(config,
                 columnConfigList, segmentExpansions, datasetHeaders)));
         normContinuous.addLinearNorms(from, to);
         normContinuous.setMapMissingTo(0.0);
@@ -181,7 +182,7 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
         // derived field name is consisted of FieldName and "_zscl"
         List<DerivedField> derivedFields = new ArrayList<DerivedField>();
         derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).setName(
-                FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config.getColumnName()), normType)))
+                FieldName.create(genPmmlColumnName(NormalUtils.getSimpleColumnName(config.getColumnName()), normType)))
                 .setExpression(normContinuous));
         return derivedFields;
     }

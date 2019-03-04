@@ -197,7 +197,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                                 columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount,
                                 Arrays.toString(items));
                         columnConfig.setColumnType(ColumnType.N);
-                    } else if(isDoubleFrequentVariable(distinctCount, items)) {
+                    } else if(isDoubleFrequentVariable(items)) {
                         log.info(
                                 "Column {} with index {} is set to numeric type because of all sampled items are double(including blank). Distinct count {}.",
                                 columnConfig.getColumnName(), columnConfig.getColumnNum(), distinctCount);
@@ -240,20 +240,17 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         return true;
     }
 
-    private boolean isDoubleFrequentVariable(long distinctCount, String[] items) {
-        int doubleCount = 0, blankCount = 0;
-        for(String string: items) {
-            try {
-                Double.parseDouble(string);
-                doubleCount += 1;
-            } catch (NumberFormatException e) {
-                if(StringUtils.isBlank(string)) {
-                    blankCount += 0;
+    private boolean isDoubleFrequentVariable(String[] items) {
+        for(String string: items){
+            if(!StringUtils.isNotBlank(string)){
+                try{
+                    Double.parseDouble(string);
+                }catch(NumberFormatException e){
+                    return false;
                 }
             }
         }
-
-        return (doubleCount + blankCount) == items.length;
+        return true;
     }
 
     // OptionsParser doesn't to support *.jar currently.

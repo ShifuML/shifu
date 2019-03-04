@@ -19,16 +19,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.InvalidValueTreatmentMethod;
+import org.dmg.pmml.MiningField;
+import org.dmg.pmml.MiningField.UsageType;
+import org.dmg.pmml.MiningSchema;
+import org.dmg.pmml.OpType;
+import org.encog.ml.BasicML;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
-import ml.shifu.shifu.util.CommonUtils;
-
-import org.dmg.pmml.*;
-import org.dmg.pmml.MiningField.UsageType;
-import org.encog.ml.BasicML;
+import ml.shifu.shifu.util.NormalUtils;
 
 /**
  * Created by zhanhu on 3/29/16.
@@ -124,7 +128,7 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
 
     private MiningField createActiveMingFields(ColumnConfig columnConfig) {
         return createMiningField(
-                CommonUtils.getSimpleColumnName(columnConfig.getColumnName()),
+                NormalUtils.getSimpleColumnName(columnConfig.getColumnName()),
                 getOptype(columnConfig), UsageType.ACTIVE);
     }
 
@@ -134,12 +138,12 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
                 && ModelTrainConf.MultipleClassification.NATIVE.equals(modelConfig.getTrain().getMultiClassifyMethod())) {
             for ( int i = 0; i < modelConfig.getTags().size(); i ++ ) {
                 targetMiningFields.add(createMiningField(
-                        CommonUtils.getSimpleColumnName(columnConfig.getColumnName()) + "_" + i,
+                        NormalUtils.getSimpleColumnName(columnConfig.getColumnName()) + "_" + i,
                         getOptype(columnConfig), UsageType.TARGET));
             }
         } else {
             targetMiningFields.add(createMiningField(
-                    CommonUtils.getSimpleColumnName(columnConfig.getColumnName()),
+                    NormalUtils.getSimpleColumnName(columnConfig.getColumnName()),
                     getOptype(columnConfig), UsageType.TARGET));
         }
         return targetMiningFields;
@@ -150,6 +154,7 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
         miningField.setName(FieldName.create(name));
         miningField.setOpType(opType);
         miningField.setUsageType(fieldUsageType);
+        miningField.setInvalidValueTreatment(InvalidValueTreatmentMethod.AS_MISSING);
         return miningField;
     }
 

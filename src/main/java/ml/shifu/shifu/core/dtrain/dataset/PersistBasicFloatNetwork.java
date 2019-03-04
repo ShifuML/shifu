@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.dtrain.dataset;
 
 import ml.shifu.shifu.core.dtrain.nn.ActivationLeakyReLU;
+import ml.shifu.shifu.core.dtrain.nn.ActivationPTANH;
 import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
 import ml.shifu.shifu.core.dtrain.nn.ActivationSwish;
 import org.apache.commons.lang.StringUtils;
@@ -105,6 +106,8 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
                         name = "ml.shifu.shifu.core.dtrain.nn.ActivationLeakyReLU";
                     } else if (cols.get(0).equals("ActivationSwish")){
                         name = "ml.shifu.shifu.core.dtrain.nn.ActivationSwish";
+                    } else if (cols.get(0).equals("ActivationPTANH")){
+                        name = "ml.shifu.shifu.core.dtrain.nn.ActivationPTANH";
                     }
                     try {
                         final Class<?> clazz = Class.forName(name);
@@ -239,6 +242,8 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
                 name = ActivationLeakyReLU.class.getName();
             } else if (name.equals("ActivationSwish")) {
                 name = ActivationSwish.class.getName();
+            } else if (name.equals("ActivationPTANH")) {
+                name = ActivationPTANH.class.getName();
             } else {
                 name = "org.encog.engine.network.activation." + name;
             }
