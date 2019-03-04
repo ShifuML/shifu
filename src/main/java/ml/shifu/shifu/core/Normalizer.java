@@ -268,6 +268,13 @@ public class Normalizer {
 
     /**
      * Adding new API with cateIndeMap parameter without change normalize API.
+     * @param config config
+     * @param raw raw
+     * @param cutoff cutoff
+     * @param type tyep
+     * @param categoryMissingNormType categoryMissingNormType
+     * @param cateIndexMap cateIndexMap
+     * @return list of normalized value
      */
     public static List<Double> fullNormalize(ColumnConfig config, Object raw, Double cutoff,
             ModelNormalizeConf.NormType type, CategoryMissingNormType categoryMissingNormType,
