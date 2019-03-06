@@ -432,7 +432,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         } finally {
             try {
                 FileUtils.moveFile(new File(globalDefaultConfFile.getName().toString()),
-                        new File(globalDefaultConfFile.getName() + System.currentTimeMillis()));
+                        new File(globalDefaultConfFile.getName() + "_" + System.currentTimeMillis()));
             } catch (Exception e) {
                 LOG.warn("Failed to move tf-yarn conf file, such message can be ignored!");
             }

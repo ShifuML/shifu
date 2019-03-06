@@ -18,13 +18,12 @@
 # Enable python based tensorflow training, all training logic redicted to python file under ./scripts
 # 
 
-echo $HADOOP_HOME
-echo $GLIBC_HOME
+echo "Hadoop home path: $HADOOP_HOME"
+echo "Local GLIBC HOME for python usage: $GLIBC_HOME"
 LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HADOOP_HOME/lib/native/Linux-amd64-64:$HADOOP_HOME/lib/native"
-echo $PYTHON_HOME
-echo $TRAIN_SCRIPT_PATH
-echo $HADOOP_HOME
-echo $LD_LIBRARY_PATH
+echo "Local tensorflow python home: $PYTHON_HOME"
+echo "Training python script: $TRAIN_SCRIPT_PATH"
+echo "LD libray path for loading HDFS data into python script: $LD_LIBRARY_PATH"
 
 chmod 777 -R ./
 
