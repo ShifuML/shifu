@@ -26,11 +26,9 @@ BUILD_MODEL_BY_CONF_ENABLE = True
 REPLICAS_TO_AGGREGATE_RATIO = 1
 
 HIDDEN_NODES_COUNT = 20
-VALID_TRAINING_DATA_RATIO = 0.3
+VALID_TRAINING_DATA_RATIO = 0.1
 DELIMITER = '|'
 BATCH_SIZE = 100
-
-#WORKING_DIR = "hdfs://horton/user/webai/.yarn_cancer/"
 
 # read from env
 cluster_spec = json.loads(os.environ["CLUSTER_SPEC"])
@@ -275,7 +273,7 @@ def main(_):
                                                                           label_placeholder: valid_y,
                                                                           sample_weight_placeholder: valid_sample_w}
                                           )
-                logging.info('step: ' + str(gs) + 'worker: ' + str(task_index) + "training loss:" + str(l) + "valid loss:" + str(valid_loss))
+                logging.info('Step: ' + str(gs) + ' worker: ' + str(task_index) + " training loss:" + str(l) + " valid loss:" + str(valid_loss))
 
                 # Send intermediate result to master
                 message = "worker_index:{},time:{},current_epoch:{},training_loss:{},valid_loss:{}\n".format(
