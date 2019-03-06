@@ -21,12 +21,12 @@ from tensorflow.python.saved_model import tag_constants
 import json
 import socket
 
-BUILD_MODEL_BY_CONF_ENABLE = True
-
-REPLICAS_TO_AGGREGATE_RATIO = 1
-
 HIDDEN_NODES_COUNT = 20
 VALID_TRAINING_DATA_RATIO = 0.1
+
+BUILD_MODEL_BY_CONF_ENABLE = True
+REPLICAS_TO_AGGREGATE_RATIO = 1
+
 DELIMITER = '|'
 BATCH_SIZE = 100
 
@@ -100,7 +100,7 @@ def generate_from_modelconf(x, model_conf):
                      act=activation_func[i], act_op_name="hidden_layer" + str(i))
         previous_layer = layer
 
-    return previous_layer
+    return previous_layer, num_hidden_nodes[num_hidden_layer-1]
 
 
 def model(x, y_, sample_weight, model_conf):
@@ -108,11 +108,13 @@ def model(x, y_, sample_weight, model_conf):
     logging.info("total_training_data_number:%d" % total_training_data_number)
 
     if BUILD_MODEL_BY_CONF_ENABLE and model_conf is not None:
-        output_digits = generate_from_modelconf(x, model_conf)
+        output_digits, output_nodes = generate_from_modelconf(x, model_conf)
     else:
         output_digits = nn_layer(x, FEATURE_COUNT, HIDDEN_NODES_COUNT, act_op_name="hidden_layer1")
+        output_nodes = HIDDEN_NODES_COUNT
 
-    y = nn_layer(output_digits, HIDDEN_NODES_COUNT, 1, act=tf.nn.sigmoid, act_op_name="shifu_output_0")
+    logging.info("output_nodes : " + str(output_nodes))
+    y = nn_layer(output_digits, output_nodes, 1, act=tf.nn.sigmoid, act_op_name="shifu_output_0")
 
     # count the number of updates
     global_step = tf.get_variable('global_step', [],
@@ -173,6 +175,8 @@ def main(_):
             model_conf = json.load(f)
             logging.info("model" + str(model_conf))
             EPOCH = int(model_conf['train']['numTrainEpochs'])
+            global VALID_TRAINING_DATA_RATIO
+            VALID_TRAINING_DATA_RATIO = model_conf['train']['validSetRate']
 
         # import data
         context = load_data(training_data_path)
@@ -300,11 +304,13 @@ def main(_):
                                name="shifu_input_0")
             with tf.get_default_graph().as_default():
                 if BUILD_MODEL_BY_CONF_ENABLE and model_conf is not None:
-                    output_digits = generate_from_modelconf(x, model_conf)
+                    output_digits, output_nodes = generate_from_modelconf(x, model_conf)
                 else:
                     output_digits = nn_layer(x, FEATURE_COUNT, HIDDEN_NODES_COUNT, act_op_name="hidden_layer1")
+                    output_nodes = HIDDEN_NODES_COUNT
 
-                prediction = nn_layer(output_digits, HIDDEN_NODES_COUNT, 1, act=tf.nn.sigmoid,
+                logging.info("output_nodes : " + str(output_nodes))
+                prediction = nn_layer(output_digits, output_nodes, 1, act=tf.nn.sigmoid,
                                       act_op_name="shifu_output_0")
 
             # restore from last checkpoint
