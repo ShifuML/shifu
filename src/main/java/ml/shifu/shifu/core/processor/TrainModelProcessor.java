@@ -515,10 +515,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         globalConf.set("shifu.worker.instances.backup", Integer.toString(backupWorkerNumber));
 
         // set model conf
-        globalConf.set("shifu.application.model-conf", super.getPathFinder().getModelConfigPath(SourceType.HDFS));
+        globalConf.set("shifu.application.model-conf", super.getPathFinder().getModelConfigPath(SourceType.LOCAL));
 
         // set column conf
-        globalConf.set("shifu.application.column-conf", super.getPathFinder().getColumnConfigPath(SourceType.HDFS));
+        globalConf.set("shifu.application.column-conf", super.getPathFinder().getColumnConfigPath(SourceType.LOCAL));
 
         // set python script
         globalConf.set("shifu.application.python-script-path",

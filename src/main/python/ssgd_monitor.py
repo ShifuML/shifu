@@ -21,13 +21,14 @@ from tensorflow.python.saved_model import tag_constants
 import json
 import socket
 
+BUILD_MODEL_BY_CONF_ENABLE = True
+
 REPLICAS_TO_AGGREGATE_RATIO = 1
 
 HIDDEN_NODES_COUNT = 20
 VALID_TRAINING_DATA_RATIO = 0.3
 DELIMITER = '|'
 BATCH_SIZE = 100
-EPOCH = 10 # TODO: should consider recovery from checkpoint, we need to reduce current global step
 
 #WORKING_DIR = "hdfs://horton/user/webai/.yarn_cancer/"
 
@@ -68,12 +69,52 @@ def nn_layer(input_tensor, input_dim, output_dim, act=tf.nn.tanh, act_op_name=No
     return activations
 
 
-def model(x, y_, sample_weight):
+def get_activation_fun(name):
+    if name is None:
+        return tf.nn.leaky_relu
+    name = name.lower()
+
+    if 'sigmoid' == name:
+        return tf.nn.sigmoid
+    elif 'tanh' == name:
+        return tf.nn.tanh
+    elif 'relu' == name:
+        return tf.nn.relu
+    elif 'leakyrelu' == name:
+        return tf.nn.leaky_relu
+    else:
+        return tf.nn.leaky_relu
+
+
+def generate_from_modelconf(x, model_conf):
+    train_params = model_conf['train']['params']
+    num_hidden_layer = int(train_params['NumHiddenLayers'])
+    num_hidden_nodes = [int(s) for s in train_params['NumHiddenNodes']]
+    activation_func = [get_activation_fun(s) for s in train_params['ActivationFunc']]
+
+    global FEATURE_COUNT
+    # first layer
+    previous_layer = nn_layer(x, FEATURE_COUNT, num_hidden_nodes[0],
+                     act=activation_func[0], act_op_name="hidden_layer" + str(0))
+
+    for i in range(1, num_hidden_layer):
+        layer = nn_layer(previous_layer, num_hidden_nodes[i-1], num_hidden_nodes[i],
+                     act=activation_func[i], act_op_name="hidden_layer" + str(i))
+        previous_layer = layer
+
+    return previous_layer
+
+
+def model(x, y_, sample_weight, model_conf):
     logging.info("worker_num:%d" % n_workers)
     logging.info("total_training_data_number:%d" % total_training_data_number)
 
-    hidden1 = nn_layer(x, FEATURE_COUNT, HIDDEN_NODES_COUNT, act_op_name="hidden_layer1")
-    y = nn_layer(hidden1, HIDDEN_NODES_COUNT, 1, act=tf.nn.sigmoid, act_op_name="shifu_output_0")
+    if BUILD_MODEL_BY_CONF_ENABLE and model_conf is not None:
+        output_digits = generate_from_modelconf(x, model_conf)
+    else:
+        output_digits = nn_layer(x, FEATURE_COUNT, HIDDEN_NODES_COUNT, act_op_name="hidden_layer1")
+
+    y = nn_layer(output_digits, HIDDEN_NODES_COUNT, 1, act=tf.nn.sigmoid, act_op_name="shifu_output_0")
 
     # count the number of updates
     global_step = tf.get_variable('global_step', [],
@@ -84,8 +125,12 @@ def model(x, y_, sample_weight):
     loss = tf.losses.mean_squared_error(predictions=y, labels=y_, weights=sample_weight)
 
     # we suppose every worker has same batch_size
+    if model_conf is not None:
+        learning_rate = model_conf['train']['params']['LearningRate']
+    else:
+        learning_rate = 0.003;
     opt = tf.train.SyncReplicasOptimizer(
-        tf.train.GradientDescentOptimizer(0.003),
+        tf.train.GradientDescentOptimizer(learning_rate),
         replicas_to_aggregate=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE * REPLICAS_TO_AGGREGATE_RATIO),
         total_num_replicas=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE),
         name="shifu_sync_replicas")
@@ -95,7 +140,8 @@ def model(x, y_, sample_weight):
 
 
 def main(_):
-    logging.getLogger().setLevel(logging.INFO)
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%y-%m-%d %H:%M:%S')
+    #logging.getLogger().setLevel(logging.INFO)
 
     logging.info("job_name:%s, task_index:%d" % (job_name, task_index))
 
@@ -123,6 +169,12 @@ def main(_):
         else:
             logging.info("This is a backup worker")
             # watching certain file in hdfs which contains its training data
+
+        # Read model structure info from ModelConfig
+        with open('./ModelConfig.json') as f:
+            model_conf = json.load(f)
+            logging.info("model" + str(model_conf))
+            EPOCH = int(model_conf['train']['numTrainEpochs'])
 
         # import data
         context = load_data(training_data_path)
@@ -153,7 +205,8 @@ def main(_):
 
             opt, train_step, loss, global_step, y = model(input_placeholder,
                                                           label_placeholder,
-                                                          sample_weight_placeholder)
+                                                          sample_weight_placeholder,
+                                                          model_conf)
 
             # init ops
             init_tokens_op = opt.get_init_tokens_op()
@@ -248,8 +301,12 @@ def main(_):
             x = tf.placeholder(dtype=tf.float32, shape=(None, FEATURE_COUNT),
                                name="shifu_input_0")
             with tf.get_default_graph().as_default():
-                hidden1 = nn_layer(x, FEATURE_COUNT, HIDDEN_NODES_COUNT, act_op_name="hidden_layer1")
-                prediction = nn_layer(hidden1, HIDDEN_NODES_COUNT, 1, act=tf.nn.sigmoid,
+                if BUILD_MODEL_BY_CONF_ENABLE and model_conf is not None:
+                    output_digits = generate_from_modelconf(x, model_conf)
+                else:
+                    output_digits = nn_layer(x, FEATURE_COUNT, HIDDEN_NODES_COUNT, act_op_name="hidden_layer1")
+
+                prediction = nn_layer(output_digits, HIDDEN_NODES_COUNT, 1, act=tf.nn.sigmoid,
                                       act_op_name="shifu_output_0")
 
             # restore from last checkpoint
@@ -260,7 +317,7 @@ def main(_):
                 assert ckpt, "Invalid model checkpoint path: {}".format(tmp_model_path)
                 saver.restore(sess, ckpt.model_checkpoint_path)
 
-                print("Exporting saved_model to: {}".format(final_model_path))
+                logging.info("Exporting saved_model to: {}".format(final_model_path))
 
                 # exported signatures defined in code
                 simple_save(session=sess, export_dir=final_model_path,
@@ -270,7 +327,7 @@ def main(_):
                             outputs={
                                 "shifu_output_0": prediction
                             })
-                print("Exported saved_model")
+                logging.info("Exported saved_model")
 
             time.sleep(40) # grace period to wait before closing session
 
