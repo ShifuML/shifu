@@ -555,6 +555,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // set hdfs final model path
         globalConf.set("shifu.application.final-model-path", super.getPathFinder().getModelsPath(SourceType.HDFS));
 
+        // add all shifuconf, this includes 'shifu train -Dk=v' <k,v> pairs and it will override default keys set above.
+        Properties shifuConfigMap = Environment.getProperties();
+        for(Map.Entry<Object, Object> entry: shifuConfigMap.entrySet()) {
+            globalConf.set(entry.getKey().toString(), entry.getValue().toString());
+        }
+
         OutputStream os = null;
         try {
             // Write user's overridden conf to an xml to be localized.
