@@ -547,11 +547,19 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         globalConf.set("shifu.application.total-training-data-number",
                 Long.toString(columnConfigList.get(0).getTotalCount()));
 
+        globalConf.set("shifu.application.epochs", this.modelConfig.getTrain().getNumTrainEpochs() + "");
+
         // set hdfs tmp model path
         globalConf.set("shifu.application.tmp-model-path", super.getPathFinder().getTmpModelsPath(SourceType.HDFS));
 
         // set hdfs final model path
         globalConf.set("shifu.application.final-model-path", super.getPathFinder().getModelsPath(SourceType.HDFS));
+
+        // add all shifuconf, this includes 'shifu train -Dk=v' <k,v> pairs and it will override default keys set above.
+        Properties shifuConfigMap = Environment.getProperties();
+        for(Map.Entry<Object, Object> entry: shifuConfigMap.entrySet()) {
+            globalConf.set(entry.getKey().toString(), entry.getValue().toString());
+        }
 
         OutputStream os = null;
         try {
