@@ -20,12 +20,15 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
 
+import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
+
 /**
  * TODO
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideDenseLayer extends AbstractLayer<float[], float[], float[], float[]> implements WeightInitializer {
+public class WideDenseLayer extends AbstractLayer<float[], float[], float[], float[], WideDenseLayer>
+        implements WeightInitializer {
 
     /**
      * [in] float array of weights
@@ -117,6 +120,21 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
      */
     public void setWeights(float[] weights) {
         this.weights = weights;
+    }
+
+    /**
+     * @return the wGrads
+     */
+    public float[] getwGrads() {
+        return wGrads;
+    }
+
+    /**
+     * @param wGrads
+     *            the wGrads to set
+     */
+    public void setwGrads(float[] wGrads) {
+        this.wGrads = wGrads;
     }
 
     /**
@@ -213,5 +231,19 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
     @Override
     public void initWeight(InitMethod method) {
         this.weights = method.getInitialisable().initWeight(this.in);
+    }
+
+    @Override
+    public WideDenseLayer combine(WideDenseLayer from) {
+        float[] fromGrads = from.getwGrads();
+        for(int i = 0; i < this.in; i++) {
+            wGrads[i] += fromGrads[i];
+        }
+        return this;
+    }
+
+    @Override
+    public void update(WideDenseLayer gradLayer, Optimizer optimizer) {
+        optimizer.update(this.weights, gradLayer.getwGrads());
     }
 }

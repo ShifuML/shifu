@@ -15,11 +15,11 @@
  */
 package ml.shifu.shifu.core.dtrain.wnd;
 
-import ml.shifu.guagua.io.Bytable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
 
 /**
  * {@link DenseLayer} defines normal hidden layer in neural network while activation is not included but in one
@@ -29,7 +29,8 @@ import java.io.IOException;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]> implements WeightInitializer {
+public class DenseLayer extends AbstractLayer<float[], float[], float[], float[], DenseLayer>
+        implements WeightInitializer {
 
     /**
      * [in, out] array for deep matrix weights
@@ -311,5 +312,26 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
             default:
                 break;
         }
+    }
+
+    @Override
+    public DenseLayer combine(DenseLayer from) {
+        float[][] fromWGrads = from.getwGrads();
+        for(int i = 0; i < this.in; i++) {
+            for(int j = 0; j < this.out; j++) {
+                wGrads[i][j] += fromWGrads[i][j];
+            }
+        }
+        float[] fromBGrads = from.getbGrads();
+        for(int i = 0; i < this.out; i++) {
+            bGrads[i] += fromBGrads[i];
+        }
+        return this;
+    }
+
+    @Override
+    public void update(DenseLayer gradLayer, Optimizer optimizer) {
+        optimizer.batchUpdate(this.weights, gradLayer.getwGrads());
+        optimizer.update(this.bias, gradLayer.getbGrads());
     }
 }

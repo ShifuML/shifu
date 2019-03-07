@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.dtrain.wnd;
 
 import ml.shifu.shifu.core.dtrain.AssertUtils;
+import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -27,7 +28,7 @@ import java.io.IOException;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class DenseInputLayer extends AbstractLayer<float[], float[], float[], float[]> {
+public class DenseInputLayer extends AbstractLayer<float[], float[], float[], float[], DenseInputLayer> {
 
     /**
      * Output dimension.
@@ -77,6 +78,16 @@ public class DenseInputLayer extends AbstractLayer<float[], float[], float[], fl
     @Override
     public void readFields(DataInput in) throws IOException {
         this.out = in.readInt();
+    }
+
+    @Override
+    public DenseInputLayer combine(DenseInputLayer from) {
+        return this;
+    }
+
+    @Override
+    public void update(DenseInputLayer gradLayer, Optimizer optimizer) {
+        // no need to update output dimension
     }
 
 }

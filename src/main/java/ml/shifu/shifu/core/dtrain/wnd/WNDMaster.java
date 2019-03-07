@@ -35,6 +35,8 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.wnd.optimization.AdaGrad;
+import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
@@ -106,6 +108,11 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
      */
     private WideAndDeep wnd;
 
+    /**
+     * The optimizer to update weights.
+     */
+    private Optimizer optimizer;
+
     @SuppressWarnings({ "unchecked", "unused" })
     @Override
     public void init(MasterContext<WNDParams, WNDParams> context) {
@@ -150,6 +157,7 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
         Float l2reg = (Float) this.validParams.get(CommonConstants.WND_L2_REG);
         this.wnd = new WideAndDeep(idBinCateSizeMap, numInputs, numericalIds, embedColumnIds, embedOutputList,
                 wideColumnIds, hiddenNodes, actFunc, l2reg);
+        this.optimizer = new AdaGrad(this.learningRate);
     }
 
     @Override
@@ -163,9 +171,8 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
         // aggregate all worker gradients to one gradient object.
         WNDParams aggregation = aggregateWorkerGradients(context);
 
-        // TODO optimizer, wnd object as current model weights, aggregation as current iteration gradients aggregation
-        // gradients = aggregation.getWnd();
-        // this.wnd -= this.learningRate * gradients;
+        // apply optimizer
+        this.wnd.update(aggregation.getWnd(), optimizer);
 
         // construct master result which contains WideAndDeep current model weights
         WNDParams params = new WNDParams();

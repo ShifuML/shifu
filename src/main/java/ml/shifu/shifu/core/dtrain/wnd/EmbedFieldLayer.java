@@ -22,6 +22,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
+
 /**
  * {@link EmbedFieldLayer} is for each column like sparse categorical feature. The input of this layer is one-hot
  * encoding while the output is dense vector.
@@ -35,7 +37,7 @@ import java.util.Map.Entry;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[], float[]>
+public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[], float[], EmbedFieldLayer>
         implements WeightInitializer {
 
     /**
@@ -266,5 +268,30 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
             default:
                 break;
         }
+    }
+
+    @Override
+    public EmbedFieldLayer combine(EmbedFieldLayer from) {
+        if(columnId != from.getColumnId()) {
+            return this;
+        }
+        Map<Integer, float[]> fromGrads = from.getwGrads();
+        for(Entry<Integer, float[]> entry: fromGrads.entrySet()) {
+            Integer index = entry.getKey();
+            float[] grad = entry.getValue();
+            if(wGrads.containsKey(index)) {
+                float[] thisGrad = wGrads.get(index);
+                for(int i = 0; i < this.out; i++) {
+                    grad[i] += thisGrad[i];
+                }
+            }
+            wGrads.put(index, grad);
+        }
+        return this;
+    }
+
+    @Override
+    public void update(EmbedFieldLayer gradLayer, Optimizer optimizer) {
+        optimizer.batchUpdate(this.weights, gradLayer.getwGrads());
     }
 }

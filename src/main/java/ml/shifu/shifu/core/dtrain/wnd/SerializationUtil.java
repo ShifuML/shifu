@@ -12,11 +12,13 @@ public class SerializationUtil {
      * Serialize float array with null and length check.
      * 
      * @param out
+     *            DataOutput instance
      * @param array
      *            the array to be serialized
      * @param size
      *            the expected length of array
      * @throws IOException
+     *             if an I/O error occurs.
      */
     public static void writeFloatArray(DataOutput out, float[] array, int size) throws IOException {
         if(array == null || array.length != size) {
@@ -34,6 +36,7 @@ public class SerializationUtil {
      * null or size dose not match.
      * 
      * @param in
+     *            DataInput instance
      * @param array
      *            the array to hold data from DataInput. Will be ignored if null or length not match size param.
      * @param size
@@ -41,6 +44,7 @@ public class SerializationUtil {
      * @return de-serialized array. The returned value will reuse memory of provided array if it is not null and its
      *         length is size.
      * @throws IOException
+     *             if an I/O error occurs.
      */
     public static float[] readFloatArray(DataInput in, float[] array, int size) throws IOException {
         if(in.readBoolean()) {
@@ -58,6 +62,7 @@ public class SerializationUtil {
      * Serialize two dimensional float array with null and length check.
      * 
      * @param out
+     *            DataOutput instance
      * @param array
      *            the array to be serialized. The size should match [width][length]. The array will be treated as null
      *            otherwise.
@@ -66,6 +71,7 @@ public class SerializationUtil {
      * @param length
      *            array length
      * @throws IOException
+     *             if an I/O error occurs.
      */
     public static void write2DimFloatArray(DataOutput out, float[][] array, int width, int length) throws IOException {
         if(array == null || array.length != width || array[0].length != length) {
@@ -85,6 +91,7 @@ public class SerializationUtil {
      * if provided is null or size does not match.
      * 
      * @param in
+     *            DataInput instance
      * @param array
      *            the array to hold de-serialized data.Will be ignored if null or not sized as [width][length].
      * @param width
@@ -94,6 +101,7 @@ public class SerializationUtil {
      * @return de-serialized 2-dim array. The returned value will reuse memory of provided array if it is not null and
      *         size match with [width][length].
      * @throws IOException
+     *             if an I/O error occurs.
      */
     public static float[][] read2DimFloatArray(DataInput in, float[][] array, int width, int length)
             throws IOException {
@@ -114,9 +122,11 @@ public class SerializationUtil {
      * Serialize Integer list with null check.
      * 
      * @param out
+     *            DataOutput instance
      * @param list
      *            the List to serialize.
      * @throws IOException
+     *             if an I/O error occurs.
      */
     public static void writeIntList(DataOutput out, List<Integer> list) throws IOException {
         if(list == null) {
@@ -133,10 +143,12 @@ public class SerializationUtil {
      * De-serialize Integer list. Try using provided list to save memory.
      * 
      * @param in
+     *            DataInput instance
      * @param list
      *            the list to hold de-serialized data.
      * @return de-serialized list. Will reuse provided list if it is not null.
      * @throws IOException
+     *             if an I/O error occurs.
      */
     public static List<Integer> readIntList(DataInput in, List<Integer> list) throws IOException {
         int size = in.readInt();
