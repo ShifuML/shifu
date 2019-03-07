@@ -20,6 +20,8 @@ from tensorflow.python.saved_model import signature_def_utils
 from tensorflow.python.saved_model import tag_constants
 import json
 import socket
+#from threading import Thread
+#import tensorboard.main as tb_main
 
 HIDDEN_NODES_COUNT = 20
 VALID_TRAINING_DATA_RATIO = 0.1
@@ -36,7 +38,7 @@ n_pss = len(cluster_spec['ps'])  # the number of parameter servers
 n_workers = int(os.environ["WORKER_CNT"])  # the number of worker nodes
 job_name = os.environ["JOB_NAME"]
 task_index = int(os.environ["TASK_ID"])
-socket_server_port = int(os.environ["SOCKET_SERVER_PORT"])  # The port of local java socket server listening
+socket_server_port = int(os.environ["SOCKET_SERVER_PORT"])  # The port of local java socket server listening, to sync worker training intermediate information with master
 total_training_data_number = int(os.environ["TOTAL_TRAINING_DATA_NUMBER"]) # total data
 feature_column_nums = [int(s) for s in str(os.environ["SELECTED_COLUMN_NUMS"]).split(' ')]  # selected column numbers
 FEATURE_COUNT = len(feature_column_nums)
@@ -57,11 +59,13 @@ def nn_layer(input_tensor, input_dim, output_dim, act=tf.nn.tanh, act_op_name=No
     weights = tf.get_variable(name="weight_"+str(act_op_name),
                               shape=[input_dim, output_dim],
                               regularizer=l2_reg,
-                              initializer=tf.glorot_uniform_initializer())
+                              #initializer=tf.glorot_uniform_initializer())
+                              initializer=tf.contrib.layers.xavier_initializer())
     biases = tf.get_variable(name="biases_"+str(act_op_name),
                              shape=[output_dim],
                              regularizer=l2_reg,
-                             initializer=tf.glorot_uniform_initializer())
+                             #initializer=tf.glorot_uniform_initializer())
+                             initializer=tf.contrib.layers.xavier_initializer())
 
     activations = act(tf.matmul(input_tensor, weights) + biases, name=act_op_name)
     return activations
@@ -128,9 +132,10 @@ def model(x, y_, sample_weight, model_conf):
     if model_conf is not None:
         learning_rate = model_conf['train']['params']['LearningRate']
     else:
-        learning_rate = 0.003;
+        learning_rate = 0.003
     opt = tf.train.SyncReplicasOptimizer(
-        tf.train.GradientDescentOptimizer(learning_rate),
+        #tf.train.GradientDescentOptimizer(learning_rate),
+        tf.train.AdamOptimizer(learning_rate=learning_rate),
         replicas_to_aggregate=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE * REPLICAS_TO_AGGREGATE_RATIO),
         total_num_replicas=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE),
         name="shifu_sync_replicas")
@@ -141,7 +146,6 @@ def model(x, y_, sample_weight, model_conf):
 
 def main(_):
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%y-%m-%d %H:%M:%S')
-    #logging.getLogger().setLevel(logging.INFO)
 
     logging.info("job_name:%s, task_index:%d" % (job_name, task_index))
 
@@ -177,6 +181,7 @@ def main(_):
             EPOCH = int(model_conf['train']['numTrainEpochs'])
             global VALID_TRAINING_DATA_RATIO
             VALID_TRAINING_DATA_RATIO = model_conf['train']['validSetRate']
+            is_continue_train = model_conf['train']['isContinuous']
 
         # import data
         context = load_data(training_data_path)
@@ -230,7 +235,10 @@ def main(_):
         sync_replicas_hook = opt.make_session_run_hook(is_chief)
         stop_hook = tf.train.StopAtStepHook(num_steps=EPOCH)
         chief_hooks = [sync_replicas_hook, stop_hook]
-        scaff = tf.train.Scaffold(init_op=init_op,
+        if is_continue_train:
+            scaff = None
+        else:
+            scaff = tf.train.Scaffold(init_op=init_op,
                                   local_init_op=local_init,
                                   ready_for_local_init_op=ready_for_local_init)
         # Configure
@@ -252,8 +260,9 @@ def main(_):
                                                  stop_grace_period_secs=10,
                                                  checkpoint_dir=tmp_model_path)
 
-        if is_chief:
+        if is_chief and not is_continue_train:
             sess.run(init_tokens_op)
+            #start_tensorboard(tmp_model_path)
             logging.info("chief start waiting 40 sec")
             time.sleep(40)  # grace period to wait on other workers before starting training
             logging.info("chief finish waiting 40 sec")
@@ -484,6 +493,17 @@ def export_generic_config(export_dir):
     f = tf.gfile.GFile(export_dir + "/GenericModelConfig.json", mode="w+")
     f.write(config_json_str)
 
+
+def start_tensorboard(checkpoint_dir):
+    tf.flags.FLAGS.logdir = checkpoint_dir
+    if TB_PORT_ENV_VAR in os.environ:
+        tf.flags.FLAGS.port = os.environ['TB_PORT']
+
+    tb_thread = Thread(target=tb_main.run_main)
+    tb_thread.daemon = True
+
+    logging.info("Starting TensorBoard with --logdir=" + checkpoint_dir + " in daemon thread...")
+    tb_thread.start()
 
 if __name__ == '__main__':
     tf.app.run()
