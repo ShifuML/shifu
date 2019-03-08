@@ -254,10 +254,13 @@ public class WideLayer
     public WideLayer combine(WideLayer from) {
         List<WideFieldLayer> fLayers = from.getLayers();
         int wflSize = this.layers.size();
+        List<WideFieldLayer> combinedLayers = new ArrayList<WideFieldLayer>(wflSize);
         for(int i = 0; i < wflSize; i++) {
             WideFieldLayer nLayer = layers.get(i).combine(fLayers.get(i));
-            this.layers.add(i, nLayer);
+            combinedLayers.add(nLayer);
         }
+        this.layers = combinedLayers;
+
         denseLayer = denseLayer.combine(from.getDenseLayer());
         bias = bias.combine(from.getBias());
         return this;

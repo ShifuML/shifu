@@ -150,10 +150,12 @@ public class EmbedLayer
     public EmbedLayer combine(EmbedLayer from) {
         List<EmbedFieldLayer> fromLayers = from.getEmbedLayers();
         int size = this.embedLayers.size();
+        List<EmbedFieldLayer> combinedLayers = new ArrayList<EmbedFieldLayer>(size);
         for(int i = 0; i < size; i++) {
             EmbedFieldLayer nLayer = embedLayers.get(i).combine(fromLayers.get(i));
-            this.embedLayers.add(i, nLayer);
+            combinedLayers.add(nLayer);
         }
+        this.embedLayers = combinedLayers;
         return this;
     }
 
