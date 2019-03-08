@@ -74,7 +74,7 @@ public interface Optimizer {
         for(Entry<Integer, float[]> entry: grads.entrySet()) {
             int index = entry.getKey();
             if(index < in) {
-                update(weights[in], entry.getValue());
+                update(weights[index], entry.getValue());
             }
         }
     }
