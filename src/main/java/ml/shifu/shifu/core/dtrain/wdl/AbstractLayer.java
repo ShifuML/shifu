@@ -22,10 +22,14 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 
+import ml.shifu.guagua.io.Combinable;
+import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
+
 /**
  * @author juguo
  */
-public abstract class AbstractLayer<FIN, FOUT, BIN, BOUT> implements Layer<FIN, FOUT, BIN, BOUT>, Bytable {
+public abstract class AbstractLayer<FIN, FOUT, BIN, BOUT, SELF extends Bytable>
+        implements Layer<FIN, FOUT, BIN, BOUT>, Bytable, Combinable<SELF> {
     /**
      * Serialization type.
      * In convention, this field should only be serialized in {@link ml.shifu.shifu.core.dtrain.wdl.WideAndDeep}.
@@ -51,11 +55,13 @@ public abstract class AbstractLayer<FIN, FOUT, BIN, BOUT> implements Layer<FIN, 
     /**
      * Serialize layer based on provided SerializationType. The implementation of {@link #write(DataOutput)} should use
      * {@link #serializationType} to determine what to serialize.
+     * 
      * @param out
      *            the data output stream
      * @param serializationType
      *            the serialization type
-     * @throws IOException if an I/O error occurs.
+     * @throws IOException
+     *             if an I/O error occurs.
      */
     public void write(DataOutput out, SerializationType serializationType) throws IOException {
         setSerializationType(serializationType);
@@ -65,16 +71,20 @@ public abstract class AbstractLayer<FIN, FOUT, BIN, BOUT> implements Layer<FIN, 
     /**
      * De-serialize layer based on provided SerializationType. The implementation of {@link #readFields(DataInput)}
      * should use {@link #serializationType} to determine what to de-serialize.
+     * 
      * @param in
-     *             the data input stream
+     *            the data input stream
      * @param serializationType
-     *              the serialization type
-     * @throws IOException if an I/O error occurs.
+     *            the serialization type
+     * @throws IOException
+     *             if an I/O error occurs.
      */
     public void readFields(DataInput in, SerializationType serializationType) throws IOException {
         setSerializationType(serializationType);
         readFields(in);
     }
+
+    public abstract void update(SELF gradLayer, Optimizer optimizer);
 
 }
 

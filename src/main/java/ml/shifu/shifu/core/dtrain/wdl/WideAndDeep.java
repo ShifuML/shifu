@@ -15,13 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
-import ml.shifu.guagua.io.Bytable;
-import ml.shifu.shifu.util.Tuple;
-import ml.shifu.shifu.core.dtrain.AssertUtils;
-import ml.shifu.shifu.core.dtrain.wdl.activation.Activation;
-import ml.shifu.shifu.core.dtrain.wdl.activation.ReLU;
-import ml.shifu.shifu.core.dtrain.wdl.activation.Sigmoid;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -30,6 +23,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import ml.shifu.guagua.io.Bytable;
+import ml.shifu.guagua.io.Combinable;
+import ml.shifu.shifu.core.dtrain.AssertUtils;
+import ml.shifu.shifu.core.dtrain.wdl.activation.Activation;
+import ml.shifu.shifu.core.dtrain.wdl.activation.ReLU;
+import ml.shifu.shifu.core.dtrain.wdl.activation.Sigmoid;
+import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
+import ml.shifu.shifu.util.Tuple;
 
 /**
  * {@link WideAndDeep} graph definition which is for whole network including deep side and wide side.
@@ -45,7 +47,7 @@ import java.util.Map.Entry;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideAndDeep implements WeightInitializer, Bytable {
+public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideAndDeep> {
 
     private DenseInputLayer dil;
 
@@ -635,9 +637,9 @@ public class WideAndDeep implements WeightInitializer, Bytable {
             }
         }
 
-        finalLayer = (DenseLayer) readLayerWithNullCheck(in, finalLayer, DenseLayer.class);
-        ecl = (EmbedLayer) readLayerWithNullCheck(in, ecl, EmbedLayer.class);
-        wl = (WideLayer) readLayerWithNullCheck(in, wl, WideLayer.class);
+        finalLayer = (DenseLayer) readLayerWithNullCheck(in, finalLayer == null ? new DenseLayer() : finalLayer);
+        ecl = (EmbedLayer) readLayerWithNullCheck(in, ecl == null ? new EmbedLayer() : ecl);
+        wl = (WideLayer) readLayerWithNullCheck(in, wl == null ? new WideLayer() : wl);
 
         if(serializationType == SerializationType.MODEL_SPEC) {
             if(idBinCateSizeMap == null) {
@@ -671,30 +673,58 @@ public class WideAndDeep implements WeightInitializer, Bytable {
     }
 
     /**
-     * Read layer with null check. The layer class should have instantiation method of empty argument list.
+     * Read layer with null check.
      * 
      * @param in
      * @param layer
-     *            the layer to hold serialized data. It should be an instance of clazz.
-     * @param clazz
-     *            The layer class should have instantiation method of empty argument list.
+     *            the layer to hold serialized data. This value should not be null.
      * @return de-serialized layer instance
      * @throws IOException
      */
     @SuppressWarnings("rawtypes")
-    private AbstractLayer readLayerWithNullCheck(DataInput in, AbstractLayer layer,
-            Class<? extends AbstractLayer> clazz) throws IOException {
+    private AbstractLayer readLayerWithNullCheck(DataInput in, AbstractLayer layer) throws IOException {
         if(in.readBoolean()) {
-            if(layer == null) {
-                try {
-                    layer = clazz.newInstance();
-                } catch (InstantiationException | IllegalAccessException e) { // should not happen
-                    return null;
-                }
-            }
             layer.readFields(in, serializationType);
         }
         return layer;
+    }
+
+    @SuppressWarnings("rawtypes")
+    @Override
+    public WideAndDeep combine(WideAndDeep from) {
+        this.dil = this.dil.combine(from.getDil());
+
+        List<Layer> fhl = from.getHiddenLayers();
+        int hlSize = hiddenLayers.size();
+        for(int i = 0; i < hlSize; i++) {
+            if(hiddenLayers.get(i) instanceof DenseLayer) {
+                Layer nLayer = ((DenseLayer) hiddenLayers.get(i)).combine((DenseLayer) fhl.get(i));
+                hiddenLayers.add(i, nLayer);
+            }
+        }
+
+        this.finalLayer = this.finalLayer.combine(from.getFinalLayer());
+        this.ecl = this.ecl.combine(from.getEcl());
+        this.wl = this.wl.combine(from.getWl());
+        return this;
+    }
+
+    @SuppressWarnings("rawtypes")
+    public void update(WideAndDeep gradWnd, Optimizer optimizer) {
+        this.dil.update(gradWnd.getDil(), optimizer);
+
+        List<Layer> gradHLs = gradWnd.getHiddenLayers();
+        int hlSize = hiddenLayers.size();
+        for(int i = 0; i < hlSize; i++) {
+            Layer tmpLayer = this.hiddenLayers.get(i);
+            if(tmpLayer instanceof DenseLayer) {
+                ((DenseLayer) tmpLayer).update((DenseLayer) gradHLs.get(i), optimizer);
+            }
+        }
+
+        this.finalLayer.update(gradWnd.getFinalLayer(), optimizer);
+        this.ecl.update(gradWnd.getEcl(), optimizer);
+        this.wl.update(gradWnd.getWl(), optimizer);
     }
 
 }

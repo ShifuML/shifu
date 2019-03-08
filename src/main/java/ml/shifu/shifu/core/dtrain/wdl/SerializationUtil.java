@@ -17,7 +17,8 @@ public class SerializationUtil {
      *            the array to be serialized
      * @param size
      *            the expected length of array
-     * @throws IOException if an I/O error occurs.
+     * @throws IOException
+     *             if an I/O error occurs.
      */
     public static void writeFloatArray(DataOutput out, float[] array, int size) throws IOException {
         if(array == null || array.length != size) {
@@ -42,7 +43,8 @@ public class SerializationUtil {
      *            the expected length of array
      * @return de-serialized array. The returned value will reuse memory of provided array if it is not null and its
      *         length is size.
-     * @throws IOException if an I/O error occurs.
+     * @throws IOException
+     *             if an I/O error occurs.
      */
     public static float[] readFloatArray(DataInput in, float[] array, int size) throws IOException {
         if(in.readBoolean()) {
@@ -68,7 +70,8 @@ public class SerializationUtil {
      *            array width
      * @param length
      *            array length
-     * @throws IOException if an I/O error occurs.
+     * @throws IOException
+     *             if an I/O error occurs.
      */
     public static void write2DimFloatArray(DataOutput out, float[][] array, int width, int length) throws IOException {
         if(array == null || array.length != width || array[0].length != length) {
@@ -97,7 +100,8 @@ public class SerializationUtil {
      *            array length
      * @return de-serialized 2-dim array. The returned value will reuse memory of provided array if it is not null and
      *         size match with [width][length].
-     * @throws IOException if an I/O error occurs.
+     * @throws IOException
+     *             if an I/O error occurs.
      */
     public static float[][] read2DimFloatArray(DataInput in, float[][] array, int width, int length)
             throws IOException {
@@ -118,10 +122,11 @@ public class SerializationUtil {
      * Serialize Integer list with null check.
      * 
      * @param out
-     *           the data output stream
+     *            the data output stream
      * @param list
      *            the List to serialize.
-     * @throws IOException if an I/O error occurs.
+     * @throws IOException
+     *             if an I/O error occurs.
      */
     public static void writeIntList(DataOutput out, List<Integer> list) throws IOException {
         if(list == null) {
@@ -138,11 +143,12 @@ public class SerializationUtil {
      * De-serialize Integer list. Try using provided list to save memory.
      * 
      * @param in
-     *           the data input stream
+     *            the data input stream
      * @param list
      *            the list to hold de-serialized data.
      * @return de-serialized list. Will reuse provided list if it is not null.
-     * @throws IOException if an I/O error occurs.
+     * @throws IOException
+     *             if an I/O error occurs.
      */
     public static List<Integer> readIntList(DataInput in, List<Integer> list) throws IOException {
         int size = in.readInt();

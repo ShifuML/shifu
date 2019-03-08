@@ -19,12 +19,14 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
+
 /**
  * {@link BiasLayer} used in wide part of WideAndDeep architecture.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class BiasLayer extends AbstractLayer<Float, Float, Float, Float> implements WeightInitializer {
+public class BiasLayer extends AbstractLayer<Float, Float, Float, Float, BiasLayer> implements WeightInitializer {
 
     private float weight;
 
@@ -125,4 +127,16 @@ public class BiasLayer extends AbstractLayer<Float, Float, Float, Float> impleme
                 break;
         }
     }
+
+    @Override
+    public BiasLayer combine(BiasLayer from) {
+        this.wGrad += from.getwGrad();
+        return this;
+    }
+
+    @Override
+    public void update(BiasLayer gradLayer, Optimizer optimizer) {
+        this.weight -= gradLayer.getwGrad() * optimizer.getLearningRate();
+    }
+
 }

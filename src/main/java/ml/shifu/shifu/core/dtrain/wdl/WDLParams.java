@@ -147,8 +147,12 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
 
     @Override
     public WDLParams combine(WDLParams from) {
-        // TODO How to combine workers into one to save memory
-        return null;
+        this.trainCount += from.trainCount;
+        this.trainError += from.trainError;
+        this.validationCount += from.validationCount;
+        this.validationError += from.validationError;
+        this.wnd = this.wnd.combine(from.getWnd());
+        return this;
     }
 
     @Override

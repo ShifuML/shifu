@@ -22,13 +22,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
+
 /**
  * {@link WideFieldLayer} is wide part input of WideAndDeep architecture. Per each column a {@link WideFieldLayer}
  * instance and each instanced will be forwarded and backwarded accordingly.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[], float[]> implements WeightInitializer {
+public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[], float[], WideFieldLayer>
+        implements WeightInitializer {
 
     /**
      * [in] float array of weights
@@ -250,5 +253,24 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
             default:
                 break;
         }
+    }
+
+    @Override
+    public WideFieldLayer combine(WideFieldLayer from) {
+        if(columnId != from.getColumnId()) {
+            return this;
+        }
+        Map<Integer, Float> fromGrads = from.getwGrads();
+        for(Entry<Integer, Float> entry: fromGrads.entrySet()) {
+            Integer index = entry.getKey();
+            float grad = entry.getValue();
+            wGrads.put(index, grad + wGrads.getOrDefault(index, 0.0f));
+        }
+        return this;
+    }
+
+    @Override
+    public void update(WideFieldLayer gradLayer, Optimizer optimizer) {
+        optimizer.update(this.weights, gradLayer.getwGrads());
     }
 }

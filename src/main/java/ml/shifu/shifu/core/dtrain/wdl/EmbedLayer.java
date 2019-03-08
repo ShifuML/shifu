@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ml.shifu.shifu.core.dtrain.AssertUtils;
+import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
 
 /**
  * {@link EmbedLayer} merges all embedding layers together and distributes forward and backward computation to
@@ -29,7 +30,8 @@ import ml.shifu.shifu.core.dtrain.AssertUtils;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class EmbedLayer extends AbstractLayer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>>
+public class EmbedLayer
+        extends AbstractLayer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>, EmbedLayer>
         implements WeightInitializer {
 
     /**
@@ -138,6 +140,29 @@ public class EmbedLayer extends AbstractLayer<List<SparseInput>, List<float[]>, 
 
         while(this.embedLayers.size() > embedLayerSize) {
             this.embedLayers.remove(embedLayerSize);
+        }
+    }
+
+    /**
+     * Supposing the two EmbedLayer have same size and order of {@link #embedLayers}.
+     */
+    @Override
+    public EmbedLayer combine(EmbedLayer from) {
+        List<EmbedFieldLayer> fromLayers = from.getEmbedLayers();
+        int size = this.embedLayers.size();
+        for(int i = 0; i < size; i++) {
+            EmbedFieldLayer nLayer = embedLayers.get(i).combine(fromLayers.get(i));
+            this.embedLayers.add(i, nLayer);
+        }
+        return this;
+    }
+
+    @Override
+    public void update(EmbedLayer gradLayer, Optimizer optimizer) {
+        List<EmbedFieldLayer> gradEFLs = gradLayer.getEmbedLayers();
+        int size = this.embedLayers.size();
+        for(int i = 0; i < size; i++) {
+            this.embedLayers.get(i).update(gradEFLs.get(i), optimizer);
         }
     }
 }

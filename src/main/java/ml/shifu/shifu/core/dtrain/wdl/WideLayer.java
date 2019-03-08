@@ -15,14 +15,15 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
-import ml.shifu.shifu.core.dtrain.AssertUtils;
-import ml.shifu.shifu.util.Tuple;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import ml.shifu.shifu.core.dtrain.AssertUtils;
+import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
+import ml.shifu.shifu.util.Tuple;
 
 /**
  * {@link WideLayer} defines wide part of WideAndDeep. It includes a list of {@link WideFieldLayer} instances (each one
@@ -33,7 +34,8 @@ import java.util.List;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideLayer extends AbstractLayer<Tuple<List<SparseInput>, float[]>, float[], float[], List<float[]>>
+public class WideLayer
+        extends AbstractLayer<Tuple<List<SparseInput>, float[]>, float[], float[], List<float[]>, WideLayer>
         implements WeightInitializer {
 
     /**
@@ -246,6 +248,30 @@ public class WideLayer extends AbstractLayer<Tuple<List<SparseInput>, float[]>, 
             }
             this.bias.readFields(in, this.serializationType);
         }
+    }
+
+    @Override
+    public WideLayer combine(WideLayer from) {
+        List<WideFieldLayer> fLayers = from.getLayers();
+        int wflSize = this.layers.size();
+        for(int i = 0; i < wflSize; i++) {
+            WideFieldLayer nLayer = layers.get(i).combine(fLayers.get(i));
+            this.layers.add(i, nLayer);
+        }
+        denseLayer = denseLayer.combine(from.getDenseLayer());
+        bias = bias.combine(from.getBias());
+        return this;
+    }
+
+    @Override
+    public void update(WideLayer gradLayer, Optimizer optimizer) {
+        List<WideFieldLayer> gradWFLs = gradLayer.getLayers();
+        int wflSize = this.layers.size();
+        for(int i = 0; i < wflSize; i++) {
+            this.layers.get(i).update(gradWFLs.get(i), optimizer);
+        }
+        this.denseLayer.update(gradLayer.getDenseLayer(), optimizer);
+        this.bias.update(gradLayer.getBias(), optimizer);
     }
 
 }
