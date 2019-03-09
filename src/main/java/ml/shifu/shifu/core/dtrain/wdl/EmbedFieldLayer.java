@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 
 /**
  * {@link EmbedFieldLayer} is for each column like sparse categorical feature. The input of this layer is one-hot

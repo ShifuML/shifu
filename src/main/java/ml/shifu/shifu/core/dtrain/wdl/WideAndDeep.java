@@ -30,7 +30,7 @@ import ml.shifu.shifu.core.dtrain.AssertUtils;
 import ml.shifu.shifu.core.dtrain.wdl.activation.Activation;
 import ml.shifu.shifu.core.dtrain.wdl.activation.ReLU;
 import ml.shifu.shifu.core.dtrain.wdl.activation.Sigmoid;
-import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.util.Tuple;
 
 /**
@@ -696,12 +696,16 @@ public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideA
 
         List<Layer> fhl = from.getHiddenLayers();
         int hlSize = hiddenLayers.size();
+        List<Layer> combinedLayers = new ArrayList<Layer>(hlSize);
         for(int i = 0; i < hlSize; i++) {
             if(hiddenLayers.get(i) instanceof DenseLayer) {
                 Layer nLayer = ((DenseLayer) hiddenLayers.get(i)).combine((DenseLayer) fhl.get(i));
-                hiddenLayers.add(i, nLayer);
+                combinedLayers.add(nLayer);
+            } else {
+                combinedLayers.add(hiddenLayers.get(i));
             }
         }
+        this.hiddenLayers = combinedLayers;
 
         this.finalLayer = this.finalLayer.combine(from.getFinalLayer());
         this.ecl = this.ecl.combine(from.getEcl());
