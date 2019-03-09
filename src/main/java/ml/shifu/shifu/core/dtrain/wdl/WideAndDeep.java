@@ -15,6 +15,13 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
+import ml.shifu.guagua.io.Bytable;
+import ml.shifu.guagua.io.Combinable;
+import ml.shifu.shifu.core.dtrain.AssertUtils;
+import ml.shifu.shifu.core.dtrain.wdl.activation.*;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+import ml.shifu.shifu.util.Tuple;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -23,15 +30,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import ml.shifu.guagua.io.Bytable;
-import ml.shifu.guagua.io.Combinable;
-import ml.shifu.shifu.core.dtrain.AssertUtils;
-import ml.shifu.shifu.core.dtrain.wdl.activation.Activation;
-import ml.shifu.shifu.core.dtrain.wdl.activation.ReLU;
-import ml.shifu.shifu.core.dtrain.wdl.activation.Sigmoid;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
-import ml.shifu.shifu.util.Tuple;
 
 /**
  * {@link WideAndDeep} graph definition which is for whole network including deep side and wide side.
@@ -161,6 +159,16 @@ public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideA
                 this.hiddenLayers.add(new ReLU());
             } else if("sigmoid".equalsIgnoreCase(acti)) {
                 this.hiddenLayers.add(new Sigmoid());
+            } else if("log".equalsIgnoreCase(acti)) {
+                this.hiddenLayers.add(new Log());
+            } else if("gaussian".equalsIgnoreCase(acti)) {
+                this.hiddenLayers.add(new Gaussian());
+            } else if("leakyReLU".equalsIgnoreCase(acti)) {
+                this.hiddenLayers.add(new LeakyReLU());
+            } else if("swish".equalsIgnoreCase(acti)) {
+                this.hiddenLayers.add(new Swish());
+            } else if("tanH".equalsIgnoreCase(acti)) {
+                this.hiddenLayers.add(new TanH());
             }
             preHiddenInputs = hiddenOutputs;
         }

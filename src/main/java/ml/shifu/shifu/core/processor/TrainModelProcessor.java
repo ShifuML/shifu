@@ -330,9 +330,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) // NN algorithm
                 || LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) // LR algorithm
                 || CommonUtils.isTreeModel(alg) // RF or GBT algortihm
-                || Constants.TF_ALG_NAME.equalsIgnoreCase(alg))) {
+                || Constants.TF_ALG_NAME.equalsIgnoreCase(alg)
+                || Constants.WDL.equalsIgnoreCase(alg))) {
             throw new IllegalArgumentException(
-                    "Currently we only support NN, LR, RF(RandomForest) and GBDT(Gradient Boost Desicion Tree) distributed training.");
+                    "Currently we only support NN, LR, RF(RandomForest), WDL and GBDT(Gradient Boost Desicion Tree) distributed training.");
         }
 
         if((LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)

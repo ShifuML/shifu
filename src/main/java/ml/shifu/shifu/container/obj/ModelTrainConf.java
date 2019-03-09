@@ -15,19 +15,18 @@
  */
 package ml.shifu.shifu.container.obj;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
-import ml.shifu.shifu.core.alg.SVMTrainer;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import ml.shifu.shifu.core.alg.LogisticRegressionTrainer;
+import ml.shifu.shifu.core.alg.SVMTrainer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * {@link ModelTrainConf} is train part in ModelConfig.json.
@@ -42,7 +41,7 @@ public class ModelTrainConf {
      * @author Zhang David (pengzhang@paypal.com)
      */
     public static enum ALGORITHM {
-        NN, LR, SVM, DT, RF, GBT, TENSORFLOW
+        NN, LR, SVM, DT, RF, GBT, TENSORFLOW, WDL
     }
 
     /**
@@ -586,7 +585,28 @@ public class ModelTrainConf {
             params.put(CommonConstants.ACTIVATION_FUNC, func);
             params.put(CommonConstants.TF_OPTIMIZER, "Adam");
             params.put(CommonConstants.TF_LOSS, "entropy");
-
+        } else if(ALGORITHM.WDL.equals(alg)) {
+            params.put(CommonConstants.LEARNING_RATE, 0.1);
+            List<Integer> embedColumnIds = new ArrayList<>(30);
+            embedColumnIds.add(629);
+            embedColumnIds.add(627);
+            embedColumnIds.add(555);
+            embedColumnIds.add(554);
+            embedColumnIds.add(553);
+            embedColumnIds.add(552);
+            embedColumnIds.add(550);
+            embedColumnIds.add(549);
+            embedColumnIds.add(547);
+            embedColumnIds.add(441);
+            params.put(CommonConstants.NUM_EMBED_COLUMN_IDS, embedColumnIds);
+            List<Integer> nodes = new ArrayList<Integer>();
+            nodes.add(50);
+            params.put(CommonConstants.NUM_HIDDEN_LAYERS, nodes);
+            List<String> func = new ArrayList<String>();
+            func.add("relu");
+            params.put(CommonConstants.ACTIVATION_FUNC, func);
+            params.put(CommonConstants.NUM_HIDDEN_NODES, 3);
+            params.put(CommonConstants.WDL_L2_REG, 1e-8f);
         }
         return params;
     }
