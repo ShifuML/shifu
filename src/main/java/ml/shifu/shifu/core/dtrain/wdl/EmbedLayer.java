@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ml.shifu.shifu.core.dtrain.AssertUtils;
-import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 
 /**
  * {@link EmbedLayer} merges all embedding layers together and distributes forward and backward computation to

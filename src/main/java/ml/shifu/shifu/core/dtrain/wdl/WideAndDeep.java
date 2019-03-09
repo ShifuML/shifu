@@ -30,7 +30,7 @@ import ml.shifu.shifu.core.dtrain.AssertUtils;
 import ml.shifu.shifu.core.dtrain.wdl.activation.Activation;
 import ml.shifu.shifu.core.dtrain.wdl.activation.ReLU;
 import ml.shifu.shifu.core.dtrain.wdl.activation.Sigmoid;
-import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.util.Tuple;
 
 /**
