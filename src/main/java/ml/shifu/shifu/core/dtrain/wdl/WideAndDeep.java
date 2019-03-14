@@ -602,13 +602,14 @@ public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideA
         if(this.dil == null) {
             this.dil = new DenseInputLayer();
         }
-        this.dil.readFields(in, serializationType);
+        readLayerWithNullCheck(in, this.dil);
 
         if(actiFuncs == null) {
-            actiFuncs = new ArrayList<String>();
+            actiFuncs = new ArrayList<>();
         }
         actiFuncs.clear();
-        for(int i = 0; i < in.readInt(); i++) {
+        int size = in.readInt();
+        for(int i = 0; i < size; i++) {
             actiFuncs.add(in.readUTF());
         }
 
@@ -624,7 +625,8 @@ public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideA
         } else {
             hiddenLayers = new ArrayList<Layer>();
         }
-        for(int i = 0; i < in.readInt(); i++) {
+        size = in.readInt();
+        for(int i = 0; i < size; i++) {
             if(hiddenDenseLayers.size() > i) {
                 hiddenDenseLayers.get(i).readFields(in, serializationType);
             } else {
@@ -633,7 +635,7 @@ public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideA
                 hiddenDenseLayers.add(tmpLayer);
             }
         }
-        hiddenLayers = new ArrayList<Layer>();
+        hiddenLayers = new ArrayList<>();
         for(int i = 0; i < hiddenDenseLayers.size(); i++) {
             hiddenLayers.add(hiddenDenseLayers.get(i));
             String acti = actiFuncs.get(i);
@@ -654,7 +656,8 @@ public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideA
                 idBinCateSizeMap = new HashMap<Integer, Integer>();
             }
             idBinCateSizeMap.clear();
-            for(int i = 0; i < in.readInt(); i++) {
+            size = in.readInt();
+            for(int i = 0; i < size; i++) {
                 idBinCateSizeMap.put(in.readInt(), in.readInt());
             }
             numericalSize = in.readInt();
@@ -692,7 +695,7 @@ public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideA
     @SuppressWarnings("rawtypes")
     private AbstractLayer readLayerWithNullCheck(DataInput in, AbstractLayer layer) throws IOException {
         if(in.readBoolean()) {
-            layer.readFields(in, serializationType);
+            layer.readFields(in, this.serializationType);
         }
         return layer;
     }
