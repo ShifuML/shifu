@@ -250,6 +250,7 @@ public class WDLWorker extends
         // hashcode for fixed input split in train and validation
         long hashcode = 0;
         float[] inputs = new float[this.numInputs];
+        this.cateInputs = (int) this.columnConfigList.stream().filter(ColumnConfig::isCategorical).count();
         SparseInput[] cateInputs = new SparseInput[this.cateInputs];
         float ideal = 0f, significance = 1f;
         int index = 0, numIndex = 0, cateIndex = 0;
@@ -653,7 +654,7 @@ public class WDLWorker extends
         int numLayers = (Integer) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
-        Float l2reg = (Float) this.validParams.get(CommonConstants.WDL_L2_REG);
+        Float l2reg = ((Double) this.validParams.get(CommonConstants.WDL_L2_REG)).floatValue();
         this.wnd = new WideAndDeep(idBinCateSizeMap, numInputs, numericalIds, embedColumnIds, embedOutputList,
                 wideColumnIds, hiddenNodes, actFunc, l2reg);
     }
@@ -690,7 +691,8 @@ public class WDLWorker extends
         for(Data data: trainingData) {
             float[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data), getWideInputs(data));
             float error = sigmoid(logits[0]) - data.label;
-            trainSumError += data.weight * error * error; // TODO, logloss, squredloss, weighted error or not
+            // TODO, logloss, squredloss, weighted error or not
+            trainSumError += data.weight * error * error;
             this.wnd.backward(new float[] { error }, data.getWeight());
         }
 

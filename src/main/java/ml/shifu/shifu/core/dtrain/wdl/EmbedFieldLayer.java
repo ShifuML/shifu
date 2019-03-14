@@ -15,14 +15,14 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 
 /**
  * {@link EmbedFieldLayer} is for each column like sparse categorical feature. The input of this layer is one-hot
@@ -84,9 +84,7 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
         this.columnId = columnId;
         this.out = out;
         this.in = in;
-        for(int i = 0; i < in; i++) {
-            this.weights[i] = new float[out];
-        }
+        this.weights = new float[in][out];
     }
 
     @Override
