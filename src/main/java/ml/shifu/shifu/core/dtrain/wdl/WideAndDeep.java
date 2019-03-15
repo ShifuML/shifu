@@ -18,18 +18,20 @@ package ml.shifu.shifu.core.dtrain.wdl;
 import ml.shifu.guagua.io.Bytable;
 import ml.shifu.guagua.io.Combinable;
 import ml.shifu.shifu.core.dtrain.AssertUtils;
+import static ml.shifu.shifu.core.dtrain.wdl.SerializationUtil.NULL;
 import ml.shifu.shifu.core.dtrain.wdl.activation.*;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.util.Tuple;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 /**
  * {@link WideAndDeep} graph definition which is for whole network including deep side and wide side.
@@ -46,6 +48,8 @@ import java.util.Map.Entry;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideAndDeep> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(WideAndDeep.class);
 
     private DenseInputLayer dil;
 
@@ -152,24 +156,7 @@ public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideA
             int hiddenOutputs = hiddenNodes.get(i);
             DenseLayer denseLayer = new DenseLayer(hiddenOutputs, preHiddenInputs, l2reg);
             this.hiddenLayers.add(denseLayer);
-            String acti = actiFuncs.get(i);
-
-            // TODO add more else
-            if("relu".equalsIgnoreCase(acti)) {
-                this.hiddenLayers.add(new ReLU());
-            } else if("sigmoid".equalsIgnoreCase(acti)) {
-                this.hiddenLayers.add(new Sigmoid());
-            } else if("log".equalsIgnoreCase(acti)) {
-                this.hiddenLayers.add(new Log());
-            } else if("gaussian".equalsIgnoreCase(acti)) {
-                this.hiddenLayers.add(new Gaussian());
-            } else if("leakyReLU".equalsIgnoreCase(acti)) {
-                this.hiddenLayers.add(new LeakyReLU());
-            } else if("swish".equalsIgnoreCase(acti)) {
-                this.hiddenLayers.add(new Swish());
-            } else if("tanH".equalsIgnoreCase(acti)) {
-                this.hiddenLayers.add(new TanH());
-            }
+            this.hiddenLayers.add(ActivationFactory.getInstance().getActivation(actiFuncs.get(i)));
             preHiddenInputs = hiddenOutputs;
         }
 
@@ -215,11 +202,9 @@ public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideA
         for(int i = 0; i < this.hiddenLayers.size(); i++) {
             Layer layer = this.hiddenLayers.get(this.hiddenLayers.size() - 1 - i);
             if(layer instanceof DenseLayer) {
-                DenseLayer dl = (DenseLayer) layer;
-                backInputs = dl.backward(backInputs, sig);
+                backInputs = ((DenseLayer) layer).backward(backInputs, sig);
             } else if(layer instanceof Activation) {
-                Activation acti = (Activation) layer;
-                backInputs = acti.backward(backInputs, sig);
+                backInputs = ((Activation) layer).backward(backInputs, sig);
             }
         }
 
@@ -250,7 +235,7 @@ public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideA
         List<float[]> results = new ArrayList<>();
         int srcPos = outDim;
         for(EmbedFieldLayer el: embedLayers) {
-            float[] elBackInputs = new float[el.getIn()];
+            float[] elBackInputs = new float[el.getOut()];
             System.arraycopy(backInputs, srcPos, elBackInputs, 0, elBackInputs.length);
             srcPos += elBackInputs.length;
             results.add(elBackInputs);
@@ -543,35 +528,46 @@ public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideA
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeInt(this.serializationType.getValue());
-        writeLayerWithNuLLCheck(out, dil);
 
-        if(actiFuncs == null) {
-            out.writeInt(0);
-        } else {
-            out.writeInt(actiFuncs.size());
-            for(String acti: actiFuncs) {
-                out.writeUTF(acti);
-            }
-        }
+        writeLayerWithNuLLCheck(out, this.dil);
+
         if(this.hiddenLayers == null) {
-            out.writeInt(0);
+            out.writeInt(NULL);
         } else {
-            out.writeInt(hiddenLayers.size());
-            for(Layer layer: hiddenLayers) {
-                if(layer instanceof DenseLayer) { // Activation is constructed from actiFuncs
-                    DenseLayer denseLayer = (DenseLayer) layer;
-                    denseLayer.write(out, serializationType);
+            List<DenseLayer> denseLayers = this.hiddenLayers.stream()
+                    .filter(layer -> layer instanceof DenseLayer)
+                    .map(layer -> (DenseLayer) layer)
+                    .collect(Collectors.toList());
+            out.writeInt(denseLayers.size());
+            denseLayers.forEach(denseLayer -> {
+                try {
+                    denseLayer.write(out, this.serializationType);
+                } catch (IOException e) {
+                    LOG.error("IOException when write hidden nodes dense part", e);
                 }
-            }
+            });
         }
 
         writeLayerWithNuLLCheck(out, finalLayer);
         writeLayerWithNuLLCheck(out, ecl);
         writeLayerWithNuLLCheck(out, wl);
 
+        if(this.actiFuncs == null) {
+            out.writeInt(NULL);
+        } else {
+            out.writeInt(this.actiFuncs.size());
+            this.actiFuncs.forEach(act -> {
+                try {
+                    out.writeUTF(act);
+                } catch (IOException e) {
+                    LOG.error("Write active function " + act, e);
+                }
+            });
+        }
+
         if(this.serializationType == SerializationType.MODEL_SPEC) {
             if(idBinCateSizeMap == null) {
-                out.writeInt(0);
+                out.writeInt(NULL);
             } else {
                 out.writeInt(idBinCateSizeMap.size());
                 for(Entry<Integer, Integer> entry: idBinCateSizeMap.entrySet()) {
@@ -599,64 +595,37 @@ public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideA
     public void readFields(DataInput in) throws IOException {
         this.serializationType = SerializationType.getSerializationType(in.readInt());
 
-        if(this.dil == null) {
-            this.dil = new DenseInputLayer();
-        }
-        readLayerWithNullCheck(in, this.dil);
+        this.dil = (DenseInputLayer) readLayerWithNullCheck(in, new DenseInputLayer());
 
-        if(actiFuncs == null) {
-            actiFuncs = new ArrayList<>();
-        }
-        actiFuncs.clear();
+        List<DenseLayer> hiddenDenseLayer = new ArrayList<>();
         int size = in.readInt();
         for(int i = 0; i < size; i++) {
-            actiFuncs.add(in.readUTF());
+            DenseLayer denseLayer = new DenseLayer();
+            denseLayer.readFields(in, this.serializationType);
+            hiddenDenseLayer.add(denseLayer);
         }
 
-        List<DenseLayer> hiddenDenseLayers = new ArrayList<DenseLayer>();
-        if(hiddenLayers != null) {
-            // get existing dense hidden layers to save memory
-            for(Layer layer: hiddenLayers) {
-                if(layer instanceof DenseLayer) {
-                    hiddenDenseLayers.add((DenseLayer) layer);
-                }
-            }
-            hiddenLayers.clear();
-        } else {
-            hiddenLayers = new ArrayList<Layer>();
-        }
+        this.finalLayer = (DenseLayer) readLayerWithNullCheck(in, new DenseLayer());
+        this.ecl = (EmbedLayer) readLayerWithNullCheck(in, new EmbedLayer());
+        this.wl = (WideLayer) readLayerWithNullCheck(in, new WideLayer());
+
+        this.actiFuncs = new ArrayList<>();
         size = in.readInt();
         for(int i = 0; i < size; i++) {
-            if(hiddenDenseLayers.size() > i) {
-                hiddenDenseLayers.get(i).readFields(in, serializationType);
-            } else {
-                DenseLayer tmpLayer = new DenseLayer();
-                tmpLayer.readFields(in, serializationType);
-                hiddenDenseLayers.add(tmpLayer);
-            }
-        }
-        hiddenLayers = new ArrayList<>();
-        for(int i = 0; i < hiddenDenseLayers.size(); i++) {
-            hiddenLayers.add(hiddenDenseLayers.get(i));
-            String acti = actiFuncs.get(i);
-
-            if("relu".equalsIgnoreCase(acti)) {
-                this.hiddenLayers.add(new ReLU());
-            } else if("sigmoid".equalsIgnoreCase(acti)) {
-                this.hiddenLayers.add(new Sigmoid());
-            }
+            this.actiFuncs.add(in.readUTF());
         }
 
-        finalLayer = (DenseLayer) readLayerWithNullCheck(in, finalLayer == null ? new DenseLayer() : finalLayer);
-        ecl = (EmbedLayer) readLayerWithNullCheck(in, ecl == null ? new EmbedLayer() : ecl);
-        wl = (WideLayer) readLayerWithNullCheck(in, wl == null ? new WideLayer() : wl);
+        AssertUtils.assertListNotNullAndSizeEqual(this.actiFuncs, hiddenDenseLayer);
+        hiddenDenseLayer.forEach(denseLayer -> LOG.info(String.valueOf(denseLayer)));
+        this.hiddenLayers = new ArrayList<>(this.actiFuncs.size() * 2);
+        for(int i = 0; i < hiddenDenseLayer.size(); i ++) {
+            this.hiddenLayers.add(hiddenDenseLayer.get(i));
+            this.hiddenLayers.add(ActivationFactory.getInstance().getActivation(this.actiFuncs.get(i)));
+        }
 
         if(serializationType == SerializationType.MODEL_SPEC) {
-            if(idBinCateSizeMap == null) {
-                idBinCateSizeMap = new HashMap<Integer, Integer>();
-            }
-            idBinCateSizeMap.clear();
             size = in.readInt();
+            this.idBinCateSizeMap = new HashMap<>(size);
             for(int i = 0; i < size; i++) {
                 idBinCateSizeMap.put(in.readInt(), in.readInt());
             }

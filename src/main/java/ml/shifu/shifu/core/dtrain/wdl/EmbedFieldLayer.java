@@ -96,7 +96,7 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
     public float[] forward(SparseInput si) {
         this.lastInput = si;
         int valueIndex = si.getValueIndex();
-        float[] results = new float[this.in];
+        float[] results = new float[this.out];
         for(int i = 0; i < results.length; i++) {
             results[i] = si.getValue() * this.getWeights()[valueIndex][i];
         }
@@ -107,9 +107,7 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
     public float[] backward(float[] backInputs, float sig) {
         // gradients computation
         int valueIndex = this.lastInput.getValueIndex();
-        if(this.wGrads.get(valueIndex) == null) {
-            this.wGrads.put(valueIndex, new float[this.out]);
-        }
+        this.wGrads.computeIfAbsent(valueIndex, k -> new float[this.out]);
         for(int j = 0; j < this.out; j++) {
             this.wGrads.get(valueIndex)[j] += (this.lastInput.getValue() * backInputs[j] * sig);
         }

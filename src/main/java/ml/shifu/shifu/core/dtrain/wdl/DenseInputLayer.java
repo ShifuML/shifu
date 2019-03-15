@@ -51,7 +51,7 @@ public class DenseInputLayer extends AbstractLayer<float[], float[], float[], fl
     @Override
     public float[] forward(float[] inputs) {
         AssertUtils.assertNotNull(inputs);
-        AssertUtils.assertEquals(inputs, this.out);
+        AssertUtils.assertEquals(inputs.length, this.out);
         return inputs;
     }
 

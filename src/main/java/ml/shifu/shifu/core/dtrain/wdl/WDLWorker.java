@@ -727,11 +727,45 @@ public class WDLWorker extends
     }
 
     private List<SparseInput> getEmbedInputs(Data data) {
-        List<SparseInput> embedInputs = new ArrayList<SparseInput>();
+        List<SparseInput> embedInputs = new ArrayList<>();
         for(Integer columnId: this.wnd.getEmbedColumnIds()) {
             embedInputs.add(data.getCategoricalValues()[this.inputIndexMap.get(columnId)]);
         }
         return embedInputs;
+    }
+
+    @Override
+    protected void postLoad(WorkerContext<WDLParams, WDLParams> context) {
+        this.trainingData.switchState();
+        if(validationData != null) {
+            this.validationData.switchState();
+        }
+        LOG.info("    - # Records of the Total Data Set: {}.", this.count);
+        LOG.info("    - Bagging Sample Rate: {}.", this.modelConfig.getBaggingSampleRate());
+        LOG.info("    - Bagging With Replacement: {}.", this.modelConfig.isBaggingWithReplacement());
+        if(this.isKFoldCV) {
+            LOG.info("        - Validation Rate(kFold): {}.", 1d / this.modelConfig.getTrain().getNumKFold());
+        } else {
+            LOG.info("        - Validation Rate: {}.", this.modelConfig.getValidSetRate());
+        }
+        LOG.info("        - # Records of the Training Set: {}.", this.trainingData.size());
+        if(modelConfig.isRegression() || modelConfig.getTrain().isOneVsAll()) {
+            LOG.info("        - # Positive Bagging Selected Records of the Training Set: {}.",
+                    this.positiveSelectedTrainCount);
+            LOG.info("        - # Negative Bagging Selected Records of the Training Set: {}.",
+                    this.negativeSelectedTrainCount);
+            LOG.info("        - # Positive Raw Records of the Training Set: {}.", this.positiveTrainCount);
+            LOG.info("        - # Negative Raw Records of the Training Set: {}.", this.negativeTrainCount);
+        }
+
+        if(validationData != null) {
+            LOG.info("        - # Records of the Validation Set: {}.", this.validationData.size());
+            if(modelConfig.isRegression() || modelConfig.getTrain().isOneVsAll()) {
+                LOG.info("        - # Positive Records of the Validation Set: {}.", this.positiveValidationCount);
+                LOG.info("        - # Negative Records of the Validation Set: {}.", this.negativeValidationCount);
+            }
+        }
+
     }
 
     /**

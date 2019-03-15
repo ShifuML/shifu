@@ -151,6 +151,7 @@
                 <include>*:joda-time:*</include>
                 <include>*:automaton:*</include>
                 <include>*:stream:*</include>
+                <include>*:reflections:*</include>
                 <include>*:parquet-pig:*</include>
                 <include>*:parquet-column:*</include>
                 <include>*:parquet-common:*</include>
