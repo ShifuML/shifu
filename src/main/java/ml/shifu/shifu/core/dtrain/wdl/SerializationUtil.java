@@ -9,6 +9,11 @@ import java.util.List;
 public class SerializationUtil {
 
     /**
+     *  Write false when null
+     */
+    public static final int NULL = 0;
+
+    /**
      * Serialize float array with null and length check.
      * 
      * @param out

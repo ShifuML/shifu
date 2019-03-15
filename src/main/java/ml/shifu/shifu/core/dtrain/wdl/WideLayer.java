@@ -15,15 +15,16 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
+import ml.shifu.shifu.core.dtrain.AssertUtils;
+import static ml.shifu.shifu.core.dtrain.wdl.SerializationUtil.NULL;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+import ml.shifu.shifu.util.Tuple;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import ml.shifu.shifu.core.dtrain.AssertUtils;
-import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
-import ml.shifu.shifu.util.Tuple;
 
 /**
  * {@link WideLayer} defines wide part of WideAndDeep. It includes a list of {@link WideFieldLayer} instances (each one
@@ -185,7 +186,7 @@ public class WideLayer
     @Override
     public void write(DataOutput out) throws IOException {
         if(this.layers == null) {
-            out.writeInt(0);
+            out.writeInt(NULL);
         } else {
             out.writeInt(this.layers.size());
             for(WideFieldLayer wideFieldLayer: this.layers) {
@@ -216,36 +217,20 @@ public class WideLayer
     @Override
     public void readFields(DataInput in) throws IOException {
         int layerSize = in.readInt();
-        if(this.layers == null) {
-            this.layers = new ArrayList<WideFieldLayer>();
-        }
+        this.layers = new ArrayList<>(layerSize);
         for(int i = 0; i < layerSize; i++) {
-            if(this.layers.get(i) == null) {
-                this.layers.add(i, new WideFieldLayer());
-            }
-            this.layers.get(i).readFields(in, this.serializationType);
-        }
-        while(this.layers.size() > layerSize) {
-            this.layers.remove(layerSize);
+            WideFieldLayer wideFieldLayer = new WideFieldLayer();
+            wideFieldLayer.readFields(in, this.serializationType);
+            this.layers.add(wideFieldLayer);
         }
 
-        boolean denseLayerExist = in.readBoolean();
-        if(!denseLayerExist) {
-            this.denseLayer = null;
-        } else {
-            if(this.denseLayer == null) {
-                this.denseLayer = new WideDenseLayer();
-            }
+        if(in.readBoolean()) {
+            this.denseLayer = new WideDenseLayer();
             this.denseLayer.readFields(in, this.serializationType);
         }
 
-        boolean biasExist = in.readBoolean();
-        if(!biasExist) {
-            this.bias = null;
-        } else {
-            if(this.bias == null) {
-                this.bias = new BiasLayer();
-            }
+        if(in.readBoolean()) {
+            this.bias = new BiasLayer();
             this.bias.readFields(in, this.serializationType);
         }
     }
@@ -254,10 +239,13 @@ public class WideLayer
     public WideLayer combine(WideLayer from) {
         List<WideFieldLayer> fLayers = from.getLayers();
         int wflSize = this.layers.size();
+        List<WideFieldLayer> combinedLayers = new ArrayList<WideFieldLayer>(wflSize);
         for(int i = 0; i < wflSize; i++) {
             WideFieldLayer nLayer = layers.get(i).combine(fLayers.get(i));
-            this.layers.add(i, nLayer);
+            combinedLayers.add(nLayer);
         }
+        this.layers = combinedLayers;
+
         denseLayer = denseLayer.combine(from.getDenseLayer());
         bias = bias.combine(from.getBias());
         return this;

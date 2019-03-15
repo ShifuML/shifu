@@ -15,14 +15,14 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
 
 /**
  * {@link EmbedFieldLayer} is for each column like sparse categorical feature. The input of this layer is one-hot
@@ -84,9 +84,7 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
         this.columnId = columnId;
         this.out = out;
         this.in = in;
-        for(int i = 0; i < in; i++) {
-            this.weights[i] = new float[out];
-        }
+        this.weights = new float[in][out];
     }
 
     @Override
@@ -98,7 +96,7 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
     public float[] forward(SparseInput si) {
         this.lastInput = si;
         int valueIndex = si.getValueIndex();
-        float[] results = new float[this.in];
+        float[] results = new float[this.out];
         for(int i = 0; i < results.length; i++) {
             results[i] = si.getValue() * this.getWeights()[valueIndex][i];
         }
@@ -109,9 +107,7 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
     public float[] backward(float[] backInputs, float sig) {
         // gradients computation
         int valueIndex = this.lastInput.getValueIndex();
-        if(this.wGrads.get(valueIndex) == null) {
-            this.wGrads.put(valueIndex, new float[this.out]);
-        }
+        this.wGrads.computeIfAbsent(valueIndex, k -> new float[this.out]);
         for(int j = 0; j < this.out; j++) {
             this.wGrads.get(valueIndex)[j] += (this.lastInput.getValue() * backInputs[j] * sig);
         }

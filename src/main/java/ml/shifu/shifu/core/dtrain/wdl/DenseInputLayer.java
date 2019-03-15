@@ -16,7 +16,7 @@
 package ml.shifu.shifu.core.dtrain.wdl;
 
 import ml.shifu.shifu.core.dtrain.AssertUtils;
-import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -51,7 +51,7 @@ public class DenseInputLayer extends AbstractLayer<float[], float[], float[], fl
     @Override
     public float[] forward(float[] inputs) {
         AssertUtils.assertNotNull(inputs);
-        AssertUtils.assertEquals(inputs, this.out);
+        AssertUtils.assertEquals(inputs.length, this.out);
         return inputs;
     }
 

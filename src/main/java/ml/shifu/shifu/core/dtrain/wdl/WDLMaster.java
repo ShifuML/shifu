@@ -22,8 +22,8 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.core.dtrain.wnd.optimization.AdaGrad;
-import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.GradientDescent;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.io.IOUtils;
@@ -51,8 +51,8 @@ import java.util.Properties;
  * AdaGrad to do model updates.
  * 
  * <p>
- * At the first iteration, workre results are ignored because after master model initialization, workers training model
- * needs pulling lastest consistent model in worker while not to use on random model. In
+ * At the first iteration, worker results are ignored because after master model initialization, workers training model
+ * needs pulling latest consistent model in worker while not to use on random model. In
  * {@link #doCompute(MasterContext)}, the first iteration is to just send back model to workers and in {@link WDLWorker}
  * the first iteration is just to return an empty parameters without usage in master.
  * 
@@ -84,7 +84,6 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
     /**
      * Learning rate
      */
-    @SuppressWarnings("unused")
     private double learningRate;
 
     /**
@@ -153,10 +152,11 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         int numLayers = (Integer) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
-        Float l2reg = (Float) this.validParams.get(CommonConstants.WDL_L2_REG);
+        Float l2reg = ((Double) this.validParams.get(CommonConstants.WDL_L2_REG)).floatValue();
         this.wnd = new WideAndDeep(idBinCateSizeMap, numInputs, numericalIds, embedColumnIds, embedOutputList,
                 wideColumnIds, hiddenNodes, actFunc, l2reg);
-        this.optimizer = new AdaGrad(this.learningRate);
+        // TODO: make this configurable
+        this.optimizer = new GradientDescent(this.learningRate);
     }
 
     @Override
@@ -210,7 +210,8 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         } else {
             this.wnd.initWeights();
         }
-        params.setWnd(this.wnd); // weights from this.wnd
+        // weights from this.wnd
+        params.setWnd(this.wnd);
         return params;
     }
 

@@ -15,14 +15,14 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
+import ml.shifu.shifu.core.dtrain.AssertUtils;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import ml.shifu.shifu.core.dtrain.AssertUtils;
-import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
 
 /**
  * {@link EmbedLayer} merges all embedding layers together and distributes forward and backward computation to
@@ -114,7 +114,7 @@ public class EmbedLayer
             out.writeInt(0);
         } else {
             out.writeInt(this.embedLayers.size());
-            for(EmbedFieldLayer embedFieldLayer: embedLayers) {
+            for(EmbedFieldLayer embedFieldLayer: this.embedLayers) {
                 embedFieldLayer.write(out, this.serializationType);
             }
         }
@@ -128,18 +128,11 @@ public class EmbedLayer
     @Override
     public void readFields(DataInput in) throws IOException {
         int embedLayerSize = in.readInt();
-        if(this.embedLayers == null) {
-            this.embedLayers = new ArrayList<EmbedFieldLayer>();
-        }
-        for(int i = 0; i < embedLayerSize; i++) {
-            if(this.embedLayers.get(i) == null) {
-                this.embedLayers.add(i, new EmbedFieldLayer());
-            }
-            this.embedLayers.get(i).readFields(in, this.serializationType);
-        }
-
-        while(this.embedLayers.size() > embedLayerSize) {
-            this.embedLayers.remove(embedLayerSize);
+        this.embedLayers = new ArrayList<>(embedLayerSize);
+        for(int i = 0; i < embedLayerSize; i ++) {
+            EmbedFieldLayer embedFieldLayer = new EmbedFieldLayer();
+            embedFieldLayer.readFields(in, this.serializationType);
+            this.embedLayers.add(embedFieldLayer);
         }
     }
 
@@ -150,10 +143,12 @@ public class EmbedLayer
     public EmbedLayer combine(EmbedLayer from) {
         List<EmbedFieldLayer> fromLayers = from.getEmbedLayers();
         int size = this.embedLayers.size();
+        List<EmbedFieldLayer> combinedLayers = new ArrayList<EmbedFieldLayer>(size);
         for(int i = 0; i < size; i++) {
             EmbedFieldLayer nLayer = embedLayers.get(i).combine(fromLayers.get(i));
-            this.embedLayers.add(i, nLayer);
+            combinedLayers.add(nLayer);
         }
+        this.embedLayers = combinedLayers;
         return this;
     }
 

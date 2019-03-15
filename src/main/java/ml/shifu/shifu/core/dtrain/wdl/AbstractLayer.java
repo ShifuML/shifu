@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import ml.shifu.guagua.io.Combinable;
-import ml.shifu.shifu.core.dtrain.wnd.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 
 /**
  * @author juguo

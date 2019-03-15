@@ -24,7 +24,10 @@ import java.io.IOException;
 
 /**
  * {@link Activation} is basic abstraction for different kind of activation methods like sigmoid, ReLU, tanh ...
- * 
+ *
+ * Empty construction methods is required for it's implementation class. This will be used to create reflection
+ * initialize this type of activation.
+ *
  * @author Zhang David (pengzhang@paypal.com)
  */
 public abstract class Activation implements Layer<float[], float[], float[], float[]>, Bytable {
