@@ -79,6 +79,7 @@ import org.encog.ml.BasicML;
 import org.encog.ml.data.MLDataSet;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.joda.time.ReadableInstant;
+import org.reflections.Reflections;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xerial.snappy.Snappy;
@@ -330,9 +331,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) // NN algorithm
                 || LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) // LR algorithm
                 || CommonUtils.isTreeModel(alg) // RF or GBT algortihm
-                || Constants.TF_ALG_NAME.equalsIgnoreCase(alg))) {
+                || Constants.TF_ALG_NAME.equalsIgnoreCase(alg)
+                || Constants.WDL.equalsIgnoreCase(alg))) {
             throw new IllegalArgumentException(
-                    "Currently we only support NN, LR, RF(RandomForest) and GBDT(Gradient Boost Desicion Tree) distributed training.");
+                    "Currently we only support NN, LR, RF(RandomForest), WDL and GBDT(Gradient Boost Desicion Tree) distributed training.");
         }
 
         if((LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)
@@ -1625,6 +1627,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         jars.add(JarManager.findContainingJar(ZooKeeper.class));
         // netty-*.jar
         jars.add(JarManager.findContainingJar(ServerBootstrap.class));
+
+        jars.add(JarManager.findContainingJar(Reflections.class));
+
         if(modelConfig.getNormalize().getIsParquet()) {
             // this jars are only for parquet format
             // parquet-mr-*.jar

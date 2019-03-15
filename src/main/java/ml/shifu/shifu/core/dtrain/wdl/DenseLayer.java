@@ -15,11 +15,11 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 
 /**
  * {@link DenseLayer} defines normal hidden layer in neural network while activation is not included but in one
@@ -88,9 +88,7 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
         this.in = in;
         this.l2reg = l2reg;
         this.bias = new float[out];
-        for(int i = 0; i < in; i++) {
-            this.weights[i] = new float[out];
-        }
+        this.weights = new float[in][out];
     }
 
     /**

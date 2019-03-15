@@ -37,6 +37,8 @@ import java.io.IOException;
  */
 public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
 
+    private static final boolean WDL_IS_NULL = true;
+
     /**
      * # of weighted training records per such worker.
      */
@@ -158,18 +160,24 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
     @Override
     public void doWrite(DataOutput out) throws IOException {
         if(this.wnd == null) {
-            throw new IOException("WideAndDeep instance is null.");
+            // for the first iteration, the wnd will be null
+            out.writeBoolean(WDL_IS_NULL);
+        } else {
+            out.writeBoolean(!WDL_IS_NULL);
+            this.wnd.setSerializationType(serializationType);
+            this.wnd.write(out);
         }
-        this.wnd.setSerializationType(serializationType);
-        this.wnd.write(out);
     }
 
     @Override
     public void doReadFields(DataInput in) throws IOException {
-        if(this.wnd == null) {
-            this.wnd = new WideAndDeep();
+        boolean wdlIsNull = in.readBoolean();
+        if (!wdlIsNull) {
+            if(this.wnd == null) {
+                this.wnd = new WideAndDeep();
+            }
+            this.wnd.readFields(in);
         }
-        this.wnd.readFields(in);
     }
 
     /**
