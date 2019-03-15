@@ -80,10 +80,6 @@ public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideA
 
     private SerializationType serializationType = SerializationType.MODEL_SPEC;
 
-    public WideAndDeep(WideAndDeep wnd) {
-        // TODO
-    }
-
     public WideAndDeep() {
     }
 
@@ -655,7 +651,6 @@ public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideA
             embedOutputs = SerializationUtil.readIntList(in, embedOutputs);
             wideColumnIds = SerializationUtil.readIntList(in, wideColumnIds);
             hiddenNodes = SerializationUtil.readIntList(in, hiddenNodes);
-            l2reg = in.readFloat();
         }
     }
 

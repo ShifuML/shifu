@@ -535,7 +535,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 super.getPathFinder().getScriptPath("bin/dist_pytrain.sh"));
 
         // set application name
-        globalConf.set("shifu.application.name", "Shifu_Tensorflow:" + modelConfig.getBasic().getName());
+        globalConf.set("shifu.application.name", "Shifu Tensorflow: " + modelConfig.getBasic().getName());
 
         // set yarn queue
         globalConf.set("shifu.yarn.queue", Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
