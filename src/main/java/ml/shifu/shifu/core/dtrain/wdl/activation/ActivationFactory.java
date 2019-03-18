@@ -35,19 +35,22 @@ public class ActivationFactory {
 
     private static ActivationFactory activationFactory;
 
-    private static Map<String, Activation> actionList = new HashMap<String, Activation>() {{
-        Reflections reflections = new Reflections("ml.shifu.shifu.core.dtrain.wdl");
-        Set<Class<? extends Activation>> classes = reflections.getSubTypesOf(Activation.class);
-        for(Class<? extends Activation> activation: classes) {
-            try {
-                put(activation.getName().toLowerCase(), activation.newInstance());
-            } catch (InstantiationException e) {
-                LOG.error("Don't have empty construction method for " + activation.getName(), e);
-            } catch (IllegalAccessException e) {
-                LOG.error("Don't have public construction method for " + activation.getName(), e);
+    private static Map<String, Activation> actionList = new HashMap<String, Activation>() {
+        private static final long serialVersionUID = -7080829888400897248L;
+        {
+            Reflections reflections = new Reflections("ml.shifu.shifu.core.dtrain.wdl");
+            Set<Class<? extends Activation>> classes = reflections.getSubTypesOf(Activation.class);
+            for(Class<? extends Activation> activation: classes) {
+                try {
+                    put(activation.getName().toLowerCase(), activation.newInstance());
+                } catch (InstantiationException e) {
+                    LOG.error("Don't have empty construction method for " + activation.getName(), e);
+                } catch (IllegalAccessException e) {
+                    LOG.error("Don't have public construction method for " + activation.getName(), e);
+                }
             }
         }
-    }};
+    };
 
     private ActivationFactory() {
         LOG.info(actionList.size() + " type activation loaded into system.");
@@ -57,7 +60,7 @@ public class ActivationFactory {
      * Public method to get instance
      *
      * @return
-     *      The singleton instance.
+     *         The singleton instance.
      */
     public static ActivationFactory getInstance() {
         if(activationFactory == null) {
@@ -70,9 +73,9 @@ public class ActivationFactory {
      * Get Activation by the name.
      *
      * @param name
-     *          the activation name.
+     *            the activation name.
      * @return
-     *          Activation if matched, else {@link #DEFAULT_ACTIVATION}
+     *         Activation if matched, else {@link #DEFAULT_ACTIVATION}
      */
     public Activation getActivation(String name) {
         if(name == null) {

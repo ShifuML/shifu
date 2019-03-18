@@ -53,7 +53,6 @@ final_model_path = os.environ["FINAL_MODEL_PATH"]
 socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 socket_client.connect(("127.0.0.1", socket_server_port))
 
-
 def nn_layer(input_tensor, input_dim, output_dim, act=tf.nn.tanh, act_op_name=None):
     l2_reg = tf.contrib.layers.l2_regularizer(scale=0.1)
     weights = tf.get_variable(name="weight_"+str(act_op_name),
@@ -95,6 +94,8 @@ def generate_from_modelconf(x, model_conf):
     activation_func = [get_activation_fun(s) for s in train_params['ActivationFunc']]
 
     global FEATURE_COUNT
+    logging.info("NN information: feature count: %s, hiddern layer: %s, hidden nodes: %s" % (FEATURE_COUNT, num_hidden_layer, str(num_hidden_nodes)))
+    
     # first layer
     previous_layer = nn_layer(x, FEATURE_COUNT, num_hidden_nodes[0],
                      act=activation_func[0], act_op_name="hidden_layer" + str(0))

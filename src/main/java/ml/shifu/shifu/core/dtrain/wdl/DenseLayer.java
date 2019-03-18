@@ -185,16 +185,16 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
     }
 
     @Override
-    public float[] backward(float[] backInputs, float sig) {
+    public float[] backward(float[] backInputs) {
         // gradients compute and L2 reg here
         for(int i = 0; i < this.in; i++) {
             for(int j = 0; j < this.out; j++) {
-                this.wGrads[i][j] += (this.lastInput[i] * backInputs[j] * sig); // basic derivatives
-                this.wGrads[i][j] += (this.l2reg * this.weights[i][j] * sig);// l2 loss derivatives
+                this.wGrads[i][j] += (this.lastInput[i] * backInputs[j]); // basic derivatives
+                this.wGrads[i][j] += (this.l2reg * this.weights[i][j]);// l2 loss derivatives
             }
         }
         for(int j = 0; j < this.out; j++) {
-            this.bGrads[j] = (backInputs[j] * sig); // no need l2 reg here as bias no need
+            this.bGrads[j] = (backInputs[j]); // no need l2 reg here as bias no need
         }
 
         // compute back inputs

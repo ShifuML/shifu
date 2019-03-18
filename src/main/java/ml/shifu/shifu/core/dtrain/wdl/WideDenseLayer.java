@@ -88,11 +88,11 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
     }
 
     @Override
-    public float[] backward(float[] backInputs, float sig) {
+    public float[] backward(float[] backInputs) {
         // gradients compute and L2 reg here
         for(int i = 0; i < this.in; i++) {
-            this.wGrads[i] += (this.lastInput[i] * backInputs[0] * sig); // basic derivatives
-            this.wGrads[i] += (this.l2reg * this.weights[i] * sig);// l2 loss derivatives
+            this.wGrads[i] += (this.lastInput[i] * backInputs[0]); // basic derivatives
+            this.wGrads[i] += (this.l2reg * this.weights[i]);// l2 loss derivatives
         }
         // no need compute backward outputs as it is last layer
         return null;

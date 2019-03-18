@@ -68,7 +68,7 @@ public class PersistWideAndDeep {
      * Load the WideAndDeep from input stream.
      * @param dis, the data input stream
      * @return the WideAndDeep model
-     * @throws IOException IOException when IO operation
+     * @throws IOException IOException when IO operatio
      */
     public static WideAndDeep load(DataInputStream dis) throws IOException {
         AssertUtils.assertEquals(dis.readUTF(), WideAndDeep.class.getName());

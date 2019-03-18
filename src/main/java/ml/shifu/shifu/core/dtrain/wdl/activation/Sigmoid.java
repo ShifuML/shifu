@@ -44,7 +44,7 @@ public class Sigmoid extends Activation {
     }
 
     @Override
-    public float[] backward(float[] out, float sig) {
+    public float[] backward(float[] out) {
         AssertUtils.assertFloatArrayNotNullAndLengthEqual(out, lastForward);
 
         float[] results = new float[out.length];

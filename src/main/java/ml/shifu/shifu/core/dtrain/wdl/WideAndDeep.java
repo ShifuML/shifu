@@ -189,24 +189,29 @@ public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideA
     }
 
     @SuppressWarnings("rawtypes")
-    public float[] backward(float[] error, float sig) {
+    public float[] backward(float[] predicts, float[] actuals, float sig) {
+        float[] grad2Logits = new float[predicts.length];
+        for(int i = 0; i < grad2Logits.length; i++) {
+            grad2Logits[i] = (predicts[i] - actuals[i]) * (predicts[i] * (1- predicts[i])) * sig;
+            // error * sigmoid derivertive * weight
+        }
         // wide layer backward, as wide layer in LR actually in backward, only gradients computation is needed.
-        this.wl.backward(error, sig);
+        this.wl.backward(grad2Logits);
 
         // deep layer backward, for gradients computation inside of each layer
-        float[] backInputs = this.finalLayer.backward(error, sig);
+        float[] backInputs = this.finalLayer.backward(grad2Logits);
         for(int i = 0; i < this.hiddenLayers.size(); i++) {
             Layer layer = this.hiddenLayers.get(this.hiddenLayers.size() - 1 - i);
             if(layer instanceof DenseLayer) {
-                backInputs = ((DenseLayer) layer).backward(backInputs, sig);
+                backInputs = ((DenseLayer) layer).backward(backInputs);
             } else if(layer instanceof Activation) {
-                backInputs = ((Activation) layer).backward(backInputs, sig);
+                backInputs = ((Activation) layer).backward(backInputs);
             }
         }
 
         // embedding layer backward, gradients computation
         List<float[]> backInputList = splitArray(this.dil.getOutDim(), this.ecl.getEmbedLayers(), backInputs);
-        this.ecl.backward(backInputList, sig);
+        this.ecl.backward(backInputList);
 
         // no need return final backward outputs as gradients are computed well
         return null;
@@ -520,7 +525,6 @@ public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideA
      * 
      * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
      */
-    @SuppressWarnings("rawtypes")
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeInt(this.serializationType.getValue());
@@ -586,7 +590,6 @@ public class WideAndDeep implements WeightInitializer, Bytable, Combinable<WideA
      * 
      * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
      */
-    @SuppressWarnings("rawtypes")
     @Override
     public void readFields(DataInput in) throws IOException {
         this.serializationType = SerializationType.getSerializationType(in.readInt());
