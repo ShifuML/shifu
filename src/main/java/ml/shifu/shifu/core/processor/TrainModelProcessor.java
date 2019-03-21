@@ -26,6 +26,7 @@ import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.container.obj.ModelTrainConf.MultipleClassification;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.AbstractTrainer;
@@ -497,6 +498,55 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
+     * @param globalConf
+     */
+    private void setSelectedColumnForWideDeep(Configuration globalConf) {
+        int targetColumnNum = -1;
+        int weightColumnNum = -1;
+        List<Integer> seletectedNumericColumnNums = new ArrayList<Integer>();
+        List<Integer> seletectedCategoryColumnNums = new ArrayList<Integer>();
+        String weightColumnName = this.modelConfig.getDataSet().getWeightColumnName();
+
+        for(int i = 0; i < columnConfigList.size(); i++) {
+            ColumnConfig cc = columnConfigList.get(i);
+            if(cc.isTarget()) {
+                targetColumnNum = i;
+            } else if(cc.isFinalSelect()) {
+                if (cc.isCategorical()) {
+                    seletectedCategoryColumnNums.add(i);
+                } else {
+                    seletectedNumericColumnNums.add(i);
+                }
+            }
+
+            if(weightColumnName.equalsIgnoreCase(cc.getColumnName())) {
+                weightColumnNum = i;
+            }
+        }
+        if((seletectedNumericColumnNums.size() + seletectedCategoryColumnNums.size()) == 0) {
+            boolean hasCandidate = CommonUtils.hasCandidateColumns(columnConfigList);
+            for(int i = 0; i < columnConfigList.size(); i++) {
+                ColumnConfig cc = columnConfigList.get(i);
+                if(cc.isTarget() || cc.isMeta()) {
+                    continue;
+                }
+                if(CommonUtils.isGoodCandidate(cc, hasCandidate)) {
+                    if (cc.isCategorical()) {
+                        seletectedCategoryColumnNums.add(i);
+                    } else {
+                        seletectedNumericColumnNums.add(i);
+                    }
+                }
+            }
+        }
+        
+        globalConf.set("shifu.application.target-column-number", Integer.toString(targetColumnNum));
+        globalConf.set("shifu.application.weight-column-number", Integer.toString(weightColumnNum));
+        globalConf.set("shifu.application.selected-numeric-column-numbers", StringUtils.join(seletectedNumericColumnNums, ' '));
+        globalConf.set("shifu.application.selected-category-column-numbers", StringUtils.join(seletectedCategoryColumnNums, ' '));
+    }
+    
+    /**
      * update some fields of conf based on current project
      * 
      * @throws IOException
@@ -504,6 +554,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     private void generateGlobalConf() throws IOException {
         if(HDFSUtils.getLocalFS().exists(new Path(globalDefaultConfFile.getName()))) {
             // local project already have global conf, so we do not copy it again
+            LOG.info("Project already has global conf");
             return;
         }
 
@@ -529,8 +580,20 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         globalConf.set("shifu.application.column-conf", super.getPathFinder().getColumnConfigPath(SourceType.LOCAL));
 
         // set python script
-        globalConf.set("shifu.application.python-script-path",
-                super.getPathFinder().getScriptPath("scripts/ssgd_monitor.py"));
+        if (this.modelConfig.getNormalize().getNormType() == NormType.ZSCALE_INDEX) {
+            // Running wide and deep
+            globalConf.set("shifu.application.python-script-path",
+                    super.getPathFinder().getScriptPath("scripts/wnp_ssgd.py"));
+            
+            setSelectedColumnForWideDeep(globalConf);
+        } else {
+            // Running normal NN
+            globalConf.set("shifu.application.python-script-path",
+                    super.getPathFinder().getScriptPath("scripts/ssgd_monitor.py"));
+            
+            // set selected column number; target column number; weight column number
+            setSelectedTargetAndWeightColumnNumber(globalConf);
+        }
 
         // set shell to lauch python
         globalConf.set("shifu.application.python-shell-path",
@@ -541,9 +604,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         // set yarn queue
         globalConf.set("shifu.yarn.queue", Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
-
-        // set selected column number; target column number; weight column number
-        setSelectedTargetAndWeightColumnNumber(globalConf);
 
         // set data total count
         globalConf.set("shifu.application.total-training-data-number",
@@ -562,7 +622,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         for(Map.Entry<Object, Object> entry: shifuConfigMap.entrySet()) {
             globalConf.set(entry.getKey().toString(), entry.getValue().toString());
         }
-
+        
         OutputStream os = null;
         try {
             // Write user's overridden conf to an xml to be localized.
@@ -1795,7 +1855,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     /**
      * A thread used to tail progress log from hdfs log file.
      */
-    private static class TailThread extends Thread {
+    public static class TailThread extends Thread {
         private long offset[];
         private String[] progressLogs;
 

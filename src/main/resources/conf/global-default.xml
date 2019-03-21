@@ -7,7 +7,7 @@
   <!-- Application configurations -->
   <property>
     <description>Default queue to submit to YARN.</description>
-    <name>shifu.yarn.queue</name>
+    <name>shifu.application.yarn.queue</name>
     <value>default</value>
   </property>
 
