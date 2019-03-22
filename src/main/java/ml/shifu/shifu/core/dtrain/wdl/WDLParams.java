@@ -167,6 +167,11 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
             this.wnd.setSerializationType(serializationType);
             this.wnd.write(out);
         }
+        out.writeDouble(this.trainCount);
+        out.writeDouble(this.validationCount);
+        out.writeDouble(this.trainError);
+        out.writeDouble(this.validationError);
+        out.writeInt(this.serializationType.getValue());
     }
 
     @Override
@@ -178,6 +183,11 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
             }
             this.wnd.readFields(in);
         }
+        this.trainCount = in.readDouble();
+        this.validationCount = in.readDouble();
+        this.trainError = in.readDouble();
+        this.validationError = in.readDouble();
+        this.serializationType = SerializationType.getSerializationType(in.readInt());
     }
 
     /**
