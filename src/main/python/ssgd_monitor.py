@@ -54,7 +54,7 @@ socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 socket_client.connect(("127.0.0.1", socket_server_port))
 
 def nn_layer(input_tensor, input_dim, output_dim, act=tf.nn.tanh, act_op_name=None):
-    l2_reg = tf.contrib.layers.l2_regularizer(scale=0.1)
+    l2_reg = tf.contrib.layers.l2_regularizer(scale=0.01)
     weights = tf.get_variable(name="weight_"+str(act_op_name),
                               shape=[input_dim, output_dim],
                               regularizer=l2_reg,
