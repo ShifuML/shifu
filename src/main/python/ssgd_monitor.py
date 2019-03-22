@@ -280,9 +280,8 @@ def main(_):
 
                     _, l, gs = sess.run([train_step, loss, global_step], feed_dict=train_feed)
                 training_time = time.time() - start
-
-                time.sleep(5)
-
+                
+                # compute validation loss TODO, check if batch compute
                 valid_loss, gs = sess.run([loss, global_step], feed_dict={input_placeholder: valid_x,
                                                                           label_placeholder: valid_y,
                                                                           sample_weight_placeholder: valid_sample_w}
