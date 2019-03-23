@@ -28,7 +28,7 @@ BUILD_MODEL_BY_CONF_ENABLE = True
 REPLICAS_TO_AGGREGATE_RATIO = 1
 
 DELIMITER = '|'
-BATCH_SIZE = 32
+BATCH_SIZE = 256
 
 # read from env
 cluster_spec = json.loads(os.environ["CLUSTER_SPEC"])
@@ -61,8 +61,10 @@ def wide_model(numeric_input, category_input, vocabs):
     category_sum = None
     # Append embadding category to numeric_sum
     for i in range(0, len(vocabs)):
-        embedding = tf.get_variable("wideem" + str(i), [vocabs[i], 1],
-                                    initializer=tf.contrib.layers.xavier_initializer())
+        embedding = tf.get_variable("wideem" + str(i), [vocabs[i], 8],
+                                    initializer=tf.contrib.layers.xavier_initializer(),
+                                    #partitioner=tf.fixed_size_partitioner(n_pss))
+                                    partitioner=tf.min_max_variable_partitioner(n_pss, 0, 2 << 10))
         # Pick one column from category input
         col = tf.nn.embedding_lookup(transpose_category_input, [i])[0]
         # Same as make [0001]*[w1,w2,w3,w4] = lookup w4
@@ -81,14 +83,16 @@ def wide_model(numeric_input, category_input, vocabs):
 
 
 def deep_model(numeric_input, category_input, vocabs, hidden1, hidden2, hidden3):
-    embedding_output_cnt = 2
+    embedding_output_cnt = 8
 
     transpose_category_input = tf.transpose(category_input)
 
     # append emmbadding category input to numeric
     for i in range(0, len(vocabs)):
         embedding = tf.get_variable("deepem" + str(i), [vocabs[i], embedding_output_cnt],
-                                    initializer=tf.contrib.layers.xavier_initializer())
+                                    initializer=tf.contrib.layers.xavier_initializer(),
+                                    #partitioner=tf.fixed_size_partitioner(n_pss))
+                                    partitioner=tf.min_max_variable_partitioner(n_pss, 0, 2 << 10))
         # Pick one column from category input
 
         col = tf.nn.embedding_lookup(transpose_category_input, [i])[0]
@@ -226,7 +230,8 @@ def main(_):
         worker_device = "/job:%s/task:%d" % (job_name, task_index)
         with tf.device(tf.train.replica_device_setter(#ps_tasks=n_pss,
                                                       cluster=cluster,
-                                                      worker_device=worker_device
+                                                      worker_device=worker_device,
+                                                      ps_strategy=tf.contrib.training.GreedyLoadBalancingStrategy(n_pss, tf.contrib.training.byte_size_load_fn)
                                                       )):
             numeric_input_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, NUMERIC_FEATURE_COUNT),
                                                name="shifu_numeric_input_0")
