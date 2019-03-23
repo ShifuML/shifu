@@ -45,10 +45,8 @@ public interface Layer<FIN, FOUT, BIN, BOUT> {
      * 
      * @param backInput
      *            the backward input from last layer backward.
-     * @param significance
-     *            weight/significance per each record in backward computation.
      * @return backward output result which is typically corresponding like input of layer.
      */
-    BOUT backward(BIN backInput, float significance);
+    BOUT backward(BIN backInput);
 
 }

@@ -332,8 +332,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) // NN algorithm
                 || LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) // LR algorithm
                 || CommonUtils.isTreeModel(alg) // RF or GBT algortihm
-                || Constants.TF_ALG_NAME.equalsIgnoreCase(alg)
-                || Constants.WDL.equalsIgnoreCase(alg))) {
+                || Constants.TF_ALG_NAME.equalsIgnoreCase(alg) || Constants.WDL.equalsIgnoreCase(alg))) {
             throw new IllegalArgumentException(
                     "Currently we only support NN, LR, RF(RandomForest), WDL and GBDT(Gradient Boost Desicion Tree) distributed training.");
         }
@@ -359,9 +358,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         // check if parquet format norm output is consistent with current isParquet setting.
-        boolean isParquetMetaFileExist = ShifuFileUtils
-                .getFileSystemBySourceType(super.getModelConfig().getDataSet().getSource())
-                .exists(new Path(super.getPathFinder().getNormalizedDataPath(), "_common_metadata"));
+        boolean isParquetMetaFileExist = false;
+        try {
+            isParquetMetaFileExist = ShifuFileUtils
+                    .getFileSystemBySourceType(super.getModelConfig().getDataSet().getSource())
+                    .exists(new Path(super.getPathFinder().getNormalizedDataPath(), "_common_metadata"));
+        } catch (Exception e) {
+            isParquetMetaFileExist = false;
+        }
         if(super.modelConfig.getNormalize().getIsParquet() && !isParquetMetaFileExist) {
             throw new IllegalArgumentException("Your normlized input in "
                     + super.getPathFinder().getNormalizedDataPath()
@@ -600,7 +604,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 super.getPathFinder().getScriptPath("bin/dist_pytrain.sh"));
 
         // set application name
-        globalConf.set("shifu.application.name", "Shifu_Tensorflow:" + modelConfig.getBasic().getName());
+        globalConf.set("shifu.application.name", "Shifu Tensorflow: " + modelConfig.getBasic().getName());
 
         // set yarn queue
         globalConf.set("shifu.yarn.queue", Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));

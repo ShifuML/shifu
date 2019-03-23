@@ -104,12 +104,12 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
     }
 
     @Override
-    public float[] backward(float[] backInputs, float sig) {
+    public float[] backward(float[] backInputs) {
         // gradients computation
         int valueIndex = this.lastInput.getValueIndex();
         this.wGrads.computeIfAbsent(valueIndex, k -> new float[this.out]);
         for(int j = 0; j < this.out; j++) {
-            this.wGrads.get(valueIndex)[j] += (this.lastInput.getValue() * backInputs[j] * sig);
+            this.wGrads.get(valueIndex)[j] += (this.lastInput.getValue() * backInputs[j]);
         }
 
         // no need compute backward outputs as it is last layer

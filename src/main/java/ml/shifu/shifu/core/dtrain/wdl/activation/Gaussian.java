@@ -68,7 +68,7 @@ public class Gaussian extends Activation {
     }
 
     @Override
-    public float[] backward(float[] outputs, float sig) {
+    public float[] backward(float[] outputs) {
         float[] results = new float[outputs.length];
         for(int i = 0; i < outputs.length; i++) {
             float interExpValue = this.width * this.width * this.lastInput[i] * this.lastInput[i];

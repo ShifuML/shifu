@@ -31,7 +31,7 @@ public class TanH extends Activation {
     }
 
     @Override
-    public float[] backward(float[] backInput, float significance) {
+    public float[] backward(float[] backInput) {
         float[] results = new float[backInput.length];
         for(int i = 0; i < results.length; i++) {
             results[i] = 1 - backInput[i] * backInput[i];

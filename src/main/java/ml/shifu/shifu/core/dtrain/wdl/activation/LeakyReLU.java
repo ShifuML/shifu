@@ -58,7 +58,7 @@ public class LeakyReLU extends Activation {
     }
 
     @Override
-    public float[] backward(float[] backInput, float significance) {
+    public float[] backward(float[] backInput) {
         float[] results = new float[backInput.length];
         for(int i = 0; i < results.length; i++) {
             results[i] = this.lastInput[i] <= this.thresholdLow ? this.alpha : 1.0f;

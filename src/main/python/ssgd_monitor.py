@@ -113,6 +113,8 @@ def generate_from_modelconf(x, model_conf):
         l2_scale = 0.01
 
     global FEATURE_COUNT
+    logging.info("NN information: feature count: %s, hiddern layer: %s, hidden nodes: %s" % (FEATURE_COUNT, num_hidden_layer, str(num_hidden_nodes)))
+    
     # first layer
     previous_layer = nn_layer(x, FEATURE_COUNT, num_hidden_nodes[0], l2_scale=l2_scale,
                      act=activation_func[0], act_op_name="hidden_layer" + str(0))
@@ -303,9 +305,8 @@ def main(_):
 
                     _, l, gs = sess.run([train_step, loss, global_step], feed_dict=train_feed)
                 training_time = time.time() - start
-
-                time.sleep(5)
-
+                
+                # compute validation loss TODO, check if batch compute
                 valid_loss, gs = sess.run([loss, global_step], feed_dict={input_placeholder: valid_x,
                                                                           label_placeholder: valid_y,
                                                                           sample_weight_placeholder: valid_sample_w}

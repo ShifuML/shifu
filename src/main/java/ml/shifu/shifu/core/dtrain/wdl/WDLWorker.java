@@ -690,10 +690,11 @@ public class WDLWorker extends
         double trainSumError = 0d, validSumError = 0d;
         for(Data data: trainingData) {
             float[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data), getWideInputs(data));
-            float error = sigmoid(logits[0]) - data.label;
+            float predict = sigmoid(logits[0]);
+            float error = predict - data.label;
             // TODO, logloss, squredloss, weighted error or not
             trainSumError += data.weight * error * error;
-            this.wnd.backward(new float[] { error }, data.getWeight());
+            this.wnd.backward(new float[] { predict }, new float[] { data.label }, data.getWeight());
         }
 
         // compute validation error
@@ -702,7 +703,8 @@ public class WDLWorker extends
             float error = sigmoid(logits[0]) - data.label;
             validSumError += data.weight * error * error;
         }
-
+        
+        LOG.info("training error is {} {}", trainSumError, validSumError);
         // set cnt, error to params and return to master
         WDLParams params = new WDLParams();
         params.setTrainCount(trainCnt);

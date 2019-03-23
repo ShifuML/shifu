@@ -37,7 +37,7 @@ public class Swish extends Activation {
     }
 
     @Override
-    public float[] backward(float[] backInput, float significance) {
+    public float[] backward(float[] backInput) {
         float[] result = new float[backInput.length];
         for(int i = 0; i < result.length; i++) {
             float sigmoid = (float) (1 / (1.0 + Math.exp(-lastInput[i])));
