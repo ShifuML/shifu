@@ -15,18 +15,18 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 
 /**
  * {@link BiasLayer} used in wide part of WideAndDeep architecture.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class BiasLayer extends AbstractLayer<Float, Float, Float, Float, BiasLayer> implements WeightInitializer {
+public class BiasLayer extends AbstractLayer<Float, Float, Float, Float, BiasLayer> implements WeightInitializer<BiasLayer> {
 
     private float weight;
 
@@ -67,6 +67,11 @@ public class BiasLayer extends AbstractLayer<Float, Float, Float, Float, BiasLay
     @Override
     public void initWeight(InitMethod method) {
         this.weight = method.getInitialisable().initWeight();
+    }
+
+    @Override
+    public void initWeight(BiasLayer updateModel) {
+        this.weight = updateModel.getWeight();
     }
 
     /**

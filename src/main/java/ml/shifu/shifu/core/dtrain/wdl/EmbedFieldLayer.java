@@ -38,7 +38,7 @@ import java.util.Map.Entry;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[], float[], EmbedFieldLayer>
-        implements WeightInitializer {
+        implements WeightInitializer<EmbedFieldLayer> {
 
     /**
      * [in, out] array for deep matrix weights
@@ -198,6 +198,11 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
     @Override
     public void initWeight(InitMethod method) {
         this.weights = method.getInitialisable().initWeight(this.in, this.out);
+    }
+
+    @Override
+    public void initWeight(EmbedFieldLayer updateModel) {
+        this.weights = updateModel.getWeights();
     }
 
     /*
