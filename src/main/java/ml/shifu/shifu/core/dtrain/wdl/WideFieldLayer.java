@@ -86,14 +86,14 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
     }
 
     @Override
-    public float[] backward(float[] backInputs, float sig) {
+    public float[] backward(float[] backInputs) {
         assert backInputs.length == 1;
 
         int valueIndex = this.lastInput.getValueIndex();
         Float grad = this.wGrads.get(valueIndex);
         float tmpGrad = grad == null ? 0 : grad;
-        tmpGrad += (this.lastInput.getValue() * backInputs[0] * sig); // category value here is 1f
-        tmpGrad += (this.l2reg * this.weights[valueIndex] * sig); // l2 loss
+        tmpGrad += (this.lastInput.getValue() * backInputs[0]); // category value here is 1f
+        tmpGrad += (this.l2reg * this.weights[valueIndex]); // l2 loss
         this.wGrads.put(valueIndex, tmpGrad);
 
         // no need compute backward outputs as it is last layer

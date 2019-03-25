@@ -43,7 +43,7 @@ public class Log extends Activation {
     }
 
     @Override
-    public float[] backward(float[] backInput, float significance) {
+    public float[] backward(float[] backInput) {
         float[] results = new float[backInput.length];
         for(int i = 0; i < results.length; i++) {
             if (this.lastInput[i] >= 0) {

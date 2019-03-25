@@ -101,15 +101,15 @@ public class WideLayer
     }
 
     @Override
-    public List<float[]> backward(float[] backInputs, float sig) {
+    public List<float[]> backward(float[] backInputs) {
         // below backward call is for gradients computation in WideFieldLayer and BiasLayer
         List<float[]> list = new ArrayList<>();
         for(int i = 0; i < getLayers().size(); i++) {
-            list.add(this.getLayers().get(i).backward(backInputs, sig));
+            list.add(this.getLayers().get(i).backward(backInputs));
         }
 
-        list.add(this.denseLayer.backward(backInputs, sig));
-        list.add(new float[] { bias.backward(backInputs[0], sig) });
+        list.add(this.denseLayer.backward(backInputs));
+        list.add(new float[] { bias.backward(backInputs[0]) });
         return list;
     }
 

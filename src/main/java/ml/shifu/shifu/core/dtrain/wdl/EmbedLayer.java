@@ -66,11 +66,11 @@ public class EmbedLayer
     }
 
     @Override
-    public List<float[]> backward(List<float[]> backInputList, float sig) {
+    public List<float[]> backward(List<float[]> backInputList) {
         AssertUtils.assertListNotNullAndSizeEqual(this.getEmbedLayers(), backInputList);
         List<float[]> list = new ArrayList<>();
         for(int i = 0; i < this.getEmbedLayers().size(); i++) {
-            list.add(this.getEmbedLayers().get(i).backward(backInputList.get(i), sig));
+            list.add(this.getEmbedLayers().get(i).backward(backInputList.get(i)));
         }
         return list;
     }
@@ -137,7 +137,7 @@ public class EmbedLayer
     public void readFields(DataInput in) throws IOException {
         int embedLayerSize = in.readInt();
         this.embedLayers = new ArrayList<>(embedLayerSize);
-        for(int i = 0; i < embedLayerSize; i ++) {
+        for(int i = 0; i < embedLayerSize; i++) {
             EmbedFieldLayer embedFieldLayer = new EmbedFieldLayer();
             embedFieldLayer.readFields(in, this.serializationType);
             this.embedLayers.add(embedFieldLayer);

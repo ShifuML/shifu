@@ -53,7 +53,7 @@ public class ActivationFactory {
                 LOG.error("Don't have public construction method for " + activation.getName(), e);
             }
         }
-    }};
+    };
 
     private ActivationFactory() {
         LOG.info(actionList.size() + " type activation loaded into system.");
@@ -63,7 +63,7 @@ public class ActivationFactory {
      * Public method to get instance
      *
      * @return
-     *      The singleton instance.
+     *         The singleton instance.
      */
     public static ActivationFactory getInstance() {
         if(activationFactory == null) {
@@ -76,9 +76,9 @@ public class ActivationFactory {
      * Get Activation by the name.
      *
      * @param name
-     *          the activation name.
+     *            the activation name.
      * @return
-     *          Activation if matched, else {@link #DEFAULT_ACTIVATION}
+     *         Activation if matched, else {@link #DEFAULT_ACTIVATION}
      */
     public Activation getActivation(String name) {
         if(name == null) {

@@ -20,8 +20,6 @@ from tensorflow.python.saved_model import signature_def_utils
 from tensorflow.python.saved_model import tag_constants
 import json
 import socket
-#from threading import Thread
-#import tensorboard.main as tb_main
 
 HIDDEN_NODES_COUNT = 20
 VALID_TRAINING_DATA_RATIO = 0.1
@@ -30,7 +28,7 @@ BUILD_MODEL_BY_CONF_ENABLE = True
 REPLICAS_TO_AGGREGATE_RATIO = 1
 
 DELIMITER = '|'
-BATCH_SIZE = 100
+BATCH_SIZE = 256
 
 # read from env
 cluster_spec = json.loads(os.environ["CLUSTER_SPEC"])
@@ -40,8 +38,11 @@ job_name = os.environ["JOB_NAME"]
 task_index = int(os.environ["TASK_ID"])
 socket_server_port = int(os.environ["SOCKET_SERVER_PORT"])  # The port of local java socket server listening, to sync worker training intermediate information with master
 total_training_data_number = int(os.environ["TOTAL_TRAINING_DATA_NUMBER"]) # total data
-feature_column_nums = [int(s) for s in str(os.environ["SELECTED_COLUMN_NUMS"]).split(' ')]  # selected column numbers
-FEATURE_COUNT = len(feature_column_nums)
+
+numeric_feature_column_nums = [int(s) for s in str(os.environ["SELECTED_NUMERIC_COLUMN_NUMS"]).split(' ')]  # selected numeric column numbers
+category_feature_column_nums = [int(s) for s in str(os.environ["SELECTED_CATEGORY_COLUMN_NUMS"]).split(' ')]  # selected category column numbers
+NUMERIC_FEATURE_COUNT = len(numeric_feature_column_nums)
+CATEGORY_FEATURE_COUNT = len(category_feature_column_nums)
 
 sample_weight_column_num = int(os.environ["WEIGHT_COLUMN_NUM"])  # weight column number, default is -1
 target_column_num = int(os.environ["TARGET_COLUMN_NUM"])  # target column number, default is -1
@@ -54,92 +55,96 @@ socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 socket_client.connect(("127.0.0.1", socket_server_port))
 
 
-def nn_layer(input_tensor, input_dim, output_dim, l2_scale=0.01, act=tf.nn.tanh, act_op_name=None):
-    l2_reg = tf.contrib.layers.l2_regularizer(scale=l2_scale)
-    weights = tf.get_variable(name="weight_"+str(act_op_name),
-                              shape=[input_dim, output_dim],
-                              regularizer=l2_reg,
-                              #initializer=tf.glorot_uniform_initializer())
-                              initializer=tf.contrib.layers.xavier_initializer())
-    biases = tf.get_variable(name="biases_"+str(act_op_name),
-                             shape=[output_dim],
-                             regularizer=l2_reg,
-                             #initializer=tf.glorot_uniform_initializer())
-                             initializer=tf.contrib.layers.xavier_initializer())
+# vocabs is each category number of possible categories [3,3] for example.
+def wide_model(numeric_input, category_input, vocabs):
+    transpose_category_input = tf.transpose(category_input)
+    category_sum = None
+    # Append embadding category to numeric_sum
+    for i in range(0, len(vocabs)):
+        embedding = tf.get_variable("wideem" + str(i), [vocabs[i], 8],
+                                    initializer=tf.contrib.layers.xavier_initializer(),
+                                    #partitioner=tf.fixed_size_partitioner(n_pss))
+                                    partitioner=tf.min_max_variable_partitioner(n_pss, 0, 2 << 10))
+        # Pick one column from category input
+        col = tf.nn.embedding_lookup(transpose_category_input, [i])[0]
+        # Same as make [0001]*[w1,w2,w3,w4] = lookup w4
+        embedded_col = tf.nn.embedding_lookup(embedding, col)  # number * embedding output number
 
-    activations = act(tf.matmul(input_tensor, weights) + biases, name=act_op_name)
-    return activations
+        if category_sum is None:
+            category_sum = embedded_col
+        else:
+            category_sum = tf.concat([category_sum, embedded_col], 1)
 
+    tf.set_random_seed(1)
+    w = tf.get_variable("W", [numeric_input.shape[1] + category_sum.shape[1], 1], initializer=tf.contrib.layers.xavier_initializer())
+    wmodel_logits_sum = tf.matmul(tf.concat([numeric_input, category_sum], 1), w)
 
-def get_activation_fun(name):
-    if name is None:
-        return tf.nn.leaky_relu
-    name = name.lower()
-
-    if 'sigmoid' == name:
-        return tf.nn.sigmoid
-    elif 'tanh' == name:
-        return tf.nn.tanh
-    elif 'relu' == name:
-        return tf.nn.relu
-    elif 'leakyrelu' == name:
-        return tf.nn.leaky_relu
-    else:
-        return tf.nn.leaky_relu
+    return wmodel_logits_sum
 
 
-def get_optimizer(conf):
-    if 'Propagation' not in conf or conf['Propagation'] is None:
-        return tf.train.AdamOptimizer
+def deep_model(numeric_input, category_input, vocabs, hidden1, hidden2, hidden3):
+    embedding_output_cnt = 8
 
-    if 'Adam' == conf['Propagation']:
-        return tf.train.AdamOptimizer
-    elif 'B' == conf['Propagation']:
-        return tf.train.GradientDescentOptimizer
-    elif 'AdaGrad' == conf['Propagation']:
-        return tf.train.AdagradOptimizer
-    else:
-        return tf.train.AdamOptimizer
+    transpose_category_input = tf.transpose(category_input)
 
+    # append emmbadding category input to numeric
+    for i in range(0, len(vocabs)):
+        embedding = tf.get_variable("deepem" + str(i), [vocabs[i], embedding_output_cnt],
+                                    initializer=tf.contrib.layers.xavier_initializer(),
+                                    #partitioner=tf.fixed_size_partitioner(n_pss))
+                                    partitioner=tf.min_max_variable_partitioner(n_pss, 0, 2 << 10))
+        # Pick one column from category input
 
-def generate_from_modelconf(x, model_conf):
-    train_params = model_conf['train']['params']
-    num_hidden_layer = int(train_params['NumHiddenLayers'])
-    num_hidden_nodes = [int(s) for s in train_params['NumHiddenNodes']]
-    activation_func = [get_activation_fun(s) for s in train_params['ActivationFunc']]
-    if "RegularizedConstant" in train_params:
-        l2_scale = train_params["RegularizedConstant"]
-    else:
-        l2_scale = 0.01
+        col = tf.nn.embedding_lookup(transpose_category_input, [i])[0]
+        embedding_category = tf.nn.embedding_lookup(embedding, col)  # batch_size*embedding_output_cnt
 
-    global FEATURE_COUNT
-    logging.info("NN information: feature count: %s, hiddern layer: %s, hidden nodes: %s" % (FEATURE_COUNT, num_hidden_layer, str(num_hidden_nodes)))
-    
-    # first layer
-    previous_layer = nn_layer(x, FEATURE_COUNT, num_hidden_nodes[0], l2_scale=l2_scale,
-                     act=activation_func[0], act_op_name="hidden_layer" + str(0))
+        numeric_input = tf.concat([numeric_input, embedding_category], 1)
 
-    for i in range(1, num_hidden_layer):
-        layer = nn_layer(previous_layer, num_hidden_nodes[i-1], num_hidden_nodes[i], l2_scale=l2_scale,
-                     act=activation_func[i], act_op_name="hidden_layer" + str(i))
-        previous_layer = layer
+    # init
+    W1 = tf.get_variable("W1", [numeric_input.shape[1], hidden1], initializer=tf.contrib.layers.xavier_initializer())
+    b1 = tf.get_variable("b1", [hidden1], initializer=tf.zeros_initializer())
+#    W2 = tf.get_variable("W2", [hidden1, hidden2], initializer=tf.contrib.layers.xavier_initializer())
+#    b2 = tf.get_variable("b2", [hidden2], initializer=tf.zeros_initializer())
+#    W3 = tf.get_variable("W3", [hidden2, hidden3], initializer=tf.contrib.layers.xavier_initializer())
+#    b3 = tf.get_variable("b3", [hidden3], initializer=tf.zeros_initializer())
 
-    return previous_layer, num_hidden_nodes[num_hidden_layer-1]
+    # forward
+    Z1 = tf.add(tf.matmul(numeric_input, W1), b1)  # Z1 = np.dot(W1, X) + b1
+    A1 = tf.nn.tanh(Z1)  # A1 = relu(Z1)
+#    Z2 = tf.add(tf.matmul(A1, W2), b2)  # Z2 = np.dot(W2, a1) + b2
+#    A2 = tf.nn.tanh(Z2)  # A2 = relu(Z2)
+#    Z3 = tf.add(tf.matmul(A2, W3), b3)  # Z3 = np.dot(W3,Z2) + b3
+#    A3 = tf.nn.tanh(Z3)
+
+    return A1
 
 
-def model(x, y_, sample_weight, model_conf):
+def build_w_d(numeric_input, category_input, vocabs):
+    #vocabs = [3, 3]  # colum 0 has 3 vocabs and column 1 has 3 vocabs, only used for build graph
+
+    hidden1 = 50
+    hidden2 = 20
+    hidden3 = 10
+
+    dmodel_logits = deep_model(numeric_input, category_input, vocabs, hidden1, hidden2, hidden3)
+    deep_w = tf.get_variable("deep_w", [hidden1, 1], initializer=tf.contrib.layers.xavier_initializer())
+    dmodel_logits_sum = tf.matmul(dmodel_logits, deep_w)  # 3 * 1
+
+    wmodel_logits_sum = wide_model(numeric_input, category_input, vocabs)
+
+    # combine wide and deep
+    final_b = tf.get_variable("final_b", [1, 1], initializer=tf.zeros_initializer())
+    logits = tf.add(tf.add(dmodel_logits_sum, wmodel_logits_sum), final_b)
+
+    output = tf.nn.sigmoid(logits, name="shifu_output_0")
+    return output
+
+
+def model(numeric_input, category_input, y_, sample_weight, model_conf, vocabs):
     logging.info("worker_num:%d" % n_workers)
     logging.info("total_training_data_number:%d" % total_training_data_number)
 
-    if BUILD_MODEL_BY_CONF_ENABLE and model_conf is not None:
-        output_digits, output_nodes = generate_from_modelconf(x, model_conf)
-    else:
-        output_digits = nn_layer(x, FEATURE_COUNT, HIDDEN_NODES_COUNT, act_op_name="hidden_layer1")
-        output_nodes = HIDDEN_NODES_COUNT
-
-    logging.info("output_nodes : " + str(output_nodes))
-    y = nn_layer(output_digits, output_nodes, 1, act=tf.nn.sigmoid, act_op_name="shifu_output_0")
-
+    y = build_w_d(numeric_input, category_input, vocabs)
     # count the number of updates
     global_step = tf.get_variable('global_step', [],
                                   initializer=tf.constant_initializer(0),
@@ -155,8 +160,7 @@ def model(x, y_, sample_weight, model_conf):
         learning_rate = 0.003
     opt = tf.train.SyncReplicasOptimizer(
         #tf.train.GradientDescentOptimizer(learning_rate),
-        #tf.train.AdamOptimizer(learning_rate=learning_rate),
-        get_optimizer(model_conf['train']['params'])(learning_rate=learning_rate),
+        tf.train.AdamOptimizer(learning_rate=learning_rate),
         replicas_to_aggregate=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE * REPLICAS_TO_AGGREGATE_RATIO),
         total_num_replicas=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE),
         name="shifu_sync_replicas")
@@ -203,43 +207,46 @@ def main(_):
             global VALID_TRAINING_DATA_RATIO
             VALID_TRAINING_DATA_RATIO = model_conf['train']['validSetRate']
             is_continue_train = model_conf['train']['isContinuous']
-            global BATCH_SIZE
-            if "MiniBatchs" in model_conf['train']['params']:
-                BATCH_SIZE = model_conf['train']['params']['MiniBatchs']
-
-            logging.info("Batch size: " + str(BATCH_SIZE) + ", VALID_TRAINING_DATA_RATIO: " + str(VALID_TRAINING_DATA_RATIO))
 
         # import data
         context = load_data(training_data_path)
 
         # split data into batch
-        total_batch = int(len(context["train_data"]) / BATCH_SIZE)
-        x_batch = np.array_split(context["train_data"], total_batch)
+        total_batch = int(len(context["numeric_train_data"]) / BATCH_SIZE)
+        numeric_x_batch = np.array_split(context["numeric_train_data"], total_batch)
+        category_x_batch = np.array_split(context["category_train_data"], total_batch)
         y_batch = np.array_split(context["train_target"], total_batch)
         sample_w_batch = np.array_split(context["train_data_sample_weight"], total_batch)
 
-        logging.info("Testing set size: %d" % len(context['valid_data']))
-        logging.info("Training set size: %d" % len(context['train_data']))
-
-        valid_x = np.asarray(context["valid_data"])
+        numeric_valid_x = np.asarray(context["numeric_valid_data"])
+        category_valid_x = np.asarray(context["category_valid_data"])
         valid_y = np.asarray(context["valid_target"])
         valid_sample_w = np.asarray(context["valid_data_sample_weight"])
+
+        logging.info("Testing set size: %d" % len(context["valid_target"]))
+        logging.info("Training set size: %d" % len(context["train_target"]))
 
         # Graph
         worker_device = "/job:%s/task:%d" % (job_name, task_index)
         with tf.device(tf.train.replica_device_setter(#ps_tasks=n_pss,
                                                       cluster=cluster,
-                                                      worker_device=worker_device
+                                                      worker_device=worker_device,
+                                                      ps_strategy=tf.contrib.training.GreedyLoadBalancingStrategy(n_pss, tf.contrib.training.byte_size_load_fn)
                                                       )):
-            input_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, FEATURE_COUNT),
-                                               name="shifu_input_0")
+            numeric_input_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, NUMERIC_FEATURE_COUNT),
+                                               name="shifu_numeric_input_0")
+            category_input_placeholder = tf.placeholder(dtype=tf.int64, shape=(None, CATEGORY_FEATURE_COUNT),
+                                               name="shifu_category_input_0")
+
             label_placeholder = tf.placeholder(dtype=tf.int32, shape=(None, 1))
             sample_weight_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, 1))
 
-            opt, train_step, loss, global_step, y = model(input_placeholder,
+            opt, train_step, loss, global_step, y = model(numeric_input_placeholder,
+                                                          category_input_placeholder,
                                                           label_placeholder,
                                                           sample_weight_placeholder,
-                                                          model_conf)
+                                                          model_conf,
+                                                          context["vocabs"])
 
             # init ops
             init_tokens_op = opt.get_init_tokens_op()
@@ -299,15 +306,19 @@ def main(_):
             try:
                 start = time.time()
                 for i in range(total_batch):
-                    train_feed = {input_placeholder: x_batch[i],
+                    train_feed = {numeric_input_placeholder: numeric_x_batch[i],
+                                  category_input_placeholder: category_x_batch[i],
                                   label_placeholder: y_batch[i],
                                   sample_weight_placeholder: sample_w_batch[i]}
 
                     _, l, gs = sess.run([train_step, loss, global_step], feed_dict=train_feed)
+                    logging.info('finish: ' + str(l))
                 training_time = time.time() - start
-                
-                # compute validation loss TODO, check if batch compute
-                valid_loss, gs = sess.run([loss, global_step], feed_dict={input_placeholder: valid_x,
+
+                time.sleep(5)
+
+                valid_loss, gs = sess.run([loss, global_step], feed_dict={numeric_input_placeholder: numeric_valid_x,
+                                                                          category_input_placeholder: category_valid_x,
                                                                           label_placeholder: valid_y,
                                                                           sample_weight_placeholder: valid_sample_w}
                                           )
@@ -334,18 +345,13 @@ def main(_):
             tf.reset_default_graph()
 
             # add placeholders for input images (and optional labels)
-            x = tf.placeholder(dtype=tf.float32, shape=(None, FEATURE_COUNT),
-                               name="shifu_input_0")
-            with tf.get_default_graph().as_default():
-                if BUILD_MODEL_BY_CONF_ENABLE and model_conf is not None:
-                    output_digits, output_nodes = generate_from_modelconf(x, model_conf)
-                else:
-                    output_digits = nn_layer(x, FEATURE_COUNT, HIDDEN_NODES_COUNT, act_op_name="hidden_layer1")
-                    output_nodes = HIDDEN_NODES_COUNT
+            numeric_input_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, NUMERIC_FEATURE_COUNT),
+                                               name="shifu_numeric_input_0")
+            category_input_placeholder = tf.placeholder(dtype=tf.int64, shape=(None, CATEGORY_FEATURE_COUNT),
+                                               name="shifu_category_input_0")
 
-                logging.info("output_nodes : " + str(output_nodes))
-                prediction = nn_layer(output_digits, output_nodes, 1, act=tf.nn.sigmoid,
-                                      act_op_name="shifu_output_0")
+            with tf.get_default_graph().as_default():
+                prediction = build_w_d(numeric_input_placeholder, category_input_placeholder, context["vocabs"])
 
             # restore from last checkpoint
             saver = tf.train.Saver()
@@ -360,7 +366,8 @@ def main(_):
                 # exported signatures defined in code
                 simple_save(session=sess, export_dir=final_model_path,
                             inputs={
-                                "shifu_input_0": x
+                                "shifu_numeric_input_0": numeric_input_placeholder,
+                                "shifu_category_input_0": category_input_placeholder
                             },
                             outputs={
                                 "shifu_output_0": prediction
@@ -376,14 +383,19 @@ def main(_):
 
 def load_data(data_file):
     data_file_list = data_file.split(",")
-    global feature_column_nums
+    global numeric_feature_column_nums
+    global category_feature_column_nums
 
     logging.info("input data %s" % data_file_list)
-    logging.info("SELECTED_COLUMN_NUMS" + str(feature_column_nums))
+    logging.info("numeric_feature_column_nums: " + str(numeric_feature_column_nums))
+    logging.info("category_feature_column_nums: " + str(category_feature_column_nums))
 
-    train_data = []
+    numeric_train_data = []
+    category_train_data = []
     train_target = []
-    valid_data = []
+
+    numeric_valid_data = []
+    category_valid_data = []
     valid_target = []
 
     training_data_sample_weight = []
@@ -415,13 +427,6 @@ def load_data(data_file):
 
                 columns = line.split(DELIMITER)
 
-                if feature_column_nums is None:
-                    feature_column_nums = range(0, len(columns))
-
-                    feature_column_nums.remove(target_column_num)
-                    if sample_weight_column_num >= 0:
-                        feature_column_nums.remove(sample_weight_column_num)
-
                 if random.random() >= VALID_TRAINING_DATA_RATIO:
                     # Append training data
                     train_target.append([float(columns[target_column_num])])
@@ -429,14 +434,24 @@ def load_data(data_file):
                         train_pos_cnt += 1
                     else:
                         train_neg_cnt += 1
-                    single_train_data = []
-                    for feature_column_num in feature_column_nums:
+
+                    single_numeric_train_data = []
+                    for numeric_feature_column_num in numeric_feature_column_nums:
                         try:
-                            single_train_data.append(float(columns[feature_column_num].strip('\n')))
+                            single_numeric_train_data.append(float(columns[numeric_feature_column_num].strip('\n')))
                         except:
-                            logging.info("Could not convert " + str(columns[feature_column_num].strip('\n') + " to float"))
-                            logging.info("feature_column_num: " + str(feature_column_num))
-                    train_data.append(single_train_data)
+                            logging.info("Could not convert " + str(columns[numeric_feature_column_num].strip('\n') + " to float"))
+                            logging.info("feature_column_num: " + str(numeric_feature_column_num))
+                    numeric_train_data.append(single_numeric_train_data)
+
+                    single_category_train_data = []
+                    for category_feature_column_num in category_feature_column_nums:
+                        try:
+                            single_category_train_data.append(int(float(columns[category_feature_column_num].strip('\n'))))
+                        except:
+                            logging.info("Could not convert " + str(columns[category_feature_column_num].strip('\n') + " to int"))
+                            logging.info("feature_column_num: " + str(category_feature_column_num))
+                    category_train_data.append(single_category_train_data)
 
                     if sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):
                         weight = float(columns[sample_weight_column_num].strip('\n'))
@@ -453,17 +468,26 @@ def load_data(data_file):
                         valid_pos_cnt += 1
                     else:
                         valid_neg_cnt += 1
-                    single_valid_data = []
-                    for feature_column_num in feature_column_nums:
+
+                    single_numeric_valid_data = []
+                    for numeric_feature_column_num in numeric_feature_column_nums:
                         try:
-                            single_valid_data.append(float(columns[feature_column_num].strip('\n')))
+                            single_numeric_valid_data.append(float(columns[numeric_feature_column_num].strip('\n')))
                         except:
-                            logging.info("Could not convert " + str(columns[feature_column_num].strip('\n') + " to float"))
-                            logging.info("feature_column_num: " + str(feature_column_num))
+                            logging.info("Could not convert " + str(columns[numeric_feature_column_num].strip('\n') + " to float"))
+                            logging.info("feature_column_num: " + str(numeric_feature_column_num))
+                    numeric_valid_data.append(single_numeric_valid_data)
 
-                    valid_data.append(single_valid_data)
+                    single_category_valid_data = []
+                    for category_feature_column_num in category_feature_column_nums:
+                        try:
+                            single_category_valid_data.append(int(float(columns[category_feature_column_num].strip('\n'))))
+                        except:
+                            logging.info("Could not convert " + str(columns[category_feature_column_num].strip('\n') + " to int"))
+                            logging.info("feature_column_num: " + str(category_feature_column_num))
+                    category_valid_data.append(single_category_valid_data)
 
-                    if  sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):
+                    if sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):
                         weight = float(columns[sample_weight_column_num].strip('\n'))
                         if weight < 0.0:
                             logging.info("Warning: weight is below 0. example:" + line)
@@ -476,11 +500,19 @@ def load_data(data_file):
     logging.info("Train pos count: " + str(train_pos_cnt) + ", neg count: " + str(train_neg_cnt) + ".")
     logging.info("Valid pos count: " + str(valid_pos_cnt) + ", neg count: " + str(valid_neg_cnt) + ".")
 
-    return {"train_data": train_data, "train_target": train_target,
-            "valid_data": valid_data, "valid_target": valid_target,
+    category_cnt = []
+    with open('./ColumnConfig.json') as f:
+        column_conf = json.load(f)
+        for i in category_feature_column_nums:
+            category_cnt.append(len(column_conf[i]["columnBinning"]["binCategory"]) + 1)
+    logging.info("category_cnt: " + str(category_cnt) +  ".")
+
+    return {"numeric_train_data": numeric_train_data, "category_train_data": category_train_data, "train_target": train_target,
+            "numeric_valid_data": numeric_valid_data, "category_valid_data": category_valid_data, "valid_target": valid_target,
             "train_data_sample_weight": training_data_sample_weight,
             "valid_data_sample_weight": valid_data_sample_weight,
-            "feature_count": len(feature_column_nums)}
+            "feature_count": len(numeric_feature_column_nums) + len(category_feature_column_nums),
+            "vocabs": category_cnt}
 
 
 def simple_save(session, export_dir, inputs, outputs, legacy_init_op=None):
@@ -506,7 +538,8 @@ def export_generic_config(export_dir):
     config_json_str = ""
     config_json_str += "{\n"
     config_json_str += "    \"inputnames\": [\n"
-    config_json_str += "        \"shifu_input_0\"\n"
+    config_json_str += "        \"shifu_numeric_input_0,\"\n"
+    config_json_str += "        \"shifu_category_input_0\"\n"
     config_json_str += "      ],\n"
     config_json_str += "    \"properties\": {\n"
     config_json_str += "         \"algorithm\": \"tensorflow\",\n"
@@ -518,17 +551,6 @@ def export_generic_config(export_dir):
     f = tf.gfile.GFile(export_dir + "/GenericModelConfig.json", mode="w+")
     f.write(config_json_str)
 
-
-def start_tensorboard(checkpoint_dir):
-    tf.flags.FLAGS.logdir = checkpoint_dir
-    if TB_PORT_ENV_VAR in os.environ:
-        tf.flags.FLAGS.port = os.environ['TB_PORT']
-
-    tb_thread = Thread(target=tb_main.run_main)
-    tb_thread.daemon = True
-
-    logging.info("Starting TensorBoard with --logdir=" + checkpoint_dir + " in daemon thread...")
-    tb_thread.start()
 
 if __name__ == '__main__':
     tf.app.run()

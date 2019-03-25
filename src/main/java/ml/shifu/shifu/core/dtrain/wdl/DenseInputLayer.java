@@ -56,7 +56,7 @@ public class DenseInputLayer extends AbstractLayer<float[], float[], float[], fl
     }
 
     @Override
-    public float[] backward(float[] backInputs, float sig) {
+    public float[] backward(float[] backInputs) {
         throw new UnsupportedOperationException();
     }
 
