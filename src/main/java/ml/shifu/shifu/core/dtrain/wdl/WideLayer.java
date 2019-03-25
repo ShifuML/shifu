@@ -19,9 +19,6 @@ import ml.shifu.shifu.core.dtrain.AssertUtils;
 import static ml.shifu.shifu.core.dtrain.wdl.SerializationUtil.NULL;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.util.Tuple;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -40,7 +37,6 @@ import java.util.List;
 public class WideLayer
         extends AbstractLayer<Tuple<List<SparseInput>, float[]>, float[], float[], List<float[]>, WideLayer>
         implements WeightInitializer<WideLayer> {
-    private static final Logger LOG = LoggerFactory.getLogger(WideLayer.class);
     /**
      * Layers for all wide columns.
      */
@@ -83,33 +79,24 @@ public class WideLayer
 
     @Override
     public float[] forward(Tuple<List<SparseInput>, float[]> input) {
-        LOG.error("Debug in Wide Layer: with input first " + input.getFirst().size() + " second " + input.getSecond().length);
         AssertUtils.assertListNotNullAndSizeEqual(this.getLayers(), input.getFirst());
-
         float[] results = new float[layers.get(0).getOutDim()];
         for(int i = 0; i < getLayers().size(); i++) {
             float[] fOuts = this.getLayers().get(i).forward(input.getFirst().get(i));
-            LOG.error("wide layer  " + i);
             for(int j = 0; j < results.length; j++) {
-                LOG.error("outputs " + j + " value is " + fOuts[j]);
                 results[j] += fOuts[j];
             }
         }
 
         float[] denseForwards = this.denseLayer.forward(input.getSecond());
-        LOG.error("Densor forward:");
         assert denseForwards.length == results.length;
         for(int j = 0; j < results.length; j++) {
-            LOG.error("Densor forward " + j + " value is " + denseForwards[j]);
             results[j] += denseForwards[j];
         }
 
         for(int j = 0; j < results.length; j++) {
-            LOG.error("before add bias result " + j + " is " + results[j]);
             results[j] += bias.forward(1f);
-            LOG.error("after add bias result " + j + " is " + results[j]);
         }
-
         return results;
     }
 

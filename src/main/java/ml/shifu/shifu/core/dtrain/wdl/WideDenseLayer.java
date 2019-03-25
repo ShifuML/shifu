@@ -16,13 +16,9 @@
 package ml.shifu.shifu.core.dtrain.wdl;
 
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -32,7 +28,6 @@ import java.util.List;
  */
 public class WideDenseLayer extends AbstractLayer<float[], float[], float[], float[], WideDenseLayer>
         implements WeightInitializer<WideDenseLayer> {
-    private static final Logger LOG = LoggerFactory.getLogger(WideDenseLayer.class);
     /**
      * [in] float array of weights
      */
@@ -82,11 +77,9 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
 
     @Override
     public float[] forward(float[] inputs) {
-        LOG.error("WideDenseLayer weights:" + Arrays.toString(this.weights));
         this.lastInput = inputs;
         float[] results = new float[1];
         for(int i = 0; i < inputs.length; i++) {
-            LOG.error("inputs[i]=" + inputs[i] + "this.weights[i]=" + this.weights[i]);
             results[0] += inputs[i] * this.weights[i];
         }
         return results;
@@ -240,7 +233,9 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
 
     @Override
     public void initWeight(WideDenseLayer updateModel) {
-        this.weights = updateModel.getWeights();
+        for(int i = 0; i < this.in; i++) {
+            this.weights[i] = updateModel.getWeights()[i];
+        }
     }
 
     @Override

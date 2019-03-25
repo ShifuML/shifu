@@ -58,6 +58,7 @@ public interface Optimizer {
 
     default void batchUpdate(float[][] weights, float[][] grads) {
         if(weights == null || weights.length == 0 || grads == null || weights.length != grads.length) {
+            System.out.println("Error when batch update, return");
             return;
         }
         int in = weights.length;

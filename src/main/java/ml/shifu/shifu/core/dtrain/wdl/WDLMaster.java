@@ -135,7 +135,6 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         this.isAfterVarSelect = (inputOutputIndex[3] == 1);
         this.validParams = this.modelConfig.getTrain().getParams();
         this.learningRate = Double.valueOf(validParams.get(CommonConstants.LEARNING_RATE).toString());
-        System.out.println("learning rate in master init" + this.learningRate);
 
         this.isContinuousEnabled = Boolean.TRUE.toString()
                 .equalsIgnoreCase(context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));

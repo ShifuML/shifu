@@ -208,7 +208,8 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
     }
 
     public void initGrads() {
-        if(this.wGrads == null) {// reuse same array
+        if(this.wGrads == null) {
+            // reuse same array
             this.wGrads = new float[this.in][this.out];
         }
         for(int i = 0; i < this.in; i++) {
@@ -217,7 +218,8 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
             }
         }
 
-        if(this.bGrads == null) { // reuse same array
+        if(this.bGrads == null) {
+            // reuse same array
             this.bGrads = new float[this.bias.length];
         }
         for(int j = 0; j < this.out; j++) {
@@ -262,7 +264,11 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
 
     @Override
     public void initWeight(DenseLayer updateModel) {
-        this.weights = updateModel.getWeights();
+        for(int i = 0; i < this.in; i++) {
+            for(int j = 0; j < this.out; j++) {
+                this.weights[i][j] = updateModel.getWeights()[i][j];
+            }
+        }
     }
 
     /*
