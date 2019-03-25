@@ -15,14 +15,17 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 
 /**
  * {@link WideFieldLayer} is wide part input of WideAndDeep architecture. Per each column a {@link WideFieldLayer}
@@ -31,7 +34,8 @@ import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[], float[], WideFieldLayer>
-        implements WeightInitializer {
+        implements WeightInitializer<WideFieldLayer> {
+    private static final Logger LOG = LoggerFactory.getLogger(WideFieldLayer.class);
 
     /**
      * [in] float array of weights
@@ -82,8 +86,10 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
 
     @Override
     public float[] forward(SparseInput si) {
+        LOG.error("WideFiledLayer weights:" + Arrays.toString(this.weights));
         this.lastInput = si;
         int valueIndex = si.getValueIndex();
+        LOG.error("si.getValue() = " + si.getValue() + "this.weights[valueIndex]=" + this.weights[valueIndex] );
         return new float[] { si.getValue() * this.weights[valueIndex] };
     }
 
@@ -189,6 +195,11 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
     @Override
     public void initWeight(InitMethod method) {
         this.weights = method.getInitialisable().initWeight(this.in);
+    }
+
+    @Override
+    public void initWeight(WideFieldLayer updateModel) {
+        this.weights = updateModel.getWeights();
     }
 
     /*

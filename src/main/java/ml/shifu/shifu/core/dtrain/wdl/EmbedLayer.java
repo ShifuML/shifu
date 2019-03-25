@@ -32,7 +32,7 @@ import java.util.List;
  */
 public class EmbedLayer
         extends AbstractLayer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>, EmbedLayer>
-        implements WeightInitializer {
+        implements WeightInitializer<EmbedLayer> {
 
     /**
      * List of embed layer which is for each embed column.
@@ -94,6 +94,14 @@ public class EmbedLayer
     public void initWeight(InitMethod method) {
         for(EmbedFieldLayer embedFieldLayer: this.embedLayers) {
             embedFieldLayer.initWeight(method);
+        }
+    }
+
+    @Override
+    public void initWeight(EmbedLayer updateModel) {
+        AssertUtils.assertListNotNullAndSizeEqual(this.embedLayers, updateModel.embedLayers);
+        for(int i = 0; i < this.embedLayers.size(); i++) {
+            this.embedLayers.get(i).initWeight(updateModel.getEmbedLayers().get(i));
         }
     }
 

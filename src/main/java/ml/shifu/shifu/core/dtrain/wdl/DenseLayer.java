@@ -30,7 +30,7 @@ import java.io.IOException;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class DenseLayer extends AbstractLayer<float[], float[], float[], float[], DenseLayer>
-        implements WeightInitializer {
+        implements WeightInitializer<DenseLayer> {
 
     /**
      * [in, out] array for deep matrix weights
@@ -257,7 +257,12 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
 
     @Override
     public void initWeight(InitMethod method) {
-        method.getInitialisable().initWeight(this.in, this.out);
+        this.weights = method.getInitialisable().initWeight(this.in, this.out);
+    }
+
+    @Override
+    public void initWeight(DenseLayer updateModel) {
+        this.weights = updateModel.getWeights();
     }
 
     /*

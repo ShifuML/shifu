@@ -29,7 +29,7 @@ import ml.shifu.shifu.core.dtrain.wdl.weight.Zero;
  *
  * @author : Wu Devin (haifwu@paypal.com)
  */
-public interface WeightInitializer {
+public interface WeightInitializer<SELF extends WeightInitializer> {
     enum InitMethod {
         /**
          * Init all weight with {@link Zero}
@@ -90,5 +90,12 @@ public interface WeightInitializer {
      * @param method, the init method
      */
     void initWeight(InitMethod method);
+
+    /**
+     * init weight according to an existing model
+     *
+     * @param updateModel model to copy weight from
+     */
+    void initWeight(SELF updateModel);
 
 }
