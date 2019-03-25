@@ -35,7 +35,13 @@ public class ActivationFactory {
 
     private static ActivationFactory activationFactory;
 
-    private static Map<String, Activation> actionList = new HashMap<String, Activation>() {{
+    private static Map<String, Activation> actionList = new HashMap<String, Activation>() {
+        /**
+         * 
+         */
+        private static final long serialVersionUID = 1L;
+
+    {
         Reflections reflections = new Reflections("ml.shifu.shifu.core.dtrain.wdl");
         Set<Class<? extends Activation>> classes = reflections.getSubTypesOf(Activation.class);
         for(Class<? extends Activation> activation: classes) {

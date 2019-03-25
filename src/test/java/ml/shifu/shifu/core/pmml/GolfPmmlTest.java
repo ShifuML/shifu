@@ -62,7 +62,7 @@ public class GolfPmmlTest {
         }
     }
 
-    @SuppressWarnings({ "unchecked", "incomplete-switch" })
+    @SuppressWarnings({ "unchecked"})
     @Test
     public void testNewPMMLModel() throws Exception {
         // model with segment expansion

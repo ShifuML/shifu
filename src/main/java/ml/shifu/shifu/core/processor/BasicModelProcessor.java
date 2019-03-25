@@ -100,7 +100,6 @@ public class BasicModelProcessor {
      * @throws Exception
      *             any exception in setup
      */
-    @SuppressWarnings("incomplete-switch")
     protected void setUp(ModelStep step) throws Exception {
         if(hasInitialized()) {
             return;

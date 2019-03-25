@@ -26,10 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
@@ -166,8 +163,6 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public float[] forward(float[] denseInputs, List<SparseInput> embedInputs, List<SparseInput> wideInputs) {
         // wide layer forward
-        LOG.error("Forward in WideAndDeep: denseInputs: " + denseInputs.length + " embedInputs: " + embedInputs.size() + " wideInputs:" + wideInputs.size());
-
         float[] wlLogits = this.wl.forward(new Tuple(wideInputs, denseInputs));
         if(wlLogits.length > 0) {
             LOG.error("wlLogits size is " + wlLogits.length + " the first value :" + wlLogits[0]);
@@ -201,13 +196,13 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
         float[] logits = new float[dnnLogits.length];
         for(int i = 0; i < logits.length; i++) {
             logits[i] += wlLogits[i] + dnnLogits[i];
-            LOG.error("logits[" + i + "]:= " + logits[i] + "wlLogits="  + logits[i] + " dnnLogits=" + dnnLogits[i]);
         }
         return logits;
     }
 
     @SuppressWarnings("rawtypes")
     public float[] backward(float[] error, float sig) {
+        LOG.error("backward with sig=" + sig + " error:" + Arrays.toString(error));
         // wide layer backward, as wide layer in LR actually in backward, only gradients computation is needed.
         this.wl.backward(error, sig);
 
@@ -553,7 +548,6 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
      * 
      * @see ml.shifu.guagua.io.Bytable#write(java.io.DataOutput)
      */
-    @SuppressWarnings("rawtypes")
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeInt(this.serializationType.getValue());
@@ -619,7 +613,6 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
      * 
      * @see ml.shifu.guagua.io.Bytable#readFields(java.io.DataInput)
      */
-    @SuppressWarnings("rawtypes")
     @Override
     public void readFields(DataInput in) throws IOException {
         this.serializationType = SerializationType.getSerializationType(in.readInt());
