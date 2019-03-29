@@ -32,7 +32,7 @@ public class ModelStatsConf {
      */
     @JsonDeserialize(using = BinningMethodDeserializer.class)
     public static enum BinningMethod {
-        EqualNegtive, EqualInterval, EqualPositive, EqualTotal, WeightEqualNegative, WeightEqualInterval, WeightEqualPositive, WeightEqualTotal
+        EqualNegative, EqualInterval, EqualPositive, EqualTotal, WeightEqualNegative, WeightEqualInterval, WeightEqualPositive, WeightEqualTotal
     }
 
     /**
