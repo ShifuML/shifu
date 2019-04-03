@@ -20,6 +20,7 @@ from tensorflow.python.saved_model import signature_def_utils
 from tensorflow.python.saved_model import tag_constants
 import json
 import socket
+from tensorflow.python.client import timeline
 #from threading import Thread
 #import tensorboard.main as tb_main
 
@@ -295,6 +296,9 @@ def main(_):
 
         # Train until hook stops session
         logging.info('Starting training on worker %d' % task_index)
+
+        run_metadata = tf.RunMetadata()
+        run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
         while not sess.should_stop():
             try:
                 start = time.time()
@@ -303,7 +307,7 @@ def main(_):
                                   label_placeholder: y_batch[i],
                                   sample_weight_placeholder: sample_w_batch[i]}
 
-                    _, l, gs = sess.run([train_step, loss, global_step], feed_dict=train_feed)
+                    _, l, gs = sess.run([train_step, loss, global_step], feed_dict=train_feed, options=run_options,run_metadata=run_metadata)
                 training_time = time.time() - start
                 
                 # compute validation loss TODO, check if batch compute
@@ -367,6 +371,12 @@ def main(_):
                             })
                 logging.info("Exported saved_model")
 
+            tl = timeline.Timeline(run_metadata.step_stats)
+            ctf = tl.generate_chrome_trace_format()
+            logging.info("ctf:" + str(ctf))
+
+            f = tf.gfile.GFile(final_model_path + "/timeline.json", mode="w+")
+            f.write(ctf)
             time.sleep(40) # grace period to wait before closing session
 
         #sess.close()

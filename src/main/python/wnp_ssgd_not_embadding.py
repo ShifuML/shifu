@@ -21,6 +21,7 @@ from tensorflow.python.saved_model import tag_constants
 import json
 import socket
 from tensorflow.python.client import timeline
+from tensorflow.contrib.layers.python.layers import embedding_ops
 
 HIDDEN_NODES_COUNT = 20
 VALID_TRAINING_DATA_RATIO = 0.1
@@ -56,6 +57,16 @@ socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 socket_client.connect(("127.0.0.1", socket_server_port))
 
 
+''' embedding is Tensor, ids is Tensor or np.array
+def embedding_lookup(embedding, ids):
+    row_number = tf.range(0, ids.shape[0], 1, tf.int64)
+    indices = tf.stack([row_number, ids], axis=1)
+    values = tf.ones([ids.shape[0]], tf.float32)
+    dense_shape = [ids.shape[0], embedding.shape[0]]
+    sparse = tf.SparseTensor(indices=indices, values=values, dense_shape=dense_shape)
+    return tf.sparse_tensor_dense_matmul(sparse, embedding, adjoint_a=True)
+'''
+
 # vocabs is each category number of possible categories [3,3] for example.
 def wide_model(numeric_input, category_input, vocabs):
     transpose_category_input = tf.transpose(category_input)
@@ -63,16 +74,17 @@ def wide_model(numeric_input, category_input, vocabs):
     # Append embadding category to numeric_sum
     for i in range(0, len(vocabs)):
         embedding = tf.get_variable("wideem" + str(i), [vocabs[i], 8],
-                                    initializer=tf.contrib.layers.xavier_initializer(),
+                                    initializer=tf.contrib.layers.xavier_initializer()
                                     #partitioner=tf.fixed_size_partitioner(n_pss))
-                                    partitioner=tf.min_max_variable_partitioner(n_pss, 0, 2 << 10))
+                                    #partitioner=tf.min_max_variable_partitioner(n_pss, 0, 2 << 10)
+                                    )
         # Pick one column from category input
-        col = tf.nn.embedding_lookup(transpose_category_input, [i])[0]
+        col = tf.gather(transpose_category_input, [i])[0]
+        #col = tf.nn.embedding_lookup(transpose_category_input, [i])[0]
 
-        with tf.device("/job:worker/task:" + str(task_index)):
-            embedding = tf.identity(embedding)
-            # Same as make [0001]*[w1,w2,w3,w4] = lookup w4
-            embedded_col = tf.nn.embedding_lookup(embedding, col)  # number * embedding output number
+        # Same as make [0001]*[w1,w2,w3,w4] = lookup w4
+        #embedded_col = embedding_lookup(tf.identity(embedding), col)  # number * embedding output number
+        embedded_col = embedding_ops.embedding_lookup_unique(embedding, col)
 
         if category_sum is None:
             category_sum = embedded_col
@@ -94,15 +106,16 @@ def deep_model(numeric_input, category_input, vocabs, hidden1, hidden2, hidden3)
     # append emmbadding category input to numeric
     for i in range(0, len(vocabs)):
         embedding = tf.get_variable("deepem" + str(i), [vocabs[i], embedding_output_cnt],
-                                    initializer=tf.contrib.layers.xavier_initializer(),
+                                    initializer=tf.contrib.layers.xavier_initializer()
                                     #partitioner=tf.fixed_size_partitioner(n_pss))
-                                    partitioner=tf.min_max_variable_partitioner(n_pss, 0, 2 << 10))
+                                    #partitioner=tf.min_max_variable_partitioner(n_pss, 0, 2 << 10)
+                                    )
         # Pick one column from category input
-        col = tf.nn.embedding_lookup(transpose_category_input, [i])[0]
+        col = tf.gather(transpose_category_input, [i])[0]
+        #col = tf.nn.embedding_lookup(transpose_category_input, [i])[0]
 
-        with tf.device("/job:worker/task:" + str(task_index)):
-            embedding = tf.identity(embedding)
-            embedding_category = tf.nn.embedding_lookup(embedding, col)  # batch_size*embedding_output_cnt
+        embedding_category = embedding_ops.embedding_lookup_unique(embedding, col)
+        #embedding_category = embedding_lookup(tf.identity(embedding), col)  # batch_size*embedding_output_cnt
 
         numeric_input = tf.concat([numeric_input, embedding_category], 1)
 

@@ -24,7 +24,7 @@ import java.io.IOException;
 
 /**
  * {@link DenseInputLayer} denotes dense input number array. Forward computation is a wrapper with just current input
- * array. {@linkplain #backward(float[], float)} no need to be supported as it should not be called.
+ * array. {@linkplain #backward(float[])} no need to be supported as it should not be called.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
