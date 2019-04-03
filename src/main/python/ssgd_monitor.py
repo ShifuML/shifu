@@ -54,6 +54,48 @@ final_model_path = os.environ["FINAL_MODEL_PATH"]
 socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 socket_client.connect(("127.0.0.1", socket_server_port))
 
+#######################################################################################################################
+#### Start of Define TF Graph: User can change below graph but make sure tf.train.SyncReplicasOptimizer not changed
+#######################################################################################################################
+def model(x, y_, sample_weight, model_conf):
+    logging.info("worker_num:%d" % n_workers)
+    logging.info("total_training_data_number:%d" % total_training_data_number)
+
+    if BUILD_MODEL_BY_CONF_ENABLE and model_conf is not None:
+        output_digits, output_nodes = generate_from_modelconf(x, model_conf)
+    else:
+        output_digits = nn_layer(x, FEATURE_COUNT, HIDDEN_NODES_COUNT, act_op_name="hidden_layer1")
+        output_nodes = HIDDEN_NODES_COUNT
+
+    logging.info("output_nodes : " + str(output_nodes))
+    y = nn_layer(output_digits, output_nodes, 1, act=tf.nn.sigmoid, act_op_name="shifu_output_0")
+
+    # count the number of updates
+    global_step = tf.get_variable('global_step', [],
+                                  initializer=tf.constant_initializer(0),
+                                  trainable=False,
+                                  dtype=tf.int32)
+
+    loss = tf.losses.mean_squared_error(predictions=y, labels=y_, weights=sample_weight)
+
+    # we suppose every worker has same batch_size
+    if model_conf is not None:
+        learning_rate = model_conf['train']['params']['LearningRate']
+    else:
+        learning_rate = 0.003
+    opt = tf.train.SyncReplicasOptimizer(
+        #tf.train.GradientDescentOptimizer(learning_rate),
+        #tf.train.AdamOptimizer(learning_rate=learning_rate),
+        get_optimizer(model_conf['train']['params'])(learning_rate=learning_rate),
+        replicas_to_aggregate=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE * REPLICAS_TO_AGGREGATE_RATIO),
+        total_num_replicas=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE),
+        name="shifu_sync_replicas")
+    train_step = opt.minimize(loss, global_step=global_step)
+
+    return opt, train_step, loss, global_step, y
+#######################################################################################################################
+#### END of Define TF Graph
+#######################################################################################################################
 
 def nn_layer(input_tensor, input_dim, output_dim, l2_scale=0.01, act=tf.nn.tanh, act_op_name=None):
     l2_reg = tf.contrib.layers.l2_regularizer(scale=l2_scale)
@@ -126,44 +168,6 @@ def generate_from_modelconf(x, model_conf):
         previous_layer = layer
 
     return previous_layer, num_hidden_nodes[num_hidden_layer-1]
-
-
-def model(x, y_, sample_weight, model_conf):
-    logging.info("worker_num:%d" % n_workers)
-    logging.info("total_training_data_number:%d" % total_training_data_number)
-
-    if BUILD_MODEL_BY_CONF_ENABLE and model_conf is not None:
-        output_digits, output_nodes = generate_from_modelconf(x, model_conf)
-    else:
-        output_digits = nn_layer(x, FEATURE_COUNT, HIDDEN_NODES_COUNT, act_op_name="hidden_layer1")
-        output_nodes = HIDDEN_NODES_COUNT
-
-    logging.info("output_nodes : " + str(output_nodes))
-    y = nn_layer(output_digits, output_nodes, 1, act=tf.nn.sigmoid, act_op_name="shifu_output_0")
-
-    # count the number of updates
-    global_step = tf.get_variable('global_step', [],
-                                  initializer=tf.constant_initializer(0),
-                                  trainable=False,
-                                  dtype=tf.int32)
-
-    loss = tf.losses.mean_squared_error(predictions=y, labels=y_, weights=sample_weight)
-
-    # we suppose every worker has same batch_size
-    if model_conf is not None:
-        learning_rate = model_conf['train']['params']['LearningRate']
-    else:
-        learning_rate = 0.003
-    opt = tf.train.SyncReplicasOptimizer(
-        #tf.train.GradientDescentOptimizer(learning_rate),
-        #tf.train.AdamOptimizer(learning_rate=learning_rate),
-        get_optimizer(model_conf['train']['params'])(learning_rate=learning_rate),
-        replicas_to_aggregate=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE * REPLICAS_TO_AGGREGATE_RATIO),
-        total_num_replicas=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE),
-        name="shifu_sync_replicas")
-    train_step = opt.minimize(loss, global_step=global_step)
-
-    return opt, train_step, loss, global_step, y
 
 
 def main(_):
@@ -310,16 +314,18 @@ def main(_):
                     _, l, gs = sess.run([train_step, loss, global_step], feed_dict=train_feed, options=run_options,run_metadata=run_metadata)
                 training_time = time.time() - start
                 
+                valid_start = time.time()
                 # compute validation loss TODO, check if batch compute
                 valid_loss, gs = sess.run([loss, global_step], feed_dict={input_placeholder: valid_x,
                                                                           label_placeholder: valid_y,
                                                                           sample_weight_placeholder: valid_sample_w}
                                           )
-                logging.info('Step: ' + str(gs) + ' worker: ' + str(task_index) + " training loss:" + str(l) + " valid loss:" + str(valid_loss))
+                valid_time = time.time() - valid_start
+                logging.info('Step: ' + str(gs) + ' worker: ' + str(task_index) + " training loss:" + str(l) + " training time:" + str(training_time) + " valid loss:" + str(valid_loss) + " valid time:" + str(valid_time))
 
                 # Send intermediate result to master
-                message = "worker_index:{},time:{},current_epoch:{},training_loss:{},valid_loss:{}\n".format(
-                    str(task_index), str(training_time), str(gs), str(l), str(valid_loss))
+                message = "worker_index:{},time:{},current_epoch:{},training_loss:{},valid_loss:{},valid_time:{}\n".format(
+                    str(task_index), str(training_time), str(gs), str(l), str(valid_loss), str(valid_time))
                 if sys.version_info < (3, 0):
                     socket_client.send(bytes(message))
                 else:
