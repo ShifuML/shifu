@@ -249,6 +249,6 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
 
     @Override
     public void update(WideDenseLayer gradLayer, Optimizer optimizer) {
-        optimizer.update(this.weights, gradLayer.getwGrads());
+        optimizer.update(this.weights, gradLayer.getwGrads(), getClass().getSimpleName());
     }
 }

@@ -276,6 +276,6 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
 
     @Override
     public void update(WideFieldLayer gradLayer, Optimizer optimizer) {
-        optimizer.update(this.weights, gradLayer.getwGrads());
+        optimizer.update(this.weights, gradLayer.getwGrads(), getClass().getSimpleName());
     }
 }

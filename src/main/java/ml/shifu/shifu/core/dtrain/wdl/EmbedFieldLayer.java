@@ -297,6 +297,6 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
 
     @Override
     public void update(EmbedFieldLayer gradLayer, Optimizer optimizer) {
-        optimizer.batchUpdate(this.weights, gradLayer.getwGrads());
+        optimizer.batchUpdate(this.weights, gradLayer.getwGrads(), getClass().getSimpleName());
     }
 }

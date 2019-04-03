@@ -343,7 +343,7 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
 
     @Override
     public void update(DenseLayer gradLayer, Optimizer optimizer) {
-        optimizer.batchUpdate(this.weights, gradLayer.getwGrads());
-        optimizer.update(this.bias, gradLayer.getbGrads());
+        optimizer.batchUpdate(this.weights, gradLayer.getwGrads(), getClass().getSimpleName());
+        optimizer.update(this.bias, gradLayer.getbGrads(), getClass().getSimpleName());
     }
 }
