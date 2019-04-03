@@ -22,7 +22,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.google.common.collect.Lists;
+
 import ml.shifu.shifu.util.CommonUtils;
 
 /**
@@ -53,13 +53,6 @@ public class RawSourceData implements Cloneable {
     private String dataPath;
 
     /**
-     * Validation data path which is used in train step for validation data. Such data should have the same schema like
-     * {@link #dataPath}. If {@link #validationDataPath} is not empty, specified validation data is enabled and all
-     * other sampling parameters have no effect. If empty (by default), such feature is not enabled.
-     */
-    private String validationDataPath;
-
-    /**
      * How to split data and validation data.
      */
     private String dataDelimiter = "|";
@@ -77,8 +70,8 @@ public class RawSourceData implements Cloneable {
     private String headerDelimiter = "|";
 
     /**
-     * Filter expression on data path and validation data path, this is helpful to filter some data not in original
-     * data. Example like 'columna > 10'
+     * Filter expression on data path, this is helpful to filter some data not in original
+     * data. Example like 'column_a > 10'
      */
     private String filterExpressions = "";
 
@@ -96,17 +89,11 @@ public class RawSourceData implements Cloneable {
      * Positive tag list: Example like ["0", "1"];
      */
     private List<String> posTags;
-    
+
     /**
      * Negative tag list: Example like ["2", "3"]
      */
     private List<String> negTags;
-
-    /**
-     * Missing or invalid values.
-     */
-    private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "?" });
-    // private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "*", "#", "?", "null", "none" });
 
     /**
      * Auto type column feature, if eanabled by tree, shifu will set categorical or numerical feature automatically.
@@ -157,14 +144,6 @@ public class RawSourceData implements Cloneable {
         this.dataPath = dataPath;
     }
 
-    public String getValidationDataPath() {
-        return validationDataPath;
-    }
-
-    public void setValidationDataPath(String validationDataPath) {
-        this.validationDataPath = validationDataPath;
-    }
-
     public String getDataDelimiter() {
         return dataDelimiter;
     }
@@ -198,7 +177,7 @@ public class RawSourceData implements Cloneable {
     }
 
     public String getWeightColumnName() {
-        return weightColumnName;
+        return CommonUtils.normColumnName(weightColumnName);
     }
 
     public void setWeightColumnName(String weightColumnName) {
@@ -206,7 +185,7 @@ public class RawSourceData implements Cloneable {
     }
 
     public String getTargetColumnName() {
-        return targetColumnName;
+        return CommonUtils.normColumnName(targetColumnName);
     }
 
     public void setTargetColumnName(String targetColumnName) {
@@ -264,25 +243,9 @@ public class RawSourceData implements Cloneable {
         copy.setTargetColumnName(targetColumnName);
         copy.setPosTags(new ArrayList<String>(posTags));
         copy.setNegTags(new ArrayList<String>(negTags));
-        copy.setMissingOrInvalidValues(missingOrInvalidValues);
         copy.setMetaColumnNameFile(metaColumnNameFile);
 
         return copy;
-    }
-
-    /**
-     * @return the missingOrInvalidValues
-     */
-    public List<String> getMissingOrInvalidValues() {
-        return missingOrInvalidValues;
-    }
-
-    /**
-     * @param missingOrInvalidValues
-     *            the missingOrInvalidValues to set
-     */
-    public void setMissingOrInvalidValues(List<String> missingOrInvalidValues) {
-        this.missingOrInvalidValues = missingOrInvalidValues;
     }
 
     /**

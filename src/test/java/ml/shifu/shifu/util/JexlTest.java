@@ -54,6 +54,28 @@ public class JexlTest {
     }
 
     @Test
+    public void testJavaExpressionNotNull() {
+        JexlEngine jexl = new JexlEngine();
+        String jexlExp = "bad_num != \"NULL\"";
+
+        Expression e = jexl.createExpression(jexlExp);
+
+        JexlContext jc = new MapContext();
+        jc.set("bad_num", "2");
+
+        // Now evaluate the expression, getting the result
+        Boolean isEqual = (Boolean) e.evaluate(jc);
+        Assert.assertTrue(isEqual);
+
+        jc = new MapContext();
+        jc.set("bad_num", "NULL");
+
+        // Now evaluate the expression, getting the result
+        isEqual = (Boolean) e.evaluate(jc);
+        Assert.assertFalse(isEqual);
+    }
+
+    @Test
     public void testJavaExpressionString() {
         JexlEngine jexl = new JexlEngine();
         String jexlExp = "name == \"user_a\"";
@@ -111,7 +133,32 @@ public class JexlTest {
         Assert.assertEquals(Boolean.TRUE, e.evaluate(jc));
         Assert.assertEquals(Boolean.FALSE, exp.evaluate(jc));
     }
-    
+
+    @Test
+    public void testJavaEqual() {
+        JexlEngine jexl = new JexlEngine();
+        String jexlExp = "arm14_seg==1 and time_window=='DEV'";
+
+        Expression e = jexl.createExpression(jexlExp);
+        JexlContext jc = new MapContext();
+        jc.set("arm14_seg", "1");
+        jc.set("time_window", "DEV");
+
+        Assert.assertEquals(Boolean.TRUE, e.evaluate(jc));
+    }
+
+    @Test
+    public void testJavaStrEmpty() {
+        JexlEngine jexl = new JexlEngine();
+        String jexlExp = "ARM17_score != null and !ARM17_score.isEmpty()";
+
+        Expression e = jexl.createExpression(jexlExp);
+        JexlContext jc = new MapContext();
+        jc.set("ARM17_score", null);
+
+        Assert.assertEquals(Boolean.FALSE, e.evaluate(jc));
+    }
+
     @Test
     public void testJavaMode() {
         JexlEngine jexl = new JexlEngine();
@@ -190,6 +237,20 @@ public class JexlTest {
         System.out.println((result instanceof Integer));
         System.out.println((result instanceof Double));
         System.out.println(result.toString());
+    }
+
+    @Test
+    public void testJavaCompare() {
+        JexlEngine jexl = new JexlEngine();
+        String jexlExp = "time_window == 'DEV' and live_xm_send_amount <= 10000.0";
+
+        Expression e = jexl.createExpression(jexlExp);
+
+        JexlContext jc = new MapContext();
+        jc.set("time_window", "DEV");
+        jc.set("live_xm_send_amount", "50");
+
+        Assert.assertEquals(Boolean.TRUE, e.evaluate(jc));
     }
 
     @Test

@@ -26,6 +26,22 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 
+import ml.shifu.shifu.util.NormalUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.math3.distribution.PoissonDistribution;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Writable;
+import org.encog.engine.network.activation.ActivationSigmoid;
+import org.encog.neural.error.LinearErrorFunction;
+import org.encog.neural.flat.FlatNetwork;
+import org.encog.neural.networks.BasicNetwork;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Splitter;
+
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
 import ml.shifu.guagua.worker.AbstractWorkerComputable;
@@ -46,21 +62,8 @@ import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataSet;
 import ml.shifu.shifu.core.dtrain.dataset.MemoryDiskFloatMLDataSet;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.CommonUtils;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.math.RandomUtils;
-import org.apache.commons.math3.distribution.PoissonDistribution;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Writable;
-import org.encog.engine.network.activation.ActivationSigmoid;
-import org.encog.neural.error.LinearErrorFunction;
-import org.encog.neural.flat.FlatNetwork;
-import org.encog.neural.networks.BasicNetwork;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Splitter;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.MapReduceUtils;
 
 /**
  * {@link AbstractNNWorker} is refactored as a common class for different NN input format.
@@ -69,12 +72,6 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         AbstractWorkerComputable<NNParams, NNParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<VALUE>> {
 
     protected static final Logger LOG = LoggerFactory.getLogger(AbstractNNWorker.class);
-
-    /**
-     * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
-     */
-    protected static final Splitter DEFAULT_SPLITTER = Splitter.on(CommonConstants.DEFAULT_COLUMN_SEPARATOR)
-            .trimResults();
 
     /**
      * Training data set
@@ -240,7 +237,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     /**
      * If enabled by extreme learning machine: https://en.wikipedia.org/wiki/Extreme_learning_machine
      */
-    private boolean isELM;
+    // private boolean isELM;
 
     /**
      * Cache all features with feature index for searching
@@ -257,6 +254,9 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      */
     protected Set<Integer> subFeatureSet;
 
+    /**
+     * Count of feature inputs
+     */
     protected int featureInputsCnt;
 
     /**
@@ -270,7 +270,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     private String lossStr;
 
     /**
-     * Weight initializer, can be 'default', 'gaussian' or 'xavier'.
+     * Weight initializer, can be 'default', 'gaussian' or 'xavier', 'He' or 'Lecun'.
      */
     private String wgtInit;
 
@@ -279,11 +279,25 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      */
     private int batchs = 1;
 
+    /**
+     * The splitter for normalization data set
+     */
+    protected Splitter splitter;
+
+    /**
+     * The models is linear model or not
+     */
+    protected boolean isLinearTarget = false;
+
+    /**
+     * The model set candidate variables or not
+     */
+    protected boolean hasCandidates = false;
+
     protected boolean isUpSampleEnabled() {
         // only enabled in regression
-        return this.upSampleRng != null
-                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
-                        .isOneVsAll()));
+        return this.upSampleRng != null && (modelConfig.isRegression()
+                || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()));
     }
 
     /**
@@ -291,14 +305,16 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      */
     private void loadConfigFiles(final Properties props) {
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
-                    SourceType.HDFS.toString()));
+            SourceType sourceType = SourceType
+                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
             this.isCrossOver = this.modelConfig.getTrain().getIsCrossOver().booleanValue();
             LOG.info("Parameter isCrossOver:{}", this.isCrossOver);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
+            this.hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -343,8 +359,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         loadConfigFiles(context.getProps());
 
         this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
-                .getGridConfigFileContent());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(),
+                modelConfig.getTrain().getGridConfigFileContent());
         this.validParams = this.modelConfig.getTrain().getParams();
         if(gs.hasHyperParam()) {
             this.validParams = gs.getParams(trainerId);
@@ -357,13 +373,12 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             LOG.info("Cross validation is enabled by kCrossValidation: {}.", kCrossValidation);
         }
 
-        this.poissonSampler = Boolean.TRUE.toString().equalsIgnoreCase(
-                context.getProps().getProperty(NNConstants.NN_POISON_SAMPLER));
+        this.poissonSampler = Boolean.TRUE.toString()
+                .equalsIgnoreCase(context.getProps().getProperty(NNConstants.NN_POISON_SAMPLER));
         this.rng = new PoissonDistribution(1.0d);
         Double upSampleWeight = modelConfig.getTrain().getUpSampleWeight();
-        if(Double.compare(upSampleWeight, 1d) != 0
-                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
-                        .isOneVsAll()))) {
+        if(Double.compare(upSampleWeight, 1d) != 0 && (modelConfig.isRegression()
+                || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()))) {
             // set mean to upSampleWeight -1 and get sample + 1to make sure no zero sample value
             LOG.info("Enable up sampling with weight {}.", upSampleWeight);
             this.upSampleRng = new PoissonDistribution(upSampleWeight - 1);
@@ -372,9 +387,9 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         this.epochsPerIteration = epochsPerIterationInteger == null ? 1 : epochsPerIterationInteger.intValue();
         LOG.info("epochsPerIteration in worker is :{}", epochsPerIteration);
 
-        Object elmObject = validParams.get(DTrainUtils.IS_ELM);
-        isELM = elmObject == null ? false : "true".equalsIgnoreCase(elmObject.toString());
-        LOG.info("Check isELM: {}", isELM);
+        // Object elmObject = validParams.get(DTrainUtils.IS_ELM);
+        // isELM = elmObject == null ? false : "true".equalsIgnoreCase(elmObject.toString());
+        // LOG.info("Check isELM: {}", isELM);
 
         Object dropoutRateObj = validParams.get(CommonConstants.DROPOUT_RATE);
         if(dropoutRateObj != null) {
@@ -382,7 +397,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         }
         LOG.info("'dropoutRate' in worker is :{}", this.dropoutRate);
 
-        Object miniBatchO = validParams.get("MiniBatchs");
+        Object miniBatchO = validParams.get(CommonConstants.MINI_BATCH);
         if(miniBatchO != null) {
             int miniBatchs;
             try {
@@ -403,14 +418,16 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
                 this.columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        // if is one vs all classification, outputNodeCount is set to 1
-        this.outputNodeCount = modelConfig.isRegression() ? inputOutputIndex[1]
-                : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : modelConfig.getTags().size());
+        // if is one vs all classification, outputNodeCount is set to 1, if classes=2, outputNodeCount is also 1
+        int classes = modelConfig.getTags().size();
+        this.outputNodeCount = (isLinearTarget || modelConfig.isRegression()) ? inputOutputIndex[1]
+                : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : (classes == 2 ? 1 : classes));
         this.candidateCount = inputOutputIndex[2];
         boolean isAfterVarSelect = inputOutputIndex[0] != 0;
-        LOG.info("Input count {}, output count {}, candidate count {}", inputNodeCount, outputNodeCount, candidateCount);
+        LOG.info("isAfterVarSelect {}: Input count {}, output count {}, candidate count {}",
+                isAfterVarSelect, inputNodeCount, outputNodeCount, candidateCount);
         // cache all feature list for sampling features
-        this.allFeatures = CommonUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
+        this.allFeatures = NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
         String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);
         if(StringUtils.isBlank(subsetStr)) {
             this.subFeatures = this.allFeatures;
@@ -428,7 +445,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 this.subFeatureSet);
 
         this.wgtInit = "default";
-        Object wgtInitObj = validParams.get("WeightInitializer");
+        Object wgtInitObj = validParams.get(CommonConstants.WEIGHT_INITIALIZER);
         if(wgtInitObj != null) {
             this.wgtInit = wgtInitObj.toString();
         }
@@ -437,10 +454,10 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         this.lossStr = lossObj != null ? lossObj.toString() : "squared";
         LOG.info("Loss str is {}", this.lossStr);
 
-        this.isDry = Boolean.TRUE.toString().equalsIgnoreCase(
-                context.getProps().getProperty(CommonConstants.SHIFU_DRY_DTRAIN));
-        this.isSpecificValidation = (modelConfig.getValidationDataSetRawPath() != null && !"".equals(modelConfig
-                .getValidationDataSetRawPath()));
+        this.isDry = Boolean.TRUE.toString()
+                .equalsIgnoreCase(context.getProps().getProperty(CommonConstants.SHIFU_DRY_DTRAIN));
+        this.isSpecificValidation = (modelConfig.getValidationDataSetRawPath() != null
+                && !"".equals(modelConfig.getValidationDataSetRawPath()));
         this.isStratifiedSampling = this.modelConfig.getTrain().getStratifiedSample();
         if(isOnDisk()) {
             LOG.info("NNWorker is loading data into disk.");
@@ -466,14 +483,14 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             try {
                 if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
                     // fixed 0.6 and 0.4 of max memory for trainingData and validationData
-                    this.trainingData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * 0.6), DTrainUtils
-                            .getTrainingFile().toString(), this.featureInputsCnt, this.outputNodeCount);
-                    this.validationData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * 0.4), DTrainUtils
-                            .getTestingFile().toString(), this.featureInputsCnt, this.outputNodeCount);
+                    this.trainingData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * 0.6),
+                            DTrainUtils.getTrainingFile().toString(), this.featureInputsCnt, this.outputNodeCount);
+                    this.validationData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * 0.4),
+                            DTrainUtils.getTestingFile().toString(), this.featureInputsCnt, this.outputNodeCount);
                 } else {
                     this.trainingData = new MemoryDiskFloatMLDataSet(
-                            (long) (memoryStoreSize * (1 - crossValidationRate)), DTrainUtils.getTrainingFile()
-                                    .toString(), this.featureInputsCnt, this.outputNodeCount);
+                            (long) (memoryStoreSize * (1 - crossValidationRate)),
+                            DTrainUtils.getTrainingFile().toString(), this.featureInputsCnt, this.outputNodeCount);
                     this.validationData = new MemoryDiskFloatMLDataSet((long) (memoryStoreSize * crossValidationRate),
                             DTrainUtils.getTestingFile().toString(), this.featureInputsCnt, this.outputNodeCount);
                 }
@@ -489,6 +506,10 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 throw new GuaguaRuntimeException(e);
             }
         }
+
+        // create Splitter
+        String delimiter = context.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
+        this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
     }
 
     private boolean isOnDisk() {
@@ -532,10 +553,12 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
         this.gradient.getNetwork().setWeights(weights);
 
+        Set<Integer> dropoutNodes = context.getLastMasterResult().getDropoutNodes();
+
         // using the weights from master to train model in current iteration
         double[] gradients = null;
         for(int i = 0; i < epochsPerIteration; i++) {
-            gradients = this.gradient.computeGradients(context.getCurrentIteration());
+            gradients = this.gradient.computeGradients(context.getCurrentIteration(), dropoutNodes);
             if(this.epochsPerIteration > 1) {
                 this.gradient.resetNetworkWeights();
             }
@@ -544,8 +567,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         double trainError = this.gradient.getTrainError();
 
         long start = System.currentTimeMillis();
-        double testError = this.validationData.getRecordCount() > 0 ? (this.gradient.calculateError()) : this.gradient
-                .getTrainError();
+        double testError = this.validationData.getRecordCount() > 0 ? (this.gradient.calculateError())
+                : this.gradient.getTrainError();
         LOG.info("Computing test error time: {}ms", (System.currentTimeMillis() - start));
 
         // if the validation set is 0%, then the validation error should be "N/A"
@@ -570,8 +593,10 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
+        String outputActivationFunc = (String) validParams.get(CommonConstants.OUTPUT_ACTIVATION_FUNC);
         BasicNetwork network = DTrainUtils.generateNetwork(this.featureInputsCnt, this.outputNodeCount, numLayers,
-                actFunc, hiddenNodeList, false, this.dropoutRate, this.wgtInit);
+                actFunc, hiddenNodeList, false, this.dropoutRate, this.wgtInit,
+                CommonUtils.isLinearTarget(modelConfig, columnConfigList), outputActivationFunc);
         // use the weights from master
         network.getFlat().setWeights(weights);
 
@@ -585,8 +610,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         LOG.info("Gradient computing thread count is {}.", modelConfig.getTrain().getWorkerThreadCount());
 
         this.gradient = new ParallelGradient((FloatFlatNetwork) flat, training, testing, flatSpot,
-                new LinearErrorFunction(), isCrossOver, modelConfig.getTrain().getWorkerThreadCount(), this.isELM,
-                this.lossStr, this.batchs);
+                new LinearErrorFunction(), isCrossOver, modelConfig.getTrain().getWorkerThreadCount(), this.lossStr,
+                this.batchs);
     }
 
     private NNParams buildEmptyNNParams(WorkerContext<NNParams, NNParams> workerContext) {
@@ -643,8 +668,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     protected float sampleWeights(float label) {
         float sampleWeights = 1f;
         // sample negative or kFoldCV, sample rate is 1d
-        double sampleRate = (modelConfig.getTrain().getSampleNegOnly() || this.isKFoldCV) ? 1d : modelConfig.getTrain()
-                .getBaggingSampleRate();
+        double sampleRate = (modelConfig.getTrain().getSampleNegOnly() || this.isKFoldCV) ? 1d
+                : modelConfig.getTrain().getBaggingSampleRate();
         int classValue = (int) (label + 0.01f);
         if(!modelConfig.isBaggingWithReplacement()) {
             Random random = null;
@@ -695,7 +720,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     }
 
     protected boolean isPositive(float value) {
-        return Float.compare(1f, value) == 0 ? true : false;
+        return Float.compare(1f, value) == 0;
     }
 
     /**

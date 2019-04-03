@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import ml.shifu.shifu.util.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -48,8 +49,6 @@ import ml.shifu.shifu.core.dtrain.dataset.CacheBasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.CacheFlatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
 
 /**
  * Mapper implementation to accumulate MSE value when remove one column.
@@ -71,6 +70,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     /**
      * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
      */
+    @SuppressWarnings("unused")
     private static final Splitter DEFAULT_SPLITTER = Splitter.on(CommonConstants.DEFAULT_COLUMN_SEPARATOR);
 
     /**
@@ -148,12 +148,17 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     private CacheBasicFloatNetwork cacheNetwork;
 
     /**
+     * The splitter for normalization data set
+     */
+    private Splitter splitter;
+
+    /**
      * Load all configurations for modelConfig and columnConfigList from source type.
      */
     private synchronized static void loadConfigFiles(final Context context) {
         if(modelConfig == null) {
-            LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(), Thread
-                    .currentThread().getName());
+            LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(),
+                    Thread.currentThread().getName());
             long start = System.currentTimeMillis();
             try {
                 modelConfig = CommonUtils.loadModelConfig(Constants.MODEL_CONFIG_JSON_FILE_NAME, SourceType.LOCAL);
@@ -163,8 +168,8 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
                 throw new RuntimeException(e);
             }
             LOG.info("After loading config with time {}ms and memory {} in thread {}.",
-                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(), Thread.currentThread()
-                            .getName());
+                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(),
+                    Thread.currentThread().getName());
         }
     }
 
@@ -172,17 +177,17 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
      * Load first model in model path as a {@link MLRegression} instance.
      */
     private synchronized void loadModel() throws IOException {
-        LOG.debug("Before loading model with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(), Thread
-                .currentThread().getName());
+        LOG.debug("Before loading model with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(),
+                Thread.currentThread().getName());
         long start = System.currentTimeMillis();
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.LOCAL);
         // load model from local d-cache model file
-        model = (MLRegression) CommonUtils.loadModel(modelConfig, new Path("model0."
-                + modelConfig.getAlgorithm().toLowerCase()), fs);
+        model = (MLRegression) ModelSpecLoaderUtils.loadModel(modelConfig,
+                new Path("model0." + modelConfig.getAlgorithm().toLowerCase()), fs);
         LOG.debug("After load model class {} with time {}ms and memory {} in thread {}.", model.getClass().getName(),
-                (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(), Thread.currentThread()
-                        .getName());
+                (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(),
+                Thread.currentThread().getName());
     }
 
     /**
@@ -233,8 +238,8 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         // Copy mode to here
         cacheNetwork = copy((BasicFloatNetwork) model);
 
-        this.filterBy = context.getConfiguration()
-                .get(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE, Constants.FILTER_BY_SE);
+        this.filterBy = context.getConfiguration().get(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE,
+                Constants.FILTER_BY_SE);
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
                 columnConfigList);
         this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
@@ -248,7 +253,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         boolean isAfterVarSelect = (inputOutputIndex[0] != 0);
         // cache all feature list for sampling features
         if(this.featureSet == null || this.featureSet.size() == 0) {
-            this.featureSet = new HashSet<Integer>(CommonUtils.getAllFeatureList(columnConfigList, isAfterVarSelect));
+            this.featureSet = new HashSet<Integer>(NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect));
             this.inputs = new double[this.featureSet.size()];
         }
 
@@ -262,13 +267,17 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         this.inputsMLData = new BasicMLData(this.inputs.length);
         this.outputKey = new LongWritable();
         LOG.info("Filter by is {}", filterBy);
+
+        // create Splitter
+        String delimiter = context.getConfiguration().get(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
+        this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
     }
 
     @Override
     protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
         recordCount += 1L;
         int index = 0, inputsIndex = 0, outputsIndex = 0;
-        for(String input: DEFAULT_SPLITTER.split(value.toString())) {
+        for(String input: this.splitter.split(value.toString())) {
             double doubleValue = NumberFormatUtils.getDouble(input.trim(), 0.0d);
             if(index == columnConfigList.size()) {
                 break;
@@ -277,7 +286,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
                 if(columnConfig != null && columnConfig.isTarget()) {
                     this.outputs[outputsIndex++] = doubleValue;
                 } else {
-                    if(this.featureSet.contains(columnConfig.getColumnNum())) {
+                    if(this.featureSet != null && this.featureSet.contains(columnConfig.getColumnNum())) {
                         inputs[inputsIndex] = doubleValue;
                         columnIndexes[inputsIndex++] = columnConfig.getColumnNum();
                     }

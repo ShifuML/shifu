@@ -15,10 +15,24 @@
  */
 package ml.shifu.shifu.core.pmml;
 
-import org.dmg.pmml.*;
-
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
+import org.dmg.pmml.Constant;
+import org.dmg.pmml.DataType;
+import org.dmg.pmml.DerivedField;
+import org.dmg.pmml.Discretize;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.FieldRef;
+import org.dmg.pmml.LocalTransformations;
+import org.dmg.pmml.MapValues;
+import org.dmg.pmml.MiningField;
+import org.dmg.pmml.NormContinuous;
+import org.dmg.pmml.OpType;
+import org.dmg.pmml.neural_network.NeuralInput;
+import org.dmg.pmml.neural_network.NeuralInputs;
+import org.dmg.pmml.neural_network.NeuralNetwork;
 
 /**
  * This class glues the partial PMML neural network model with the neural layers
@@ -35,7 +49,7 @@ public class NeuralNetworkModelIntegrator {
      * @return nn model after adaptored
      */
     public NeuralNetwork adaptPMML(NeuralNetwork model) {
-        model.withNeuralInputs(getNeuralInputs(model));
+        model.setNeuralInputs(getNeuralInputs(model));
         model.setLocalTransformations(getLocalTranformations(model));
         return model;
     }
@@ -43,42 +57,78 @@ public class NeuralNetworkModelIntegrator {
     private NeuralInputs getNeuralInputs(final NeuralNetwork model) {
         NeuralInputs nnInputs = new NeuralInputs();
         // get HashMap for local transform and MiningSchema fields
-        HashMap<FieldName, FieldName> miningTransformMap = new HashMap<FieldName, FieldName>();
+        HashMap<FieldName, FieldName> reversMiningTransformMap = new HashMap<FieldName, FieldName>();
+        HashMap<FieldName, List<FieldName>> treeMapOfTransform = new HashMap<FieldName, List<FieldName>>();
+
         for(DerivedField dField: model.getLocalTransformations().getDerivedFields()) {
             // Apply z-scale normalization on numerical variables
+            FieldName parentField = null;
             if(dField.getExpression() instanceof NormContinuous) {
-                miningTransformMap.put(((NormContinuous) dField.getExpression()).getField(), dField.getName());
+                parentField = ((NormContinuous) dField.getExpression()).getField();
+                reversMiningTransformMap.put(dField.getName(), parentField);
             }
             // Apply bin map on categorical variables
             else if(dField.getExpression() instanceof MapValues) {
-                miningTransformMap.put(((MapValues) dField.getExpression()).getFieldColumnPairs().get(0).getField(),
-                        dField.getName());
+                parentField = ((MapValues) dField.getExpression()).getFieldColumnPairs().get(0).getField();
+                reversMiningTransformMap.put(dField.getName(), parentField);
             } else if(dField.getExpression() instanceof Discretize) {
-                miningTransformMap.put(((Discretize) dField.getExpression()).getField(), dField.getName());
+                parentField = ((Discretize) dField.getExpression()).getField();
+                reversMiningTransformMap.put(dField.getName(), parentField);
             }
+            List<FieldName> fieldNames = treeMapOfTransform.get(parentField);
+            if(fieldNames == null) {
+                fieldNames = new ArrayList<FieldName>();
+            }
+            fieldNames.add(dField.getName());
+            treeMapOfTransform.put(parentField, fieldNames);
         }
+
+        // comment here
         List<MiningField> miningList = model.getMiningSchema().getMiningFields();
         int index = 0;
-        for(int i = 0; i < miningList.size(); i++) {
-            MiningField mField = miningList.get(i);
-            if(mField.getUsageType() != FieldUsageType.ACTIVE)
-                continue;
-            FieldName mFieldName = mField.getName();
-            FieldName fName = mFieldName;
-            while(miningTransformMap.containsKey(fName)) {
-                fName = miningTransformMap.get(fName);
-            }
 
-            DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(fName).withExpression(
-                    new FieldRef(fName));
-            nnInputs.withNeuralInputs(new NeuralInput(field, "0," + (index++)));
+        for(DerivedField dField: model.getLocalTransformations().getDerivedFields()) {
+            List<FieldName> list = treeMapOfTransform.get(dField.getName());
+            boolean isLeaf = (list == null || list.size() == 0);
+            FieldName root = getRoot(dField.getName(), reversMiningTransformMap);
+            if(isLeaf && isRootInMiningList(root, miningList)) {
+                DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).setName(dField.getName())
+                        .setExpression(new FieldRef(dField.getName()));
+                nnInputs.addNeuralInputs(new NeuralInput("0," + (index++), field));
+            }
         }
 
-        DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
-                new FieldName(PluginConstants.biasValue)).withExpression(
+        DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).setName(
+                new FieldName(PluginConstants.biasValue)).setExpression(
                 new FieldRef(new FieldName(PluginConstants.biasValue)));
-        nnInputs.withNeuralInputs(new NeuralInput(field, PluginConstants.biasValue));
+        nnInputs.addNeuralInputs(new NeuralInput(PluginConstants.biasValue, field));
         return nnInputs;
+    }
+
+    private FieldName getRoot(FieldName name, HashMap<FieldName, FieldName> reversMiningTransformMap) {
+        FieldName currName = name;
+        while(reversMiningTransformMap.containsKey(currName)) {
+            FieldName newName = reversMiningTransformMap.get(currName);
+            if(newName == null) {
+                // return last not null name
+                return currName;
+            }
+            currName = newName;
+        }
+        return currName;
+    }
+
+    private boolean isRootInMiningList(FieldName root, List<MiningField> miningList) {
+        for(int i = 0; i < miningList.size(); i++) {
+            MiningField mField = miningList.get(i);
+            if(mField.getUsageType() != MiningField.UsageType.ACTIVE)
+                continue;
+            FieldName mFieldName = mField.getName();
+            if(root.equals(mFieldName)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private LocalTransformations getLocalTranformations(NeuralNetwork model) {
@@ -86,11 +136,11 @@ public class NeuralNetworkModelIntegrator {
         List<DerivedField> derivedFields = model.getLocalTransformations().getDerivedFields();
 
         // add bias
-        DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(new FieldName(
+        DerivedField field = new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).setName(new FieldName(
                 PluginConstants.biasValue));
-        field.withExpression(new Constant(String.valueOf(PluginConstants.bias)));
+        field.setExpression(new Constant(String.valueOf(PluginConstants.bias)));
         derivedFields.add(field);
-        return new LocalTransformations().withDerivedFields(derivedFields);
+        return new LocalTransformations().addDerivedFields(derivedFields.toArray(new DerivedField[derivedFields.size()]));
     }
 
 }

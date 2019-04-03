@@ -96,8 +96,8 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
 
     private synchronized static void loadConfigFiles(final Context context) {
         if(modelConfig == null) {
-            LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(), Thread
-                    .currentThread().getName());
+            LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(),
+                    Thread.currentThread().getName());
             long start = System.currentTimeMillis();
             try {
                 modelConfig = CommonUtils.loadModelConfig(Constants.MODEL_CONFIG_JSON_FILE_NAME, SourceType.LOCAL);
@@ -108,8 +108,8 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                 throw new RuntimeException(e);
             }
             LOG.info("After loading config with time {}ms and memory {} in thread {}.",
-                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(), Thread.currentThread()
-                            .getName());
+                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(),
+                    Thread.currentThread().getName());
         }
     }
 
@@ -119,10 +119,10 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
 
         this.dataSetDelimiter = modelConfig.getDataSetDelimiter();
 
-        this.dataPurifier = new DataPurifier(modelConfig);
+        this.dataPurifier = new DataPurifier(modelConfig, false);
 
-        this.isComputeAll = Boolean.valueOf(context.getConfiguration().get(Constants.SHIFU_CORRELATION_COMPUTE_ALL,
-                "false"));
+        this.isComputeAll = Boolean
+                .valueOf(context.getConfiguration().get(Constants.SHIFU_CORRELATION_COMPUTE_ALL, "false"));
 
         for(ColumnConfig config: columnConfigList) {
             if(config.isCategorical()) {
@@ -148,8 +148,9 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
         if(modelConfig != null && modelConfig.getFlattenTags() != null) {
             this.tagSet = new HashSet<String>(modelConfig.getFlattenTags());
         }
-
-        this.tags = modelConfig.getSetTags();
+        if(modelConfig != null) {
+            this.tags = modelConfig.getSetTags();
+        }
     }
 
     @Override
@@ -189,7 +190,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                 continue;
             }
 
-            CorrelationWritable cw = CorrelationMultithreadedMapper.finalCorrelationMap.get(i);
+            CorrelationWritable cw = CorrelationMultithreadedMapper.finalCorrelationMap.get(columnConfig.getColumnNum());
             synchronized(cw) {
                 cw.setColumnIndex(i);
                 cw.setCount(cw.getCount() + 1d);
@@ -228,12 +229,11 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                     cw.setAdjustSumY(adjustSumY);
                 }
 
-                for(int j = 0; j < columnConfigList.size(); j++) {
+                for(int j = (this.isComputeAll ? 0 : i) ; j < columnConfigList.size(); j++) {
                     ColumnConfig otherColumnConfig = columnConfigList.get(j);
-                    if(otherColumnConfig.getColumnFlag() == ColumnFlag.Meta) {
-                        continue;
-                    }
-                    if(i > j && !this.isComputeAll) {
+                    if((otherColumnConfig.getColumnFlag() != ColumnFlag.Target)
+                            && ((otherColumnConfig.getColumnFlag() == ColumnFlag.Meta) || (hasCandidates
+                                    && !ColumnFlag.Candidate.equals(otherColumnConfig.getColumnFlag())))) {
                         continue;
                     }
 
@@ -248,8 +248,8 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                     }
                 }
             }
-            LOG.debug("running time is {}ms in thread {}", (System.currentTimeMillis() - startO), Thread
-                    .currentThread().getName());
+            LOG.debug("running time is {}ms in thread {}", (System.currentTimeMillis() - startO),
+                    Thread.currentThread().getName());
         }
     }
 

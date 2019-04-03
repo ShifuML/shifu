@@ -26,6 +26,18 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.collect.Lists;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.math3.distribution.PoissonDistribution;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.encog.mathutil.BoundMath;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Splitter;
+
 import ml.shifu.guagua.ComputableMonitor;
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
@@ -41,16 +53,8 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.util.CommonUtils;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.math3.distribution.PoissonDistribution;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.encog.mathutil.BoundMath;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Splitter;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.MapReduceUtils;
 
 /**
  * {@link LogisticRegressionWorker} defines logic to accumulate local <a
@@ -70,9 +74,8 @@ import com.google.common.base.Splitter;
  * <p>
  * L1 and l2 regulations are supported by configuration: RegularizedConstant in model params of ModelConfig.json.
  */
-@ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 300)
-public class LogisticRegressionWorker
-        extends
+@ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 3600)
+public class LogisticRegressionWorker extends
         AbstractWorkerComputable<LogisticRegressionParams, LogisticRegressionParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
 
     private static final Logger LOG = LoggerFactory.getLogger(LogisticRegressionWorker.class);
@@ -136,7 +139,7 @@ public class LogisticRegressionWorker
     /**
      * A splitter to split data with specified delimiter.
      */
-    private Splitter splitter = Splitter.on("|").trimResults();
+    private Splitter splitter;
 
     /**
      * PoissonDistribution which is used for poisson sampling for bagging with replacement.
@@ -218,6 +221,11 @@ public class LogisticRegressionWorker
      */
     private boolean isKFoldCV;
 
+    /**
+     * The model set candidate variables or not
+     */
+    protected boolean hasCandidates = false;
+
     protected boolean isUpSampleEnabled() {
         return this.upSampleRng != null;
     }
@@ -230,12 +238,13 @@ public class LogisticRegressionWorker
     @Override
     public void init(WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         loadConfigFiles(context.getProps());
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                this.columnConfigList);
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         this.outputNum = inputOutputIndex[1];
         this.candidateNum = inputOutputIndex[2];
-        this.isSpecificValidation = (modelConfig.getValidationDataSetRawPath() != null && !"".equals(modelConfig
-                .getValidationDataSetRawPath()));
+        this.isSpecificValidation = (modelConfig.getValidationDataSetRawPath() != null
+                && !"".equals(modelConfig.getValidationDataSetRawPath()));
         this.isStratifiedSampling = this.modelConfig.getTrain().getStratifiedSample();
         this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
         Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
@@ -260,20 +269,25 @@ public class LogisticRegressionWorker
 
         if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
             // fixed 0.6 and 0.4 of max memory for trainingData and validationData
-            this.trainingData = new BytableMemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory()
-                    * memoryFraction * 0.6), tmpFolder + File.separator + "train-" + System.currentTimeMillis(),
-                    Data.class.getName());
-            this.validationData = new BytableMemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory()
-                    * memoryFraction * 0.4), tmpFolder + File.separator + "test-" + System.currentTimeMillis(),
-                    Data.class.getName());
+            this.trainingData = new BytableMemoryDiskList<Data>(
+                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * 0.6),
+                    tmpFolder + File.separator + "train-" + System.currentTimeMillis(), Data.class.getName());
+            this.validationData = new BytableMemoryDiskList<Data>(
+                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * 0.4),
+                    tmpFolder + File.separator + "test-" + System.currentTimeMillis(), Data.class.getName());
         } else {
-            this.trainingData = new BytableMemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory()
-                    * memoryFraction * (1 - crossValidationRate)), tmpFolder + File.separator + "train-"
-                    + System.currentTimeMillis(), Data.class.getName());
-            this.validationData = new BytableMemoryDiskList<Data>((long) (Runtime.getRuntime().maxMemory()
-                    * memoryFraction * crossValidationRate), tmpFolder + File.separator + "test-"
-                    + System.currentTimeMillis(), Data.class.getName());
+            this.trainingData = new BytableMemoryDiskList<Data>(
+                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - crossValidationRate)),
+                    tmpFolder + File.separator + "train-" + System.currentTimeMillis(), Data.class.getName());
+            this.validationData = new BytableMemoryDiskList<Data>(
+                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * crossValidationRate),
+                    tmpFolder + File.separator + "test-" + System.currentTimeMillis(), Data.class.getName());
         }
+
+        // create Splitter
+        String delimiter = context.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
+        this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
+
         // cannot find a good place to close these two data set, using Shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
@@ -285,7 +299,8 @@ public class LogisticRegressionWorker
     }
 
     @Override
-    public LogisticRegressionParams doCompute(WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+    public LogisticRegressionParams doCompute(
+            WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         if(context.isFirstIteration()) {
             return new LogisticRegressionParams();
         } else {
@@ -324,10 +339,10 @@ public class LogisticRegressionWorker
                 double error = result - data.outputs[0];
                 testingFinalError += caculateMSEError(error);
             }
-            LOG.info("Iteration {} training data with error {}", context.getCurrentIteration(), trainingFinalError
-                    / trainingSize);
-            LOG.info("Iteration {} testing data with error {}", context.getCurrentIteration(), testingFinalError
-                    / testingSize);
+            LOG.info("Iteration {} training data with error {}", context.getCurrentIteration(),
+                    trainingFinalError / trainingSize);
+            LOG.info("Iteration {} testing data with error {}", context.getCurrentIteration(),
+                    testingFinalError / testingSize);
             return new LogisticRegressionParams(gradients, trainingFinalError, testingFinalError, trainingSize,
                     testingSize);
         }
@@ -341,7 +356,7 @@ public class LogisticRegressionWorker
     }
 
     /**
-     * Derived function for simmoid function.
+     * Derived function for sigmoid function.
      */
     private double derivedFunction(double result) {
         return result * (1d - result);
@@ -417,13 +432,17 @@ public class LogisticRegressionWorker
         double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
         boolean hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
 
-        for(String unit: splitter.split(line)) {
+        String[] fields = Lists.newArrayList(this.splitter.split(line)).toArray(new String[0]);
+        int pos = 0;
+
+        for (pos = 0; pos < fields.length; ) {
+            String unit = fields[pos];
             // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
             float floatValue = unit.length() == 0 ? 0f : NumberFormatUtils.getFloat(unit, 0f);
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
             floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
 
-            if(index == this.columnConfigList.size()) {
+            if(pos == fields.length - 1) {
                 // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
                 // weight, how to process???
                 if(StringUtils.isBlank(modelConfig.getWeightColumnName())) {
@@ -446,6 +465,7 @@ public class LogisticRegressionWorker
                 ColumnConfig columnConfig = this.columnConfigList.get(index);
                 if(columnConfig != null && columnConfig.isTarget()) {
                     outputData[outputIndex++] = floatValue;
+                    pos ++;
                 } else {
                     if(this.inputNum == this.candidateNum) {
                         // no variable selected, good candidate but not meta and not target choosed
@@ -454,19 +474,76 @@ public class LogisticRegressionWorker
                             inputData[inputIndex++] = floatValue;
                             hashcode = hashcode * 31 + Float.valueOf(floatValue).hashCode();
                         }
+                        pos ++;
                     } else {
-                        // final select some variables but meta and target are not included
-                        if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
-                                && columnConfig.isFinalSelect()) {
-                            inputData[inputIndex++] = floatValue;
-                            // only fixInitialInput=true, hashcode is effective. Remove Arrays.hashcode to avoid one
-                            // iteration for the input columns. Last weight column should be excluded.
-                            hashcode = hashcode * 31 + Float.valueOf(floatValue).hashCode();
+                        if ( columnConfig.isFinalSelect() ) {
+                            if ( columnConfig.isNumerical()
+                                    && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT) ) {
+                                for(int k = 0; k < columnConfig.getBinBoundary().size() + 1; k++) {
+                                    String tval = fields[pos];
+                                    // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+                                    float fval = tval.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
+                                    // no idea about why NaN in input data, we should process it as missing value TODO ,
+                                    // according to norm type
+                                    fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? 0f : fval;
+                                    inputData[inputIndex++] = fval;
+                                    pos++;
+                                }
+                            } else if(columnConfig.isCategorical()
+                                    && (modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
+                                    || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))) {
+                                for(int k = 0; k < columnConfig.getBinCategory().size() + 1; k++) {
+                                    String tval = fields[pos];
+                                    // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+                                    float fval = tval.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
+                                    // no idea about why NaN in input data, we should process it as missing value TODO ,
+                                    // according to norm type
+                                    fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? 0f : fval;
+                                    inputData[inputIndex++] = fval;
+                                    pos++;
+                                }
+                            } else {
+                                inputData[inputIndex++] = floatValue;
+                                pos++;
+                            }
+
+                            hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
+                        } else {
+                            if ( !CommonUtils.isToNormVariable(columnConfig, hasCandidates, modelConfig.isRegression()) ) {
+                                pos += 1;
+                            } else if ( columnConfig.isNumerical()
+                                    && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)
+                                    && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 0) {
+                                pos += (columnConfig.getBinBoundary().size() + 1);
+                            } else if(columnConfig.isCategorical()
+                                    && (modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
+                                    || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))
+                                    && columnConfig.getBinCategory().size() > 0) {
+                                pos += (columnConfig.getBinCategory().size() + 1);
+                            } else {
+                                pos += 1;
+                            }
                         }
                     }
                 }
             }
             index += 1;
+        }
+
+        if ( index != this.columnConfigList.size() || pos != fields.length - 1 ) {
+            throw new RuntimeException("Wrong data indexing. ColumnConfig index = " + index
+                    + ", while it should be " + columnConfigList.size() + ". "
+                    + "Data Pos = " + pos
+                    + ", while it should be " + (fields.length - 1));
+        }
+
+        // output delimiter in norm can be set by user now and if user set a special one later changed, this exception
+        // is helped to quick find such issue.
+        if(inputIndex != inputData.length) {
+            String delimiter = context.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER,
+                    Constants.DEFAULT_DELIMITER);
+            throw new RuntimeException("Input length is inconsistent with parsing size. Input original size: "
+                    + inputData.length + ", parsing size:" + inputIndex + ", delimiter:" + delimiter + ".");
         }
 
         // sample negative only logic here
@@ -478,8 +555,9 @@ public class LogisticRegressionWorker
                 // should take 1-0.8 to check endHashCode
                 int endHashCode = startHashCode
                         + Double.valueOf((1d - this.modelConfig.getBaggingSampleRate()) * 100).intValue();
-                if((modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
-                        .isOneVsAll())) // regression or onevsall
+                if((modelConfig.isRegression()
+                        || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll())) // regression or
+                                                                                                    // onevsall
                         && (int) (outputData[0] + 0.01d) == 0 // negative record
                         && isInRange(hashcode, startHashCode, endHashCode)) {
                     return;
@@ -487,8 +565,9 @@ public class LogisticRegressionWorker
             } else {
                 // if not fixed initial input, and for regression or onevsall multiple classification (regression also).
                 // if negative record
-                if((modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
-                        .isOneVsAll())) // regression or onevsall
+                if((modelConfig.isRegression()
+                        || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll())) // regression or
+                                                                                                    // onevsall
                         && (int) (outputData[0] + 0.01d) == 0 // negative record
                         && Double.compare(Math.random(), this.modelConfig.getBaggingSampleRate()) >= 0) {
                     return;
@@ -530,8 +609,8 @@ public class LogisticRegressionWorker
     protected float sampleWeights(float label) {
         float sampleWeights = 1f;
         // sample negative or kFoldCV, sample rate is 1d
-        double sampleRate = (modelConfig.getTrain().getSampleNegOnly() || this.isKFoldCV) ? 1d : modelConfig.getTrain()
-                .getBaggingSampleRate();
+        double sampleRate = (modelConfig.getTrain().getSampleNegOnly() || this.isKFoldCV) ? 1d
+                : modelConfig.getTrain().getBaggingSampleRate();
         int classValue = (int) (label + 0.01f);
         if(!modelConfig.isBaggingWithReplacement()) {
             Random random = null;
@@ -579,12 +658,13 @@ public class LogisticRegressionWorker
 
     private void loadConfigFiles(final Properties props) {
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
-                    SourceType.HDFS.toString()));
+            SourceType sourceType = SourceType
+                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

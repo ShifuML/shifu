@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core.processor;
 
 import ml.shifu.shifu.container.obj.*;
+import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.validator.ModelInspector;
 import ml.shifu.shifu.executor.ExecutorManager;
@@ -602,6 +603,8 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
         } else if (ModelTrainConf.ALGORITHM.GBT.equals(alg)) {
             trainConf.setNumTrainEpochs(40000);
         } else if (ModelTrainConf.ALGORITHM.LR.equals(alg)) {
+            trainConf.setNumTrainEpochs(100);
+        } else if(ALGORITHM.TENSORFLOW.equals(alg)) {
             trainConf.setNumTrainEpochs(100);
         }
         trainConf.setBaggingWithReplacement(true);

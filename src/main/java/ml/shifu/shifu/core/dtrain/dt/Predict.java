@@ -78,6 +78,11 @@ public class Predict implements Bytable {
         classValue = in.readByte();
     }
 
+    public void readFields(DataInput in, int version) throws IOException {
+        predict = in.readDouble();
+        classValue = in.readByte();
+    }
+
     @Override
     public String toString() {
         return "Predict [predict=" + predict + ", classValue=" + classValue + "]";

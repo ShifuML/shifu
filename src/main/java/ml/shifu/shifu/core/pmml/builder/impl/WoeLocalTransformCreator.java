@@ -15,16 +15,22 @@
  */
 package ml.shifu.shifu.core.pmml.builder.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.dmg.pmml.DataType;
+import org.dmg.pmml.DerivedField;
+import org.dmg.pmml.Discretize;
+import org.dmg.pmml.DiscretizeBin;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.Interval;
+import org.dmg.pmml.OpType;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.util.CommonUtils;
-
-import org.dmg.pmml.*;
-
-import java.util.ArrayList;
-import java.util.List;
+import ml.shifu.shifu.util.NormalUtils;
 
 /**
  * Created by zhanhu on 3/29/16.
@@ -51,7 +57,8 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
      * @return DerivedField for variable
      */
     @Override
-    protected List<DerivedField> createNumericalDerivedField(ColumnConfig config, double cutoff, ModelNormalizeConf.NormType normType) {
+    protected List<DerivedField> createNumericalDerivedField(ColumnConfig config, double cutoff,
+            ModelNormalizeConf.NormType normType) {
         List<Double> binWoeList = (normType.equals(ModelNormalizeConf.NormType.WOE) ? config.getBinCountWoe() : config
                 .getBinWeightedWoe());
         List<Double> binBoundaryList = config.getBinBoundary();
@@ -63,36 +70,38 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
             Interval interval = new Interval();
 
             if(i == 0) {
-                if ( binBoundaryList.size() == 1 ) {
-                    interval.withClosure(Interval.Closure.OPEN_OPEN)
-                            .withLeftMargin(Double.NEGATIVE_INFINITY)
-                            .withRightMargin(Double.POSITIVE_INFINITY);
+                if(binBoundaryList.size() == 1) {
+                    interval.setClosure(Interval.Closure.OPEN_OPEN).setLeftMargin(Double.NEGATIVE_INFINITY)
+                            .setRightMargin(Double.POSITIVE_INFINITY);
                 } else {
-                    interval.withClosure(Interval.Closure.OPEN_OPEN).withRightMargin(binBoundaryList.get(i + 1));
+                    interval.setClosure(Interval.Closure.OPEN_OPEN).setRightMargin(binBoundaryList.get(i + 1));
                 }
             } else if(i == binBoundaryList.size() - 1) {
-                interval.withClosure(Interval.Closure.CLOSED_OPEN).withLeftMargin(binBoundaryList.get(i));
+                interval.setClosure(Interval.Closure.CLOSED_OPEN).setLeftMargin(binBoundaryList.get(i));
             } else {
-                interval.withClosure(Interval.Closure.CLOSED_OPEN).withLeftMargin(binBoundaryList.get(i))
-                        .withRightMargin(binBoundaryList.get(i + 1));
+                interval.setClosure(Interval.Closure.CLOSED_OPEN).setLeftMargin(binBoundaryList.get(i))
+                        .setRightMargin(binBoundaryList.get(i + 1));
             }
 
-            discretizeBin.withInterval(interval).withBinValue(Double.toString(binWoeList.get(i)));
+            discretizeBin.setInterval(interval).setBinValue(Double.toString(binWoeList.get(i)));
             discretizeBinList.add(discretizeBin);
         }
 
         Discretize discretize = new Discretize();
         discretize
-                .withDataType(DataType.DOUBLE)
-                .withField(FieldName.create(CommonUtils.getSimpleColumnName(config)))
-                .withMapMissingTo(Normalizer.normalize(config, null, cutoff, normType).get(0).toString())
-                .withDefaultValue(Normalizer.normalize(config, null, cutoff, normType).get(0).toString())
-                .withDiscretizeBins(discretizeBinList);
+                .setDataType(DataType.DOUBLE)
+                .setField(
+                        FieldName.create(NormalUtils.getSimpleColumnName(config, columnConfigList, segmentExpansions,
+                                datasetHeaders)))
+                .setMapMissingTo(Normalizer.normalize(config, null, cutoff, normType).get(0).toString())
+                .setDefaultValue(Normalizer.normalize(config, null, cutoff, normType).get(0).toString())
+                .addDiscretizeBins(discretizeBinList.toArray(new DiscretizeBin[discretizeBinList.size()]));
 
         // derived field name is consisted of FieldName and "_zscl"
         List<DerivedField> derivedFields = new ArrayList<DerivedField>();
-        derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).withName(
-                FieldName.create(genPmmlColumnName(CommonUtils.getSimpleColumnName(config), normType))).withExpression(discretize));
+        derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).setName(
+                FieldName.create(genPmmlColumnName(NormalUtils.getSimpleColumnName(config.getColumnName()), normType)))
+                .setExpression(discretize));
         return derivedFields;
     }
 }

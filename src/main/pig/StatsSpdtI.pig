@@ -59,4 +59,4 @@ binning_info_partial = FOREACH data_binning_grp GENERATE group.$0, GenBinningDat
 binning_info_partial = FILTER binning_info_partial BY $1 IS NOT NULL;
 binning_info_grp = GROUP binning_info_partial BY $0 PARALLEL $group_binning_parallel;
 binning_info = FOREACH binning_info_grp GENERATE FLATTEN(MergeBinningData(*));
-STORE binning_info INTO '$path_stats_binning_info' USING PigStorage('|', '-schema');
+STORE binning_info INTO '$path_stats_binning_info' USING PigStorage('$output_delimiter', '-schema');

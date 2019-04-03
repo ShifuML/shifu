@@ -22,6 +22,7 @@ import java.util.jar.Manifest;
 
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
+import ml.shifu.shifu.core.pmml.builder.impl.MiningModelPmmlCreator;
 import ml.shifu.shifu.core.pmml.builder.impl.NNPmmlModelCreator;
 
 import org.apache.pig.impl.util.JarManager;
@@ -29,15 +30,15 @@ import org.dmg.pmml.Application;
 import org.dmg.pmml.DataDictionary;
 import org.dmg.pmml.Header;
 import org.dmg.pmml.LocalTransformations;
-import org.dmg.pmml.MiningFunctionType;
-import org.dmg.pmml.MiningModel;
+import org.dmg.pmml.MiningFunction;
+import org.dmg.pmml.mining.MiningModel;
+import org.dmg.pmml.mining.Segment;
+import org.dmg.pmml.mining.Segmentation;
+import org.dmg.pmml.mining.Segmentation.MultipleModelMethod;
 import org.dmg.pmml.MiningSchema;
 import org.dmg.pmml.Model;
 import org.dmg.pmml.ModelStats;
-import org.dmg.pmml.MultipleModelMethodType;
 import org.dmg.pmml.PMML;
-import org.dmg.pmml.Segment;
-import org.dmg.pmml.Segmentation;
 import org.dmg.pmml.True;
 import org.encog.ml.BasicML;
 import org.slf4j.Logger;
@@ -82,7 +83,7 @@ public class PMMLTranslator {
         // create and add header
         Header header = new Header();
         pmml.setHeader(header);
-        header.setCopyright(" Copyright [2013-2017] PayPal Software Foundation\n" + "\n"
+        header.setCopyright(" Copyright [2013-2018] PayPal Software Foundation\n" + "\n"
                 + " Licensed under the Apache License, Version 2.0 (the \"License\");\n"
                 + " you may not use this file except in compliance with the License.\n"
                 + " You may obtain a copy of the License at\n" + "\n"
@@ -121,14 +122,19 @@ public class PMMLTranslator {
         if(isOutBaggingToOne) {
             MiningModel miningModel = new MiningModel();
             miningModel.setMiningSchema(this.miningSchemaCreator.build(null));
-            miningModel.setFunctionName(MiningFunctionType.fromValue("regression"));
+            miningModel.setMiningFunction(MiningFunction.fromValue("regression"));
 
             miningModel.setTargets(((NNPmmlModelCreator) this.modelCreator).createTargets());
+
+            AbstractSpecifCreator minningModelCreator = new MiningModelPmmlCreator(
+                    this.specifCreator.getModelConfig(),
+                    this.specifCreator.getColumnConfigList());
+            minningModelCreator.build(null, miningModel);
 
             Segmentation seg = new Segmentation();
             miningModel.setSegmentation(seg);
 
-            seg.setMultipleModelMethod(MultipleModelMethodType.fromValue("weightedAverage"));
+            seg.setMultipleModelMethod(MultipleModelMethod.AVERAGE);
             List<Segment> list = seg.getSegments();
             int idCount = 0;
             for(BasicML basicML: basicMLs) {
@@ -142,12 +148,7 @@ public class PMMLTranslator {
                 tmpmodel.setLocalTransformations(this.localTransformationsCreator.build(basicML));
                 this.specifCreator.build(basicML, tmpmodel, idCount);
 
-                tmpmodel.setModelName(String.valueOf(idCount));
                 Segment segment = new Segment();
-
-                // TODO, using scale here or 1d???
-                segment.setWeight(1000d);
-
                 segment.setId("Segement" + String.valueOf(idCount));
                 segment.setPredicate(new True());
                 segment.setModel(tmpmodel);
@@ -167,7 +168,7 @@ public class PMMLTranslator {
             // create variable transform
             model.setLocalTransformations(this.localTransformationsCreator.build(basicML));
             this.specifCreator.build(basicML, model);
-            pmml.withModels(model);
+            pmml.addModels(model);
         }
 
         return pmml;

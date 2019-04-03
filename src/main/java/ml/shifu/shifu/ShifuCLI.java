@@ -15,13 +15,30 @@
  */
 package ml.shifu.shifu;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
+
+import ml.shifu.shifu.core.TreeModel;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.util.*;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.pig.impl.util.JarManager;
+import org.encog.ml.BasicML;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.core.processor.BasicModelProcessor;
@@ -33,27 +50,15 @@ import ml.shifu.shifu.core.processor.ExportModelProcessor;
 import ml.shifu.shifu.core.processor.InitModelProcessor;
 import ml.shifu.shifu.core.processor.ManageModelProcessor;
 import ml.shifu.shifu.core.processor.ManageModelProcessor.ModelAction;
+import ml.shifu.shifu.core.processor.ModelDataEncodeProcessor;
 import ml.shifu.shifu.core.processor.NormalizeModelProcessor;
 import ml.shifu.shifu.core.processor.PostTrainModelProcessor;
 import ml.shifu.shifu.core.processor.Processor;
+import ml.shifu.shifu.core.processor.ShifuTestProcessor;
 import ml.shifu.shifu.core.processor.StatsModelProcessor;
 import ml.shifu.shifu.core.processor.TrainModelProcessor;
 import ml.shifu.shifu.core.processor.VarSelectModelProcessor;
 import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.GnuParser;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionBuilder;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.lang.StringUtils;
-import org.apache.pig.impl.util.JarManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * ShifuCLI class is the MAIN class for whole project
@@ -84,15 +89,29 @@ public class ShifuCLI {
     private static final String NEW = "new";
 
     private static final String CMD_EXPORT = "export";
-
     private static final String CMD_COMBO = "combo";
+    private static final String CMD_ENCODE = "encode";
+    private static final String CMD_TEST = "test";
+    private static final String CMD_CONVERT = "convert";
+    private static final String CMD_ANALYSIS = "analysis";
 
-    private static final String RESET = "reset";
-
+    // options for stats
     private static final String CORRELATION = "correlation";
-
+    private static final String SHORT_CORRELATION = "c";
     private static final String PSI = "psi";
     private static final String SHORT_PSI = "p";
+    // options for variable re-binning
+    private static final String REBIN = "rebin";
+    private static final String VARS = "vars";
+    private static final String N = "n";
+    private static final String IVR = "ivr";
+    private static final String BIC = "bic";
+
+    // options for variable select
+    private static final String RESET = "reset";
+    private static final String FILTER_AUTO = "autofilter";
+    private static final String RECOVER_AUTO = "recoverauto";
+    private static final String RECURSIVE = "r";
 
     // for evaluation
     private static final String LIST = "list";
@@ -101,6 +120,9 @@ public class ShifuCLI {
     private static final String CONFMAT = "confmat";
     private static final String PERF = "perf";
     private static final String NORM = "norm";
+    private static final String NOSORT = "nosort";
+    private static final String REF = "ref";
+    private static final String STRICT = "strict";
 
     private static final String SAVE = "save";
     private static final String SWITCH = "switch";
@@ -110,37 +132,18 @@ public class ShifuCLI {
     private static final String SHUFFLE = "shuffle";
     private static final String RESUME = "resume";
 
-    private static final String REBIN = "rebin";
-    private static final String VARS = "vars";
-    private static final String N = "n";
-    private static final String IVR = "ivr";
-    private static final String BIC = "bic";
+    // for test function
+    private static final String FILTER = "filter";
+    // for model spec convert
+    private static final String TO_ZIPB = "tozipb";
+    private static final String TO_TREEB = "totreeb";
+    // for model spec analysis
+    private static final String FI = "fi";
 
     static private final Logger log = LoggerFactory.getLogger(ShifuCLI.class);
 
     public static void main(String[] args) {
-        // get -D parameters at first and set it in Environment then clean args
-        List<String> cleanedArgsList = new ArrayList<String>();
-        for(int i = 0; i < args.length; i++) {
-            if(args[i].startsWith("-D")) {
-                // remove '-D' at first
-                String keyValue = args[i].substring(2, args[i].length());
-                int index = keyValue.indexOf("=");
-                String key = keyValue.substring(0, index);
-                String value = "";
-                if(keyValue.length() >= index + 1) {
-                    value = keyValue.substring(index + 1, keyValue.length());
-                }
-                // set to Environment for others to read
-                Environment.setProperty(key.trim(), value.trim());
-                // such parameter will also be set in system properties for later reference in correlation and others
-                System.setProperty(key.trim(), value.trim());
-            } else {
-                cleanedArgsList.add(args[i]);
-            }
-        }
-
-        String[] cleanedArgs = cleanedArgsList.toArray(new String[0]);
+        String[] cleanedArgs = cleanArgs(args);
         // invalid input and help options
         if(cleanedArgs.length < 1 || (isHelpOption(cleanedArgs[0]))) {
             printUsage();
@@ -154,7 +157,7 @@ public class ShifuCLI {
         }
 
         CommandLineParser parser = new GnuParser();
-        Options opts = buildModelSetOptions(cleanedArgs);
+        Options opts = buildModelSetOptions();
         CommandLine cmd = null;
 
         try {
@@ -192,9 +195,10 @@ public class ShifuCLI {
                     if(cmd.getOptions() == null || cmd.getOptions().length == 0) {
                         status = initializeModel();
                         if(status == 0) {
-                            log.info("ModelSet initilization is successful. Please continue next step by using 'shifu stats'.");
+                            log.info(
+                                    "ModelSet initialization is successful. Please continue next step by using 'shifu stats'.");
                         } else {
-                            log.warn("Error in ModelSet initilization, please check your shifu config or report issue");
+                            log.warn("Error in ModelSet initialization, please check your shifu config or report issue");
                         }
                     } else if(cmd.hasOption(INIT_CMD_MODEL)) {
                         initializeModelParam();
@@ -204,7 +208,7 @@ public class ShifuCLI {
                     }
                 } else if(cleanedArgs[0].equals(STATS_CMD)) {
                     Map<String, Object> params = new HashMap<String, Object>();
-                    params.put(Constants.IS_COMPUTE_CORR, cmd.hasOption(CORRELATION) || cmd.hasOption("c"));
+                    params.put(Constants.IS_COMPUTE_CORR, cmd.hasOption(CORRELATION) || cmd.hasOption(SHORT_CORRELATION));
                     params.put(Constants.IS_REBIN, cmd.hasOption(REBIN));
                     params.put(Constants.REQUEST_VARS, cmd.getOptionValue(VARS));
                     params.put(Constants.EXPECTED_BIN_NUM, cmd.getOptionValue(N));
@@ -215,31 +219,47 @@ public class ShifuCLI {
                     // stats step
                     status = calModelStats(params);
                     if(status == 0) {
-                        if(cmd.hasOption(CORRELATION) || cmd.hasOption("c")) {
-                            log.info("Do model set correlation computing successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
+                        if(cmd.hasOption(CORRELATION) || cmd.hasOption(SHORT_CORRELATION)) {
+                            log.info(
+                                    "Do model set correlation computing successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
                         }
                         if(cmd.hasOption(PSI) || cmd.hasOption(SHORT_PSI)) {
-                            log.info("Do model set psi computing successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
+                            log.info(
+                                    "Do model set psi computing successfully. Please continue next step by using 'shifu normalize or shifu norm'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
                         } else {
-                            log.info("Do model set statistic successfully. Please continue next step by using 'shifu normalize or shifu norm or shifu transform'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
+                            log.info(
+                                    "Do model set statistic successfully. Please continue next step by using 'shifu normalize or shifu norm or shifu transform'. For tree ensemble model, no need do norm, please continue next step by using 'shifu varsel'");
                         }
                     } else {
-                        log.warn("Error in model set stats computation, please report issue on http:/github.com/shifuml/shifu/issues.");
+                        log.warn(
+                                "Error in model set stats computation, please report issue on http:/github.com/shifuml/shifu/issues.");
                     }
                 } else if(cleanedArgs[0].equals(NORMALIZE_CMD) || cleanedArgs[0].equals(NORM_CMD)
                         || cleanedArgs[0].equals(TRANSFORM_CMD)) {
                     // normalize step
-                    status = normalizeTrainData(cmd.hasOption(SHUFFLE));
+                    Map<String, Object> params = new HashMap<String, Object>();
+                    params.put(Constants.IS_TO_SHUFFLE_DATA, cmd.hasOption(SHUFFLE));
+                    status = normalizeTrainData(params);
                     if(status == 0) {
-                        log.info("Do model set normalization successfully. Please continue next step by using 'shifu varselect or shifu varsel'.");
+                        log.info(
+                                "Do model set normalization successfully. Please continue next step by using 'shifu varselect or shifu varsel'.");
                     } else {
-                        log.warn("Error in model set stats computation, please report issue on http:/github.com/shifuml/shifu/issues.");
+                        log.warn(
+                                "Error in model set stats computation, please report issue on http:/github.com/shifuml/shifu/issues.");
                     }
                 } else if(cleanedArgs[0].equals(VARSELECT_CMD) || cleanedArgs[0].equals(VARSEL_CMD)) {
+                    Map<String, Object> params = new HashMap<String, Object>();
+                    params.put(Constants.IS_TO_RESET, cmd.hasOption(RESET));
+                    params.put(Constants.IS_TO_LIST, cmd.hasOption(LIST));
+                    params.put(Constants.IS_TO_FILTER_AUTO, cmd.hasOption(FILTER_AUTO));
+                    params.put(Constants.IS_TO_RECOVER_AUTO, cmd.hasOption(RECOVER_AUTO));
+                    params.put(Constants.RECURSIVE_CNT, cmd.getOptionValue(RECURSIVE));
+
                     // variable selected step
-                    status = selectModelVar(cmd.hasOption(RESET), cmd.hasOption(LIST));
+                    status = selectModelVar(params);
                     if(status == 0) {
-                        log.info("Do model set variables selection successfully. Please continue next step by using 'shifu train'.");
+                        log.info(
+                                "Do model set variables selection successfully. Please continue next step by using 'shifu train'.");
                     } else {
                         log.info("Do variable selection with error, please check error message or report issue.");
                     }
@@ -248,10 +268,16 @@ public class ShifuCLI {
                     status = trainModel(cmd.hasOption(TRAIN_CMD_DRY), cmd.hasOption(TRAIN_CMD_DEBUG),
                             cmd.hasOption(SHUFFLE));
                     if(status == 0) {
-                        log.info("Do model set training successfully. Please continue next step by using 'shifu posttrain' or if no need posttrain you can go through with 'shifu eval'.");
+                        log.info(
+                                "Do model set training successfully. Please continue next step by using 'shifu posttrain' or if no need posttrain you can go through with 'shifu eval'.");
                     } else {
                         log.info("Do model training with error, please check error message or report issue.");
                     }
+                } else if (cleanedArgs[0].equals(CMD_ENCODE)) {
+                    Map<String, Object> params = new HashMap<String, Object>();
+                    params.put(ModelDataEncodeProcessor.ENCODE_DATA_SET, cmd.getOptionValue(EVAL_CMD_RUN));
+                    params.put(ModelDataEncodeProcessor.ENCODE_REF_MODEL, cmd.getOptionValue(REF));
+                    status = runEncode(params);
                 } else if(cleanedArgs[0].equals(CMD_COMBO)) {
                     if(cmd.hasOption(MODELSET_CMD_NEW)) {
                         log.info("Create new commbo models");
@@ -276,7 +302,8 @@ public class ShifuCLI {
                     // post train step
                     status = postTrainModel();
                     if(status == 0) {
-                        log.info("Do model set post-training successfully. Please configure your eval set in ModelConfig.json and continue next step by using 'shifu eval' or 'shifu eval -new <eval set>' to create a new eval set.");
+                        log.info(
+                                "Do model set post-training successfully. Please configure your eval set in ModelConfig.json and continue next step by using 'shifu eval' or 'shifu eval -new <eval set>' to create a new eval set.");
                     } else {
                         log.info("Do model post training with error, please check error message or report issue.");
                     }
@@ -290,6 +317,8 @@ public class ShifuCLI {
                     ManageModelProcessor p = new ManageModelProcessor(ModelAction.SHOW, null);
                     p.run();
                 } else if(cleanedArgs[0].equals(EVAL_CMD)) {
+                    Map<String, Object> params = new HashMap<String, Object>();
+
                     // eval step
                     if(cleanedArgs.length == 1) {
                         // run everything
@@ -302,25 +331,24 @@ public class ShifuCLI {
                     } else if(cmd.getOptionValue(MODELSET_CMD_NEW) != null) {
                         // create new eval
                         createNewEvalSet(cmd.getOptionValue(MODELSET_CMD_NEW));
-                        log.info("Create eval set successfully. You can configure EvalConfig.json or directly run 'shifu eval -run <evalSetName>' to get performance info.");
+                        log.info(
+                                "Create eval set successfully. You can configure EvalConfig.json or directly run 'shifu eval -run <evalSetName>' to get performance info.");
                     } else if(cmd.hasOption(EVAL_CMD_RUN)) {
                         runEvalSet(cmd.getOptionValue(EVAL_CMD_RUN), cmd.hasOption(TRAIN_CMD_DRY));
                         log.info("Finish run eval performance with eval set {}.", cmd.getOptionValue(EVAL_CMD_RUN));
                     } else if(cmd.hasOption(SCORE)) {
+                        params.put(EvalModelProcessor.NOSORT, cmd.hasOption(NOSORT));
                         // run score
-                        runEvalScore(cmd.getOptionValue(SCORE));
+                        runEvalScore(cmd.getOptionValue(SCORE), params);
                         log.info("Finish run score with eval set {}.", cmd.getOptionValue(SCORE));
                     } else if(cmd.hasOption(CONFMAT)) {
-
                         // run confusion matrix
                         runEvalConfMat(cmd.getOptionValue(CONFMAT));
                         log.info("Finish run confusion matrix with eval set {}.", cmd.getOptionValue(CONFMAT));
-
                     } else if(cmd.hasOption(PERF)) {
                         // run perfermance
                         runEvalPerf(cmd.getOptionValue(PERF));
                         log.info("Finish run performance maxtrix with eval set {}.", cmd.getOptionValue(PERF));
-
                     } else if(cmd.hasOption(LIST)) {
                         // list all evaluation sets
                         listEvalSet();
@@ -328,7 +356,7 @@ public class ShifuCLI {
                         // delete some evaluation set
                         deleteEvalSet(cmd.getOptionValue(DELETE));
                     } else if(cmd.hasOption(NORM)) {
-                        runEvalNorm(cmd.getOptionValue(NORM));
+                        runEvalNorm(cmd.getOptionValue(NORM), cmd.hasOption(STRICT));
                     } else {
                         log.error("Invalid command, please check help message.");
                         printUsage();
@@ -342,9 +370,46 @@ public class ShifuCLI {
                     params.put(ExportModelProcessor.MINIMUM_BIN_INST_CNT, cmd.getOptionValue(BIC));
                     status = exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE), params);
                     if(status == 0) {
-                        log.info("Export models/columnstats to PMML/csv format successfully in current folder.");
+                        log.info("Export models/columnstats/corr successfully.");
                     } else {
-                        log.warn("Export models/columnstats to PMML/csv format with error, please check or report issue.");
+                        log.warn("Fail to export models/columnstats/corr, please check or report issue.");
+                    }
+                } else if(cleanedArgs[0].equals(CMD_TEST)) {
+                    Map<String, Object> params = new HashMap<String, Object>();
+                    params.put(ShifuTestProcessor.IS_TO_TEST_FILTER, cmd.hasOption(FILTER));
+                    params.put(ShifuTestProcessor.TEST_TARGET, cmd.getOptionValue(FILTER));
+                    params.put(ShifuTestProcessor.TEST_RECORD_CNT, cmd.getOptionValue(N));
+                    status = runShifuTest(params);
+                    if(status == 0) {
+                        log.info("Run test for Shifu Successfully.");
+                    } else {
+                        log.warn("Fail to run Shifu test.");
+                    }
+                } else if(cleanedArgs[0].equals(CMD_CONVERT)) {
+                    int optType = -1;
+                    if ( cmd.hasOption(TO_ZIPB) ) {
+                        optType = 1;
+                    } else if(cmd.hasOption(TO_TREEB)) {
+                        optType = 2;
+                    }
+
+                    String[] convertArgs = new String[2];
+                    int j = 0;
+                    for ( int i = 1; i < cleanedArgs.length; i ++ ) {
+                        if ( !cleanedArgs[i].startsWith("-") ) {
+                            convertArgs[j++] = cleanedArgs[i];
+                        }
+                    }
+
+                    if (optType < 0 || StringUtils.isBlank(convertArgs[0]) || StringUtils.isBlank(convertArgs[1])) {
+                        printUsage();
+                    } else {
+                        status = runShifuConvert(optType, convertArgs[0], convertArgs[1]);
+                    }
+                } else if (cleanedArgs[0].equals(CMD_ANALYSIS)) {
+                    if (cmd.hasOption(FI)) {
+                        String modelPath = cmd.getOptionValue(FI);
+                        analysisModelFi(modelPath);
                     }
                 } else {
                     log.error("Invalid command, please check help message.");
@@ -355,11 +420,36 @@ public class ShifuCLI {
             System.exit(status);
         } catch (ShifuException e) {
             // need define error code in each step.
-            log.error(e.getError().toString(), e.getCause());
+            log.error(e.getError().toString() + "; msg: " + e.getMessage(), e.getCause());
             exceptionExit(e);
         } catch (Exception e) {
             exceptionExit(e);
         }
+    }
+
+    private static String[] cleanArgs(String[] args) {
+        // get -D parameters at first and set it in Environment then clean args
+        List<String> cleanedArgsList = new ArrayList<>();
+        for(int i = 0; i < args.length; i++) {
+            if(args[i].startsWith("-D")) {
+                // remove '-D' at first
+                String keyValue = args[i].substring(2);
+                int index = keyValue.indexOf("=");
+                String key = keyValue.substring(0, index).trim();
+                String value = "";
+                if(keyValue.length() >= index + 1) {
+                    value = keyValue.substring(index + 1).trim();
+                }
+                // set to Environment for others to read
+                Environment.setProperty(key, value);
+                // such parameter will also be set in system properties for later reference in correlation and others
+                System.setProperty(key, value);
+            } else {
+                cleanedArgsList.add(args[i]);
+            }
+        }
+
+        return cleanedArgsList.toArray(new String[0]);
     }
 
     /*
@@ -426,9 +516,8 @@ public class ShifuCLI {
     /*
      * Select variables for model
      */
-    public static int selectModelVar(boolean isToReset, boolean isToList) throws Exception {
-        VarSelectModelProcessor p = new VarSelectModelProcessor(isToReset);
-        p.setToList(isToList);
+    public static int selectModelVar(Map<String, Object> params) throws Exception {
+        VarSelectModelProcessor p = new VarSelectModelProcessor(params);
         return p.run();
     }
 
@@ -436,14 +525,14 @@ public class ShifuCLI {
      * Normalize the training data
      */
     public static int normalizeTrainData() throws Exception {
-        return normalizeTrainData(false);
+        return normalizeTrainData(null);
     }
 
     /*
      * Normalize the training data
      */
-    public static int normalizeTrainData(boolean isToShuffleData) throws Exception {
-        NormalizeModelProcessor p = new NormalizeModelProcessor(isToShuffleData);
+    public static int normalizeTrainData(Map<String, Object> params) throws Exception {
+        NormalizeModelProcessor p = new NormalizeModelProcessor(params);
         return p.run();
     }
 
@@ -474,8 +563,8 @@ public class ShifuCLI {
         return p.run();
     }
 
-    public static int runEvalScore(String evalSetNames) throws Exception {
-        EvalModelProcessor p = new EvalModelProcessor(EvalStep.SCORE, evalSetNames);
+    public static int runEvalScore(String evalSetNames, Map<String, Object> params) throws Exception {
+        EvalModelProcessor p = new EvalModelProcessor(EvalStep.SCORE, evalSetNames, params);
         return p.run();
     }
 
@@ -489,8 +578,10 @@ public class ShifuCLI {
         return p.run();
     }
 
-    private static int runEvalNorm(String evalSetNames) throws Exception {
-        EvalModelProcessor p = new EvalModelProcessor(EvalStep.NORM, evalSetNames);
+    private static int runEvalNorm(String evalSetNames, boolean strictMode) throws Exception {
+        Map<String, Object> params = new HashMap<>();
+        params.put(Constants.STRICT_MODE, strictMode);
+        EvalModelProcessor p = new EvalModelProcessor(EvalStep.NORM, evalSetNames, params);
         return p.run();
     }
 
@@ -543,24 +634,72 @@ public class ShifuCLI {
         p.checkAlgorithmParam();
     }
 
+    private static int runEncode(Map<String,Object> params) {
+        ModelDataEncodeProcessor processor = new ModelDataEncodeProcessor(params);
+        return processor.run();
+    }
+
+    private static int runShifuTest(Map<String,Object> params) {
+        ShifuTestProcessor processor = new ShifuTestProcessor(params);
+        return processor.run();
+    }
+
+    public static int runShifuConvert(int optType, String fromFilePath, String toFilePath) {
+        IndependentTreeModelUtils modelUtils = new IndependentTreeModelUtils();
+        boolean status = false;
+        if (optType == 1) {
+            status = modelUtils.convertBinaryToZipSpec(new File(fromFilePath), new File(toFilePath));
+        } else if(optType == 2) {
+            status = modelUtils.convertZipSpecToBinary(new File(fromFilePath), new File(toFilePath));
+        }
+        return (status ? 0 : 1);
+    }
+
+    public static int analysisModelFi(String modelPath) {
+        File modelFile = new File(modelPath);
+        if (!modelFile.exists() || !(modelPath.toUpperCase().endsWith("." + CommonConstants.GBT_ALG_NAME)
+                || modelPath.toUpperCase().endsWith("." + CommonConstants.RF_ALG_NAME))) {
+            log.error("The model {} doesn't exist or it isn't GBT/RF model.", modelPath);
+            return 1;
+        }
+
+        FileInputStream inputStream =  null;
+        String fiFileName = modelFile.getName() + ".fi";
+
+        try {
+            inputStream = new FileInputStream(modelFile);
+            BasicML basicML = TreeModel.loadFromStream(inputStream);
+            Map<Integer, MutablePair<String, Double>> featureImportances = CommonUtils
+                    .computeTreeModelFeatureImportance(Arrays.asList(new BasicML[]{basicML}));
+            CommonUtils.writeFeatureImportance(fiFileName, featureImportances);
+        } catch (IOException e)  {
+            log.error("Fail to analysis model FI for {}", modelPath);
+            return 1;
+        } finally {
+            IOUtils.closeQuietly(inputStream);
+        }
+
+        return 0;
+    }
+
     private static void printModelSetCopiedSuccessfulLog(String newModelSetName) {
         log.info(String.format("ModelSet %s is copied successfully with ModelConfig.json in %s folder.",
                 newModelSetName, newModelSetName));
-        log.info(String
-                .format("Please change your folder to %s and then configure your ModelConfig.json or directly do initialization step by 'shifu init.'",
-                        newModelSetName));
+        log.info(String.format(
+                "Please change your folder to %s and then configure your ModelConfig.json or directly do initialization step by 'shifu init.'",
+                newModelSetName));
     }
 
     private static void printModelSetCreatedSuccessfulLog(String modelName) {
         log.info(String.format("ModelSet %s is created successfully with ModelConfig.json in %s folder.", modelName,
                 modelName));
-        log.info(String
-                .format("Please change your folder to %s and then configure your ModelConfig.json or directly do initialization step by 'shifu init.'",
-                        modelName));
+        log.info(String.format(
+                "Please change your folder to %s and then configure your ModelConfig.json or directly do initialization step by 'shifu init.'",
+                modelName));
     }
 
     @SuppressWarnings("static-access")
-    private static Options buildModelSetOptions(String[] args) {
+    private static Options buildModelSetOptions() {
         Options opts = new Options();
 
         Option opt_cmt = OptionBuilder.hasArg().withDescription("The description for new model").create(MODELSET_CMD_M);
@@ -572,8 +711,17 @@ public class ShifuCLI {
                 .create(TRAIN_CMD_DEBUG);
         Option opt_model = OptionBuilder.hasArg(false).withDescription("Init model").create(INIT_CMD_MODEL);
         Option opt_concise = OptionBuilder.hasArg(false).withDescription("Export concise PMML").create(EXPORT_CONCISE);
+
+        // options for variable selection
         Option opt_reset = OptionBuilder.hasArg(false).withDescription("Reset all variables to finalSelect = false")
                 .create(RESET);
+        Option opt_filter_auto = OptionBuilder.hasArg(false)
+                .withDescription("Auto filter variables by MissingRate, IV/KS, Correlation").create(FILTER_AUTO);
+        Option opt_recover_auto = OptionBuilder.hasArg(false)
+                .withDescription("Recover auto filtered variables from history.").create(RECOVER_AUTO);
+        Option opt_recursive = OptionBuilder.hasArg().withDescription("Run variable selection recursively")
+                .create(RECURSIVE);
+
         Option opt_correlation = OptionBuilder.hasArg(false)
                 .withDescription("Compute correlation value for all column pairs.").create(CORRELATION);
         Option opt_correlation_short = OptionBuilder.hasArg(false)
@@ -592,7 +740,12 @@ public class ShifuCLI {
         Option opt_norm = OptionBuilder.hasArg().create(NORM);
         Option opt_eval = OptionBuilder.hasArg(false).create(EVAL_CMD);
         Option opt_init = OptionBuilder.hasArg(false).create(INIT_CMD);
+        Option opt_nosort = OptionBuilder.hasArg(false).create(NOSORT);
+        Option opt_ref = OptionBuilder.hasArg(true).create(REF);
+        Option opt_filter = OptionBuilder.hasOptionalArg().create(FILTER);
+        Option opt_strict = OptionBuilder.hasArg(false).create(STRICT);
 
+        // options for variable re-binning
         Option opt_rebin = OptionBuilder.hasArg(false).create(REBIN);
         Option opt_vars = OptionBuilder.hasArg().create(VARS);
         Option opt_n = OptionBuilder.hasArg().create(N);
@@ -602,6 +755,11 @@ public class ShifuCLI {
         Option opt_save = OptionBuilder.hasArg(false).withDescription("save model").create(SAVE);
         Option opt_switch = OptionBuilder.hasArg(false).withDescription("switch model").create(SWITCH);
         Option opt_eval_model = OptionBuilder.hasArg().withDescription("").create(EVAL_MODEL);
+
+        Option opt_tozipb = OptionBuilder.hasArg(false).create(TO_ZIPB);
+        Option opt_totreeb = OptionBuilder.hasArg(false).create(TO_TREEB);
+
+        Option opt_fi = OptionBuilder.hasArg(true).create(FI);
 
         opts.addOption(opt_cmt);
         opts.addOption(opt_new);
@@ -613,7 +771,16 @@ public class ShifuCLI {
         opts.addOption(opt_debug);
         opts.addOption(opt_model);
         opts.addOption(opt_concise);
+        opts.addOption(opt_nosort);
+        opts.addOption(opt_ref);
+        opts.addOption(opt_filter);
+        opts.addOption(opt_strict);
+
         opts.addOption(opt_reset);
+        opts.addOption(opt_filter_auto);
+        opts.addOption(opt_recover_auto);
+        opts.addOption(opt_recursive);
+
         opts.addOption(opt_eval);
         opts.addOption(opt_init);
         opts.addOption(opt_shuffle);
@@ -637,6 +804,11 @@ public class ShifuCLI {
         opts.addOption(opt_ivr);
         opts.addOption(opt_bic);
 
+        opts.addOption(opt_tozipb);
+        opts.addOption(opt_totreeb);
+
+        opts.addOption(opt_fi);
+
         return opts;
     }
 
@@ -647,17 +819,23 @@ public class ShifuCLI {
         System.out.println("Usage: shifu [-Dkey=value] COMMAND");
         System.out.println("where COMMAND is one of:");
         System.out.println("\tnew <ModelSetName> [-t <NN|LR|RF|GBT>]  Create a new model set.");
-        System.out
-                .println("\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
-        System.out
-                .println("\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
-        System.out
-                .println("\tstats -correlation(c)                   Calculate correlation values between column pairs.");
+        System.out.println(
+                "\tinit                                    Create initial ColumnConfig.json and upload to HDFS.");
+        System.out.println(
+                "\tstats                                   Calculate statistics on HDFS and update local ColumnConfig.json.");
+        System.out.println(
+                "\tstats -correlation(c)                   Calculate correlation values between column pairs.");
         System.out.println("\tstats -psi(p)                           Calculate psi values if psi column is provided.");
         System.out.println("\tstats -rebin [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
         System.out.println("\t                                        Do the variable Re-bin.");
-        System.out
-                .println("\tvarselect/varsel [-reset] [-list]         Variable selection, will update finalSelect in ColumnConfig.json.");
+        System.out.println(
+                "\tvarselect/varsel -list                  Variable selection, will update finalSelect in ColumnConfig.json.");
+        System.out.println("\tvarselect/varsel -list                  List all finalSelect=true variables");
+        System.out.println("\tvarselect/varsel -reset                 Set finalSelect=false for all variables");
+        System.out.println(
+                "\tvarselect/varsel -autofilter            Auto filter variables by MissingRate, KS/IV, and Correlation.");
+        System.out.println("\tvarselect/varsel -recoverauto           Recover those variables that are auto-filtered.");
+        System.out.println("\tvarselect/varsel -r                     Run variable selection recursively.");
         System.out.println("\tnormalize/norm/transform [-shuffle]     Normalize the columns with finalSelect as true.");
         System.out.println("\ttrain [-dry] [-shuffle]                 Train the model with the normalized data.");
         System.out.println("\tposttrain                               Post-process data after training models.");
@@ -666,20 +844,23 @@ public class ShifuCLI {
         System.out.println("\teval -new     <EvalSetName>             Create a new eval set.");
         System.out.println("\teval -delete  <EvalSetName>             Delete an eval set.");
         System.out.println("\teval -run     <EvalSetName>             Run eval set evaluation.");
-        System.out.println("\teval -score   <EvalSetName>             Scoring evaluation dataset.");
+        System.out.println("\teval -score   <EvalSetName> [-nosort]   Scoring evaluation dataset.");
         System.out.println("\teval -norm    <EvalSetName>             Normalize evaluation dataset.");
         System.out.println("\teval -confmat <EvalSetName>             Compute the TP/FP/TN/FN based on scoring");
         System.out
                 .println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
-        System.out
-                .println("\texport [-t pmml|columnstats|woemapping|bagging|baggingpmml] [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
-        System.out
-                .println("\t                                        Export model to PMML format or export ColumnConfig.");
-        System.out
-                .println("\tcombo -new    <Algorithm List>          Create a combo model train. Algorithm lis should be NN,LR,RF,GBT");
+        System.out.println(
+                "\texport [-t pmml|columnstats|woemapping|bagging|baggingpmml|corr|woe] [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
+        System.out.println(
+                "\t                                        Export model to PMML format or export ColumnConfig.");
+        System.out.println(
+                "\tcombo -new    <Algorithm List>          Create a combo model train. Algorithm lis should be NN,LR,RF,GBT");
         System.out.println("\tcombo -init                             Generate sub-models.");
         System.out.println("\tcombo -run [-shuffle] [-resume]         Run Combo-Model train.");
         System.out.println("\tcombo -eval [-resume]                   Evaluate Combo-Model performance.");
+        System.out.println("\tencode -run [TDS|EvalSetNames] [-ref encode_ref_model]");
+        System.out.println("\t                                        Run encode on training or evaluation datasets and set them to encode_ref_model.");
+        System.out.println("\ttest [-filter [EvalSetNames]] [-n]      Run testing for Shifu to detect error early.");
         System.out.println("\tversion|v|-v|-version                   Print version of current package.");
         System.out.println("\thelp|h|-h|-help                         Help message.");
     }

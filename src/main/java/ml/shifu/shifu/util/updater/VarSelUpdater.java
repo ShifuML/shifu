@@ -8,6 +8,7 @@ import java.util.Map.Entry;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.ModelConfig;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -41,6 +42,18 @@ public class VarSelUpdater extends BasicUpdater {
             }
         }
 
+        this.setCategorialColumns = new HashSet<NSColumn>();
+        if (CollectionUtils.isNotEmpty(modelConfig.getCategoricalColumnNames())) {
+            for(String category: modelConfig.getCategoricalColumnNames()) {
+                this.setCategorialColumns.add(new NSColumn(category));
+                if(this.isForSegs) {
+                    for(int i = 0; i < segs.size(); i++) {
+                        this.setCategorialColumns.add(new NSColumn(category + "_" + (i + 1)));
+                    }
+                }
+            }
+        }
+
         setHybridColumns = new HashSet<NSColumn>();
         hybridColumnNames = modelConfig.getHybridColumnNames();
         if(hybridColumnNames != null && hybridColumnNames.size() > 0) {
@@ -68,6 +81,14 @@ public class VarSelUpdater extends BasicUpdater {
         // No need reset ColumnType since column type should be set well in stats and later cannot be changed
         if(NSColumnUtils.isColumnEqual(this.targetColumnName, varName)) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Target);
+            if ( CollectionUtils.isEmpty(this.modelConfig.getTags()) ) {
+                // allow tags are empty to support linear target
+                // set columnType to N
+                columnConfig.setColumnType(ColumnType.N);
+            } else {
+                // target column is set to categorical column
+                columnConfig.setColumnType(ColumnType.C);
+            }
         } else if(this.setMeta.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Meta);
         } else if(this.setForceRemove.contains(new NSColumn(varName))) {
@@ -83,6 +104,8 @@ public class VarSelUpdater extends BasicUpdater {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Weight);
         } else if(this.setCandidates.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Candidate);
+        } else if ( this.setCategorialColumns.contains(new NSColumn(varName)) ) {
+            columnConfig.setColumnType(ColumnType.C);
         }
     }
 }

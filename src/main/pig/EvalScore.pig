@@ -36,4 +36,4 @@ raw = FILTER raw BY IsDataFilterOut(*);
 evalScore = FOREACH raw GENERATE FLATTEN(EvalScore(*));
 evalScore = FILTER evalScore BY $0 IS NOT NULL;
 
-STORE evalScore INTO '$pathEvalScore' USING PigStorage('|', '-schema');
+STORE evalScore INTO '$pathEvalScore' USING PigStorage('$output_delimiter', '-schema');

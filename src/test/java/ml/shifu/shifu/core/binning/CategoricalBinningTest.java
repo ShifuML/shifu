@@ -17,10 +17,6 @@
  */
 package ml.shifu.shifu.core.binning;
 
-import junit.framework.Assert;
-
-import org.testng.annotations.Test;
-
 /**
  * CategoricalBinningTest class
  * 
@@ -28,13 +24,5 @@ import org.testng.annotations.Test;
  * 
  */
 public class CategoricalBinningTest {
-
-    @Test
-    public void testSerialObject() {
-        CategoricalBinning binning = new CategoricalBinning(10, 5000);
-        String binStr = binning.objToString();
-        String[] fieldArr = binStr.split(Character.toString(AbstractBinning.FIELD_SEPARATOR), -1);
-        Assert.assertTrue(fieldArr.length == 6);
-    }
 
 }

@@ -15,14 +15,24 @@
  */
 package ml.shifu.shifu.core.pmml.builder.impl;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
-import org.dmg.pmml.*;
-import org.encog.ml.BasicML;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.MiningFunction;
+import org.dmg.pmml.Model;
+import org.dmg.pmml.OpType;
+import org.dmg.pmml.Target;
+import org.dmg.pmml.TargetValue;
+import org.dmg.pmml.Targets;
+import org.dmg.pmml.neural_network.NeuralNetwork;
+import org.encog.ml.BasicML;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
+import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 
 /**
  * Created by zhanhu on 3/29/16.
@@ -40,6 +50,12 @@ public class NNPmmlModelCreator extends AbstractPmmlElementCreator<Model> {
     @Override
     public Model build(BasicML basicML) {
         Model model = new NeuralNetwork();
+/*        if ( modelConfig.isClassification() &&
+                ModelTrainConf.MultipleClassification.NATIVE.equals(modelConfig.getTrain().getMultiClassifyMethod())) {
+            model.setFunctionName(MiningFunctionType.CLASSIFICATION);
+        } else {*/
+            model.setMiningFunction(MiningFunction.REGRESSION);
+/*        }*/
         model.setTargets(createTargets());
         return model;
     }
@@ -47,33 +63,63 @@ public class NNPmmlModelCreator extends AbstractPmmlElementCreator<Model> {
     public Targets createTargets() {
         Targets targets = new Targets();
 
-        Target target = new Target();
+        if(modelConfig.isClassification() && ModelTrainConf.MultipleClassification.NATIVE
+                .equals(modelConfig.getTrain().getMultiClassifyMethod())) {
+            List<Target> targetList = createMultiClassTargets();
+            targets.addTargets(targetList.toArray(new Target[targetList.size()]));
+        } else {
+            Target target = new Target();
 
-        target.setOptype(OpType.CATEGORICAL);
-        target.setField(new FieldName(modelConfig.getTargetColumnName()));
+            target.setOpType(OpType.CONTINUOUS);
+            target.setField(new FieldName(modelConfig.getTargetColumnName()));
 
-        List<TargetValue> targetValueList = new ArrayList<TargetValue>();
+            List<TargetValue> targetValueList = new ArrayList<TargetValue>();
 
-        for(String posTagValue: modelConfig.getPosTags()) {
-            TargetValue pos = new TargetValue();
-            pos.setValue(posTagValue);
-            pos.setDisplayValue("Positive");
+            if(CollectionUtils.isNotEmpty(modelConfig.getPosTags())) {
+                for(String posTagValue : modelConfig.getPosTags()) {
+                    TargetValue pos = new TargetValue();
+                    pos.setValue(posTagValue);
+                    pos.setDisplayValue("Positive");
 
-            targetValueList.add(pos);
+                    targetValueList.add(pos);
+                }
+            }
+
+            if(CollectionUtils.isNotEmpty(modelConfig.getNegTags())) {
+                for(String negTagValue : modelConfig.getNegTags()) {
+                    TargetValue neg = new TargetValue();
+                    neg.setValue(negTagValue);
+                    neg.setDisplayValue("Negative");
+
+                    targetValueList.add(neg);
+                }
+            }
+
+            target.addTargetValues(targetValueList.toArray(new TargetValue[targetValueList.size()]));
+
+            targets.addTargets(target);
         }
 
-        for(String negTagValue: modelConfig.getNegTags()) {
-            TargetValue neg = new TargetValue();
-            neg.setValue(negTagValue);
-            neg.setDisplayValue("Negative");
+        return targets;
+    }
 
-            targetValueList.add(neg);
+    private List<Target> createMultiClassTargets() {
+        List<Target> targets = new ArrayList<Target>();
+        for ( int i = 0; i < modelConfig.getTags().size(); i ++ ) {
+            String tag = modelConfig.getTags().get(i);
+
+            Target target = new Target();
+            target.setOpType(OpType.CONTINUOUS);
+            target.setField(new FieldName(modelConfig.getTargetColumnName() + "_" + i));
+
+            TargetValue targetValue = new TargetValue();
+            targetValue.setValue(Integer.toString(i));
+            targetValue.setDisplayValue(tag);
+
+            target.addTargetValues(targetValue);
+
+            targets.add(target);
         }
-
-        target.withTargetValues(targetValueList);
-
-        targets.withTargets(target);
-
         return targets;
     }
 }

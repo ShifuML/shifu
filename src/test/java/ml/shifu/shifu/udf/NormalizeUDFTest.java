@@ -23,6 +23,7 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import ml.shifu.shifu.udf.NormalizeUDF.PrecisionType;
 import java.io.IOException;
 
 /**
@@ -38,6 +39,7 @@ public class NormalizeUDFTest {
         instance = new NormalizeUDF("LOCAL",
                 "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
                 "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json");
+        instance.setPrecisionType(PrecisionType.FLOAT7);
     }
 
     @Test

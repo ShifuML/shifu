@@ -32,6 +32,8 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@link CorrelationReducer} is used to merge all {@link CorrelationWritable}s together to compute pearson correlation
@@ -40,7 +42,9 @@ import org.apache.hadoop.mapreduce.Reducer;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class CorrelationReducer extends Reducer<IntWritable, CorrelationWritable, IntWritable, Text> {
-
+    
+    private final static Logger LOG = LoggerFactory.getLogger(CorrelationReducer.class);
+    
     /**
      * Output key cache to avoid new operation.
      */
@@ -90,6 +94,13 @@ public class CorrelationReducer extends Reducer<IntWritable, CorrelationWritable
         Iterator<CorrelationWritable> cwIt = values.iterator();
         while(cwIt.hasNext()) {
             CorrelationWritable cw = cwIt.next();
+            
+            if (!cw.isValid()) {
+                // In this case, there is no need to process this one because all of inside value is null
+                LOG.warn("Such CorrelationWritable has not been inited, so we ingore it");
+                continue;
+            }
+            
             if(finalCw == null) {
                 finalCw = initCw(cw.getAdjustCount().length);
             }
@@ -97,6 +108,11 @@ public class CorrelationReducer extends Reducer<IntWritable, CorrelationWritable
             finalCw.combine(cw);
         }
 
+        if (finalCw == null) {
+            LOG.warn("Key: {}, Reducer result is null because there is no useful correlationwritable from Mapper.", key.get());
+            return;
+        }
+        
         this.outputKey.set(key.get());
         this.outputValue.set(new String(Base64.encodeBase64(objectToBytes(finalCw)), "utf-8"));
         context.write(outputKey, outputValue);

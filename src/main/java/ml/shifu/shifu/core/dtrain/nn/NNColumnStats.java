@@ -15,19 +15,19 @@
  */
 package ml.shifu.shifu.core.dtrain.nn;
 
+import ml.shifu.guagua.io.Bytable;
+import ml.shifu.shifu.container.obj.ColumnType;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import ml.shifu.guagua.io.Bytable;
-import ml.shifu.shifu.container.obj.ColumnType;
-
 /**
  * {@link NNColumnStats} is to wrapper valued info for neural network model serialization.
  */
-class NNColumnStats implements Bytable {
+public class NNColumnStats implements Bytable {
 
     public NNColumnStats() {
     }

@@ -71,7 +71,7 @@ public enum ShifuErrorCode {
             "The input data length is less than column config"), ERROR_NO_EQUAL_COLCONFIG(1153,
             "The input data length is not equal to column config size"), ERROR_NO_TARGET_COLUMN(1154,
             "There is no target column in training data"), ERROR_INVALID_TARGET_VALUE(1155,
-            "Invalid target value,target value must be 1 or 0"),
+            "Invalid target value,target value must be 1 or 0"), ASSERT_ERROR(1156, "Assert error"),
 
     /*
      * model validate 1201 - 1250

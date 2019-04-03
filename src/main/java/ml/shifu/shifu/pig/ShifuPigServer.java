@@ -16,11 +16,7 @@
 package ml.shifu.shifu.pig;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.Properties;
-
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Environment;
 
 import org.apache.pig.ExecType;
 import org.apache.pig.PigServer;
@@ -29,6 +25,9 @@ import org.apache.pig.impl.PigContext;
 import org.apache.pig.impl.logicalLayer.FrontendException;
 import org.apache.pig.newplan.logical.relational.LogicalPlan;
 import org.apache.pig.tools.pigstats.PigStats;
+
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.ValueVisitor;
 
 /**
  * {@link ShifuPigServer} is add an entry point to inject properties set in shifuconfig or command to make sure user
@@ -59,13 +58,14 @@ public class ShifuPigServer extends PigServer {
     }
 
     protected PigStats launchPlan(LogicalPlan lp, String jobName) throws ExecException, FrontendException {
-        // add logic to update properties and make config in Environment.getProperties() override properties in pig
-        // script
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                super.pigContext.getProperties().put(entry.getKey(), entry.getValue());
+        // add logic to update properties and make config in Environment.getProperties()
+        // to override properties in pig script
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                pigContext.getProperties().put(key, value.toString());
             }
-        }
+        });
 
         return super.launchPlan(lp, jobName);
     }

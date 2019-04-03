@@ -25,6 +25,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ModelRunner;
 import ml.shifu.shifu.util.CommonUtils;
 
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.encog.ml.BasicML;
@@ -47,7 +48,7 @@ public class SimpleScoreUDF extends AbstractTrainerUDF<Double> {
 
         SourceType sourceType = SourceType.valueOf(source);
 
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, null, sourceType);
+        List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(modelConfig, null, sourceType);
         this.header = CommonUtils.getHeaders(pathHeader, delimiter, sourceType);
         modelRunner = new ModelRunner(modelConfig, columnConfigList, this.header, modelConfig.getDataSetDelimiter(),
                 models);

@@ -17,9 +17,14 @@ package ml.shifu.shifu.core.dtrain.dt;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UTFDataFormatException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -28,6 +33,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.StringUtils;
@@ -261,6 +267,76 @@ public class IndependentTreeModel {
                         || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_CUTOFF_CONVETER)
                         || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_HALF_CUTOFF_CONVETER) || gbtScoreConvertStrategy
                             .equalsIgnoreCase(Constants.GBT_SCORE_MAXMIN_SCALE_CONVETER));
+    }
+
+    public final List<String> encode(int depth, Map<String, Object> dataMap) {
+        return encode(depth, convertDataMapToDoubleArray(dataMap));
+    }
+
+    public List<String> encode(int depth, double[] data) {
+        List<String> encodingResult = new ArrayList<String>();
+        for (int i = 0; i < this.trees.size(); i ++ ) {
+            List<TreeNode> treeBag = this.trees.get(i);
+            for (int j = 0; j < treeBag.size(); j ++ ) {
+                //use tree to encoding
+                TreeNode tree = treeBag.get(j);
+                String[] treeCodes = encodeTree(depth, tree.getNode(), data);
+                encodingResult.add(StringUtils.join(treeCodes));
+            }
+        }
+        return encodingResult;
+    }
+
+    private String[] encodeTree(int depth, Node topNode, double[] data) {
+        String[] treeCodes = new String[depth];
+        Arrays.fill(treeCodes, "L");
+        int ops = 0;
+
+        Node currNode = topNode;
+        // go until leaf
+        while(currNode.getSplit() != null && !currNode.isRealLeaf()) {
+            Split split = currNode.getSplit();
+            double value = data[this.getColumnIndex(split.getColumnNum())];
+            if(split.getFeatureType() == Split.CONTINUOUS) {
+                // value is real numeric value and no need to transform to binLowestValue
+                if(value < split.getThreshold()) {
+                    currNode = currNode.getLeft();
+                    treeCodes[ops++] = "L";
+                } else {
+                    currNode = currNode.getRight();
+                    treeCodes[ops++] = "R";
+                }
+            } else if(split.getFeatureType() == Split.CATEGORICAL) {
+                short indexValue = -1;
+                int categoricalSize = this.getCategoricalSize(split.getColumnNum());
+                if(Double.compare(value, 0d) < 0 || Double.compare(value, categoricalSize) >= 0) {
+                    indexValue = (short) categoricalSize;
+                } else {
+                    // value is category index + 0.1d is to avoid 0.9999999 converted to 0, is there?
+                    indexValue = (short) (value + 0.1d);
+                }
+                Set<Short> childCategories = split.getLeftOrRightCategories();
+                if(split.isLeft()) {
+                    if(childCategories.contains(indexValue)) {
+                        currNode = currNode.getLeft();
+                        treeCodes[ops++] = "L";
+                    } else {
+                        currNode = currNode.getRight();
+                        treeCodes[ops++] = "R";
+                    }
+                } else {
+                    if(childCategories.contains(indexValue)) {
+                        currNode = currNode.getRight();
+                        treeCodes[ops++] = "R";
+                    } else {
+                        currNode = currNode.getLeft();
+                        treeCodes[ops++] = "L";
+                    }
+                }
+            }
+        }
+
+        return treeCodes;
     }
 
     /**
@@ -897,7 +973,7 @@ public class IndependentTreeModel {
         }
 
         int version = dis.readInt();
-        IndependentTreeModel.setVersion(version);
+        // IndependentTreeModel.setVersion(version);
         String algorithm = dis.readUTF();
         String lossStr = dis.readUTF();
         boolean isClassification = dis.readBoolean();
@@ -933,7 +1009,7 @@ public class IndependentTreeModel {
             Map<String, Integer> categoryIndexMapping = new HashMap<String, Integer>(categoryListSize, 1f);
             List<String> categories = new ArrayList<String>(categoryListSize);
             for(int j = 0; j < categoryListSize; j++) {
-                String category = dis.readUTF();
+                String category = readCategory(dis);
                 // categories is merged category list
                 categories.add(category);
                 if(category.contains(Constants.CATEGORICAL_GROUP_VAL_DELIMITER)) {
@@ -960,7 +1036,7 @@ public class IndependentTreeModel {
         List<List<TreeNode>> bagTrees = new ArrayList<List<TreeNode>>(1);
         List<List<Double>> bagWgts = new ArrayList<List<Double>>();
         int bags = 0;
-        if(IndependentTreeModel.getVersion() < 4) {
+        if(version < 4) {
             bags = 1;
         } else {
             // if version >=4, model saving first is size
@@ -972,7 +1048,7 @@ public class IndependentTreeModel {
             List<Double> weights = new ArrayList<Double>(treeNum);
             for(int i = 0; i < treeNum; i++) {
                 TreeNode treeNode = new TreeNode();
-                treeNode.readFields(dis);
+                treeNode.readFields(dis, version);
                 trees.add(treeNode);
                 weights.add(treeNode.getLearningRate());
 
@@ -990,6 +1066,110 @@ public class IndependentTreeModel {
                 columnCategoryIndexMapping, columnMapping, isOptimizeMode, bagTrees, bagWgts,
                 CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm), isClassification && !isOneVsAll,
                 isConvertToProb, lossStr, algorithm, inputNode, version, gbtScoreConvertStrategy);
+    }
+
+    /**
+     * Read category by marker, if marker<-1, read from bytes or read from readUTF
+     * 
+     * @param dis
+     *            input stream
+     * @return catregory read from input stream
+     * @throws IOException
+     *             any io exception
+     * @throws UnsupportedEncodingException
+     *             not supported encoding exception
+     */
+    private static String readCategory(DataInputStream dis) throws IOException, UnsupportedEncodingException {
+        String category = null;
+        short markerOrLen = dis.readShort();
+        if(markerOrLen < 0) {
+            int len = dis.readInt();
+            byte[] bytes = new byte[len];
+            for(int k = 0; k < bytes.length; k++) {
+                bytes[k] = dis.readByte();
+            }
+            category = new String(bytes, "UTF-8");
+        } else {
+            category = readUTF(dis, markerOrLen);
+        }
+        return category;
+    }
+
+    /**
+     * Copied from DataInputStream since we need't read utflen in the beginning of the method.
+     * 
+     * @param in
+     *            input stream
+     * @param utflen
+     *            len of utf string
+     * @return the string read from stream
+     * @throws IOException
+     *             any io exception
+     */
+    private final static String readUTF(DataInputStream in, int utflen) throws IOException {
+        byte[] bytearr = null;
+        char[] chararr = null;
+        bytearr = new byte[utflen];
+        chararr = new char[utflen];
+
+        int c, char2, char3;
+        int count = 0;
+        int chararr_count = 0;
+
+        in.readFully(bytearr, 0, utflen);
+
+        while(count < utflen) {
+            c = (int) bytearr[count] & 0xff;
+            if(c > 127)
+                break;
+            count++;
+            chararr[chararr_count++] = (char) c;
+        }
+
+        while(count < utflen) {
+            c = (int) bytearr[count] & 0xff;
+            switch(c >> 4) {
+                case 0:
+                case 1:
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                case 6:
+                case 7:
+                    /* 0xxxxxxx */
+                    count++;
+                    chararr[chararr_count++] = (char) c;
+                    break;
+                case 12:
+                case 13:
+                    /* 110x xxxx 10xx xxxx */
+                    count += 2;
+                    if(count > utflen)
+                        throw new UTFDataFormatException("malformed input: partial character at end");
+                    char2 = (int) bytearr[count - 1];
+                    if((char2 & 0xC0) != 0x80)
+                        throw new UTFDataFormatException("malformed input around byte " + count);
+                    chararr[chararr_count++] = (char) (((c & 0x1F) << 6) | (char2 & 0x3F));
+                    break;
+                case 14:
+                    /* 1110 xxxx 10xx xxxx 10xx xxxx */
+                    count += 3;
+                    if(count > utflen)
+                        throw new UTFDataFormatException("malformed input: partial character at end");
+                    char2 = (int) bytearr[count - 2];
+                    char3 = (int) bytearr[count - 1];
+                    if(((char2 & 0xC0) != 0x80) || ((char3 & 0xC0) != 0x80))
+                        throw new UTFDataFormatException("malformed input around byte " + (count - 1));
+                    chararr[chararr_count++] = (char) (((c & 0x0F) << 12) | ((char2 & 0x3F) << 6) | ((char3 & 0x3F) << 0));
+                    break;
+                default:
+                    /* 10xx xxxx, 1111 xxxx */
+                    throw new UTFDataFormatException("malformed input around byte " + count);
+            }
+        }
+        // The number of chars produced may be less than utflen
+        return new String(chararr, 0, chararr_count);
     }
 
     /**
@@ -1022,4 +1202,83 @@ public class IndependentTreeModel {
         return gbtScoreConvertStrategy;
     }
 
+    public IndependentTreeModel() {
+        // for Json converter
+    }
+
+    public boolean saveToInputStream(OutputStream outputStream) throws IOException{
+        DataOutputStream fos = new DataOutputStream(new GZIPOutputStream(outputStream));
+        // version
+        fos.writeInt(CommonConstants.TREE_FORMAT_VERSION);
+        fos.writeUTF(this.algorithm);
+        fos.writeUTF(this.lossStr);
+        fos.writeBoolean(this.isClassification);
+        fos.writeBoolean(false); // make this.isClassification to do final decision
+        fos.writeInt(this.inputNode);
+
+        Map<Integer, String> columnIndexNameMapping = this.numNameMapping;
+        Map<Integer, List<String>> columnIndexCategoricalListMapping = this.categoricalColumnNameNames;
+        Map<Integer, Double> numericalMeanMapping = this.numericalMeanMapping;
+
+        // serialize numericalMeanMapping
+        fos.writeInt(numericalMeanMapping.size());
+        for(Entry<Integer, Double> entry : numericalMeanMapping.entrySet()) {
+            fos.writeInt(entry.getKey());
+            // for some feature, it is null mean value, it is not selected, just set to 0d to avoid NPE
+            fos.writeDouble(entry.getValue() == null ? 0d : entry.getValue());
+        }
+        // serialize columnIndexNameMapping
+        fos.writeInt(columnIndexNameMapping.size());
+        for(Entry<Integer, String> entry : columnIndexNameMapping.entrySet()) {
+            fos.writeInt(entry.getKey());
+            fos.writeUTF(entry.getValue());
+        }
+        // serialize columnIndexCategoricalListMapping
+        fos.writeInt(columnIndexCategoricalListMapping.size());
+        for(Entry<Integer, List<String>> entry : columnIndexCategoricalListMapping.entrySet()) {
+            List<String> categories = entry.getValue();
+            if(categories != null) {
+                fos.writeInt(entry.getKey());
+                fos.writeInt(categories.size());
+                for(String category : categories) {
+                    // There is 16k limitation when using writeUTF() function.
+                    // if the category value is larger than 10k, write a marker -1 and write bytes instead of
+                    // writeUTF;
+                    // in read part logic should be changed also to readByte not readUTF according to the marker
+                    if(category.length() < Constants.MAX_CATEGORICAL_VAL_LEN) {
+                        fos.writeUTF(category);
+                    } else {
+                        fos.writeShort(BinaryDTSerializer.UTF_BYTES_MARKER); // marker here
+                        byte[] bytes = category.getBytes("UTF-8");
+                        fos.writeInt(bytes.length);
+                        for(int i = 0; i < bytes.length; i++) {
+                            fos.writeByte(bytes[i]);
+                        }
+                    }
+                }
+            }
+        }
+
+        Map<Integer, Integer> columnMapping = this.columnNumIndexMapping;
+        fos.writeInt(columnMapping.size());
+        for(Entry<Integer, Integer> entry : columnMapping.entrySet()) {
+            fos.writeInt(entry.getKey());
+            fos.writeInt(entry.getValue());
+        }
+
+        // after model version 4 (>=4), IndependentTreeModel support bagging, here write a default RF/GBT size 1
+        fos.writeInt(trees.size());
+        for(int i = 0; i < trees.size(); i++) {
+            List<TreeNode> forest = trees.get(i);
+            int treeLength = forest.size();
+            fos.writeInt(treeLength);
+            for(TreeNode treeNode : forest) {
+                treeNode.write(fos);
+            }
+        }
+
+        fos.close();
+
+        return true;
+    }
 }

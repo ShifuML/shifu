@@ -20,6 +20,7 @@ import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.fs.PathFinder;
@@ -27,6 +28,7 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.message.EvalResultMessage;
 import ml.shifu.shifu.message.RunModelResultMessage;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
@@ -82,7 +84,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
 
         subModelsCnt = new TreeMap<String, Integer>();
         @SuppressWarnings("deprecation")
-        List<ModelSpec> subModels = CommonUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
+        List<ModelSpec> subModels = ModelSpecLoaderUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
                 evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb());
         if(CollectionUtils.isNotEmpty(subModels)) {
             for(ModelSpec modelSpec: subModels) {
@@ -146,7 +148,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
                 }
 
                 // append meta data
-                List<String> metaColumns = evalConfig.getScoreMetaColumns(modelConfig);
+                List<String> metaColumns = evalConfig.getAllMetaColumns(modelConfig);
                 if(CollectionUtils.isNotEmpty(metaColumns)) {
                     for(String columnName: metaColumns) {
                         String value = rawDataMap.get(columnName);
@@ -182,10 +184,13 @@ public class ScoreModelWorker extends AbstractWorkerActor {
     }
 
     private void addModelScoreData(StringBuilder buf, CaseScoreResult cs) {
-        buf.append("|" + cs.getAvgScore());
-        buf.append("|" + cs.getMaxScore());
-        buf.append("|" + cs.getMinScore());
-        buf.append("|" + cs.getMedianScore());
+        if ( !(modelConfig.isClassification()
+                && ModelTrainConf.MultipleClassification.NATIVE.equals(modelConfig.getTrain().getMultiClassifyMethod())) ) {
+            buf.append("|" + cs.getAvgScore());
+            buf.append("|" + cs.getMaxScore());
+            buf.append("|" + cs.getMinScore());
+            buf.append("|" + cs.getMedianScore());
+        }
 
         // score
         for (Double score : cs.getScores()) {
@@ -207,7 +212,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
         buf.append("|" + (StringUtils.isBlank(evalConfig.getDataSet().getWeightColumnName())
                 ? "weight" : evalConfig.getDataSet().getWeightColumnName()));
 
-        List<BasicML> models = CommonUtils.loadBasicModels(modelConfig, evalConfig, SourceType.LOCAL);
+        List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(modelConfig, evalConfig, SourceType.LOCAL);
         if ( CollectionUtils.isNotEmpty(models) ) {
             addModelScoreHeader(buf, models.size(), "");
         }
@@ -236,12 +241,21 @@ public class ScoreModelWorker extends AbstractWorkerActor {
     }
 
     private void addModelScoreHeader(StringBuilder buf, Integer modelCnt, String modelName) {
-        buf.append("|" + addModelNameAsNS(modelName, "mean"));
-        buf.append("|" + addModelNameAsNS(modelName, "max"));
-        buf.append("|" + addModelNameAsNS(modelName, "min"));
-        buf.append("|" + addModelNameAsNS(modelName, "median"));
-        for (int i = 0; i < modelCnt; i++) {
-            buf.append("|" + addModelNameAsNS(modelName, "model" + i));
+        if ( modelConfig.isClassification()
+                && ModelTrainConf.MultipleClassification.NATIVE.equals(modelConfig.getTrain().getMultiClassifyMethod())) {
+            for (int i = 0; i < modelCnt; i++) {
+                for (int j = 0; j < modelConfig.getTags().size(); j ++ ) {
+                    buf.append("|" + ((StringUtils.isNotBlank(modelName) ? modelName : "model") + i + "_tag_" + j));
+                }
+            }
+        } else {
+            buf.append("|" + addModelNameAsNS(modelName, "mean"));
+            buf.append("|" + addModelNameAsNS(modelName, "max"));
+            buf.append("|" + addModelNameAsNS(modelName, "min"));
+            buf.append("|" + addModelNameAsNS(modelName, "median"));
+            for (int i = 0; i < modelCnt; i++) {
+                buf.append("|" + addModelNameAsNS(modelName, "model" + i));
+            }
         }
     }
 

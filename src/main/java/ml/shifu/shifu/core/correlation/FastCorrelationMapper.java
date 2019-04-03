@@ -106,8 +106,8 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
 
     private synchronized static void loadConfigFiles(final Context context) {
         if(modelConfig == null) {
-            LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(), Thread
-                    .currentThread().getName());
+            LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(),
+                    Thread.currentThread().getName());
             long start = System.currentTimeMillis();
             try {
                 modelConfig = CommonUtils.loadModelConfig(Constants.MODEL_CONFIG_JSON_FILE_NAME, SourceType.LOCAL);
@@ -118,8 +118,8 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
                 throw new RuntimeException(e);
             }
             LOG.info("After loading config with time {}ms and memory {} in thread {}.",
-                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(), Thread.currentThread()
-                            .getName());
+                    (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(),
+                    Thread.currentThread().getName());
         }
     }
 
@@ -129,10 +129,10 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
 
         this.dataSetDelimiter = modelConfig.getDataSetDelimiter();
 
-        this.dataPurifier = new DataPurifier(modelConfig);
+        this.dataPurifier = new DataPurifier(modelConfig, false);
 
-        this.isComputeAll = Boolean.valueOf(context.getConfiguration().get(Constants.SHIFU_CORRELATION_COMPUTE_ALL,
-                "false"));
+        this.isComputeAll = Boolean
+                .valueOf(context.getConfiguration().get(Constants.SHIFU_CORRELATION_COMPUTE_ALL, "false"));
 
         this.outputKey = new IntWritable();
         this.correlationMap = new HashMap<Integer, CorrelationWritable>();
@@ -162,7 +162,9 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
             this.tagSet = new HashSet<String>(modelConfig.getFlattenTags());
         }
 
-        this.tags = modelConfig.getSetTags();
+        if(modelConfig != null) {
+            this.tags = modelConfig.getSetTags();
+        }
     }
 
     @Override
@@ -202,10 +204,10 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
                     || (hasCandidates && !ColumnFlag.Candidate.equals(columnConfig.getColumnFlag()))) {
                 continue;
             }
-            CorrelationWritable cw = this.correlationMap.get(i);
+            CorrelationWritable cw = this.correlationMap.get(columnConfig.getColumnNum());
             if(cw == null) {
                 cw = new CorrelationWritable();
-                this.correlationMap.put(i, cw);
+                this.correlationMap.put(columnConfig.getColumnNum(), cw);
             }
             cw.setColumnIndex(i);
             cw.setCount(cw.getCount() + 1d);
@@ -244,16 +246,15 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
                 cw.setAdjustSumY(adjustSumY);
             }
             if(i % 1000 == 0) {
-                LOG.debug("running time 1 is {}ms in thread {}", (System.currentTimeMillis() - start), Thread
-                        .currentThread().getName());
+                LOG.debug("running time 1 is {}ms in thread {}", (System.currentTimeMillis() - start),
+                        Thread.currentThread().getName());
             }
             start = System.currentTimeMillis();
-            for(int j = 0; j < columnConfigList.size(); j++) {
+            for(int j = (this.isComputeAll ? 0 : i); j < columnConfigList.size(); j++) {
                 ColumnConfig otherColumnConfig = columnConfigList.get(j);
-                if(otherColumnConfig.getColumnFlag() == ColumnFlag.Meta) {
-                    continue;
-                }
-                if(i > j && !this.isComputeAll) {
+                if((otherColumnConfig.getColumnFlag() != ColumnFlag.Target)
+                        && ((otherColumnConfig.getColumnFlag() == ColumnFlag.Meta) || (hasCandidates
+                                && !ColumnFlag.Candidate.equals(otherColumnConfig.getColumnFlag())))) {
                     continue;
                 }
 
@@ -268,12 +269,12 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
                 }
             }
             if(i % 1000 == 0) {
-                LOG.debug("running time 2 is {}ms in thread {}", (System.currentTimeMillis() - start), Thread
-                        .currentThread().getName());
+                LOG.debug("running time 2 is {}ms in thread {}", (System.currentTimeMillis() - start),
+                        Thread.currentThread().getName());
             }
         }
-        LOG.debug("running time is {}ms in thread {}", (System.currentTimeMillis() - startO), Thread.currentThread()
-                .getName());
+        LOG.debug("running time is {}ms in thread {}", (System.currentTimeMillis() - startO),
+                Thread.currentThread().getName());
     }
 
     private double[] getDoubleArrayByRawArray(String[] units) {

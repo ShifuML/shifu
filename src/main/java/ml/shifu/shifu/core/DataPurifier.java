@@ -44,14 +44,16 @@ public class DataPurifier {
     private ShifuMapContext jc = new ShifuMapContext();
     private JexlEngine jexl;
 
-    public DataPurifier(ModelConfig modelConfig) throws IOException {
-        if(StringUtils.isNotBlank(modelConfig.getFilterExpressions())) {
+    public DataPurifier(ModelConfig modelConfig, boolean isForValidationDataSet) throws IOException {
+        String filterExpression = (isForValidationDataSet ?
+                modelConfig.getDataSet().getValidationFilterExpressions() : modelConfig.getFilterExpressions());
+        if(StringUtils.isNotBlank(filterExpression)) {
             jexl = new JexlEngine();
             try {
-                dataFilterExpr = jexl.createExpression(modelConfig.getFilterExpressions());
+                dataFilterExpr = jexl.createExpression(filterExpression);
             } catch (JexlException e) {
-                log.error("The expression is " + modelConfig.getFilterExpressions()
-                        + "is invalid, please use correct expression.", e);
+                log.error("The expression `{}` is invalid, please use correct expression.", filterExpression, e);
+                log.error("Please note the expression won't take effect!");
                 dataFilterExpr = null;
             }
             this.headers = CommonUtils.getFinalHeaders(modelConfig);
@@ -113,8 +115,8 @@ public class DataPurifier {
 
         for(int i = 0; i < fields.length; i++) {
             NSColumn nsColumn = new NSColumn(headers[i]);
-            jc.set(headers[i], ((fields[i] == null) ? "" : fields[i].toString()));
-            jc.set(nsColumn.getSimpleName(), ((fields[i] == null) ? "" : fields[i].toString()));
+            jc.set(headers[i], (fields[i] == null ? "" : fields[i]));
+            jc.set(nsColumn.getSimpleName(), (fields[i] == null ? "" : fields[i]));
         }
 
         Boolean result = Boolean.FALSE;
@@ -126,7 +128,7 @@ public class DataPurifier {
             if(this.jexl.isStrict()) {
                 throw new RuntimeException(e);
             } else {
-                log.error("Error occurred when trying to evaluate" + dataFilterExpr.toString(), e);
+                log.error("Error occurred when trying to evaluate " + dataFilterExpr.toString(), e);
             }
         }
 
@@ -164,7 +166,7 @@ public class DataPurifier {
             if(this.jexl.isStrict()) {
                 throw new RuntimeException(e);
             } else {
-                log.warn("Error occurred when trying to evaluate" + dataFilterExpr.toString(), e);
+                log.warn("Error occurred when trying to evaluate " + dataFilterExpr.toString(), e);
             }
         }
 

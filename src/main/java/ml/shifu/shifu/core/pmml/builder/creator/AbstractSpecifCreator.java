@@ -15,8 +15,13 @@
  */
 package ml.shifu.shifu.core.pmml.builder.creator;
 
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
 import org.dmg.pmml.*;
 import org.encog.ml.BasicML;
+
+import java.util.List;
 
 /**
  * Created by zhanhu on 3/30/16.
@@ -27,9 +32,26 @@ public abstract class AbstractSpecifCreator {
     public static final String ROUND_FUNC = "round";
     public static final String FINAL_RESULT = "FinalResult";
 
+    private ModelConfig modelConfig;
+    @SuppressWarnings("unused")
+    private List<ColumnConfig> columnConfigList;
+
+    public AbstractSpecifCreator(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
+        this.modelConfig = modelConfig;
+        this.columnConfigList = columnConfigList;
+    }
+
     public abstract boolean build(BasicML basicML, Model model);
 
     public abstract boolean build(BasicML basicML, Model model, int id);
+
+    public ModelConfig getModelConfig() {
+        return modelConfig;
+    }
+
+    public List<ColumnConfig> getColumnConfigList() {
+        return columnConfigList;
+    }
 
     /**
      * Create the normalized output for model, since the final score should be 0 ~ 1000, instead of 0.o ~ 1.0
@@ -38,16 +60,28 @@ public abstract class AbstractSpecifCreator {
      */
     protected Output createNormalizedOutput() {
         Output output = new Output();
+        if ( modelConfig.isClassification() &&
+                ModelTrainConf.MultipleClassification.NATIVE.equals(modelConfig.getTrain().getMultiClassifyMethod()) ) {
+            for ( int i = 0; i < modelConfig.getTags().size(); i ++ ) {
+                output.addOutputFields(createOutputField(RAW_RESULT + "_" + i, OpType.CONTINUOUS, DataType.DOUBLE,
+                        new FieldName(modelConfig.getTargetColumnName() + "_" + i), ResultFeature.PREDICTED_VALUE));
 
-        output.withOutputFields(createOutputField(RAW_RESULT, OpType.CONTINUOUS, DataType.DOUBLE,
-                ResultFeatureType.PREDICTED_VALUE));
+                OutputField finalResult = createOutputField(FINAL_RESULT + "_" + i, OpType.CONTINUOUS, DataType.DOUBLE,
+                        new FieldName(modelConfig.getTargetColumnName() + "_" + i), ResultFeature.TRANSFORMED_VALUE);
+                finalResult.setExpression(createNormExpr(i));
 
-        OutputField finalResult = createOutputField(FINAL_RESULT, OpType.CONTINUOUS, DataType.DOUBLE,
-                ResultFeatureType.TRANSFORMED_VALUE);
-        finalResult.withExpression(createNormExpr());
+                output.addOutputFields(finalResult);
+            }
+        } else {
+            output.addOutputFields(createOutputField(RAW_RESULT, OpType.CONTINUOUS, DataType.DOUBLE,
+                    new FieldName(modelConfig.getTargetColumnName()), ResultFeature.PREDICTED_VALUE));
 
-        output.withOutputFields(finalResult);
+            OutputField finalResult = createOutputField(FINAL_RESULT, OpType.CONTINUOUS, DataType.DOUBLE,
+                    new FieldName(modelConfig.getTargetColumnName()), ResultFeature.TRANSFORMED_VALUE);
+            finalResult.setExpression(createNormExpr());
 
+            output.addOutputFields(finalResult);
+        }
         return output;
     }
 
@@ -61,14 +95,14 @@ public abstract class AbstractSpecifCreator {
     protected Output createNormalizedOutput(int id) {
         Output output = new Output();
 
-        output.withOutputFields(createOutputField(RAW_RESULT + "_" + id, OpType.CONTINUOUS, DataType.DOUBLE,
-                ResultFeatureType.PREDICTED_VALUE));
+        output.addOutputFields(createOutputField(RAW_RESULT + "_" + id, OpType.CONTINUOUS, DataType.DOUBLE,
+                new FieldName(modelConfig.getTargetColumnName()), ResultFeature.PREDICTED_VALUE));
 
         OutputField finalResult = createOutputField(FINAL_RESULT + "_" + id, OpType.CONTINUOUS, DataType.DOUBLE,
-                ResultFeatureType.TRANSFORMED_VALUE);
-        finalResult.withExpression(createNormExpr(id));
+                new FieldName(modelConfig.getTargetColumnName()), ResultFeature.TRANSFORMED_VALUE);
+        finalResult.setExpression(createNormExpr(id));
 
-        output.withOutputFields(finalResult);
+        output.addOutputFields(finalResult);
 
         return output;
     }
@@ -82,17 +116,22 @@ public abstract class AbstractSpecifCreator {
      *            - operation type
      * @param dataType
      *            - data type
+     * @param targetField
+     *            - the target field name
      * @param feature
      *            - result feature type
      * @return OutputField
      */
     protected OutputField createOutputField(String fieldName, OpType opType, DataType dataType,
-            ResultFeatureType feature) {
+            FieldName targetField, ResultFeature feature) {
         OutputField outputField = new OutputField();
-        outputField.withName(new FieldName(fieldName));
-        outputField.withOptype(opType);
-        outputField.withDataType(dataType);
-        outputField.withFeature(feature);
+        outputField.setName(new FieldName(fieldName));
+        outputField.setOpType(opType);
+        outputField.setDataType(dataType);
+        outputField.setResultFeature(feature);
+        if ( targetField != null ) {
+            outputField.setTargetField(targetField);
+        }
         return outputField;
     }
 
@@ -103,17 +142,17 @@ public abstract class AbstractSpecifCreator {
      */
     protected Expression createNormExpr() {
         NormContinuous normContinuous = new NormContinuous();
-        normContinuous.withField(new FieldName(RAW_RESULT));
-        normContinuous.withLinearNorms(new LinearNorm().withOrig(0).withNorm(0));
-        normContinuous.withLinearNorms(new LinearNorm().withOrig(1).withNorm(1000));
+        normContinuous.setField(new FieldName(RAW_RESULT));
+        normContinuous.addLinearNorms(new LinearNorm().setOrig(0).setNorm(0));
+        normContinuous.addLinearNorms(new LinearNorm().setOrig(1).setNorm(1000));
         return normContinuous;
     }
 
     protected Expression createNormExpr(int id) {
         NormContinuous normContinuous = new NormContinuous();
-        normContinuous.withField(new FieldName(RAW_RESULT + "_" + id));
-        normContinuous.withLinearNorms(new LinearNorm().withOrig(0).withNorm(0));
-        normContinuous.withLinearNorms(new LinearNorm().withOrig(1).withNorm(1000));
+        normContinuous.setField(new FieldName(RAW_RESULT + "_" + id));
+        normContinuous.addLinearNorms(new LinearNorm().setOrig(0).setNorm(0));
+        normContinuous.addLinearNorms(new LinearNorm().setOrig(1).setNorm(1000));
         return normContinuous;
     }
 }

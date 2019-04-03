@@ -24,25 +24,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
-import ml.shifu.shifu.container.obj.ColumnType;
-import ml.shifu.shifu.container.obj.EvalConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.validator.ModelInspector;
-import ml.shifu.shifu.fs.PathFinder;
-import ml.shifu.shifu.udf.CalculateStatsUDF;
-import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.FileStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
@@ -52,6 +38,17 @@ import org.testng.annotations.Test;
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
+import ml.shifu.shifu.container.obj.ColumnType;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.validator.ModelInspector;
+import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.udf.CalculateStatsUDF;
+import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
 
 /**
  * CommonUtilsTest
@@ -222,7 +219,7 @@ public class CommonUtilsTest {
         config.setColumnType(ColumnType.C);
         config.setBinCategory(Arrays.asList(new String[] { "2", "1", "3" }));
 
-        int rt = CommonUtils.getBinNum(config, "2");
+        int rt = BinUtils.getBinNum(config, "2");
 
         Assert.assertTrue(rt == 0);
 
@@ -256,6 +253,30 @@ public class CommonUtilsTest {
     // objDataMap);
     // Assert.assertTrue(pair.getInput().getData()[0] < 0.0);
     // }
+
+    @Test
+    public void hasCandidateTest(){
+        List<ColumnConfig> configList = new ArrayList<ColumnConfig>();
+
+        ColumnConfig config = new ColumnConfig();
+        config.setColumnName("A");
+        config.setFinalSelect(false);
+        config.setColumnFlag(ColumnFlag.Candidate);
+
+        configList.add(config);
+        Assert.assertTrue(CommonUtils.hasCandidateColumns(configList));
+    }
+    @Test
+    public void hasNoCandidateTest(){
+        List<ColumnConfig> configList = new ArrayList<ColumnConfig>();
+
+        ColumnConfig config = new ColumnConfig();
+        config.setColumnName("A");
+        config.setFinalSelect(false);
+
+        configList.add(config);
+        Assert.assertFalse(CommonUtils.hasCandidateColumns(configList));
+    }
 
     @Test
     public void getTargetColumnNumTest() {
@@ -373,54 +394,6 @@ public class CommonUtilsTest {
         FileUtils.deleteDirectory(new File("common-utils"));
     }
 
-    @Test
-    public void testFindModels() throws IOException {
-        ModelConfig modelConfig = CommonUtils.loadModelConfig(
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json", SourceType.LOCAL);
-
-        File srcModels = new File("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models");
-        File dstModels = new File("models");
-        FileUtils.copyDirectory(srcModels, dstModels);
-
-        List<FileStatus> modelFiles = CommonUtils.findModels(modelConfig, null, SourceType.LOCAL);
-        Assert.assertEquals(5, modelFiles.size());
-
-        EvalConfig evalConfig = modelConfig.getEvalConfigByName("EvalA");
-        evalConfig.setCustomPaths(new HashMap<String, String>());
-        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH, null);
-        modelFiles = CommonUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
-        Assert.assertEquals(5, modelFiles.size());
-
-        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH, "  ");
-        modelFiles = CommonUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
-        Assert.assertEquals(5, modelFiles.size());
-
-        FileUtils.deleteDirectory(dstModels);
-
-        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH,
-                "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models");
-        modelFiles = CommonUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
-        Assert.assertEquals(5, modelFiles.size());
-
-        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH,
-                "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models/model0.nn");
-        modelFiles = CommonUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
-        Assert.assertEquals(1, modelFiles.size());
-
-        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH, "not-exists");
-        modelFiles = CommonUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
-        Assert.assertEquals(0, modelFiles.size());
-
-        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH,
-                "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models/*.nn");
-        modelFiles = CommonUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
-        Assert.assertEquals(5, modelFiles.size());
-
-        evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH,
-                "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet{0,1,9}/*/*.nn");
-        modelFiles = CommonUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
-        Assert.assertEquals(5, modelFiles.size());
-    }
 
     @Test
     public void testStringToArray() {
@@ -474,12 +447,12 @@ public class CommonUtilsTest {
                 0.23977 };
         List<Double> binBoundary = Arrays.asList(array);
 
-        Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.00350), 1);
-        Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.00351), 2);
-        Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.00353), 2);
-        Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.0642), 5);
-        Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 0.00010), 0);
-        Assert.assertEquals(CommonUtils.getBinIndex(binBoundary, 5D), 8);
+        Assert.assertEquals(BinUtils.getBinIndex(binBoundary, 0.00350), 1);
+        Assert.assertEquals(BinUtils.getBinIndex(binBoundary, 0.00351), 2);
+        Assert.assertEquals(BinUtils.getBinIndex(binBoundary, 0.00353), 2);
+        Assert.assertEquals(BinUtils.getBinIndex(binBoundary, 0.0642), 5);
+        Assert.assertEquals(BinUtils.getBinIndex(binBoundary, 0.00010), 0);
+        Assert.assertEquals(BinUtils.getBinIndex(binBoundary, 5D), 8);
 
     }
 

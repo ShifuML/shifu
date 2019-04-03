@@ -18,11 +18,6 @@ package ml.shifu.shifu.udf;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import ml.shifu.shifu.container.obj.EvalConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -36,12 +31,15 @@ import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
 import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
 
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+
 /**
  * To project only useful columns used in eval sorting. Meta, target, weight and score columns should be included.
  */
-public class ColumnProjector extends AbstractTrainerUDF<Tuple> {
-
-    private EvalConfig evalConfig;
+public class ColumnProjector extends AbstractEvalUDF<Tuple> {
 
     private String scoreMetaColumn;
 
@@ -62,28 +60,25 @@ public class ColumnProjector extends AbstractTrainerUDF<Tuple> {
      */
     private int weightExceptions;
 
-    public ColumnProjector(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
-        super(source, pathModelConfig, pathColumnConfig);
-    }
-
     public ColumnProjector(String source, String pathModelConfig, String pathColumnConfig, String evalSetName,
             String columnName) throws IOException {
-        super(source, pathModelConfig, pathColumnConfig);
-        this.evalConfig = modelConfig.getEvalConfigByName(evalSetName);
+        super(source, pathModelConfig, pathColumnConfig, evalSetName);
         this.scoreMetaColumn = columnName;
 
         // create model runner
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
-            this.headers = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), evalConfig.getDataSet()
-                    .getHeaderDelimiter(), evalConfig.getDataSet().getSource());
+            this.headers = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(),
+                    evalConfig.getDataSet().getHeaderDelimiter(), evalConfig.getDataSet().getSource());
         } else {
-            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) ? evalConfig
-                    .getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
-            String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter, evalConfig
-                    .getDataSet().getSource());
+            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter())
+                    ? evalConfig.getDataSet().getDataDelimiter()
+                    : evalConfig.getDataSet().getHeaderDelimiter();
+            String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter,
+                    evalConfig.getDataSet().getSource());
             if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
                 this.headers = new String[fields.length];
                 for(int i = 0; i < fields.length; i++) {
+                    fields[i] = CommonUtils.normColumnName(fields[i]);
                     this.headers[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
                 }
                 log.warn("No header path is provided, we will try to read first line and detect schema.");
@@ -117,7 +112,8 @@ public class ColumnProjector extends AbstractTrainerUDF<Tuple> {
     @Override
     public Tuple exec(Tuple input) throws IOException {
         Tuple tuple = TupleFactory.getInstance().newTuple(3);
-        String tag = input.get(targetColumnIndex).toString();
+        Object tval = input.get(targetColumnIndex);
+        String tag = CommonUtils.trimTag((tval == null) ? "" : tval.toString());
         tuple.set(0, tag);
         double score = 0;
         try {

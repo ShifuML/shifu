@@ -17,12 +17,14 @@ package ml.shifu.shifu.core.pmml.builder.creator;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.dmg.pmml.DataType;
 import org.dmg.pmml.OpType;
 import org.encog.ml.BasicML;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
@@ -35,6 +37,17 @@ public abstract class AbstractPmmlElementCreator<T> {
     protected ModelConfig modelConfig;
     protected List<ColumnConfig> columnConfigList;
 
+    /**
+     * Raw data set headers, after segment expansions, columnConfigList is not for all columns but with column segment
+     * expansion. By using data set headers, still we can check raw columns.
+     */
+    protected String[] datasetHeaders;
+
+    /**
+     * Different segment expansions which is used to address raw columns.
+     */
+    protected List<String> segmentExpansions;
+
     public AbstractPmmlElementCreator(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
         this(modelConfig, columnConfigList, false);
     }
@@ -43,6 +56,13 @@ public abstract class AbstractPmmlElementCreator<T> {
         this.modelConfig = modelConfig;
         this.columnConfigList = columnConfigList;
         this.isConcise = isConcise;
+        try {
+            this.datasetHeaders = CommonUtils.getFinalHeaders(modelConfig);
+            this.segmentExpansions = modelConfig.getSegmentFilterExpressions();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
     public abstract T build(BasicML basicML);

@@ -39,9 +39,7 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.pig.PigExecutor;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.*;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.Predicate;
@@ -104,8 +102,11 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
             }
 
             clearUp(ModelStep.POSTTRAIN);
+        } catch (ShifuException e) {
+            log.error("Error:" + e.getError().toString() + "; msg:" + e.getMessage(), e);
+            return -1;
         } catch (Exception e) {
-            log.error("Error:", e);
+            log.error("Error:" + e.getMessage(), e);
             return -1;
         }
         log.info("Step Finished: posttrain with {} ms", (System.currentTimeMillis() - start));
@@ -223,9 +224,9 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         return featureImportance;
     }
 
-    private void runMRBinAvgScoreJob(SourceType source, String postTrainOutputPath) throws IOException,
-            InterruptedException, ClassNotFoundException {
-        Configuration conf = new Configuration();
+    private void runMRBinAvgScoreJob(SourceType source, String postTrainOutputPath)
+            throws IOException, InterruptedException, ClassNotFoundException {
+        final Configuration conf = new Configuration();
         // add jars to hadoop mapper and reducer
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars() });
 
@@ -237,14 +238,10 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
-        conf.set(
-                Constants.SHIFU_MODEL_CONFIG,
-                ShifuFileUtils.getFileSystemBySourceType(source)
-                        .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
-        conf.set(
-                Constants.SHIFU_COLUMN_CONFIG,
-                ShifuFileUtils.getFileSystemBySourceType(source)
-                        .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
+        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
+        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
         // set mapreduce.job.max.split.locations to 30 to suppress warnings
@@ -263,11 +260,12 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         }
 
         // one can set guagua conf in shifuconfig
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                conf.set(entry.getKey().toString(), entry.getValue().toString());
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                conf.set(key.toString(), value.toString());
             }
-        }
+        });
 
         @SuppressWarnings("deprecation")
         Job job = new Job(conf, "Shifu: Post Train : " + this.modelConfig.getModelSetName());
@@ -277,10 +275,8 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(FeatureStatsWritable.class);
         job.setInputFormatClass(CombineInputFormat.class);
-        FileInputFormat.setInputPaths(
-                job,
-                ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(
-                        new Path(super.modelConfig.getDataSetRawPath())));
+        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.modelConfig.getDataSetRawPath())));
 
         MultipleOutputs.addNamedOutput(job, Constants.POST_TRAIN_OUTPUT_SCORE, TextOutputFormat.class,
                 NullWritable.class, Text.class);
@@ -302,9 +298,9 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         }
     }
 
-    private void runMRFeatureImportanceJob(SourceType source, String output) throws IOException, InterruptedException,
-            ClassNotFoundException {
-        Configuration conf = new Configuration();
+    private void runMRFeatureImportanceJob(SourceType source, String output)
+            throws IOException, InterruptedException, ClassNotFoundException {
+        final Configuration conf = new Configuration();
         // add jars to hadoop mapper and reducer
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars() });
 
@@ -316,14 +312,10 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
-        conf.set(
-                Constants.SHIFU_MODEL_CONFIG,
-                ShifuFileUtils.getFileSystemBySourceType(source)
-                        .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
-        conf.set(
-                Constants.SHIFU_COLUMN_CONFIG,
-                ShifuFileUtils.getFileSystemBySourceType(source)
-                        .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
+        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
+        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
         // set mapreduce.job.max.split.locations to 30 to suppress warnings
@@ -342,11 +334,12 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         }
 
         // one can set guagua conf in shifuconfig
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                conf.set(entry.getKey().toString(), entry.getValue().toString());
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                conf.set(key.toString(), value.toString());
             }
-        }
+        });
 
         @SuppressWarnings("deprecation")
         Job job = new Job(conf, "Shifu: Post Train FeatureImportance : " + this.modelConfig.getModelSetName());
@@ -356,10 +349,8 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(DoubleWritable.class);
         job.setInputFormatClass(CombineInputFormat.class);
-        FileInputFormat.setInputPaths(
-                job,
-                ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(
-                        new Path(super.modelConfig.getDataSetRawPath())));
+        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.modelConfig.getDataSetRawPath())));
 
         job.setReducerClass(FeatureImportanceReducer.class);
         job.setNumReduceTasks(1);
@@ -440,8 +431,8 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
      */
     private List<ColumnConfig> updateColumnConfigWithBinAvgScore(List<ColumnConfig> columnConfigList)
             throws IOException {
-        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getBinAvgScorePath(), modelConfig
-                .getDataSet().getSource());
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getBinAvgScorePath(),
+                modelConfig.getDataSet().getSource());
 
         // CommonUtils.getDataScanners(pathFinder.getBinAvgScorePath(), modelConfig.getDataSet().getSource());
         for(Scanner scanner: scanners) {

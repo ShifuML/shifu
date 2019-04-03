@@ -31,7 +31,7 @@ public class IndependentNNModelTest {
 
     private IndependentNNModel nnModel;
 
-//    @BeforeClass
+    // @BeforeClass
     public void setUp() throws IOException {
         String modelPath = "src/test/resources/dttest/model/inde.nn";
         FileInputStream fi = null;
@@ -39,11 +39,13 @@ public class IndependentNNModelTest {
             fi = new FileInputStream(modelPath);
             nnModel = IndependentNNModel.loadFromStream(fi);
         } finally {
-            fi.close();
+            if(fi != null) {
+                fi.close();
+            }
         }
     }
 
-//    @Test
+    // @Test
     public void testEvalScore() throws IOException {
         List<String> headerList = FileUtils.readLines(new File(
                 "src/test/resources/example/cancer-judgement/DataStore/EvalSet1/.pig_header"));

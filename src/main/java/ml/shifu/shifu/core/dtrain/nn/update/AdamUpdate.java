@@ -23,6 +23,8 @@
  */
 package ml.shifu.shifu.core.dtrain.nn.update;
 
+import java.util.Set;
+
 import ml.shifu.shifu.core.dtrain.Weight;
 
 /**
@@ -50,8 +52,10 @@ public class AdamUpdate implements UpdateRule {
     }
 
     @Override
-    public void update(double[] gradients, double[] weights, int iteration) {
+    public void update(double[] gradients, double[] weights, int iteration, Set<Integer> fixedWeights) {
         for(int i = 0; i < weights.length; i++) {
+            if (fixedWeights.contains(i)) continue;
+            
             m[i] = (this.beta1 * m[i]) + (1 - this.beta1) * gradients[i];
             v[i] = (this.beta2 * v[i]) + (1 - this.beta2) * gradients[i] * gradients[i];
 

@@ -20,7 +20,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.BinUtils;
 
 /**
  * Created by Mark on 5/27/2016.
@@ -50,7 +50,7 @@ public class NumericCounter extends Counter {
         } else {
             try {
                 Double dVal = Double.parseDouble(val.toString());
-                int index = CommonUtils.getBinIndex(binBoundary, dVal);
+                int index = BinUtils.getBinIndex(binBoundary, dVal);
                 counter[index] = counter[index] + 1;
                 unitSum += dVal;
             } catch (Exception e) {

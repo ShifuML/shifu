@@ -22,17 +22,18 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.udf.CalculateStatsUDF;
-import ml.shifu.shifu.util.CommonUtils;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.udf.CalculateStatsUDF;
+import ml.shifu.shifu.util.BinUtils;
+import ml.shifu.shifu.util.CommonUtils;
 
 /**
  * NumericalVarStats class
@@ -127,7 +128,7 @@ public class NumericalVarStats extends AbstractVarStats {
             } else {
                 streamStatsCalculator.addData(colVal);
                 // binning.addData(colVal);
-                int binNum = CommonUtils.getBinNum(columnConfig, str);
+                int binNum = BinUtils.getBinNum(columnConfig, str);
                 if(binNum == -1) {
                     throw new RuntimeException("binNum should not be -1 to this step.");
                 }

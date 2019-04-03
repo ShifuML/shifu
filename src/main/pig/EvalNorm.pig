@@ -36,5 +36,6 @@ raw = LOAD '$pathEvalRawData' USING PigStorage('$delimiter', '-noschema');
 raw = FILTER raw BY IsDataFilterOut(*);
 
 evalNormalize = FOREACH raw GENERATE FLATTEN(EvalNormalize(*));
+evalNormalize = FILTER evalNormalize BY $0 IS NOT NULL;
 
-STORE evalNormalize INTO '$pathEvalNormalized' USING PigStorage('|', '-schema');
+STORE evalNormalize INTO '$pathEvalNormalized' USING PigStorage('$output_delimiter', '-schema');

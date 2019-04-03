@@ -1,9 +1,9 @@
-[<img src="images/logo/shifu.png" alt="Shifu" align="left">](http://shifu.ml)<div align="right"><div>[![Build Status](https://travis-ci.org/ShifuML/shifu.svg)](https://travis-ci.org/ShifuML/shifu)</div><div>[![Maven Central](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu/badge.svg)](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu)</div></div>
+[<img src="images/logo/shifu.png" alt="Shifu" align="left">](http://shifu.ml)<div align="right"><div>[![Build Status](https://travis-ci.org/ShifuML/shifu.svg)](https://travis-ci.org/ShifuML/shifu?branch=develop)</div><div>[![Maven Central](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu/badge.svg)](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu)</div></div>
 
 #
 
 ## Download
-Please [download](https://github.com/ShifuML/shifu/wiki/shifu-0.10.5-hdp-yarn.tar.gz) latest shifu [here](https://github.com/ShifuML/shifu/wiki/shifu-0.10.5-hdp-yarn.tar.gz).
+Please [download](https://github.com/ShifuML/shifu/wiki/shifu-0.11.1-hdp-yarn.tar.gz) latest shifu [here](https://github.com/ShifuML/shifu/wiki/shifu-0.11.1-hdp-yarn.tar.gz).
 
 ## Getting Started
 After shifu downloading, build your first model with Shifu [tutorial](https://github.com/ShifuML/shifu/wiki/Tutorial---Build-Your-First-ML-Model). More details about shifu can be found in our [wiki pages](https://github.com/ShifuML/shifu/wiki).
@@ -23,6 +23,7 @@ Shifu provides a simple command-line interface for each step of the model buildi
 * [Distributed neural network model training](https://github.com/ShifuML/shifu/wiki/Distributed%20Neural%20Network%20Training%20in%20Shifu)
 * [Distributed tree ensemble model training](https://github.com/ShifuML/shifu/wiki/Distributed%20Tree%20Ensemble%20Model%20Training%20in%20Shifu)
 * Post training analysis & model evaluation
+* [Distributed Tensorflow on SHIFU] {https://github.com/ShifuML/shifu/wiki/Distributed-Tensorflow-Support-On-SHIFU)
 
 Shifu’s fast Hadoop-based, distributed neural network / logistic regression / gradient boosted trees training can reduce model training time from days to hours on TB data sets. Shifu integrates with Pig workflows on Hadoop, and Shifu-trained models can be integrated into production code with a simple Java API. Shifu leverages Pig, Akka, Encog and other open source projects.
 
@@ -50,6 +51,7 @@ More details about shifu can be found in our [wiki pages](https://github.com/Shi
  - Sharma Nitin (nsharma1@paypal.com)
  - Wayne Zhu (wzhu1@paypal.com)
  - Devin Wu (haifwu@paypal.com)
+ - Fred Bai (webai@paypal.com)
 
 ## Google Group
 
@@ -57,4 +59,4 @@ Please join [Shifu group](https://groups.google.com/forum/#!forum/shifuml) if qu
 
 ## Copyright and License
 
-Copyright 2012-2017, PayPal Software Foundation under the [Apache License](LICENSE.txt).
+Copyright 2012-2019, PayPal Software Foundation under the [Apache License](LICENSE.txt).
