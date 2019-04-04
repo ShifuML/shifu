@@ -37,22 +37,24 @@ public class BasicUpdater {
     protected Set<NSColumn> setHybridColumns;
     protected Map<String, Double> hybridColumnNames;
 
+    protected boolean isForSegs;
+    protected List<String> segs;
+
     public BasicUpdater(ModelConfig modelConfig) throws IOException {
         this.modelConfig = modelConfig;
+        this.segs = modelConfig.getSegmentFilterExpressions();
+        this.isForSegs = (this.segs.size() > 0);
+
         this.targetColumnName = modelConfig.getTargetColumnName();
         this.weightColumnName = modelConfig.getWeightColumnName();
 
-        this.setCategorialColumns = new HashSet<NSColumn>();
-        if(CollectionUtils.isNotEmpty(modelConfig.getCategoricalColumnNames())) {
-            for(String column: modelConfig.getCategoricalColumnNames()) {
-                setCategorialColumns.add(new NSColumn(column));
-            }
-        }
-
-        this.setMeta = new HashSet<NSColumn>();
-        if(CollectionUtils.isNotEmpty(modelConfig.getMetaColumnNames())) {
-            for(String meta: modelConfig.getMetaColumnNames()) {
-                setMeta.add(new NSColumn(meta));
+        this.setMeta = loadNSColumns(modelConfig.getMetaColumnNames());
+        this.setCategorialColumns = loadNSColumns(modelConfig.getCategoricalColumnNames());
+        this.setHybridColumns = new HashSet<NSColumn>();
+        this.hybridColumnNames = modelConfig.getHybridColumnNames();
+        if(this.hybridColumnNames != null && this.hybridColumnNames.size() > 0) {
+            for(Entry<String, Double> entry: this.hybridColumnNames.entrySet()) {
+                this.setHybridColumns.add(new NSColumn(entry.getKey()));
             }
         }
 
@@ -60,35 +62,38 @@ public class BasicUpdater {
         if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())
                 && CollectionUtils.isNotEmpty(modelConfig.getListForceRemove())) {
             // if we need to update force remove, only and if one the force is enabled
+            // this.setForceRemove = loadNSColumns(modelConfig.getListForceRemove());
             for(String forceRemoveName: modelConfig.getListForceRemove()) {
-                setForceRemove.add(new NSColumn(forceRemoveName));
+                this.setForceRemove.add(new NSColumn(forceRemoveName));
             }
         }
 
-        setHybridColumns = new HashSet<NSColumn>();
-        hybridColumnNames = modelConfig.getHybridColumnNames();
-        if(hybridColumnNames != null && hybridColumnNames.size() > 0) {
-            for(Entry<String, Double> entry: hybridColumnNames.entrySet()) {
-                setHybridColumns.add(new NSColumn(entry.getKey()));
-            }
-        }
-
-        this.setForceSelect = new HashSet<NSColumn>(512);
+        this.setForceSelect = new HashSet<NSColumn>();
         if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())
                 && CollectionUtils.isNotEmpty(modelConfig.getListForceSelect())) {
             // if we need to update force select, only and if one the force is enabled
+            // this.setForceSelect = loadNSColumns(modelConfig.getListForceSelect());
             for(String forceSelectName: modelConfig.getListForceSelect()) {
-                setForceSelect.add(new NSColumn(forceSelectName));
+                this.setForceSelect.add(new NSColumn(forceSelectName));
             }
         }
 
-        this.setCandidates = new HashSet<NSColumn>();
-        List<String> candidates = modelConfig.getListCandidates();
-        if(CollectionUtils.isNotEmpty(candidates)) {
-            for(String candidate: candidates) {
-                this.setCandidates.add(new NSColumn(candidate));
+        this.setCandidates = loadNSColumns(modelConfig.getListCandidates());
+    }
+
+    protected Set<NSColumn> loadNSColumns(List<String> columnNames) {
+        Set<NSColumn> nsColumns = new HashSet<>();
+        if(CollectionUtils.isNotEmpty(columnNames)) {
+            for(String column: columnNames) {
+                nsColumns.add(new NSColumn(column));
+                if(this.isForSegs) {
+                    for(int i = 0; i < segs.size(); i++) {
+                        nsColumns.add(new NSColumn(column + "_" + (i + 1)));
+                    }
+                }
             }
         }
+        return nsColumns;
     }
 
     public void updateColumnConfig(ColumnConfig columnConfig) {

@@ -829,7 +829,7 @@ public class ShifuCLI {
         System.out.println("\tstats -rebin [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
         System.out.println("\t                                        Do the variable Re-bin.");
         System.out.println(
-                "\tvarselect/varsel -list                  Variable selection, will update finalSelect in ColumnConfig.json.");
+                "\tvarselect/varsel                        Variable selection, will update finalSelect in ColumnConfig.json.");
         System.out.println("\tvarselect/varsel -list                  List all finalSelect=true variables");
         System.out.println("\tvarselect/varsel -reset                 Set finalSelect=false for all variables");
         System.out.println(
