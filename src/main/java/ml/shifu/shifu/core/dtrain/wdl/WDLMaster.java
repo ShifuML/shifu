@@ -13,17 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain.wnd;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-
-import org.apache.hadoop.fs.Path;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+package ml.shifu.shifu.core.dtrain.wdl;
 
 import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterContext;
@@ -32,13 +22,28 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.GradientDescent;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
 /**
- * {@link WNDMaster} is master logic in wide and deep implementation based on Guagua.
+ * {@link WDLMaster} is master logic in wide and deep implementation based on Guagua.
  * 
  * <p>
- * Like neural network implementation on Guagua. WNDMaster is used to aggregate worker gradients and update global wide
+ * Like neural network implementation on Guagua. WDLMaster is used to aggregate worker gradients and update global wide
  * and deep model inside of current master {@link #wnd}.
  * 
  * <p>
@@ -46,9 +51,9 @@ import ml.shifu.shifu.util.CommonUtils;
  * AdaGrad to do model updates.
  * 
  * <p>
- * At the first iteration, workre results are ignored because after master model initialization, workers training model
- * needs pulling lastest consistent model in worker while not to use on random model. In
- * {@link #doCompute(MasterContext)}, the first iteration is to just send back model to workers and in {@link WNDWorker}
+ * At the first iteration, worker results are ignored because after master model initialization, workers training model
+ * needs pulling latest consistent model in worker while not to use on random model. In
+ * {@link #doCompute(MasterContext)}, the first iteration is to just send back model to workers and in {@link WDLWorker}
  * the first iteration is just to return an empty parameters without usage in master.
  * 
  * <p>
@@ -57,9 +62,9 @@ import ml.shifu.shifu.util.CommonUtils;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
+public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
 
-    protected static final Logger LOG = LoggerFactory.getLogger(WNDMaster.class);
+    protected static final Logger LOG = LoggerFactory.getLogger(WDLMaster.class);
 
     /**
      * Model configuration loaded from configuration file.
@@ -79,7 +84,6 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
     /**
      * Learning rate
      */
-    @SuppressWarnings("unused")
     private double learningRate;
 
     /**
@@ -102,9 +106,14 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
      */
     private WideAndDeep wnd;
 
+    /**
+     * The optimizer to update weights.
+     */
+    private Optimizer optimizer;
+
     @SuppressWarnings({ "unchecked", "unused" })
     @Override
-    public void init(MasterContext<WNDParams, WNDParams> context) {
+    public void init(MasterContext<WDLParams, WDLParams> context) {
         Properties props = context.getProps();
         try {
             SourceType sourceType = SourceType
@@ -126,6 +135,7 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
         this.isAfterVarSelect = (inputOutputIndex[3] == 1);
         this.validParams = this.modelConfig.getTrain().getParams();
         this.learningRate = Double.valueOf(validParams.get(CommonConstants.LEARNING_RATE).toString());
+        System.out.println("learning rate in master init" + this.learningRate);
 
         this.isContinuousEnabled = Boolean.TRUE.toString()
                 .equalsIgnoreCase(context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
@@ -133,21 +143,25 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
         // Build wide and deep graph
         List<Integer> embedColumnIds = (List<Integer>) this.validParams.get(CommonConstants.NUM_EMBED_COLUMN_IDS);
         Integer embedOutputs = (Integer) this.validParams.get(CommonConstants.NUM_EMBED_OUTPUTS);
-        List<Integer> embedOutputList = new ArrayList<Integer>();
+        List<Integer> embedOutputList = new ArrayList<>();
         for(Integer cId: embedColumnIds) {
             embedOutputList.add(embedOutputs == null ? CommonConstants.DEFAULT_EMBEDING_OUTPUT : embedOutputs);
         }
+        List<Integer> numericalIds = DTrainUtils.getNumericalIds(this.columnConfigList, isAfterVarSelect);
         List<Integer> wideColumnIds = DTrainUtils.getCategoricalIds(columnConfigList, isAfterVarSelect);
+        Map<Integer, Integer> idBinCateSizeMap = DTrainUtils.getIdBinCategorySizeMap(columnConfigList);
         int numLayers = (Integer) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
-        Float l2reg = (Float) this.validParams.get(CommonConstants.WND_L2_REG);
-        this.wnd = new WideAndDeep(columnConfigList, numInputs, embedColumnIds, embedOutputList, wideColumnIds,
-                hiddenNodes, actFunc, l2reg);
+        Float l2reg = ((Double) this.validParams.get(CommonConstants.WDL_L2_REG)).floatValue();
+        this.wnd = new WideAndDeep(idBinCateSizeMap, numInputs, numericalIds, embedColumnIds, embedOutputList,
+                wideColumnIds, hiddenNodes, actFunc, l2reg);
+        // TODO: make this configurable
+        this.optimizer = new GradientDescent(this.learningRate);
     }
 
     @Override
-    public WNDParams doCompute(MasterContext<WNDParams, WNDParams> context) {
+    public WDLParams doCompute(MasterContext<WDLParams, WDLParams> context) {
         if(context.isFirstIteration()) {
             // Fist iteration, no need take worker results and after master model initialization, global model should be
             // sent to workers for training.
@@ -155,25 +169,25 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
         }
 
         // aggregate all worker gradients to one gradient object.
-        WNDParams aggregation = aggregateWorkerGradients(context);
+        WDLParams aggregation = aggregateWorkerGradients(context);
 
-        // TODO optimizer, wnd object as current model weights, aggregation as current iteration gradients aggregation
-        // gradients = aggregation.getWnd();
-        // this.wnd -= this.learningRate * gradients;
+        // apply optimizer
+        this.wnd.update(aggregation.getWnd(), optimizer);
 
         // construct master result which contains WideAndDeep current model weights
-        WNDParams params = new WNDParams();
+        WDLParams params = new WDLParams();
         params.setTrainCount(aggregation.getTrainCount());
         params.setValidationCount(aggregation.getValidationCount());
         params.setTrainError(aggregation.getTrainError());
         params.setValidationError(aggregation.getValidationError());
+        params.setSerializationType(SerializationType.WEIGHTS);
         params.setWnd(this.wnd);
         return params;
     }
 
-    private WNDParams aggregateWorkerGradients(MasterContext<WNDParams, WNDParams> context) {
-        WNDParams aggregation = null;
-        for(WNDParams params: context.getWorkerResults()) {
+    private WDLParams aggregateWorkerGradients(MasterContext<WDLParams, WDLParams> context) {
+        WDLParams aggregation = null;
+        for(WDLParams params: context.getWorkerResults()) {
             if(aggregation == null) {
                 aggregation = params;
             } else {
@@ -183,26 +197,36 @@ public class WNDMaster extends AbstractMasterComputable<WNDParams, WNDParams> {
         return aggregation;
     }
 
-    private WNDParams initOrRecoverModelWeights(MasterContext<WNDParams, WNDParams> context) {
-        WNDParams params = new WNDParams();
+    private WDLParams initOrRecoverModelWeights(MasterContext<WDLParams, WDLParams> context) {
+        WDLParams params = new WDLParams();
         if(this.isContinuousEnabled) {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             WideAndDeep existingModel = loadModel(modelPath);
-            if(existingModel == null) {
+            if(existingModel != null) {
                 this.wnd.updateWeights(existingModel);
             } else {
                 LOG.warn("Continuous training enabled but existing model load failed, do random initialization.");
-                // TODO this.wnd.initWeights();
+                this.wnd.initWeights();
             }
         } else {
-            // TODO, init weights in WideAndDeep with this.wnd object this.wnd.initWeights();
+            this.wnd.initWeights();
         }
-        params.setWnd(this.wnd); // weights from this.wnd
+        // weights from this.wnd
+        params.setWnd(this.wnd);
         return params;
     }
 
     private WideAndDeep loadModel(Path modelPath) {
-        // TODO load wide and deep model from file path
+        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS);
+        InputStream inputStream = null;
+        try {
+            inputStream = fileSystem.open(modelPath);
+            return IndependentWDLModel.loadFromStream(inputStream).getWnd();
+        } catch (IOException e) {
+            LOG.error("IOException happen when load WideAndDeep from HDFS", e);
+        } finally {
+            IOUtils.closeQuietly(inputStream);
+        }
         return null;
     }
 

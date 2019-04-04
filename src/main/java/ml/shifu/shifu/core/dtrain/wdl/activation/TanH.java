@@ -13,31 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain.wnd;
+package ml.shifu.shifu.core.dtrain.wdl.activation;
 
 /**
- * {@link BiasLayer} used in wide part of WideAndDeep architecture.
- * 
- * @author Zhang David (pengzhang@paypal.com)
+ * TanH Activation.
+ *
+ * @author Wu Devin (haifwu@paypal.com)
  */
-public class BiasLayer implements Layer<Float, Float, Float, Float> {
-
-    private float weight;
-
+public class TanH extends Activation {
     @Override
-    public int getOutDim() {
-        return 1;
+    public float[] forward(float[] input) {
+        float[] outputs = new float[input.length];
+        for(int i = 0; i < input.length; i++) {
+            outputs[i] = (float) Math.tanh(input[i]);
+        }
+        return outputs;
     }
 
     @Override
-    public Float forward(Float input) {
-        return weight;
+    public float[] backward(float[] backInput) {
+        float[] results = new float[backInput.length];
+        for(int i = 0; i < results.length; i++) {
+            results[i] = 1 - backInput[i] * backInput[i];
+        }
+        return results;
     }
-
-    @Override
-    public Float backward(Float backInput, float sig) {
-        // TODO compute gradients here
-        return backInput * weight;
-    }
-
 }

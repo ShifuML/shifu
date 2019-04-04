@@ -13,37 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain.wnd;
+package ml.shifu.shifu.core.dtrain.wdl.activation;
 
 /**
- * Typical ReLU implementation.
- * 
- * @author Zhang David (pengzhang@paypal.com)
+ * Swish Activation.
+ *
+ * @author Wu Devin (haifwu@paypal.com)
  */
-public class ReLU extends Activation {
-
+public class Swish extends Activation {
     /**
      * Tmp save last inputs in forward and then can be used in backward computation.
      */
     private float[] lastInput;
 
     @Override
-    public float[] forward(float[] inputs) {
-        this.lastInput = inputs;
-        float[] outputs = new float[inputs.length];
-        for(int i = 0; i < inputs.length; i++) {
-            outputs[i] = Math.max(0, inputs[i]);
+    public float[] forward(float[] input) {
+        this.lastInput = input;
+        float[] result = new float[input.length];
+        for(int i = 0; i < result.length; i++) {
+            result[i] = (float) (input[i] * (1/ (Math.exp(-1* input[i]) +1 )));
         }
-        return outputs;
+        return result;
     }
 
     @Override
-    public float[] backward(float[] outputs, float sig) {
-        float[] results = new float[outputs.length];
-        for(int i = 0; i < outputs.length; i++) {
-            results[i] = this.lastInput[i] > 0 ? outputs[i] * 1f : 0f;
+    public float[] backward(float[] backInput) {
+        float[] result = new float[backInput.length];
+        for(int i = 0; i < result.length; i++) {
+            float sigmoid = (float) (1 / (1.0 + Math.exp(-lastInput[i])));
+            result[i] = sigmoid + lastInput[i] * sigmoid * (1 - sigmoid);
         }
-        return results;
+        return result;
     }
-
 }

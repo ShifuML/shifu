@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Util normalization class which is used for any kind of transformation.
@@ -35,7 +36,10 @@ public class Normalizer {
     public static final double STD_DEV_CUTOFF = 4.0d;
 
     public enum NormalizeMethod {
-        ZScore, MaxMin;
+        /**
+         * Normalize methods.
+         */
+        ZScore, MaxMin
     }
 
     private ColumnConfig config;
@@ -263,6 +267,88 @@ public class Normalizer {
             case ZSCORE:
             default:
                 return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, false);
+        }
+    }
+
+    /**
+     * Adding new API with cateIndeMap parameter without change normalize API.
+     * @param config
+     *              the ColumnConfig
+     * @param raw
+     *              the raw input
+     * @param cutoff
+     *              the cutoff value
+     * @param type
+     *              normalize type
+     * @param categoryMissingNormType
+     *              the category missing normal type
+     * @param cateIndexMap
+     *              the cateIndexMap map from category to index
+     * @return normalized value
+     */
+    public static List<Double> fullNormalize(ColumnConfig config, Object raw, Double cutoff,
+            ModelNormalizeConf.NormType type, CategoryMissingNormType categoryMissingNormType,
+            Map<String, Integer> cateIndexMap) {
+        switch(type) {
+            case ZSCORE_INDEX:
+            case ZSCALE_INDEX:
+                return numZScoreAndCateIndexNorm(config, raw, cutoff, cateIndexMap);
+            case WOE_INDEX:
+                if(config.isNumerical()) {
+                    return woeNormalize(config, raw, false);
+                } else if(config.isCategorical()) {
+                    Integer index = cateIndexMap.get(raw == null ? "" : raw.toString());
+                    if(index == null || index == -1) {
+                        // last index for null category
+                        index = config.getBinCategory().size();
+                    }
+                    return Arrays.asList((double) index);
+                }
+            case WOE_ZSCALE_INDEX:
+                if(config.isNumerical()) {
+                    return woeZScoreNormalize(config, raw, cutoff, false);
+                } else if(config.isCategorical()) {
+                    Integer index = cateIndexMap.get(raw == null ? "" : raw.toString());
+                    if(index == null || index == -1) {
+                        // last index for null category
+                        index = config.getBinCategory().size();
+                    }
+                    return Arrays.asList((double) index);
+                }
+            default:
+                // others use old normalize API to reuse code
+                return normalize(config, raw, cutoff, type, categoryMissingNormType);
+        }
+    }
+
+    /**
+     * Compute the normalized data for @NormalizeMethod.Zscore
+     * 
+     * @param config
+     *            ColumnConfig info
+     * @param raw
+     *            input column value
+     * @param cutoff
+     *            standard deviation cut off
+     * @param categoryMissingNormType
+     *            missing categorical value norm type
+     * @return normalized value for ZScore method.
+     */
+    private static List<Double> numZScoreAndCateIndexNorm(ColumnConfig config, Object raw, Double cutoff,
+            Map<String, Integer> cateIndexMap) {
+        if(config.isNumerical()) {
+            double stdDevCutOff = checkCutOff(cutoff);
+            double value = parseRawValue(config, raw, null);
+            return Arrays.asList(computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff));
+        } else if(config.isCategorical()) {
+            Integer index = cateIndexMap.get(raw == null ? "" : raw.toString());
+            if(index == null || index == -1) {
+                // last index for null category
+                index = config.getBinCategory().size();
+            }
+            return Arrays.asList(((double) index));
+        } else {
+            throw new IllegalArgumentException("Not supported norm column type.");
         }
     }
 

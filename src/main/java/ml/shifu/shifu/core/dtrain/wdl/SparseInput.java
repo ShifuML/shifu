@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain.wnd;
+package ml.shifu.shifu.core.dtrain.wdl;
 
 /**
  * {@link SparseInput} is only to save non-zero value instead of one sparse float array to save memory.
@@ -33,9 +33,16 @@ public class SparseInput {
      */
     private int valueIndex;
 
+    /**
+     * By default value is 1 for sparse input while in other senarios, value could not be 1.
+     */
+    private float value = 1f;
+
     // TODO if add weight or change valueIndex to array for multiple-hot encoder
 
     /**
+     * Constructor with column index and value index
+     * 
      * @param columnIndex
      *            column index in ColumnConfig#columnNum
      * @param valueIndex
@@ -44,6 +51,22 @@ public class SparseInput {
     public SparseInput(int columnIndex, int valueIndex) {
         this.columnIndex = columnIndex;
         this.valueIndex = valueIndex;
+    }
+
+    /**
+     * Constructor with column index, value index and value
+     * 
+     * @param columnIndex
+     *            column index in ColumnConfig#columnNum
+     * @param valueIndex
+     *            value index, which value of such category
+     * @param value
+     *            the category value
+     */
+    public SparseInput(int columnIndex, int valueIndex, float value) {
+        this.columnIndex = columnIndex;
+        this.valueIndex = valueIndex;
+        this.value = value;
     }
 
     /**
@@ -74,6 +97,21 @@ public class SparseInput {
      */
     public void setValueIndex(int valueIndex) {
         this.valueIndex = valueIndex;
+    }
+
+    /**
+     * @return the value
+     */
+    public float getValue() {
+        return value;
+    }
+
+    /**
+     * @param value
+     *            the value to set
+     */
+    public void setValue(float value) {
+        this.value = value;
     }
 
 }

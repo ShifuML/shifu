@@ -61,21 +61,25 @@ public class ModelSpecLoaderUtils {
     /**
      * Load basic models by configuration
      *
-     * @param modelConfig ModelConfig
-     * @param evalConfig  eval configuration
+     * @param modelConfig
+     *            ModelConfig
+     * @param evalConfig
+     *            eval configuration
      * @return the list of models
-     * @throws IOException              if any IO exception in reading model file.
-     * @throws IllegalArgumentException if {@code modelConfig} is, if invalid model algorithm .
-     * @throws IllegalStateException    if not HDFS or LOCAL source type or algorithm not supported.
+     * @throws IOException
+     *             if any IO exception in reading model file.
+     * @throws IllegalArgumentException
+     *             if {@code modelConfig} is, if invalid model algorithm .
+     * @throws IllegalStateException
+     *             if not HDFS or LOCAL source type or algorithm not supported.
      */
     public static List<BasicML> loadBasicModels(ModelConfig modelConfig, EvalConfig evalConfig) throws IOException {
         if(modelConfig == null || (!Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm()) // NN model
                 && !Constants.SVM.equalsIgnoreCase(modelConfig.getAlgorithm()) // SVM model
                 && !Constants.LR.equalsIgnoreCase(modelConfig.getAlgorithm()) // LR model
                 && !CommonUtils.isTreeModel(modelConfig.getAlgorithm()))) {
-            throw new IllegalArgumentException(modelConfig == null ?
-                    "modelConfig is null." :
-                    String.format(" invalid model algorithm %s.", modelConfig.getAlgorithm()));
+            throw new IllegalArgumentException(modelConfig == null ? "modelConfig is null."
+                    : String.format(" invalid model algorithm %s.", modelConfig.getAlgorithm()));
         }
 
         return loadBasicModels(modelConfig, evalConfig, modelConfig.getDataSet().getSource());
@@ -84,11 +88,15 @@ public class ModelSpecLoaderUtils {
     /**
      * Load basic models by configuration
      *
-     * @param modelConfig ModelConfig
-     * @param evalConfig  eval configuration
-     * @param sourceType  source type
+     * @param modelConfig
+     *            ModelConfig
+     * @param evalConfig
+     *            eval configuration
+     * @param sourceType
+     *            source type
      * @return the list of models
-     * @throws IOException Exception when fail to locate or load models
+     * @throws IOException
+     *             Exception when fail to locate or load models
      */
     public static List<BasicML> loadBasicModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
             throws IOException {
@@ -97,7 +105,7 @@ public class ModelSpecLoaderUtils {
         List<BasicML> models = new ArrayList<BasicML>();
         List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
-            for(FileStatus f : modelFileStats) {
+            for(FileStatus f: modelFileStats) {
                 models.add(loadModel(modelConfig, f.getPath(), fs));
             }
         }
@@ -108,7 +116,8 @@ public class ModelSpecLoaderUtils {
     /**
      * Get BasicNetwork from model, if model is not {@link BasicNetwork or NNModel}, Exception will be thrown
      *
-     * @param model basic model
+     * @param model
+     *            basic model
      * @return Network of model
      */
     public static BasicNetwork getBasicNetwork(BasicML model) {
@@ -123,14 +132,21 @@ public class ModelSpecLoaderUtils {
     /**
      * Load basic models by configuration
      *
-     * @param modelConfig      model config
-     * @param evalConfig       eval config
-     * @param sourceType       source type
-     * @param gbtConvertToProb convert gbt score to prob or not
+     * @param modelConfig
+     *            model config
+     * @param evalConfig
+     *            eval config
+     * @param sourceType
+     *            source type
+     * @param gbtConvertToProb
+     *            convert gbt score to prob or not
      * @return list of models
-     * @throws IOException              if any IO exception in reading model file.
-     * @throws IllegalArgumentException if {@code modelConfig} is, if invalid model algorithm .
-     * @throws IllegalStateException    if not HDFS or LOCAL source type or algorithm not supported.
+     * @throws IOException
+     *             if any IO exception in reading model file.
+     * @throws IllegalArgumentException
+     *             if {@code modelConfig} is, if invalid model algorithm .
+     * @throws IllegalStateException
+     *             if not HDFS or LOCAL source type or algorithm not supported.
      */
     public static List<BasicML> loadBasicModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType,
             boolean gbtConvertToProb) throws IOException {
@@ -140,15 +156,23 @@ public class ModelSpecLoaderUtils {
     /**
      * Load basic models by configuration
      *
-     * @param modelConfig             model config
-     * @param evalConfig              eval config
-     * @param sourceType              source type
-     * @param gbtConvertToProb        convert gbt score to prob or not
-     * @param gbtScoreConvertStrategy specify how to convert gbt raw score
+     * @param modelConfig
+     *            model config
+     * @param evalConfig
+     *            eval config
+     * @param sourceType
+     *            source type
+     * @param gbtConvertToProb
+     *            convert gbt score to prob or not
+     * @param gbtScoreConvertStrategy
+     *            specify how to convert gbt raw score
      * @return list of models
-     * @throws IOException              if any IO exception in reading model file.
-     * @throws IllegalArgumentException if {@code modelConfig} is, if invalid model algorithm .
-     * @throws IllegalStateException    if not HDFS or LOCAL source type or algorithm not supported.
+     * @throws IOException
+     *             if any IO exception in reading model file.
+     * @throws IllegalArgumentException
+     *             if {@code modelConfig} is, if invalid model algorithm .
+     * @throws IllegalStateException
+     *             if not HDFS or LOCAL source type or algorithm not supported.
      */
     public static List<BasicML> loadBasicModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType,
             boolean gbtConvertToProb, String gbtScoreConvertStrategy) throws IOException {
@@ -168,7 +192,7 @@ public class ModelSpecLoaderUtils {
 
         List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
-            for(FileStatus fst : modelFileStats) {
+            for(FileStatus fst: modelFileStats) {
                 models.add(loadModel(modelConfig, fst.getPath(), fs, gbtConvertToProb, gbtScoreConvertStrategy));
             }
         }
@@ -179,11 +203,16 @@ public class ModelSpecLoaderUtils {
     /**
      * Load generic model from local or HDFS storage and initialize.
      *
-     * @param modelConfig           model config
-     * @param genericModelConfigs   generic model files
-     * @param sourceType            source type
-     * @param models                models list to have the result
-     * @throws IOException Exception when fail to load generic models
+     * @param modelConfig
+     *            model config
+     * @param genericModelConfigs
+     *            generic model files
+     * @param sourceType
+     *            source type
+     * @param models
+     *            models list to have the result
+     * @throws IOException
+     *             Exception when fail to load generic models
      */
     public static void loadGenericModels(ModelConfig modelConfig, List<FileStatus> genericModelConfigs,
             SourceType sourceType, List<BasicML> models) throws IOException {
@@ -194,17 +223,17 @@ public class ModelSpecLoaderUtils {
         File f = new File(System.getProperty(Constants.USER_DIR) + "/models");
         // check if model dir is exist
         if(!f.exists()) {
-            hdfs.copyToLocalFile(false, new Path(src),  // source
+            hdfs.copyToLocalFile(false, new Path(src), // source
                     new Path(System.getProperty(Constants.USER_DIR)), true);
         }
 
-        for(FileStatus fst : genericModelConfigs) {
+        for(FileStatus fst: genericModelConfigs) {
             GenericModelConfig gmc = CommonUtils.loadJSON( // loading as GenericModelConfig
                     fst.getPath().toString(), sourceType, GenericModelConfig.class);
             String alg = (String) gmc.getProperties().get(Constants.GENERIC_ALGORITHM);
             String genericModelPath = System.getProperty(Constants.USER_DIR) // <usr.dir>
-                    + File.separator + Constants.MODELS                      // + /models
-                    + File.separator + modelConfig.getBasic().getName();     // + /ModelName
+                    + File.separator + Constants.MODELS; // + /models
+            // + File.separator + modelConfig.getBasic().getName(); // + /ModelName
             gmc.getProperties().put(Constants.GENERIC_MODEL_PATH, genericModelPath);
             log.info("Generic model path is : {}.", gmc.getProperties().get(Constants.GENERIC_MODEL_PATH));
             if(Constants.TENSORFLOW.equals(alg)) {
@@ -227,11 +256,15 @@ public class ModelSpecLoaderUtils {
     /**
      * Get how many models under current workspace
      *
-     * @param modelConfig   model config
-     * @param evalConfig    eval configuration
-     * @param sourceType    {@link SourceType} LOCAL or HDFS?
-     * @return  the number of models
-     * @throws IOException Exception when fail to load basic models
+     * @param modelConfig
+     *            model config
+     * @param evalConfig
+     *            eval configuration
+     * @param sourceType
+     *            {@link SourceType} LOCAL or HDFS?
+     * @return the number of models
+     * @throws IOException
+     *             Exception when fail to load basic models
      */
     public static int getBasicModelsCnt(ModelConfig modelConfig, EvalConfig evalConfig,
             RawSourceData.SourceType sourceType) throws IOException {
@@ -242,11 +275,15 @@ public class ModelSpecLoaderUtils {
     /**
      * Find model spec files
      *
-     * @param modelConfig   model config
-     * @param evalConfig    eval configuration
-     * @param sourceType    {@link SourceType} LOCAL or HDFS?
-     * @return      The basic model file list
-     * @throws IOException Exception when fail to load basic models
+     * @param modelConfig
+     *            model config
+     * @param evalConfig
+     *            eval configuration
+     * @param sourceType
+     *            {@link SourceType} LOCAL or HDFS?
+     * @return The basic model file list
+     * @throws IOException
+     *             Exception when fail to load basic models
      */
     public static List<FileStatus> locateBasicModels(ModelConfig modelConfig, EvalConfig evalConfig,
             SourceType sourceType) throws IOException {
@@ -266,7 +303,8 @@ public class ModelSpecLoaderUtils {
 
         // to avoid the *unix and windows file list order
         Collections.sort(listStatus, new Comparator<FileStatus>() {
-            @Override public int compare(FileStatus f1, FileStatus f2) {
+            @Override
+            public int compare(FileStatus f1, FileStatus f2) {
                 return f1.getPath().getName().compareToIgnoreCase(f2.getPath().getName());
             }
         });
@@ -297,11 +335,15 @@ public class ModelSpecLoaderUtils {
     /**
      * Loading model spec according to existing model path.
      *
-     * @param modelConfig model config
-     * @param modelPath the path of model file
-     * @param fs {@link FileSystem}
+     * @param modelConfig
+     *            model config
+     * @param modelPath
+     *            the path of model file
+     * @param fs
+     *            {@link FileSystem}
      * @return model object or null if no modelPath file
-     * @throws IOException Exception when fail to load model
+     * @throws IOException
+     *             Exception when fail to load model
      */
     public static BasicML loadModel(ModelConfig modelConfig, Path modelPath, FileSystem fs) throws IOException {
         return loadModel(modelConfig, modelPath, fs, false, Constants.GBT_SCORE_RAW_CONVETER);
@@ -310,12 +352,17 @@ public class ModelSpecLoaderUtils {
     /**
      * Loading model according to existing model path.
      *
-     * @param modelConfig      model config
-     * @param modelPath        the path to store model
-     * @param fs               file system used to store model
-     * @param gbtConvertToProb convert gbt score to prob or not
+     * @param modelConfig
+     *            model config
+     * @param modelPath
+     *            the path to store model
+     * @param fs
+     *            file system used to store model
+     * @param gbtConvertToProb
+     *            convert gbt score to prob or not
      * @return model object or null if no modelPath file
-     * @throws IOException if loading file for any IOException
+     * @throws IOException
+     *             if loading file for any IOException
      */
     public static BasicML loadModel(ModelConfig modelConfig, Path modelPath, FileSystem fs, boolean gbtConvertToProb)
             throws IOException {
@@ -325,13 +372,19 @@ public class ModelSpecLoaderUtils {
     /**
      * Loading model according to existing model path.
      *
-     * @param modelConfig             model config
-     * @param modelPath               the path to store model
-     * @param fs                      file system used to store model
-     * @param gbtConvertToProb        convert gbt score to prob or not
-     * @param gbtScoreConvertStrategy specify how to convert gbt raw score
+     * @param modelConfig
+     *            model config
+     * @param modelPath
+     *            the path to store model
+     * @param fs
+     *            file system used to store model
+     * @param gbtConvertToProb
+     *            convert gbt score to prob or not
+     * @param gbtScoreConvertStrategy
+     *            specify how to convert gbt raw score
      * @return model object or null if no modelPath file,
-     * @throws IOException if loading file for any IOException
+     * @throws IOException
+     *             if loading file for any IOException
      */
     public static BasicML loadModel(ModelConfig modelConfig, Path modelPath, FileSystem fs, boolean gbtConvertToProb,
             String gbtScoreConvertStrategy) throws IOException {
@@ -381,11 +434,15 @@ public class ModelSpecLoaderUtils {
      * or if {@link EvalConfig} is null or modelsPath is blank, Shifu will try to load models under `models`
      * directory
      *
-     * @param modelConfig - {@link ModelConfig}, need this, since the model file may exist in HDFS
-     * @param evalConfig  - {@link EvalConfig}, maybe null
-     * @param sourceType  - Where is file system
+     * @param modelConfig
+     *            - {@link ModelConfig}, need this, since the model file may exist in HDFS
+     * @param evalConfig
+     *            - {@link EvalConfig}, maybe null
+     * @param sourceType
+     *            - Where is file system
      * @return - {@link FileStatus} array for all found models
-     * @throws IOException io exception to load files
+     * @throws IOException
+     *             io exception to load files
      */
     public static List<FileStatus> findModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
             throws IOException {
@@ -404,7 +461,7 @@ public class ModelSpecLoaderUtils {
             String modelsPath = evalConfig.getModelsPath();
             FileStatus[] expandedPaths = fs.globStatus(new Path(modelsPath));
             if(ArrayUtils.isNotEmpty(expandedPaths)) {
-                for(FileStatus fileStatus : expandedPaths) {
+                for(FileStatus fileStatus: expandedPaths) {
                     fileList.addAll(Arrays.asList(fs.listStatus(fileStatus.getPath(), // list all files
                             new FileSuffixPathFilter(modelSuffix))));
                 }
@@ -417,11 +474,16 @@ public class ModelSpecLoaderUtils {
     /**
      * Load the generic model config and parse it to java object.
      * Similar as {@link #findModels(ModelConfig, EvalConfig, RawSourceData.SourceType)}
-     * @param modelConfig - {@link ModelConfig}, need this, since the model file may exist in HDFS
-     * @param evalConfig - {@link EvalConfig}, maybe null
-     * @param sourceType - {@link SourceType}, HDFS or Local?
+     * 
+     * @param modelConfig
+     *            - {@link ModelConfig}, need this, since the model file may exist in HDFS
+     * @param evalConfig
+     *            - {@link EvalConfig}, maybe null
+     * @param sourceType
+     *            - {@link SourceType}, HDFS or Local?
      * @return the file status list for generic models
-     * @throws IOException Exception occurred when finding generic models
+     * @throws IOException
+     *             Exception occurred when finding generic models
      */
     public static List<FileStatus> findGenericModels(ModelConfig modelConfig, EvalConfig evalConfig,
             RawSourceData.SourceType sourceType) throws IOException {
@@ -433,15 +495,15 @@ public class ModelSpecLoaderUtils {
 
         List<FileStatus> fileList = new ArrayList<>();
         if(null == evalConfig || StringUtils.isBlank(evalConfig.getModelsPath())) {
-            Path path = new Path(pathFinder.getModelsPath(sourceType)  // modelsPath / <ModelName>
-                    + File.separator + modelConfig.getBasic().getName());
+            Path path = new Path(pathFinder.getModelsPath(sourceType)); // modelsPath / <ModelName>
+            // + File.separator + modelConfig.getBasic().getName());
             fileList.addAll(Arrays.asList(fs.listStatus(path, new FileSuffixPathFilter(modelSuffix))));
         } else {
             String modelsPath = evalConfig.getModelsPath();
-            FileStatus[] expandedPaths = fs.globStatus(new Path(modelsPath // models / <ModelName>
-                    + File.separator + modelConfig.getBasic().getName()));
+            FileStatus[] expandedPaths = fs.globStatus(new Path(modelsPath)); // models / <ModelName>
+            // + File.separator + modelConfig.getBasic().getName()));
             if(ArrayUtils.isNotEmpty(expandedPaths)) {
-                for(FileStatus epath : expandedPaths) {
+                for(FileStatus epath: expandedPaths) {
                     fileList.addAll(Arrays.asList(fs.listStatus(epath.getPath(), // list all files with suffix
                             new FileSuffixPathFilter(modelSuffix))));
                 }
@@ -452,12 +514,18 @@ public class ModelSpecLoaderUtils {
     }
 
     /**
-     *  Load sub-models under current model space
-     * @param modelConfig - {@link ModelConfig}, need this, since the model file may exist in HDFS
-     * @param columnConfigList - List of {@link ColumnConfig}
-     * @param evalConfig - {@link EvalConfig}, maybe null
-     * @param sourceType - {@link SourceType}, HDFS or Local?
-     * @param gbtConvertToProb - convert to probability or not for gbt model
+     * Load sub-models under current model space
+     * 
+     * @param modelConfig
+     *            - {@link ModelConfig}, need this, since the model file may exist in HDFS
+     * @param columnConfigList
+     *            - List of {@link ColumnConfig}
+     * @param evalConfig
+     *            - {@link EvalConfig}, maybe null
+     * @param sourceType
+     *            - {@link SourceType}, HDFS or Local?
+     * @param gbtConvertToProb
+     *            - convert to probability or not for gbt model
      * @return list of {@link ModelSpec} for sub models
      */
     public static List<ModelSpec> loadSubModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
@@ -466,19 +534,26 @@ public class ModelSpecLoaderUtils {
     }
 
     /**
-     *  Load sub-models under current model space
-     * @param modelConfig - {@link ModelConfig}, need this, since the model file may exist in HDFS
-     * @param columnConfigList - List of {@link ColumnConfig}
-     * @param evalConfig - {@link EvalConfig}, maybe null
-     * @param sourceType - {@link SourceType}, HDFS or Local?
-     * @param gbtConvertToProb - convert to probability or not for gbt model
-     * @param gbtScoreConvertStrategy - gbt score conversion strategy
+     * Load sub-models under current model space
+     * 
+     * @param modelConfig
+     *            - {@link ModelConfig}, need this, since the model file may exist in HDFS
+     * @param columnConfigList
+     *            - List of {@link ColumnConfig}
+     * @param evalConfig
+     *            - {@link EvalConfig}, maybe null
+     * @param sourceType
+     *            - {@link SourceType}, HDFS or Local?
+     * @param gbtConvertToProb
+     *            - convert to probability or not for gbt model
+     * @param gbtScoreConvertStrategy
+     *            - gbt score conversion strategy
      * @return list of {@link ModelSpec} for sub models
      */
     @SuppressWarnings("deprecation")
-    public static List<ModelSpec> loadSubModels(ModelConfig modelConfig,
-            List<ColumnConfig> columnConfigList, EvalConfig evalConfig, RawSourceData.SourceType sourceType,
-            Boolean gbtConvertToProb, String gbtScoreConvertStrategy) {
+    public static List<ModelSpec> loadSubModels(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            EvalConfig evalConfig, RawSourceData.SourceType sourceType, Boolean gbtConvertToProb,
+            String gbtScoreConvertStrategy) {
         List<ModelSpec> modelSpecs = new ArrayList<ModelSpec>();
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
 
@@ -495,7 +570,7 @@ public class ModelSpecLoaderUtils {
 
         try {
             FileStatus[] fsArr = fs.listStatus(new Path(modelsPath));
-            for(FileStatus fileStatus : fsArr) {
+            for(FileStatus fileStatus: fsArr) {
                 if(fileStatus.isDir()) {
                     ModelSpec modelSpec = loadSubModelSpec(modelConfig, columnConfigList, fileStatus, sourceType,
                             gbtConvertToProb, gbtScoreConvertStrategy);
@@ -512,13 +587,20 @@ public class ModelSpecLoaderUtils {
     }
 
     /**
-     *  Load sub-model with FileStatus
-     * @param modelConfig - {@link ModelConfig}, need this, since the model file may exist in HDFS
-     * @param columnConfigList - List of {@link ColumnConfig}
-     * @param fileStatus - {@link EvalConfig}, maybe null
-     * @param sourceType - {@link SourceType}, HDFS or Local?
-     * @param gbtConvertToProb - convert to probability or not for gbt model
-     * @param gbtScoreConvertStrategy - gbt score conversion strategy
+     * Load sub-model with FileStatus
+     * 
+     * @param modelConfig
+     *            - {@link ModelConfig}, need this, since the model file may exist in HDFS
+     * @param columnConfigList
+     *            - List of {@link ColumnConfig}
+     * @param fileStatus
+     *            - {@link EvalConfig}, maybe null
+     * @param sourceType
+     *            - {@link SourceType}, HDFS or Local?
+     * @param gbtConvertToProb
+     *            - convert to probability or not for gbt model
+     * @param gbtScoreConvertStrategy
+     *            - gbt score conversion strategy
      * @return {@link ModelSpec} for sub-model
      */
     private static ModelSpec loadSubModelSpec(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
@@ -534,12 +616,13 @@ public class ModelSpecLoaderUtils {
         ModelSpec modelSpec = null;
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
             Collections.sort(modelFileStats, new Comparator<FileStatus>() {
-                @Override public int compare(FileStatus fa, FileStatus fb) {
+                @Override
+                public int compare(FileStatus fa, FileStatus fb) {
                     return fa.getPath().getName().compareTo(fb.getPath().getName());
                 }
             });
             List<BasicML> models = new ArrayList<BasicML>();
-            for(FileStatus f : modelFileStats) {
+            for(FileStatus f: modelFileStats) {
                 models.add(loadModel(modelConfig, f.getPath(), fs, gbtConvertToProb, gbtScoreConvertStrategy));
             }
 
@@ -560,17 +643,22 @@ public class ModelSpecLoaderUtils {
 
     /**
      * Get the model spec file stats and return the ALGORITHM for the model spc
-     * @param fileStatus directory to detect
-     * @param sourceType {@link SourceType}
-     * @param modelFileStats model spec file list to return
-     * @param subConfigs configurations for the sub model
+     * 
+     * @param fileStatus
+     *            directory to detect
+     * @param sourceType
+     *            {@link SourceType}
+     * @param modelFileStats
+     *            model spec file list to return
+     * @param subConfigs
+     *            configurations for the sub model
      * @return {@link ALGORITHM}
-     * @throws IOException Exception occurred when finding model spec files
+     * @throws IOException
+     *             Exception occurred when finding model spec files
      */
     @SuppressWarnings("deprecation")
-    public static ALGORITHM getModelsAlgAndSpecFiles(FileStatus fileStatus,
-            RawSourceData.SourceType sourceType, List<FileStatus> modelFileStats, FileStatus[] subConfigs)
-            throws IOException {
+    public static ALGORITHM getModelsAlgAndSpecFiles(FileStatus fileStatus, RawSourceData.SourceType sourceType,
+            List<FileStatus> modelFileStats, FileStatus[] subConfigs) throws IOException {
         assert modelFileStats != null;
 
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
@@ -578,7 +666,7 @@ public class ModelSpecLoaderUtils {
 
         FileStatus[] fileStatsArr = fs.listStatus(fileStatus.getPath());
         if(fileStatsArr != null) {
-            for(FileStatus fls : fileStatsArr) {
+            for(FileStatus fls: fileStatsArr) {
                 if(!fls.isDir()) {
                     String fileName = fls.getPath().getName();
 
@@ -611,15 +699,19 @@ public class ModelSpecLoaderUtils {
     /**
      * Get how many models for each sub models
      *
-     * @param modelConfig   model config
-     * @param columnConfigList list of {@link ColumnConfig}
-     * @param evalConfig    eval configuration
-     * @param sourceType    {@link SourceType} LOCAL or HDFS?
+     * @param modelConfig
+     *            model config
+     * @param columnConfigList
+     *            list of {@link ColumnConfig}
+     * @param evalConfig
+     *            eval configuration
+     * @param sourceType
+     *            {@link SourceType} LOCAL or HDFS?
      * @return the number of models
      */
     @SuppressWarnings("deprecation")
-    public static Map<String, Integer> getSubModelsCnt(ModelConfig modelConfig,
-            List<ColumnConfig> columnConfigList, EvalConfig evalConfig, RawSourceData.SourceType sourceType) {
+    public static Map<String, Integer> getSubModelsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            EvalConfig evalConfig, RawSourceData.SourceType sourceType) {
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         PathFinder pathFinder = new PathFinder(modelConfig);
 
@@ -635,7 +727,7 @@ public class ModelSpecLoaderUtils {
 
         try {
             FileStatus[] fsArr = fs.listStatus(new Path(modelsPath));
-            for(FileStatus fileStatus : fsArr) {
+            for(FileStatus fileStatus: fsArr) {
                 if(fileStatus.isDir()) {
                     List<FileStatus> subModelSpecFiles = new ArrayList<FileStatus>();
                     getModelsAlgAndSpecFiles(fileStatus, sourceType, subModelSpecFiles, new FileStatus[2]);
@@ -653,10 +745,14 @@ public class ModelSpecLoaderUtils {
 
     /**
      * Load models with specified models path and algorithm
-     * @param modelsPath - model spec path
-     * @param alg - algorithm
+     * 
+     * @param modelsPath
+     *            - model spec path
+     * @param alg
+     *            - algorithm
      * @return - list of {@link BasicML}
-     * @throws IOException Exception occurred when loading model specsModelSpecLoaderUtils
+     * @throws IOException
+     *             Exception occurred when loading model specsModelSpecLoaderUtils
      */
     public static List<BasicML> loadBasicModels(final String modelsPath, final ModelTrainConf.ALGORITHM alg)
             throws IOException {
@@ -666,12 +762,17 @@ public class ModelSpecLoaderUtils {
     /**
      * Load neural network models from specified file path
      *
-     * @param modelsPath              - a file or directory that contains .nn files
-     * @param alg                     the algorithm
-     * @param isConvertToProb         if convert to prob for gbt model
-     * @param gbtScoreConvertStrategy specify how to convert gbt raw score
+     * @param modelsPath
+     *            - a file or directory that contains .nn files
+     * @param alg
+     *            the algorithm
+     * @param isConvertToProb
+     *            if convert to prob for gbt model
+     * @param gbtScoreConvertStrategy
+     *            specify how to convert gbt raw score
      * @return - a list of @BasicML
-     * @throws IOException - throw exception when loading model files
+     * @throws IOException
+     *             - throw exception when loading model files
      */
     public static List<BasicML> loadBasicModels(final String modelsPath, final ALGORITHM alg, boolean isConvertToProb,
             String gbtScoreConvertStrategy) throws IOException {
@@ -686,7 +787,8 @@ public class ModelSpecLoaderUtils {
         File modelsPathDir = new File(modelsPath);
 
         File[] modelFiles = modelsPathDir.listFiles(new FilenameFilter() {
-            @Override public boolean accept(File dir, String name) {
+            @Override
+            public boolean accept(File dir, String name) {
                 return name.endsWith("." + alg.name().toLowerCase());
             }
         });
@@ -694,13 +796,14 @@ public class ModelSpecLoaderUtils {
         if(modelFiles != null) {
             // sort file names
             Arrays.sort(modelFiles, new Comparator<File>() {
-                @Override public int compare(File from, File to) {
+                @Override
+                public int compare(File from, File to) {
                     return from.getName().compareTo(to.getName());
                 }
             });
 
             List<BasicML> models = new ArrayList<BasicML>(modelFiles.length);
-            for(File nnf : modelFiles) {
+            for(File nnf: modelFiles) {
                 InputStream is = null;
                 try {
                     is = new FileInputStream(nnf);

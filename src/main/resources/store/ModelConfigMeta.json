@@ -398,7 +398,11 @@
                     {"label":"zscore and OneHot for categorical", "value":"ZSCALE_ONEHOT"},
                     {"label":"zscore and Ordinal for categorical", "value":"ZSCALE_ORDINAL"},
                     {"label":"Discrete numerical feature in each bin and positive rate for categorical feature", "value":"DISCRETE_ZSCALE"},
-                    {"label":"Discrete numerical feature in each bin and positive rate for categorical feature", "value":"DISCRETE_ZSCORE"}
+                    {"label":"Discrete numerical feature in each bin and positive rate for categorical feature", "value":"DISCRETE_ZSCORE"},
+                    {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCALE_INDEX"},
+                    {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCORE_INDEX"},
+                    {"label":"numerical variable using woe, categorical variable, using cate index", "value":"WOE_INDEX"},
+                    {"label":"numerical variable using zscaled woe, categorical variable using cate index", "value":"WOE_ZSCALE_INDEX"}
                 ]
             }, {
                 "name": "stdDevCutOff",
@@ -539,7 +543,7 @@
                     {"label": "Random Forest", "value":"RF"},
                     {"label": "Gradient Boost Decision Tree", "value":"GBT"},
                     {"label": "Tensorflow", "value":"Tensorflow"},
-                    {"label": "Wide And Deep", "value":"WND"},
+                    {"label": "Wide And Deep", "value":"WDL"},
                     {"label": "Generic", "value":"generic"}
                 ]
             }, {
@@ -604,11 +608,29 @@
                                 "defval": 45
                             }                            
                          ]
+                     }, {
+                        "name" : "NumEmbedColumnIds",
+                        "type" : "list",
+                        "directive": "input",
+                        "elementType" : "integer",
+                        "element": [
+                            {
+                                "name": "dummy",
+                                "type": "integer",
+                                "directive": "input",
+                                "defval": 1
+                            }                            
+                         ]
                     }, {
                         "name" : "LearningRate",
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.1
+                    }, {
+                        "name" : "WDLL2Reg",
+                        "type" : "float",
+                        "directive": "input",
+                        "defval" : 0.01
                     }, {
                     	"name" : "TF.optimizer",
                     	"type" : "text",

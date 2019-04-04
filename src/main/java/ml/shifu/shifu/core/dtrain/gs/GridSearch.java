@@ -15,25 +15,17 @@
  */
 package ml.shifu.shifu.core.dtrain.gs;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import ml.shifu.shifu.container.meta.MetaFactory;
 import ml.shifu.shifu.container.meta.MetaItem;
 import ml.shifu.shifu.core.processor.TrainModelProcessor;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.util.Environment;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * Grid search supports for kinds of parameters set by List: [..., ..., ...].
@@ -175,7 +167,8 @@ public class GridSearch {
 
         // stats on hyper parameters
         for(Entry<String, Object> entry: sortedMap.entrySet()) {
-            if(entry.getKey().equals("ActivationFunc") || entry.getKey().equals("NumHiddenNodes") || entry.getKey().equals("FixedLayers")) {
+            if(entry.getKey().equals("ActivationFunc") || entry.getKey().equals("NumHiddenNodes")
+                    || entry.getKey().equals("FixedLayers") || entry.getKey().equals("NumEmbedColumnIds")) {
                 if(entry.getValue() instanceof List) {
                     if(((List) (entry.getValue())).size() > 0 && ((List) (entry.getValue())).get(0) instanceof List) {
                         // ActivationFunc and NumHiddenNodes in NN is already List, so as hyper parameter they should be
@@ -310,6 +303,16 @@ public class GridSearch {
         } else if(itemMeta.getType().equals("number")) {
             try {
                 return Double.parseDouble(itemValueStr);
+            } catch (NumberFormatException e) {
+                String message = String.format("Train param %s should be number type, actual value got is %s", itemKey,
+                        itemValueStr);
+                LOG.error(message);
+                throw new ShifuException(ShifuErrorCode.ERROR_GRID_SEARCH_FILE_CONFIG, e, message);
+            }
+        } else if(itemMeta.getType().equals("float")) {
+            try {
+                System.out.println("create float value for " + itemValueStr);
+                return Float.parseFloat(itemValueStr);
             } catch (NumberFormatException e) {
                 String message = String.format("Train param %s should be number type, actual value got is %s", itemKey,
                         itemValueStr);

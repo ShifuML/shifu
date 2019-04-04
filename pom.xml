@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ml.shifu</groupId>
 	<artifactId>shifu</artifactId>
-	<version>0.12.1-SNAPSHOT</version>
+	<version>0.12.0</version>
 	<name>Shifu</name>
 	<description>An open-source, end-to-end and distributed machine learning and data mining framework built on top of Hadoop.</description>
 	<properties>
@@ -86,7 +86,7 @@
 		<developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
 		<connection>scm:git:https://github.com/shifuml/shifu.git</connection>
 		<url>https://github.com/shifuml/shifu.git</url>
-		<tag>shifu-0.12.1-SNAPSHOT</tag>
+		<tag>shifu-0.12.0</tag>
 	</scm>
 	<dependencies>
 		<dependency>
@@ -232,6 +232,11 @@
 			<groupId>org.apache.pig</groupId>
 			<artifactId>piggybank</artifactId>
 			<version>0.14.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.reflections</groupId>
+			<artifactId>reflections</artifactId>
+			<version>0.9.10</version>
 		</dependency>
 	</dependencies>
 	<build>

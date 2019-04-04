@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain.wnd;
+package ml.shifu.shifu.core.dtrain.wdl;
+
+import ml.shifu.guagua.io.Combinable;
+import ml.shifu.guagua.io.HaltBytable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import ml.shifu.guagua.io.Combinable;
-import ml.shifu.guagua.io.HaltBytable;
-
 /**
- * {@link WNDParams} is message sent between master and workers for wide and deep model training.
+ * {@link WDLParams} is message sent between master and workers for wide and deep model training.
  *
  * <p>
  * In worker, it will collect combined gradients and then send to master for merging. While in master when model weights
@@ -35,7 +35,9 @@ import ml.shifu.guagua.io.HaltBytable;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WNDParams extends HaltBytable implements Combinable<WNDParams> {
+public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
+
+    private static final boolean WDL_IS_NULL = true;
 
     /**
      * # of weighted training records per such worker.
@@ -56,6 +58,11 @@ public class WNDParams extends HaltBytable implements Combinable<WNDParams> {
      * Validation error for such worker and such iteration.
      */
     private double validationError;
+
+    /**
+     * Serialization type. Default to MODEL_SPEC.
+     */
+    private SerializationType serializationType = SerializationType.MODEL_SPEC;
 
     private WideAndDeep wnd;
 
@@ -125,35 +132,62 @@ public class WNDParams extends HaltBytable implements Combinable<WNDParams> {
         this.validationError = validationError;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see ml.shifu.guagua.io.Combinable#combine(ml.shifu.guagua.io.Bytable)
+    /**
+     * @return the serializationType
      */
-    @Override
-    public WNDParams combine(WNDParams from) {
-        // TODO How to combine workers into one to save memory
-        return null;
+    public SerializationType getSerializationType() {
+        return serializationType;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see ml.shifu.guagua.io.HaltBytable#doWrite(java.io.DataOutput)
+    /**
+     * @param serializationType
+     *            the serializationType to set
      */
+    public void setSerializationType(SerializationType serializationType) {
+        this.serializationType = serializationType;
+    }
+
+    @Override
+    public WDLParams combine(WDLParams from) {
+        this.trainCount += from.trainCount;
+        this.trainError += from.trainError;
+        this.validationCount += from.validationCount;
+        this.validationError += from.validationError;
+        this.wnd = this.wnd.combine(from.getWnd());
+        return this;
+    }
+
     @Override
     public void doWrite(DataOutput out) throws IOException {
-        // TODO serialization
+        if(this.wnd == null) {
+            // for the first iteration, the wnd will be null
+            out.writeBoolean(WDL_IS_NULL);
+        } else {
+            out.writeBoolean(!WDL_IS_NULL);
+            this.wnd.setSerializationType(serializationType);
+            this.wnd.write(out);
+        }
+        out.writeDouble(this.trainCount);
+        out.writeDouble(this.validationCount);
+        out.writeDouble(this.trainError);
+        out.writeDouble(this.validationError);
+        out.writeInt(this.serializationType.getValue());
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see ml.shifu.guagua.io.HaltBytable#doReadFields(java.io.DataInput)
-     */
     @Override
     public void doReadFields(DataInput in) throws IOException {
-        // TODO de-serialization
+        boolean wdlIsNull = in.readBoolean();
+        if (!wdlIsNull) {
+            if(this.wnd == null) {
+                this.wnd = new WideAndDeep();
+            }
+            this.wnd.readFields(in);
+        }
+        this.trainCount = in.readDouble();
+        this.validationCount = in.readDouble();
+        this.trainError = in.readDouble();
+        this.validationError = in.readDouble();
+        this.serializationType = SerializationType.getSerializationType(in.readInt());
     }
 
     /**
@@ -164,7 +198,8 @@ public class WNDParams extends HaltBytable implements Combinable<WNDParams> {
     }
 
     /**
-     * @param wnd the wnd to set
+     * @param wnd
+     *            the wnd to set
      */
     public void setWnd(WideAndDeep wnd) {
         this.wnd = wnd;

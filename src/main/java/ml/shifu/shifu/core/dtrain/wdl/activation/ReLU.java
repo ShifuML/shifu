@@ -13,39 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain.wnd;
+package ml.shifu.shifu.core.dtrain.wdl.activation;
 
 /**
- * {@link DenseInputLayer} denotes dense input number array. Forward computation is a wrapper with just current input
- * array. {@linkplain #backward(float[], float)} no need to be supported as it should not be called.
+ * ReLU Activation.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class DenseInputLayer implements Layer<float[], float[], float[], float[]> {
+public class ReLU extends Activation {
 
     /**
-     * Output dimension.
+     * Tmp save last inputs in forward and then can be used in backward computation.
      */
-    private final int out;
-
-    public DenseInputLayer(int out) {
-        this.out = out;
-    }
-
-    @Override
-    public int getOutDim() {
-        return this.out;
-    }
+    private float[] lastInput;
 
     @Override
     public float[] forward(float[] inputs) {
-        assert inputs.length == this.out;
-        return inputs;
+        this.lastInput = inputs;
+        float[] outputs = new float[inputs.length];
+        for(int i = 0; i < inputs.length; i++) {
+            outputs[i] = Math.max(0, inputs[i]);
+        }
+        return outputs;
     }
 
     @Override
-    public float[] backward(float[] backInputs, float sig) {
-        throw new UnsupportedOperationException();
+    public float[] backward(float[] outputs) {
+        float[] results = new float[outputs.length];
+        for(int i = 0; i < outputs.length; i++) {
+            results[i] = this.lastInput[i] > 0 ? outputs[i] * 1f : 0f;
+        }
+        return results;
     }
 
 }

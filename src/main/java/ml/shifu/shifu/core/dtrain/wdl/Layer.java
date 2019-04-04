@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain.wnd;
+package ml.shifu.shifu.core.dtrain.wdl;
 
 /**
  * This is single {@link Layer} abstraction for all kind of operations in a neural network graph. Typical implementation
@@ -28,7 +28,7 @@ public interface Layer<FIN, FOUT, BIN, BOUT> {
      * Output dimesion of current layer.
      * @return output dim
      */
-    public int getOutDim();
+    int getOutDim();
 
     /**
      * Layer forward computation from input to output. Activation in neural network is abstracted as one layer.
@@ -37,7 +37,7 @@ public interface Layer<FIN, FOUT, BIN, BOUT> {
      *            the input object (float array or sparse input) of current layer
      * @return output results, common case like float[] or float.
      */
-    public FOUT forward(FIN input);
+    FOUT forward(FIN input);
 
     /**
      * Backward is used to backward compute inputs according to layer outputs. At the same time layer inside gradients
@@ -45,10 +45,8 @@ public interface Layer<FIN, FOUT, BIN, BOUT> {
      * 
      * @param backInput
      *            the backward input from last layer backward.
-     * @param significance
-     *            weight/significance per each record in backward computation.
      * @return backward output result which is typically corresponding like input of layer.
      */
-    public BOUT backward(BIN backInput, float significance);
+    BOUT backward(BIN backInput);
 
 }

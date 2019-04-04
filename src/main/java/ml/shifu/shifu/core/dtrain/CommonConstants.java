@@ -86,7 +86,7 @@ public interface CommonConstants {
 
     public static final String NUM_HIDDEN_LAYERS = "NumHiddenLayers";
 
-    public static final String WND_L2_REG = "WNDL2Reg";
+    public static final String WDL_L2_REG = "WDLL2Reg";
 
     public static final String CHECKPOINT_INTERVAL = "CheckpointInterval";
 
@@ -102,7 +102,7 @@ public interface CommonConstants {
 
     public static final String OUTPUT_ACTIVATION_FUNC = "OutputActivationFunc";
     
-    public static final String NUM_EMBED_COLUMN_IDS = "NumEmbedCoulmIds";
+    public static final String NUM_EMBED_COLUMN_IDS = "NumEmbedColumnIds";
     
     public static final String NUM_EMBED_OUTPUTS = "NumEmbedOuputs";
 
@@ -141,7 +141,9 @@ public interface CommonConstants {
     public static final int TREE_FORMAT_VERSION = 4;
 
     public static final int NN_FORMAT_VERSION = 1;
-    
+
+    public static final int WDL_FORMAT_VERSION = 1;
+
     public static final int DEFAULT_EMBEDING_OUTPUT = 16;
 
 }

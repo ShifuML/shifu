@@ -352,8 +352,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         if(!config.isMeta() && config.isFinalSelect()) {
                             // for multiple classification, binPosRate means rate of such category over all counts,
                             // reuse binPosRate for normalize
-                            List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
-                                    this.categoryMissingNormType);
+                            List<Double> normVals = Normalizer.fullNormalize(config, val, cutoff, normType,
+                                    this.categoryMissingNormType, this.categoricalIndexMap.get(config.getColumnNum()));
                             List<String> formatNormVals = new ArrayList<>();
                             for(Double normVal: normVals) {
                                 String formatVal = getOutputValue(normVal, true);
@@ -380,8 +380,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         if(CommonUtils.isToNormVariable(config, super.hasCandidates, modelConfig.isRegression())) {
                             // for multiple classification, binPosRate means rate of such category over all counts,
                             // reuse binPosRate for normalize
-                            List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
-                                    this.categoryMissingNormType);
+                            List<Double> normVals = Normalizer.fullNormalize(config, val, cutoff, normType,
+                                    this.categoryMissingNormType, this.categoricalIndexMap.get(config.getColumnNum()));
                             for(Double normVal: normVals) {
                                 appendOutputValue(tuple, normVal, true);
                             }
@@ -447,8 +447,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     if(!config.isMeta() && config.isFinalSelect()) {
                         // for multiple classification, binPosRate means rate of such category over all counts,
                         // reuse binPosRate for normalize
-                        List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
-                                this.categoryMissingNormType);
+                        List<Double> normVals = Normalizer.fullNormalize(config, val, cutoff, normType,
+                                this.categoryMissingNormType, this.categoricalIndexMap.get(config.getColumnNum()));
                         List<String> formatNormVals = new ArrayList<>();
                         for(Double normVal: normVals) {
                             String formatVal = getOutputValue(normVal, true);
@@ -470,8 +470,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 } else {
                     // for others
                     if(CommonUtils.isToNormVariable(config, super.hasCandidates, modelConfig.isRegression())) {
-                        List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType,
-                                this.categoryMissingNormType);
+                        List<Double> normVals = Normalizer.fullNormalize(config, val, cutoff, normType,
+                                this.categoryMissingNormType, this.categoricalIndexMap.get(config.getColumnNum()));
                         for(Double normVal: normVals) {
                             appendOutputValue(tuple, normVal, true);
                         }

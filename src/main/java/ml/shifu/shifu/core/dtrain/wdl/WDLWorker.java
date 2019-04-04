@@ -13,28 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain.wnd;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.math3.distribution.PoissonDistribution;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+package ml.shifu.shifu.core.dtrain.wdl;
 
 import com.google.common.base.Splitter;
-
 import ml.shifu.guagua.ComputableMonitor;
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
@@ -52,9 +33,21 @@ import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.MapReduceUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.math3.distribution.PoissonDistribution;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 /**
- * {@link WNDWorker} is responsible for loading part of data into memory, do iteration gradients computation and send
+ * {@link WDLWorker} is responsible for loading part of data into memory, do iteration gradients computation and send
  * back to master for master aggregation. After master aggregation is done, received latest weights to do next
  * iteration.
  * 
@@ -79,10 +72,10 @@ import ml.shifu.shifu.util.MapReduceUtils;
  * @author Zhang David (pengzhang@paypal.com)
  */
 @ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 3600)
-public class WNDWorker extends
-        AbstractWorkerComputable<WNDParams, WNDParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
+public class WDLWorker extends
+        AbstractWorkerComputable<WDLParams, WDLParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
 
-    protected static final Logger LOG = LoggerFactory.getLogger(WNDWorker.class);
+    protected static final Logger LOG = LoggerFactory.getLogger(WDLWorker.class);
 
     /**
      * Model configuration loaded from configuration file.
@@ -249,7 +242,7 @@ public class WNDWorker extends
      */
     @Override
     public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue,
-            WorkerContext<WNDParams, WNDParams> context) {
+            WorkerContext<WDLParams, WDLParams> context) {
         if((++this.count) % 5000 == 0) {
             LOG.info("Read {} records.", this.count);
         }
@@ -257,6 +250,7 @@ public class WNDWorker extends
         // hashcode for fixed input split in train and validation
         long hashcode = 0;
         float[] inputs = new float[this.numInputs];
+        this.cateInputs = (int) this.columnConfigList.stream().filter(ColumnConfig::isCategorical).count();
         SparseInput[] cateInputs = new SparseInput[this.cateInputs];
         float ideal = 0f, significance = 1f;
         int index = 0, numIndex = 0, cateIndex = 0;
@@ -505,7 +499,7 @@ public class WNDWorker extends
     /**
      * If no enough columns for model training, most of the cases root cause is from inconsistent delimiter.
      */
-    private void validateInputLength(WorkerContext<WNDParams, WNDParams> context, float[] inputs, int numInputIndex) {
+    private void validateInputLength(WorkerContext<WDLParams, WDLParams> context, float[] inputs, int numInputIndex) {
         if(numInputIndex != inputs.length) {
             String delimiter = context.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER,
                     Constants.DEFAULT_DELIMITER);
@@ -570,7 +564,7 @@ public class WNDWorker extends
 
     @SuppressWarnings({ "unchecked", "unused" })
     @Override
-    public void init(WorkerContext<WNDParams, WNDParams> context) {
+    public void init(WorkerContext<WDLParams, WDLParams> context) {
         Properties props = context.getProps();
         try {
             SourceType sourceType = SourceType
@@ -654,13 +648,15 @@ public class WNDWorker extends
         for(Integer cId: embedColumnIds) {
             embedOutputList.add(embedOutputs == null ? CommonConstants.DEFAULT_EMBEDING_OUTPUT : embedOutputs);
         }
+        List<Integer> numericalIds = DTrainUtils.getNumericalIds(this.columnConfigList, isAfterVarSelect);
         List<Integer> wideColumnIds = DTrainUtils.getCategoricalIds(columnConfigList, isAfterVarSelect);
+        Map<Integer, Integer> idBinCateSizeMap = DTrainUtils.getIdBinCategorySizeMap(columnConfigList);
         int numLayers = (Integer) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
-        Float l2reg = (Float) this.validParams.get(CommonConstants.WND_L2_REG);
-        this.wnd = new WideAndDeep(columnConfigList, numInputs, embedColumnIds, embedOutputList, wideColumnIds,
-                hiddenNodes, actFunc, l2reg);
+        Float l2reg = ((Double) this.validParams.get(CommonConstants.WDL_L2_REG)).floatValue();
+        this.wnd = new WideAndDeep(idBinCateSizeMap, numInputs, numericalIds, embedColumnIds, embedOutputList,
+                wideColumnIds, hiddenNodes, actFunc, l2reg);
     }
 
     private void initCateIndexMap() {
@@ -680,26 +676,26 @@ public class WNDWorker extends
     }
 
     @Override
-    public WNDParams doCompute(WorkerContext<WNDParams, WNDParams> context) {
+    public WDLParams doCompute(WorkerContext<WDLParams, WDLParams> context) {
         if(context.isFirstIteration()) {
             // return empty which has been ignored in master first iteration, worker needs sync with master at first.
-            return new WNDParams();
+            return new WDLParams();
         }
 
         // update master global model into worker WideAndDeep graph
         this.wnd.updateWeights(context.getLastMasterResult());
 
-        // compute gradients for each iteration
-        WideAndDeep gradientsWnd = new WideAndDeep(this.wnd); // TODO build a wideanddeep to aggregate gradients
-
-        // forward and backward computation
+        // forward and backward compute gradients for each iteration
         int trainCnt = trainingData.size(), validCnt = validationData.size();
         double trainSumError = 0d, validSumError = 0d;
         for(Data data: trainingData) {
             float[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data), getWideInputs(data));
-            float error = sigmoid(logits[0]) - data.label;
-            trainSumError += data.weight * error * error; // TODO, logloss, squredloss, weighted error or not
-            this.wnd.backward(new float[] { error }, data.getWeight());
+            float predict = sigmoid(logits[0]);
+            float error = predict - data.label;
+            // TODO, logloss, squredloss, weighted error or not
+            System.out.println("error in worker" + error + " logits[0]= " + logits[0] + " weight=" + data.weight);
+            trainSumError += data.weight * error * error;
+            this.wnd.backward(new float[] { predict }, new float[] { data.label }, data.getWeight());
         }
 
         // compute validation error
@@ -708,14 +704,16 @@ public class WNDWorker extends
             float error = sigmoid(logits[0]) - data.label;
             validSumError += data.weight * error * error;
         }
-
+        
+        LOG.info("training error is {} {}", trainSumError, validSumError);
         // set cnt, error to params and return to master
-        WNDParams params = new WNDParams();
+        WDLParams params = new WDLParams();
         params.setTrainCount(trainCnt);
         params.setValidationCount(validCnt);
         params.setTrainError(trainSumError);
         params.setValidationError(validSumError);
-        params.setWnd(gradientsWnd);
+        params.setSerializationType(SerializationType.GRADIENTS);
+        params.setWnd(this.wnd);
         return params;
     }
 
@@ -732,11 +730,45 @@ public class WNDWorker extends
     }
 
     private List<SparseInput> getEmbedInputs(Data data) {
-        List<SparseInput> embedInputs = new ArrayList<SparseInput>();
+        List<SparseInput> embedInputs = new ArrayList<>();
         for(Integer columnId: this.wnd.getEmbedColumnIds()) {
             embedInputs.add(data.getCategoricalValues()[this.inputIndexMap.get(columnId)]);
         }
         return embedInputs;
+    }
+
+    @Override
+    protected void postLoad(WorkerContext<WDLParams, WDLParams> context) {
+        this.trainingData.switchState();
+        if(validationData != null) {
+            this.validationData.switchState();
+        }
+        LOG.info("    - # Records of the Total Data Set: {}.", this.count);
+        LOG.info("    - Bagging Sample Rate: {}.", this.modelConfig.getBaggingSampleRate());
+        LOG.info("    - Bagging With Replacement: {}.", this.modelConfig.isBaggingWithReplacement());
+        if(this.isKFoldCV) {
+            LOG.info("        - Validation Rate(kFold): {}.", 1d / this.modelConfig.getTrain().getNumKFold());
+        } else {
+            LOG.info("        - Validation Rate: {}.", this.modelConfig.getValidSetRate());
+        }
+        LOG.info("        - # Records of the Training Set: {}.", this.trainingData.size());
+        if(modelConfig.isRegression() || modelConfig.getTrain().isOneVsAll()) {
+            LOG.info("        - # Positive Bagging Selected Records of the Training Set: {}.",
+                    this.positiveSelectedTrainCount);
+            LOG.info("        - # Negative Bagging Selected Records of the Training Set: {}.",
+                    this.negativeSelectedTrainCount);
+            LOG.info("        - # Positive Raw Records of the Training Set: {}.", this.positiveTrainCount);
+            LOG.info("        - # Negative Raw Records of the Training Set: {}.", this.negativeTrainCount);
+        }
+
+        if(validationData != null) {
+            LOG.info("        - # Records of the Validation Set: {}.", this.validationData.size());
+            if(modelConfig.isRegression() || modelConfig.getTrain().isOneVsAll()) {
+                LOG.info("        - # Positive Records of the Validation Set: {}.", this.positiveValidationCount);
+                LOG.info("        - # Negative Records of the Validation Set: {}.", this.negativeValidationCount);
+            }
+        }
+
     }
 
     /**

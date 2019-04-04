@@ -13,25 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain.wnd;
-
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.List;
-import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+package ml.shifu.shifu.core.dtrain.wdl;
 
 import ml.shifu.guagua.master.BasicMasterInterceptor;
 import ml.shifu.guagua.master.MasterContext;
@@ -43,15 +25,32 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 /**
- * {@link WNDOutput} is used to save final model path and tmp models per checkpoint definition.
+ * {@link WDLOutput} is used to save final model path and tmp models per checkpoint definition.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WNDOutput extends BasicMasterInterceptor<WNDParams, WNDParams> {
+public class WDLOutput extends BasicMasterInterceptor<WDLParams, WDLParams> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(WNDOutput.class);
+    private static final Logger LOG = LoggerFactory.getLogger(WDLOutput.class);
 
     /**
      * Model Config read from HDFS
@@ -101,12 +100,12 @@ public class WNDOutput extends BasicMasterInterceptor<WNDParams, WNDParams> {
     private Configuration conf;
 
     @Override
-    public void preApplication(MasterContext<WNDParams, WNDParams> context) {
+    public void preApplication(MasterContext<WDLParams, WDLParams> context) {
         init(context);
     }
 
     @Override
-    public void postIteration(final MasterContext<WNDParams, WNDParams> context) {
+    public void postIteration(final MasterContext<WDLParams, WDLParams> context) {
         long start = System.currentTimeMillis();
         // save tmp to hdfs according to raw trainer logic
         final int tmpModelFactor = DTrainUtils.tmpModelFactor(context.getTotalIteration());
@@ -134,10 +133,10 @@ public class WNDOutput extends BasicMasterInterceptor<WNDParams, WNDParams> {
                         LOG.info("Copy checkpointed model to tmp folder: {}", tmpModelPath.toString());
                         try {
                             DataOutputStream outputStream = new DataOutputStream(
-                                    new GZIPOutputStream(FileSystem.get(WNDOutput.this.conf).create(tmpModelPath)));
-                            FSDataInputStream inputStream = FileSystem.get(WNDOutput.this.conf).open(out);
+                                    new GZIPOutputStream(FileSystem.get(WDLOutput.this.conf).create(tmpModelPath)));
+                            FSDataInputStream inputStream = FileSystem.get(WDLOutput.this.conf).open(out);
                             DataInputStream dis = new DataInputStream(new GZIPInputStream(inputStream));
-                            IOUtils.copyBytes(dis, outputStream, WNDOutput.this.conf);
+                            IOUtils.copyBytes(dis, outputStream, WDLOutput.this.conf);
                         } catch (IOException e) {
                             LOG.warn("Error in copy models to tmp", e);
                         }
@@ -156,7 +155,7 @@ public class WNDOutput extends BasicMasterInterceptor<WNDParams, WNDParams> {
     }
 
     @SuppressWarnings("deprecation")
-    private void updateProgressLog(final MasterContext<WNDParams, WNDParams> context) {
+    private void updateProgressLog(final MasterContext<WDLParams, WDLParams> context) {
         int currentIteration = context.getCurrentIteration();
         if(context.isFirstIteration()) {
             // first iteration is used for training preparation
@@ -187,7 +186,7 @@ public class WNDOutput extends BasicMasterInterceptor<WNDParams, WNDParams> {
     }
 
     @Override
-    public void postApplication(MasterContext<WNDParams, WNDParams> context) {
+    public void postApplication(MasterContext<WDLParams, WDLParams> context) {
         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
         writeModelToFileSystem(context.getMasterResult(), out);
         if(this.isGsMode || this.isKFoldCV) {
@@ -212,14 +211,20 @@ public class WNDOutput extends BasicMasterInterceptor<WNDParams, WNDParams> {
         }
     }
 
-    private void writeModelToFileSystem(WNDParams params, Path out) {
-        // TODO write model spec to output file
+    private void writeModelToFileSystem(WDLParams params, Path out) {
+        try {
+            BinaryWDLSerializer
+                    .save(this.modelConfig, this.columnConfigList, params.getWnd(), FileSystem.get(new Configuration()),
+                            out);
+        } catch (IOException e) {
+            LOG.error("Error in writing WideAndDeep model", e);
+        }
     }
 
     /**
      * Save tmp model to HDFS.
      */
-    private void saveTmpModelToHDFS(int iteration, WNDParams params) {
+    private void saveTmpModelToHDFS(int iteration, WDLParams params) {
         Path out = getTmpModelPath(iteration);
         writeModelToFileSystem(params, out);
     }
@@ -229,7 +234,7 @@ public class WNDOutput extends BasicMasterInterceptor<WNDParams, WNDParams> {
                 modelConfig.getTrain().getAlgorithm().toLowerCase()));
     }
 
-    private void init(MasterContext<WNDParams, WNDParams> context) {
+    private void init(MasterContext<WDLParams, WDLParams> context) {
         if(isInit.compareAndSet(false, true)) {
             this.conf = new Configuration();
             loadConfigFiles(context.getProps());

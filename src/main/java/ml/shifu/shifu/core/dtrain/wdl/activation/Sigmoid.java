@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain.wnd;
+package ml.shifu.shifu.core.dtrain.wdl.activation;
+
+import ml.shifu.shifu.core.dtrain.AssertUtils;
 
 /**
  * Typical sigmoid activation implementation.
@@ -29,11 +31,11 @@ public class Sigmoid extends Activation {
 
     @Override
     public float[] forward(float[] in) {
-        assert in != null;
+        AssertUtils.assertNotNull(in);
 
         float[] results = new float[in.length];
         for(int i = 0; i < results.length; i++) {
-            results[i] = (float) (1 / (1 + Math.min(1.0E19, Math.exp(-20 * in[i]))));
+            results[i] = (float) (1 / (1 + Math.min(1.0E19, Math.exp(-1 * in[i]))));
         }
 
         // temp saved for backward usage
@@ -42,9 +44,8 @@ public class Sigmoid extends Activation {
     }
 
     @Override
-    public float[] backward(float[] out, float sig) {
-        assert out != null;
-        assert out.length == lastForward.length;
+    public float[] backward(float[] out) {
+        AssertUtils.assertFloatArrayNotNullAndLengthEqual(out, lastForward);
 
         float[] results = new float[out.length];
         for(int i = 0; i < results.length; i++) {
