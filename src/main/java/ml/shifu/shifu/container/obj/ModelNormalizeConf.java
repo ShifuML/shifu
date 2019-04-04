@@ -37,6 +37,7 @@ public class ModelNormalizeConf {
         WOE_ZSCORE, WOE_ZSCALE, 
         WEIGHT_WOE_ZSCORE, WEIGHT_WOE_ZSCALE,
         ONEHOT, ZSCALE_ONEHOT,
+        ZSCALE_ORDINAL,
         ASIS_WOE, ASIS_PR, // don't run normalization, just use original value
         DISCRETE_ZSCORE, DISCRETE_ZSCALE, // for numerical feature, use low bondwary in each bin, the first bin use min 
                         // value, missing value use raw mean value, then do zscale by raw mean and raw std-dev;
