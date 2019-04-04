@@ -1,8 +1,13 @@
+<<<<<<< HEAD
+[<img src="images/logo/shifu.png" alt="Shifu" align="left">](http://shifu.ml)<div align="right"><div>[![Build Status](https://travis-ci.org/ShifuML/shifu.svg)](https://travis-ci.org/ShifuML/shifu?branch=master)</div><div>[![Maven Central](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu/badge.svg)](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu)</div></div>
+=======
 [<img src="images/logo/shifu.png" alt="Shifu" align="left">](http://shifu.ml)<div align="right"><div>[![Build Status](https://travis-ci.org/ShifuML/shifu.svg)](https://travis-ci.org/ShifuML/shifu?branch=develop)</div><div>[![Maven Central](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu/badge.svg)](https://maven-badges.herokuapp.com/maven-central/ml.shifu/shifu)</div></div>
+>>>>>>> release
 
 #
 
 ## Download
+
 Please [download](https://github.com/ShifuML/shifu/wiki/shifu-0.12.0-hdp-yarn.tar.gz) latest shifu [here](https://github.com/ShifuML/shifu/wiki/shifu-0.12.0-hdp-yarn.tar.gz).
 
 ## Getting Started
