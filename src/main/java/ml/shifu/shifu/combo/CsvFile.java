@@ -23,12 +23,21 @@ public class CsvFile implements Iterable<Map<String, String>> {
 
     private String filePath;
     private String delimiter;
+    private boolean removeNS;
     private CvsFileIterator iterator;
 
     public CsvFile(String filePath, String delimiter) {
         this.filePath = filePath;
         this.delimiter = delimiter;
-        this.iterator = new CvsFileIterator(filePath, delimiter);
+        this.removeNS = false;
+        this.iterator = new CvsFileIterator(filePath, delimiter, false);
+    }
+
+    public CsvFile(String filePath, String delimiter, boolean removeNS) {
+        this.filePath = filePath;
+        this.delimiter = delimiter;
+        this.removeNS = removeNS;
+        this.iterator = new CvsFileIterator(filePath, delimiter, removeNS);
     }
 
     public int getColumnOps(String column) {
@@ -41,7 +50,7 @@ public class CsvFile implements Iterable<Map<String, String>> {
 
     @Override
     public Iterator<Map<String, String>> iterator() {
-        return new CvsFileIterator(filePath, delimiter);
+        return new CvsFileIterator(filePath, delimiter, removeNS);
     }
 
     public static class CvsFileIterator implements Iterator<Map<String, String>> {
@@ -50,10 +59,12 @@ public class CsvFile implements Iterable<Map<String, String>> {
         private boolean isFinished = false;
         private String[] header;
         private String delimiter;
+        private boolean removeNS;
 
-        public CvsFileIterator(String filePath, String delimiter) {
+        public CvsFileIterator(String filePath, String delimiter, boolean removeNS) {
             LOG.info("Create csv file {}, with delimiter {}", filePath, delimiter);
             this.delimiter = delimiter;
+            this.removeNS = removeNS;
             try {
                 open(filePath);
             } catch (Exception e) {
@@ -65,6 +76,11 @@ public class CsvFile implements Iterable<Map<String, String>> {
             this.reader = new BufferedReader(new FileReader(filePath));
             String headerLine = reader.readLine();
             this.header = StringUtils.splitPreserveAllTokens(headerLine, delimiter);
+            if ( this.removeNS ) {
+                for ( int i = 0; i < this.header.length; i ++ ) {
+                    this.header[i] = this.header[i].replaceAll(".*::", "");
+                }
+            }
         }
 
         @Override

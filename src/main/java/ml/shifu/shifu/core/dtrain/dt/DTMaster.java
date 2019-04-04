@@ -48,6 +48,7 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -537,7 +538,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
     /**
      * Split node into left and right for leaf-wised tree growth, doneNode should be populated by
-     * {@link #populateGainInfoToNode(Node, GainInfo)}.
+     * {@link #populateGainInfoToNode(int, Node, GainInfo)}.
      */
     private void splitNodeForLeafWisedTree(int treeId, Node doneNode) {
         boolean isOverMaxLeaves = this.trees.get(treeId).getNodeNum() + 1 > this.maxLeaves;
@@ -562,7 +563,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
     /**
      * Split node into left and right for level-wised tree growth, doneNode should be populated by
-     * {@link #populateGainInfoToNode(Node, GainInfo)}
+     * {@link #populateGainInfoToNode(int, Node, GainInfo)}
      */
     private void splitNodeForLevelWisedTree(boolean isLeaf, int treeId, Node doneNode) {
         if(!isLeaf) {
@@ -761,6 +762,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         List<Integer> depthList = new ArrayList<Integer>();
         DTMasterParams masterParams = new DTMasterParams(trees, todoNodes);
         if(isRF) {
+            long currMem = 0;
+
             // for RF, all trees should be set depth
             for(int i = 0; i < this.treeNum; i++) {
                 depthList.add(-1);
@@ -768,14 +771,20 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             for(TreeNode treeNode: trees) {
                 List<Integer> features = getSubsamplingFeatures(this.featureSubsetStrategy, this.featureSubsetRate);
                 treeNode.setFeatures(features);
-                todoNodes.put(nodeIndexInGroup, treeNode);
+
+                currMem += getStatsMem(features);
+                if ( currMem < this.maxStatsMemory ) {
+                    todoNodes.put(nodeIndexInGroup, treeNode);
+                    nodeIndexInGroup += 1;
+                } else { //over memory, just put it into queue
+                    this.toDoQueue.offer(treeNode);
+                }
                 int treeId = treeNode.getTreeId();
                 int oldDepth = depthList.get(treeId);
                 int currDepth = Node.indexToLevel(treeNode.getNode().getId());
                 if(currDepth > oldDepth) {
                     depthList.set(treeId, currDepth);
                 }
-                nodeIndexInGroup += 1;
             }
             // For RF, each time send whole trees
             masterParams.setTrees(this.trees);
@@ -1031,7 +1040,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         // cache conf to avoid new
         this.conf = new Configuration();
 
-        // if continous model training is enabled
+        // if continuous model training is enabled
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
                 context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
 
@@ -1074,7 +1083,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     TreeModel existingModel;
                     try {
                         Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-                        existingModel = (TreeModel) CommonUtils.loadModel(modelConfig, modelPath,
+                        existingModel = (TreeModel) ModelSpecLoaderUtils.loadModel(modelConfig, modelPath,
                                 ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
                         if(existingModel == null) {
                             // null means no existing model file or model file is in wrong format

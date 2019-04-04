@@ -36,4 +36,4 @@ raw = FILTER raw BY IsDataFilterOut(*);
 raw = FOREACH raw GENERATE FLATTEN(Project(*)); -- Target, Weight, Score_META => target, weight, meta_score
 evalScore = ORDER raw BY $column_name DESC;
 
-STORE evalScore INTO '$pathSortScoreData' USING PigStorage('|', '-schema');
+STORE evalScore INTO '$pathSortScoreData' USING PigStorage('$output_delimiter', '-schema');

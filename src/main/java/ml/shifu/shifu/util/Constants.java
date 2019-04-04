@@ -20,7 +20,7 @@ package ml.shifu.shifu.util;
  */
 public interface Constants {
 
-    public static final String version = "0.11.0";
+    public static final String version = "0.12.0";
 
     public static final String MODELS = "models";
 
@@ -37,6 +37,10 @@ public interface Constants {
     public static final String MODEL_SETS = "ModelSets";
 
     public static final String TMP = "tmp";
+    public static final String GENERIC_ALGORITHM = "algorithm";
+    public static final String GENERIC_MODEL_PATH = "modelpath";
+    public static final String USER_DIR = "user.dir";
+    public static final String VAR_SELECT = "varsel";
     public static final String MODELS_TMP = "modelsTmp";
 
     public static final String PIG_HEADER = ".pig_header";
@@ -62,6 +66,7 @@ public interface Constants {
     public static final String PATH_RAW_DATA = "path_raw_data";
     public static final String PATH_JAR = "path_jar";
     public static final String IS_COMPRESS = "is_compress";
+    public static final String IS_VALIDATION_DATASET = "is_validation_dataset";
     public static final String IS_NORM_FOR_CLEAN = "is_norm_for_clean";
 
     public static final String STATS_SAMPLE_RATE = "statsSampleRate";
@@ -69,6 +74,8 @@ public interface Constants {
     public static final String SOURCE_TYPE = "source_type";
     public static final String NUM_PARALLEL = "num_parallel";
     public static final String DATASET_NAME = "data_set";
+
+    public static final String SHIFU_OUTPUT_DELIMITER = "output_delimiter";
 
     public static final String DERIVED = "derived_";
 
@@ -80,11 +87,14 @@ public interface Constants {
     public static final String SVM = "svm";
     public static final String NN = "nn";
     public static final String GBT = "GBT";
+    public static final String GENERIC = "generic";
+    public static final String TENSORFLOW = "tensorflow";
+    public static final String WDL = "WDL";
 
     public static final String BZ2_SUFFIX = ".bz2";
     public static final String GZ_SUFFIX = ".gz";
 
-    public static final String MAPREDUCE_OUTPUT_PREFIX = "part-";
+    public static final String HADOOP_PART_PREFIX = "part";
     public static final String HIDDEN_FILES = ".";
     public static final String BACK_SLASH = "\\";
     public static final String SLASH = "/";
@@ -139,10 +149,14 @@ public interface Constants {
 
     public static final String VAR_SEL_HISTORY = "varsel.history";
     public static final String CORR_EXPORT_PATH = "vars_corr.csv";
+    public static final String CC_UNIT_STATS_PATH = "columnconfig.unitstats";
     public static final String TRAIN_SCORES = "TrainScores";
     public static final String BIN_AVG_SCORE = "BinAvgScore";
     public static final String CORRELATION_PATH = "CorrelationPath";
     public static final String TAB_STR = "\t";
+
+    public static final String TRAIN_DATA_ENCODE_PATH = "encodedTrainData";
+    public static final String EVAL_DATA_ENCODE_PREFIX = "encodedEval";
 
     public static final String KEY_POSTTRAIN_OUT_PATH = "posttrainOutputPath";
     public static final String KEY_PRE_TRAIN_STATS_PATH = "preTrainStatsPath";
@@ -160,12 +174,13 @@ public interface Constants {
     public static final String KEY_CORRELATION_PATH = "correlationPath";
 
     public static final String DEFAULT_META_COLUMN_FILE = "meta.column.names";
+    public static final String DEFAULT_APPEND_COLUMN_FILE = "append.column.names";
     public static final String DEFAULT_CATEGORICAL_COLUMN_FILE = "categorical.column.names";
     public static final String DEFAULT_HYBRID_COLUMN_FILE = "hybrid.column.names";
     public static final String DEFAULT_CANDIDATE_COLUMN_FILE = "candidate.column.names";
     public static final String DEFAULT_FORCESELECT_COLUMN_FILE = "forceselect.column.names";
     public static final String DEFAULT_FORCEREMOVE_COLUMN_FILE = "forceremove.column.names";
-    public static final String DEFAULT_EVALSCORE_META_COLUMN_FILE = "score.meta.column.names";
+    public static final String DEFAULT_CHAMPIONSCORE_META_COLUMN_FILE = "champion.score.column.names";
     public static final String DEFAULT_EXPRESSION_COLUMN_FILE = "filter.expressions";
 
     public static final String VAR_SEL_MASTER_CONDUCTOR = "dvarsel.master.conductor.cls";
@@ -277,6 +292,7 @@ public interface Constants {
      * Experience value from modeler
      */
     public static final int MAX_CATEGORICAL_BINC_COUNT = 10000;
+    public static final int MAX_CATEGORICAL_VAL_LENGTH = 10000;
 
     public static final String SHIFU_MAX_CATEGORY_SIZE = "shifu.max.category.size";
 
@@ -308,6 +324,11 @@ public interface Constants {
     public static final String IS_TO_FILTER_AUTO = "IS_TO_FILTER_AUTO";
     public static final String IS_TO_RECOVER_AUTO = "IS_TO_RECOVER_AUTO";
 
+    public static final String RECURSIVE_CNT = "RECURSIVE_CNT";
+    public static final String IS_TO_SHUFFLE_DATA = "IS_TO_SHUFFLE_DATA";
+
+    public static final String STRICT_MODE = "STRICT";
+
     /**
      * GBT score range is not in [0, 1], to make it in [0, 1], such strategies are provided with case insensitive.
      */
@@ -320,5 +341,21 @@ public interface Constants {
 
     public static final String SHIFU_SEGMENT_EXPRESSIONS = "shifu.segment.expressions";
     public static final String SHIFU_NORM_CATEGORY_MISSING_NORM = "shifu.norm.category.missing.norm";
+    
+    public static final String SHIFU_EVAL_NORM_APPEND_SCORE = "shifu.eval.norm.appendscore";
+    public static final String SHIFU_EVAL_NORM_OUTPUTRAW = "shifu.eval.norm.outputraw";
+    public static final String SHIFU_NORM_ONLY_SELECTED = "shifu.norm.only.selected";
+
+    public static final String SHIFU_OUTPUT_DATA_DELIMITER = "shifu.output.data.delimiter";
+    public static final String SHIFU_OUTPUT_DATA_CSV = "shifu.output.data.csv";
+    
+    public static final String SHIFU_NORM_PRECISION_TYPE = "shifu.norm.precision.type";
+    
+    public static final String TF_ALG_NAME = "Tensorflow";
+    
+    /**
+     * Wide and deep model name
+     */
+    public static final String WDL_ALG_NAME = "WDL";
 
 }

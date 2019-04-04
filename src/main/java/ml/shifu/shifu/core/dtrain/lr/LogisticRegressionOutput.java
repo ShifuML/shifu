@@ -15,12 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.lr;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.Arrays;
-import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import ml.shifu.guagua.master.BasicMasterInterceptor;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -28,10 +22,8 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
-//import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,6 +31,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Arrays;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * {@link LogisticRegressionOutput} is used to write the final model output to file system.
@@ -95,6 +93,11 @@ public class LogisticRegressionOutput extends
      */
     private boolean isGsMode;
 
+    /**
+     * The minimum epochs before choosing best parameters
+     */
+    private int minimumEpochs = -1;
+
     @Override
     public void preApplication(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         init(context);
@@ -107,13 +110,25 @@ public class LogisticRegressionOutput extends
             return;
         }
 
-        double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON) ? context.getMasterResult()
-                .getTrainError() : context.getMasterResult().getTestError());
+        if (minimumEpochs < 0) {
+            double minimumStepsRatio = DTrainUtils.getDouble(context.getProps(), // get # of steps to choose parameters
+                    CommonConstants.SHIFU_TRAIN_VAL_STEPS_RATIO, 0.1);
+            minimumEpochs = (int) (modelConfig.getNumTrainEpochs() * minimumStepsRatio) ;
+        }
 
-        // save the weights according the error decreasing
-        if(currentError < this.minTestError) {
-            this.minTestError = currentError;
+
+        if ( context.getCurrentIteration() < minimumEpochs ) {
             this.optimizedWeights = context.getMasterResult().getParameters();
+        } else {
+            double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON) ? context.getMasterResult()
+                    .getTrainError() : context.getMasterResult().getTestError());
+            if ( currentError < this.minTestError ) {
+                this.minTestError = currentError;
+                this.optimizedWeights = Arrays.copyOf(context.getMasterResult().getParameters(),
+                        context.getMasterResult().getParameters().length);
+                LOG.info("change minTestError to {}, and update best weights at {}-th epoch.",
+                        this.minTestError, context.getCurrentIteration());
+            }
         }
 
         // save tmp to hdfs according to raw trainer logic
@@ -134,7 +149,7 @@ public class LogisticRegressionOutput extends
                     Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
 
                     // if current iteration is the last iteration, or it is halted by early stop condition, no
-                    // need to save checkpoint model here as it is replicated with postApplicaiton.
+                    // need to save checkpoint model here as it is replicated with postApplication.
                     // There is issue here if saving the same model in this thread and another thread in
                     // postApplication, sometimes this conflict will cause model writing failed.
                     if(!isHalt && currentIteration != totalIteration) {

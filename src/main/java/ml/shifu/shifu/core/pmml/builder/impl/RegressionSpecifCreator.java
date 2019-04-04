@@ -15,24 +15,33 @@
  */
 package ml.shifu.shifu.core.pmml.builder.impl;
 
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.LR;
 import ml.shifu.shifu.core.pmml.PMMLLRModelBuilder;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
 
 import org.dmg.pmml.Model;
-import org.dmg.pmml.RegressionModel;
+import org.dmg.pmml.regression.RegressionModel;
 import org.encog.ml.BasicML;
+
+import java.util.List;
 
 /**
  * Created by zhanhu on 3/29/16.
  */
 public class RegressionSpecifCreator extends AbstractSpecifCreator {
 
+    public RegressionSpecifCreator(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
+        super(modelConfig, columnConfigList);
+    }
+
+
     @Override
     public boolean build(BasicML basicML, Model model) {
         RegressionModel regression = (RegressionModel) model;
         new PMMLLRModelBuilder().adaptMLModelToPMML((LR) basicML, regression);
-        regression.withOutput(createNormalizedOutput());
+        regression.setOutput(createNormalizedOutput());
         return true;
     }
 
@@ -40,7 +49,7 @@ public class RegressionSpecifCreator extends AbstractSpecifCreator {
     public boolean build(BasicML basicML, Model model, int id) {
         RegressionModel regression = (RegressionModel) model;
         new PMMLLRModelBuilder().adaptMLModelToPMML((LR) basicML, regression);
-        regression.withOutput(createNormalizedOutput(id));
+        regression.setOutput(createNormalizedOutput(id));
         return true;
     }
 

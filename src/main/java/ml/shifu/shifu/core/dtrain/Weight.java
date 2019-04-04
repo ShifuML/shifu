@@ -15,7 +15,12 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
-import java.util.Random;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ml.shifu.shifu.core.dtrain.nn.update.AdaGradUpdate;
 import ml.shifu.shifu.core.dtrain.nn.update.AdamUpdate;
@@ -24,9 +29,6 @@ import ml.shifu.shifu.core.dtrain.nn.update.NesterovUpdate;
 import ml.shifu.shifu.core.dtrain.nn.update.RMSPropUpdate;
 import ml.shifu.shifu.core.dtrain.nn.update.UpdateRule;
 import ml.shifu.shifu.util.ClassUtils;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * {@link Weight} is used to update NN weights according to propagation option. Which is also copied from Encog.
@@ -86,16 +88,6 @@ public class Weight {
     private RegulationLevel rl = RegulationLevel.NONE;
 
     /**
-     * Dropout rate.
-     */
-    private double dropoutRate = 0d;
-
-    /**
-     * Random object to do drop out
-     */
-    private Random random;
-
-    /**
      * Enable Adam, Momentum, AdaGrad or RMSProp optimization, if {@link #updateRule} is null, by default old BGD.
      */
     private UpdateRule updateRule;
@@ -123,22 +115,31 @@ public class Weight {
     // for back propagation
     private double momentum = 0.5;
 
-    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl,
-            double dropoutRate) {
-        this(numWeight, numTrainSize, rate, algorithm, reg, rl, dropoutRate, null);
+    /**
+     * Layer IDs which are not updated at all (used for fine tuning)
+     */
+    private Set<Integer> fixedWeights = new HashSet<Integer>();
+    
+    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl) {
+        this(numWeight, numTrainSize, rate, algorithm, reg, rl, null);
     }
 
     public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl,
-            double dropoutRate, String propagation) {
-        this(numWeight, numTrainSize, rate, algorithm, reg, rl, dropoutRate, propagation, 0.5d, 0d, 0.9d, 0.999d);
+            String propagation) {
+        this(numWeight, numTrainSize, rate, algorithm, reg, rl, propagation, 0.5d, 0d, 0.9d, 0.999d);
     }
 
-    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl,
-            double dropoutRate, String propagation, double momentum, double learningDecay, double adamBeta1,
+    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl, String propagation, double momentum, double learningDecay, double adamBeta1,
+            double adamBeta2, Set<Integer> fixedWeights) {
+        this(numWeight, numTrainSize, rate, algorithm, reg, rl, propagation, momentum,learningDecay, adamBeta1,adamBeta2);
+        if ( CollectionUtils.isNotEmpty(fixedWeights) ) {
+            this.fixedWeights = fixedWeights;
+        }
+    }
+    
+    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl, String propagation, double momentum, double learningDecay, double adamBeta1,
             double adamBeta2) {
         this.numWeight = numWeight;
-        this.dropoutRate = dropoutRate;
-        this.random = new Random();
         this.lastDelta = new double[numWeight];
         this.lastGradient = new double[numWeight];
         this.numTrainSize = numTrainSize;
@@ -192,14 +193,10 @@ public class Weight {
 
     public double[] calculateWeights(double[] weights, double[] gradients, int iteration) {
         if(this.updateRule != null) {
-            this.updateRule.update(gradients, weights, iteration);
+            this.updateRule.update(gradients, weights, iteration, this.fixedWeights);
             return weights;
         } else {
             for(int i = 0; i < gradients.length; i++) {
-                if(this.dropoutRate > 0 && this.random.nextDouble() < this.dropoutRate) {
-                    // drop out, no need to update weight, just continue next weight
-                    continue;
-                }
                 switch(this.rl) {
                     case NONE:
                         weights[i] += updateWeight(i, weights, gradients);
@@ -224,6 +221,11 @@ public class Weight {
     }
 
     private double updateWeight(int index, double[] weights, double[] gradients) {
+        if (this.fixedWeights.contains(index)) {
+            // we do not update fixed weight for fine tune
+            return 0.0d;
+        }
+        
         if(this.algorithm.equalsIgnoreCase(DTrainUtils.BACK_PROPAGATION)) {
             return updateWeightBP(index, weights, gradients);
         } else if(this.algorithm.equalsIgnoreCase(DTrainUtils.QUICK_PROPAGATION)) {

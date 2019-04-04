@@ -147,6 +147,7 @@
                 <include>*:automaton:*</include>
                 <include>*:jpmml:*</include>
                 <include>*:stream:*</include>
+                <include>*:reflections:*</include>
                 <include>*:parquet-pig:*</include>
                 <include>*:parquet-column:*</include>
                 <include>*:parquet-common:*</include>
@@ -156,6 +157,8 @@
                 <include>*:parquet-format:*</include>
                 <include>*:parquet-jackson:*</include>
                 <include>*:snappy-java:*</include>
+                <include>*:zip4j:*</include>
+                <include>*:shifu-tensorflow-on-yarn:*</include>
             </includes>
         </dependencySet>
         <dependencySet>

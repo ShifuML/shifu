@@ -15,21 +15,12 @@
  */
 package ml.shifu.shifu;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-
+import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
-
 import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
 import org.powermock.api.easymock.PowerMock;
@@ -40,6 +31,9 @@ import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
+
+import java.io.*;
+import java.util.Arrays;
 
 /**
  * ManagerTest class
@@ -212,7 +206,6 @@ public class ShifuCLITest {
         FileUtils.deleteQuietly(tmpColumn);
         FileUtils.deleteDirectory(new File("tmp"));
         FileUtils.deleteDirectory(new File("models"));
-
     }
 
     // @Test
@@ -290,7 +283,8 @@ public class ShifuCLITest {
         Assert.assertTrue(tmpModel.lastModified() > timestamp);
 
         FileUtils.deleteQuietly(tmpModel);
-        FileUtils.deleteQuietly(new File("EvalC" + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE));
+        FileUtils.deleteQuietly(new File("EvalC" + Constants.DEFAULT_CHAMPIONSCORE_META_COLUMN_FILE));
+        FileUtils.deleteDirectory(new File("columns"));
     }
 
     @Test
@@ -333,36 +327,34 @@ public class ShifuCLITest {
     }
 
     @Test
-    public void testRebin() throws Exception {
-        File originModel = new File("src/test/resources/example/binning-data/rebin/ModelConfig.json");
-        File tmpModel = new File("ModelConfig.json");
-        FileUtils.copyFile(originModel, tmpModel);
-
-        File originColumn = new File("src/test/resources/example/binning-data/rebin/ColumnConfig.json");
-        File tmpColumn = new File("ColumnConfig.json");
-        FileUtils.copyFile(originColumn, tmpColumn);
-
-        File originConfDir = new File("src/test/resources/example/binning-data/rebin/columns");
-        File tmpConfDir = new File("columns");
-        FileUtils.copyDirectory(originConfDir, tmpConfDir);
-
-        Map<String, Object> params = new HashMap<String, Object>();
-        params.put(Constants.IS_REBIN, true);
-        params.put(Constants.IV_KEEP_RATIO, "0.975");
-        params.put(Constants.MINIMUM_BIN_INST_CNT, "2000");
-        ShifuCLI.calModelStats(params);
-        Assert.assertTrue(new File("tmp/ColumnConfig.json").exists());
-
-        FileUtils.deleteQuietly(tmpModel);
-        FileUtils.deleteQuietly(tmpColumn);
-        FileUtils.deleteDirectory(tmpConfDir);
-        FileUtils.deleteDirectory(new File("tmp"));
-    }
-
-    @Test
     public void testLastIndexOf() {
         String text = "aa^bb^cc";
         Assert.assertEquals(2, text.lastIndexOf("^", 4));
         Assert.assertEquals(-1, text.lastIndexOf("~", 4));
+
+        double a = Double.parseDouble("NaN");
+        System.out.println(a);
+
+        float t = NumberFormatUtils.getFloat("1", 0f);
+        Assert.assertTrue(isPositive(t));
+    }
+
+    protected boolean isPositive(float value) {
+        return Float.compare(1f, value) == 0 ? true : false;
+    }
+
+    @Test
+    public void testConvert() {
+        ShifuCLI.runShifuConvert(1, "src/test/resources/example/readablespec/model0.gbt", "/tmp/model0_1.zip");
+    }
+
+    @Test
+    public void testAnalysis() {
+        int ret = ShifuCLI.analysisModelFi("src/test/resources/example/readablespec/model0.gbt");
+        Assert.assertEquals(ret, 0);
+
+        File file = new File("model0.gbt.fi");
+        Assert.assertTrue(file.exists());
+        FileUtils.deleteQuietly(file);
     }
 }

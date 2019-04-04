@@ -22,6 +22,13 @@
             </includes>
         </fileSet>
         <fileSet>
+            <directory>${project.basedir}/src/main/python</directory>
+            <outputDirectory>/scripts</outputDirectory>
+            <includes>
+                <include>*.py</include>
+            </includes>
+        </fileSet>
+        <fileSet>
             <directory>${project.basedir}/src/main/pig/stats/hadoop2</directory>
             <outputDirectory>/scripts</outputDirectory>
             <lineEnding>unix</lineEnding>
@@ -133,17 +140,18 @@
                 <include>*:liblinear:*</include>
                 <include>*:log4j:*</include>
                 <include>*:netty:*</include>
-                <include>*:pig:*</include>
+                <include>*:pig:*:h2:*</include>
+                <include>*:piggybank:*</include>
                 <include>*:scala-library:*</include>
                 <include>*:shifu:*</include>
                 <include>*:slf4j-api:*</include>
                 <include>*:stringtemplate:*</include>
                 <include>*:xmlenc:*</include>
-                <include>*:xz:*</include>
                 <include>*:zookeeper:*</include>
                 <include>*:joda-time:*</include>
                 <include>*:automaton:*</include>
                 <include>*:stream:*</include>
+                <include>*:reflections:*</include>
                 <include>*:parquet-pig:*</include>
                 <include>*:parquet-column:*</include>
                 <include>*:parquet-common:*</include>

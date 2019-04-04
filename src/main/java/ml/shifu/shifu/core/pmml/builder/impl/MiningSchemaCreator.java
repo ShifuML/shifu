@@ -15,20 +15,24 @@
  */
 package ml.shifu.shifu.core.pmml.builder.impl;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.InvalidValueTreatmentMethod;
+import org.dmg.pmml.MiningField;
+import org.dmg.pmml.MiningField.UsageType;
+import org.dmg.pmml.MiningSchema;
+import org.dmg.pmml.OpType;
+import org.encog.ml.BasicML;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
-import ml.shifu.shifu.util.CommonUtils;
-
-import org.dmg.pmml.FieldName;
-import org.dmg.pmml.FieldUsageType;
-import org.dmg.pmml.MiningField;
-import org.dmg.pmml.MiningSchema;
-import org.encog.ml.BasicML;
+import ml.shifu.shifu.util.NormalUtils;
 
 /**
  * Created by zhanhu on 3/29/16.
@@ -60,16 +64,12 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
                     break;
                 }
                 if(isActiveColumn(featureSet, columnConfig)) {
-                    MiningField miningField = new MiningField();
-                    miningField
-                            .setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig.getColumnName())));
-                    miningField.setOptype(getOptype(columnConfig));
-                    if(columnConfig.isTarget()) {
-                        miningField.setUsageType(FieldUsageType.TARGET);
+                    if ( columnConfig.isTarget() ) {
+                        List<MiningField> miningFields = createTargetMingFields(columnConfig);
+                        miningSchema.addMiningFields(miningFields.toArray(new MiningField[miningFields.size()]));
                     } else {
-                        miningField.setUsageType(FieldUsageType.ACTIVE);
+                        miningSchema.addMiningFields(createActiveMingFields(columnConfig));
                     }
-                    miningSchema.withMiningFields(miningField);
                 } else if(isSegExpansionMode) {
                     // even current column not selected, if segment column selected, we should keep raw column
                     for(int i = 0; i < segSize; i++) {
@@ -77,16 +77,12 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
                         ColumnConfig cc = columnConfigList.get(newIndex);
                         if(cc.isFinalSelect()) {
                             // if one segment feature is selected, we should put raw column in
-                            MiningField miningField = new MiningField();
-                            miningField.setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig
-                                    .getColumnName())));
-                            miningField.setOptype(getOptype(columnConfig));
-                            if(columnConfig.isTarget()) {
-                                miningField.setUsageType(FieldUsageType.TARGET);
+                            if ( columnConfig.isTarget() ) {
+                                List<MiningField> miningFields = createTargetMingFields(columnConfig);
+                                miningSchema.addMiningFields(miningFields.toArray(new MiningField[miningFields.size()]));
                             } else {
-                                miningField.setUsageType(FieldUsageType.ACTIVE);
+                                miningSchema.addMiningFields(createActiveMingFields(columnConfig));
                             }
-                            miningSchema.withMiningFields(miningField);
                             break;
                         }
                     }
@@ -102,18 +98,12 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
 
                 // FIXME, if no variable is selected
                 if(columnConfig.isFinalSelect() || columnConfig.isTarget()) {
-                    MiningField miningField = new MiningField();
-
-                    miningField
-                            .setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig.getColumnName())));
-                    miningField.setOptype(getOptype(columnConfig));
-
-                    if(columnConfig.isTarget()) {
-                        miningField.setUsageType(FieldUsageType.TARGET);
+                    if ( columnConfig.isTarget() ) {
+                        List<MiningField> miningFields = createTargetMingFields(columnConfig);
+                        miningSchema.addMiningFields(miningFields.toArray(new MiningField[miningFields.size()]));
                     } else {
-                        miningField.setUsageType(FieldUsageType.ACTIVE);
+                        miningSchema.addMiningFields(createActiveMingFields(columnConfig));
                     }
-                    miningSchema.withMiningFields(miningField);
                 } else if(isSegExpansionMode) {
                     // even current column not selected, if segment column selected, we should keep raw column
                     for(int i = 0; i < segSize; i++) {
@@ -121,18 +111,12 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
                         ColumnConfig cc = columnConfigList.get(newIndex);
                         if(cc.isFinalSelect()) {
                             // if one segment feature is selected, we should put raw column in
-                            MiningField miningField = new MiningField();
-
-                            miningField.setName(FieldName.create(CommonUtils.getSimpleColumnName(columnConfig
-                                    .getColumnName())));
-                            miningField.setOptype(getOptype(columnConfig));
-
-                            if(columnConfig.isTarget()) {
-                                miningField.setUsageType(FieldUsageType.TARGET);
+                            if ( columnConfig.isTarget() ) {
+                                List<MiningField> miningFields = createTargetMingFields(columnConfig);
+                                miningSchema.addMiningFields(miningFields.toArray(new MiningField[miningFields.size()]));
                             } else {
-                                miningField.setUsageType(FieldUsageType.ACTIVE);
+                                miningSchema.addMiningFields(createActiveMingFields(columnConfig));
                             }
-                            miningSchema.withMiningFields(miningField);
                             break;
                         }
                     }
@@ -140,6 +124,38 @@ public class MiningSchemaCreator extends AbstractPmmlElementCreator<MiningSchema
             }
         }
         return miningSchema;
+    }
+
+    private MiningField createActiveMingFields(ColumnConfig columnConfig) {
+        return createMiningField(
+                NormalUtils.getSimpleColumnName(columnConfig.getColumnName()),
+                getOptype(columnConfig), UsageType.ACTIVE);
+    }
+
+    private List<MiningField> createTargetMingFields(ColumnConfig columnConfig) {
+        List<MiningField> targetMiningFields = new ArrayList<MiningField>();
+        if ( modelConfig.isClassification()
+                && ModelTrainConf.MultipleClassification.NATIVE.equals(modelConfig.getTrain().getMultiClassifyMethod())) {
+            for ( int i = 0; i < modelConfig.getTags().size(); i ++ ) {
+                targetMiningFields.add(createMiningField(
+                        NormalUtils.getSimpleColumnName(columnConfig.getColumnName()) + "_" + i,
+                        getOptype(columnConfig), UsageType.TARGET));
+            }
+        } else {
+            targetMiningFields.add(createMiningField(
+                    NormalUtils.getSimpleColumnName(columnConfig.getColumnName()),
+                    getOptype(columnConfig), UsageType.TARGET));
+        }
+        return targetMiningFields;
+    }
+
+    private MiningField createMiningField(String name, OpType opType, UsageType fieldUsageType) {
+        MiningField miningField = new MiningField();
+        miningField.setName(FieldName.create(name));
+        miningField.setOpType(opType);
+        miningField.setUsageType(fieldUsageType);
+        miningField.setInvalidValueTreatment(InvalidValueTreatmentMethod.AS_MISSING);
+        return miningField;
     }
 
 }

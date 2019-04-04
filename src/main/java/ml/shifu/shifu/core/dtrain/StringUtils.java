@@ -23,8 +23,6 @@ import java.util.List;
 
 /**
  * Some String utility functions. Why such class? No any dependency on other jars.
- * 
- * @author pengzhang
  */
 public class StringUtils {
 
@@ -58,7 +56,6 @@ public class StringUtils {
                 categories.add(str.substring(begin, str.length()));
             }
         }
-
         return categories.toArray(new String[0]);
     }
 
@@ -102,5 +99,13 @@ public class StringUtils {
             }
             return new String(bytes, "UTF-8");
         }
+    }
+
+    public static String join(String[] cols) {
+        StringBuffer buf = new StringBuffer();
+        for(String col : cols) {
+            buf.append(col);
+        }
+        return buf.toString();
     }
 }

@@ -15,6 +15,16 @@
  */
 package ml.shifu.shifu.container.meta;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.math.DoubleMath;
+import ml.shifu.shifu.container.obj.*;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
+import ml.shifu.shifu.util.Constants;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -24,25 +34,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.math.DoubleMath;
-
-import ml.shifu.shifu.container.obj.EvalConfig;
-import ml.shifu.shifu.container.obj.ModelBasicConf;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.ModelNormalizeConf;
-import ml.shifu.shifu.container.obj.ModelSourceDataConf;
-import ml.shifu.shifu.container.obj.ModelStatsConf;
-import ml.shifu.shifu.container.obj.ModelTrainConf;
-import ml.shifu.shifu.container.obj.ModelVarSelectConf;
-import ml.shifu.shifu.core.dtrain.gs.GridSearch;
-import ml.shifu.shifu.util.Constants;
 
 /**
  * MetaFactory class
@@ -437,7 +428,7 @@ public class MetaFactory {
                     }
                 }
             }
-        } else if(itemMeta.getType().equals("number")) {
+        } else if(itemMeta.getType().equals("number") || itemMeta.getType().equals("float")) {
             if(itemValue == null) {
                 if(CollectionUtils.isNotEmpty(itemMeta.getOptions())) {
                     return itemKey + " - the value couldn't be null.";

@@ -28,6 +28,17 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.Path;
+import org.apache.pig.tools.pigstats.JobStats;
+import org.apache.pig.tools.pigstats.PigStats;
+import org.encog.ml.BasicML;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -40,6 +51,7 @@ import ml.shifu.shifu.core.Scorer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
 import ml.shifu.shifu.core.eval.GainChart;
+import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -48,15 +60,6 @@ import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
-
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.Path;
-import org.apache.pig.tools.pigstats.JobStats;
-import org.apache.pig.tools.pigstats.PigStats;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * EvalModelProcessor class
@@ -74,6 +77,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     public enum EvalStep {
         LIST, NEW, DELETE, RUN, PERF, SCORE, CONFMAT, NORM, GAINCHART;
     }
+
+    public static final String NOSORT = "NOSORT";
 
     private String evalName = null;
 
@@ -109,6 +114,21 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     public EvalModelProcessor(EvalStep step, String name) {
         this.evalName = name;
         this.evalStep = step;
+    }
+
+    /**
+     * Constructor
+     *
+     * @param step
+     *            the evaluation step
+     * @param name
+     *            the evaluation name
+     * @param params
+     *            the command params
+     */
+    public EvalModelProcessor(EvalStep step, String name, Map<String, Object> params) {
+        this(step, name);
+        this.params = params;
     }
 
     /**
@@ -156,8 +176,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
             clearUp(ModelStep.EVAL);
+        } catch (ShifuException e) {
+            LOG.error("Error:" + e.getError().toString() + "; msg:" + e.getMessage(), e);
+            return -1;
         } catch (Exception e) {
-            LOG.error("Error:", e);
+            LOG.error("Error:" + e.getMessage(), e);
             return -1;
         }
         LOG.info("Step Finished: eval with {} ms", (System.currentTimeMillis() - start));
@@ -221,6 +244,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      *             any io exception
      */
     private void runScore(List<EvalConfig> evalSetList) throws IOException {
+        // do the validation before scoring the data set
+        for (EvalConfig evalConfig : evalSetList) {
+            validateEvalColumnConfig(evalConfig);
+        }
+
         // do it only once
         syncDataToHdfs(evalSetList);
 
@@ -397,13 +425,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         Map<String, String> confMap = new HashMap<String, String>();
 
         // max min score folder
-        String maxMinScoreFolder = ShifuFileUtils
-                .getFileSystemBySourceType(sourceType)
-                .makeQualified(
-                        new Path("tmp" + File.separator + "maxmin_score_" + System.currentTimeMillis() + "_"
-                                + RANDOM.nextLong())).toString();
+        String maxMinScoreFolder = ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(new Path(
+                "tmp" + File.separator + "maxmin_score_" + System.currentTimeMillis() + "_" + RANDOM.nextLong()))
+                .toString();
         confMap.put(Constants.SHIFU_EVAL_MAXMIN_SCORE_OUTPUT, maxMinScoreFolder);
-        if(modelConfig.isClassification()) {
+        if(modelConfig.isClassification() || (isNoSort() && EvalStep.SCORE.equals(this.evalStep))) {
             pigScript = "scripts/EvalScore.pig";
         }
         try {
@@ -433,11 +459,14 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             long pigNegTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.COUNTER_NEGTAGS);
             double pigPosWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
-                    .getCounter(Constants.COUNTER_WPOSTAGS)
-                    / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
+                    .getCounter(Constants.COUNTER_WPOSTAGS) / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
             double pigNegWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
-                    .getCounter(Constants.COUNTER_WNEGTAGS)
-                    / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
+                    .getCounter(Constants.COUNTER_WNEGTAGS) / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
+
+            LOG.info("Total positive record count is : {}", pigPosTags);
+            LOG.info("Total negative record count is : {}", pigNegTags);
+            LOG.info("Total weighted positive record count is : {}", pigPosWeightTags);
+            LOG.info("Total weighted negative record count is : {}", pigNegWeightTags);
 
             long totalRunTime = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.TOTAL_MODEL_RUNTIME);
@@ -520,6 +549,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         paramsMap.put("delimiter", evalConfig.getDataSet().getDataDelimiter());
         paramsMap.put("scale",
                 Environment.getProperty(Constants.SHIFU_SCORE_SCALE, Integer.toString(Scorer.DEFAULT_SCORE_SCALE)));
+        paramsMap.put(Constants.STRICT_MODE, Boolean.toString(isStrict()));
 
         String pigScript = "scripts/EvalNorm.pig";
 
@@ -543,8 +573,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runAkkaScore(EvalConfig config) throws IOException {
         SourceType sourceType = config.getDataSet().getSource();
-        List<Scanner> scanners = ShifuFileUtils.getDataScanners(
-                ShifuFileUtils.expandPath(config.getDataSet().getDataPath(), sourceType), sourceType);
+        List<Scanner> scanners = ShifuFileUtils
+                .getDataScanners(ShifuFileUtils.expandPath(config.getDataSet().getDataPath(), sourceType), sourceType);
 
         AkkaSystemExecutor.getExecutor().submitModelEvalJob(modelConfig,
                 ShifuFileUtils.searchColumnConfig(config, this.columnConfigList), config, scanners);
@@ -565,16 +595,17 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     private void createNewEval(String name) throws IOException {
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(name);
         if(evalConfig != null) {
-            throw new ShifuException(ShifuErrorCode.ERROR_MODEL_EVALSET_ALREADY_EXIST, "EvalSet - " + name
-                    + " already exists in ModelConfig. Please use another evalset name");
+            throw new ShifuException(ShifuErrorCode.ERROR_MODEL_EVALSET_ALREADY_EXIST,
+                    "EvalSet - " + name + " already exists in ModelConfig. Please use another evalset name");
         }
 
         evalConfig = new EvalConfig();
         evalConfig.setName(name);
         evalConfig.setDataSet(modelConfig.getDataSet().cloneRawSourceData());
         // create empty <EvalSetName>Score.meta.column.names
-        ShifuFileUtils.createFileIfNotExists(new Path(evalConfig.getName()
-                + Constants.DEFAULT_EVALSCORE_META_COLUMN_FILE).toString(), SourceType.LOCAL);
+        ShifuFileUtils.createFileIfNotExists(
+                new Path(evalConfig.getName() + Constants.DEFAULT_CHAMPIONSCORE_META_COLUMN_FILE).toString(),
+                SourceType.LOCAL);
 
         // create empty <EvalSetName>.meta.column.names
         String namesFilePath = Constants.COLUMN_META_FOLDER_NAME + File.separator + evalConfig.getName() + "."
@@ -608,10 +639,13 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         // validation for score column
         for(EvalConfig evalConfig: evalSetList) {
             List<String> scoreMetaColumns = evalConfig.getScoreMetaColumns(modelConfig);
-            if(scoreMetaColumns.size() > 5) {
-                LOG.warn("Starting from 0.10.x, 'scoreMetaColumns' is used for benchmark score columns and limited to at most 5.");
-                LOG.warn("If meta columns are set in file of 'scoreMetaColumns', please move meta column config to 'eval#dataSet#metaColumnNameFile' part.");
-                LOG.warn("If 'eval#dataSet#metaColumnNameFile' is duplicated with training 'metaColumnNameFile', you can rename it to another file with different name.");
+            if (scoreMetaColumns.size() > 5) {
+                LOG.error(
+                        "Starting from 0.10.x, 'scoreMetaColumns' is used for benchmark score columns and limited to at most 5.");
+                LOG.error(
+                        "If meta columns are set in file of 'scoreMetaColumns', please move meta column config to 'eval#dataSet#metaColumnNameFile' part.");
+                LOG.error(
+                        "If 'eval#dataSet#metaColumnNameFile' is duplicated with training 'metaColumnNameFile', you can rename it to another file with different name.");
                 return;
             }
         }
@@ -681,6 +715,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
     }
 
+    @SuppressWarnings("deprecation")
     private void validateEvalColumnConfig(EvalConfig evalConfig) throws IOException {
         if(this.columnConfigList == null) {
             return;
@@ -690,19 +725,20 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
             String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) // get header delimiter
-            ? evalConfig.getDataSet().getDataDelimiter()
+                    ? evalConfig.getDataSet().getDataDelimiter()
                     : evalConfig.getDataSet().getHeaderDelimiter();
-            evalColumnNames = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), delimiter, evalConfig
-                    .getDataSet().getSource());
+            evalColumnNames = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), delimiter,
+                    evalConfig.getDataSet().getSource());
         } else {
             String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) // get header delimiter
-            ? evalConfig.getDataSet().getDataDelimiter()
+                    ? evalConfig.getDataSet().getDataDelimiter()
                     : evalConfig.getDataSet().getHeaderDelimiter();
-            String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter, evalConfig
-                    .getDataSet().getSource());
+            String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter,
+                    evalConfig.getDataSet().getSource());
             // if first line contains target column name, we guess it is csv format and first line is header.
-            String evalTargetColumnName = ((StringUtils.isBlank(evalConfig.getDataSet().getTargetColumnName())) ? modelConfig
-                    .getTargetColumnName() : evalConfig.getDataSet().getTargetColumnName());
+            String evalTargetColumnName = ((StringUtils.isBlank(evalConfig.getDataSet().getTargetColumnName()))
+                    ? modelConfig.getTargetColumnName()
+                    : evalConfig.getDataSet().getTargetColumnName());
             if(StringUtils.join(fields, "").contains(evalTargetColumnName)) {
                 // first line of data meaning second line in data files excluding first header line
                 String[] dataInFirstLine = CommonUtils.takeFirstTwoLines(evalConfig.getDataSet().getDataPath(),
@@ -712,6 +748,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                             "Eval header length and eval data length are not consistent, please check you header setting and data set setting in eval.");
                 }
 
+                // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
+                // char or / in its name in shifu will be replaced;
+                for(int i = 0; i < fields.length; i++) {
+                    fields[i] = CommonUtils.normColumnName(fields[i]);
+                }
                 evalColumnNames = fields;
                 // for(int i = 0; i < fields.length; i++) {
                 // evalColumnNames[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
@@ -736,22 +777,25 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
         String filterExpressions = super.modelConfig.getSegmentFilterExpressionsAsString();
         if(StringUtils.isNotBlank(filterExpressions)) {
-            int segFilterSize = CommonUtils
-                    .split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER).length;
+            int segFilterSize = CommonUtils.split(filterExpressions,
+                    Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER).length;
             for(int i = 0; i < segFilterSize; i++) {
                 for(int j = 0; j < evalColumnNames.length; j++) {
                     names.add(new NSColumn(evalColumnNames[j] + "_" + (i + 1)));
                 }
             }
         }
-
-        for(ColumnConfig config: this.columnConfigList) {
-            NSColumn nsColumn = new NSColumn(config.getColumnName());
-            if(config.isFinalSelect() && !names.contains(nsColumn)
-                    && !names.contains(new NSColumn(nsColumn.getSimpleName()))) {
-                throw new IllegalArgumentException("Final selected column " + config.getColumnName()
-                        + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
-            }
+        if(Constants.GENERIC.equalsIgnoreCase(modelConfig.getAlgorithm()) 
+                || Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+            // TODO correct this logic
+            return;
+        }
+        List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(modelConfig, evalConfig,
+                SourceType.LOCAL, evalConfig.getGbtConvertToProb(),
+                evalConfig.getGbtScoreConvertStrategy());
+        if (CollectionUtils.isNotEmpty(models)) {
+            validateFinalColumns(evalConfig, this.modelConfig.getModelSetName(), false,
+                    this.columnConfigList, names);
         }
 
         NSColumn targetColumn = new NSColumn(evalConfig.getDataSet().getTargetColumnName());
@@ -761,11 +805,34 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                     + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
         }
 
-        NSColumn weightColumn = new NSColumn(evalConfig.getDataSet().getTargetColumnName());
+        NSColumn weightColumn = new NSColumn(evalConfig.getDataSet().getWeightColumnName());
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName()) && !names.contains(weightColumn)
                 && !names.contains(new NSColumn(weightColumn.getSimpleName()))) {
             throw new IllegalArgumentException("Weight column " + evalConfig.getDataSet().getWeightColumnName()
                     + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
+        }
+
+        List<ModelSpec> subModels = ModelSpecLoaderUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
+                SourceType.LOCAL, evalConfig.getGbtConvertToProb(),
+                evalConfig.getGbtScoreConvertStrategy());
+        if (CollectionUtils.isNotEmpty(subModels)) {
+            for (ModelSpec modelSpec : subModels) {
+                validateFinalColumns(evalConfig, modelSpec.getModelName(), true,
+                        modelSpec.getColumnConfigList(), names);
+            }
+        }
+    }
+
+    private void validateFinalColumns(EvalConfig evalConfig, String modelName, boolean isSubModel,
+                                      List<ColumnConfig> columnConfigs, Set<NSColumn> names) {
+        for (ColumnConfig config : columnConfigs) {
+            NSColumn nsColumn = new NSColumn(config.getColumnName());
+            if (config.isFinalSelect() && !names.contains(nsColumn)
+                    && !names.contains(new NSColumn(nsColumn.getSimpleName()))) {
+                throw new IllegalArgumentException("Final selected column " + config.getColumnName()
+                        + " in " + (isSubModel ? "sub[" : "current[") + modelName + "]"
+                        + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
+            }
         }
     }
 
@@ -841,13 +908,13 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             return;
         }
 
-        // 1. Get challendge model performance
-        PerformanceResult challendgeModelPerformance = runConfusionMatrix(evalConfig, ss,
+        // 1. Get challenge model performance
+        PerformanceResult challengeModelPerformance = runConfusionMatrix(evalConfig, ss,
                 pathFinder.getEvalScorePath(evalConfig), pathFinder.getEvalPerformancePath(evalConfig), false, false,
                 isGBTNotConvertToProb(evalConfig));
 
         List<PerformanceResult> prList = new ArrayList<PerformanceResult>();
-        prList.add(challendgeModelPerformance);
+        prList.add(challengeModelPerformance);
 
         // 2. Get all champion model performance
         List<String> names = new ArrayList<String>();
@@ -872,8 +939,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             boolean hasWeight = StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName());
 
             // 3. Compute gain chart and other eval performance files only in local.
-            String htmlGainChart = pathFinder.getEvalFilePath(evalConfig.getName(), evalConfig.getName()
-                    + "_gainchart.html", SourceType.LOCAL);
+            String htmlGainChart = pathFinder.getEvalFilePath(evalConfig.getName(),
+                    evalConfig.getName() + "_gainchart.html", SourceType.LOCAL);
             LOG.info("Gain chart is generated in {}.", htmlGainChart);
             gc.generateHtml(evalConfig, modelConfig, htmlGainChart, prList, names);
 
@@ -885,14 +952,14 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             for(int i = 0; i < names.size(); i++) {
                 String name = names.get(i);
                 PerformanceResult pr = prList.get(i);
-                String unitGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), name
-                        + "_unit_wise_gainchart.csv", SourceType.LOCAL);
+                String unitGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(),
+                        name + "_unit_wise_gainchart.csv", SourceType.LOCAL);
                 LOG.info("Unit-wise gain chart data is generated in {} for eval {} and name {}.", unitGainChartCsv,
                         evalConfig.getName(), name);
                 gc.generateCsv(evalConfig, modelConfig, unitGainChartCsv, pr.gains);
                 if(hasWeight) {
-                    String weightedGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), name
-                            + "_weighted_gainchart.csv", SourceType.LOCAL);
+                    String weightedGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(),
+                            name + "_weighted_gainchart.csv", SourceType.LOCAL);
                     LOG.info("Weighted gain chart data is generated in {} for eval {} and name {}.",
                             weightedGainChartCsv, evalConfig.getName(), name);
                     gc.generateCsv(evalConfig, modelConfig, weightedGainChartCsv, pr.weightedGains);
@@ -905,8 +972,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 gc.generateCsv(evalConfig, modelConfig, prCsvFile, pr.pr);
 
                 if(hasWeight) {
-                    String weightedPrCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), name
-                            + "_weighted_pr.csv", SourceType.LOCAL);
+                    String weightedPrCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(),
+                            name + "_weighted_pr.csv", SourceType.LOCAL);
                     LOG.info("Weighted pr data is generated in {} for eval {} and name {}.", weightedPrCsvFile,
                             evalConfig.getName(), name);
                     gc.generateCsv(evalConfig, modelConfig, weightedPrCsvFile, pr.weightedPr);
@@ -919,15 +986,15 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 gc.generateCsv(evalConfig, modelConfig, rocCsvFile, pr.roc);
 
                 if(hasWeight) {
-                    String weightedRocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(), name
-                            + "_weighted_roc.csv", SourceType.LOCAL);
+                    String weightedRocCsvFile = pathFinder.getEvalFilePath(evalConfig.getName(),
+                            name + "_weighted_roc.csv", SourceType.LOCAL);
                     LOG.info("Weighted roc data is generated in {} for eval {} and name {}.", weightedRocCsvFile,
                             evalConfig.getName(), name);
                     gc.generateCsv(evalConfig, modelConfig, weightedRocCsvFile, pr.weightedRoc);
                 }
 
-                String modelScoreGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(), name
-                        + "_modelscore_gainchart.csv", SourceType.LOCAL);
+                String modelScoreGainChartCsv = pathFinder.getEvalFilePath(evalConfig.getName(),
+                        name + "_modelscore_gainchart.csv", SourceType.LOCAL);
                 LOG.info("Model score gain chart data is generated in {} for eval {} and name {}.",
                         modelScoreGainChartCsv, evalConfig.getName(), name);
                 gc.generateCsv(evalConfig, modelConfig, modelScoreGainChartCsv, pr.modelScoreList);
@@ -956,11 +1023,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         String pigScript = "scripts/EvalScoreMetaSort.pig";
         Map<String, String> confMap = new HashMap<String, String>();
         // max min score folder
-        String maxMinScoreFolder = ShifuFileUtils
-                .getFileSystemBySourceType(sourceType)
-                .makeQualified(
-                        new Path("tmp" + File.separator + "maxmin_score_" + System.currentTimeMillis() + "_"
-                                + RANDOM.nextLong())).toString();
+        String maxMinScoreFolder = ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(new Path(
+                "tmp" + File.separator + "maxmin_score_" + System.currentTimeMillis() + "_" + RANDOM.nextLong()))
+                .toString();
         confMap.put(Constants.SHIFU_EVAL_MAXMIN_SCORE_OUTPUT, maxMinScoreFolder);
 
         try {
@@ -990,11 +1055,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             long pigNegTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
                     .getCounter(Constants.COUNTER_NEGTAGS);
             double pigPosWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
-                    .getCounter(Constants.COUNTER_WPOSTAGS)
-                    / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
+                    .getCounter(Constants.COUNTER_WPOSTAGS) / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
             double pigNegWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
-                    .getCounter(Constants.COUNTER_WNEGTAGS)
-                    / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
+                    .getCounter(Constants.COUNTER_WNEGTAGS) / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
 
             double maxScore = Integer.MIN_VALUE;
             double minScore = Integer.MAX_VALUE;
@@ -1103,7 +1166,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     private PerformanceResult runConfusionMatrix(EvalConfig config, ScoreStatus ss, String scoreDataPath,
             String evalPerformancePath, boolean isPrint, boolean isGenerateChart, boolean isUseMaxMinScore)
             throws IOException {
-        ConfusionMatrix worker = new ConfusionMatrix(modelConfig, config, this);
+        ConfusionMatrix worker = new ConfusionMatrix(modelConfig, columnConfigList, config, this);
         switch(modelConfig.getBasic().getRunMode()) {
             case DIST:
             case MAPRED:
@@ -1124,7 +1187,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     private PerformanceResult runConfusionMatrix(EvalConfig config, ScoreStatus ss, String scoreDataPath,
             String evalPerformancePath, boolean isPrint, boolean isGenerateChart, int targetColumnIndex,
             int scoreColumnIndex, int weightColumnIndex) throws IOException {
-        ConfusionMatrix worker = new ConfusionMatrix(modelConfig, config, this);
+        ConfusionMatrix worker = new ConfusionMatrix(modelConfig, columnConfigList, config, this);
         switch(modelConfig.getBasic().getRunMode()) {
             case DIST:
             case MAPRED:
@@ -1155,6 +1218,23 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runConfusionMatrix(EvalConfig config) throws IOException {
         runConfusionMatrix(config, null, false);
+    }
+
+    /**
+     * Check "-nosort" is specified or not
+     * @return true if nosort is specified, or false
+     */
+    private boolean isNoSort() {
+        return getBooleanParam(this.params, NOSORT);
+    }
+
+    /**
+     * Check "-strict" is specified or not. This is used when normalize the evaluation data set.
+     * The Strict model - means output the data just as input, and append weight column only.
+     * @return true if strict is specified, or false
+     */
+    private boolean isStrict() {
+        return getBooleanParam(this.params, Constants.STRICT_MODE);
     }
 
     private static class ScoreStatus {

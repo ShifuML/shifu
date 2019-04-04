@@ -90,6 +90,10 @@
                 "type": "text",
                 "directive": "input"
             }, {
+                "name": "validationFilterExpressions",
+                "type": "text",
+                "directive": "input"
+            }, {
                 "name": "weightColumnName",
                 "type": "text",
                 "directive": "input"
@@ -324,7 +328,7 @@
                 "type": "text",
                 "directive": "select",
                 "options": [
-                    {"label": "SE", "value":"KS"},
+                    {"label": "KS", "value":"KS"},
                     {"label": "IV", "value":"IV"},
                     {"label": "Sensitivity Analysis", "value":"SE"}
                 ]
@@ -380,6 +384,8 @@
                     {"label":"old zscale mode", "value":"OLD_ZSCALE"},
                     {"label":"zscale mode", "value":"ZSCALE"},
                     {"label":"same as zscale mode", "value":"ZSCORE"},
+                    {"label":"asIs and WOE mode", "value":"ASIS_WOE"},
+                    {"label":"asIs and positive rate mode", "value":"ASIS_PR"},
                     {"label":"woe mode", "value":"WOE"},
                     {"label":"weight woe mode", "value":"WEIGHT_WOE"},
                     {"label":"hybrid mode", "value":"HYBRID"},
@@ -388,9 +394,14 @@
                     {"label":"same as woe zscale mode", "value":"WOE_ZSCORE"},
                     {"label":"weight woe zscale mode", "value":"WEIGHT_WOE_ZSCALE"},
                     {"label":"same as weight woe zscale mode", "value":"WEIGHT_WOE_ZSCORE"},
-                    {"label":"zscore and onehot for categorical", "value":"ZSCALE_ONEHOT"},
+                    {"label":"OneHot for categorical and numerical", "value":"ONEHOT"},
+                    {"label":"zscore and OneHot for categorical", "value":"ZSCALE_ONEHOT"},
                     {"label":"Discrete numerical feature in each bin and positive rate for categorical feature", "value":"DISCRETE_ZSCALE"},
-                    {"label":"Discrete numerical feature in each bin and positive rate for categorical feature", "value":"DISCRETE_ZSCORE"}
+                    {"label":"Discrete numerical feature in each bin and positive rate for categorical feature", "value":"DISCRETE_ZSCORE"},
+                    {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCALE_INDEX"},
+                    {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCORE_INDEX"},
+                    {"label":"numerical variable using woe, categorical variable, using cate index", "value":"WOE_INDEX"},
+                    {"label":"numerical variable using zscaled woe, categorical variable using cate index", "value":"WOE_ZSCALE_INDEX"}
                 ]
             }, {
                 "name": "stdDevCutOff",
@@ -529,7 +540,10 @@
                     {"label": "Support Vector Machine", "value":"SVM"},
                     {"label": "Decision Tree", "value":"DT"},
                     {"label": "Random Forest", "value":"RF"},
-                    {"label": "Gradient Boost Decision Tree", "value":"GBT"}
+                    {"label": "Gradient Boost Decision Tree", "value":"GBT"},
+                    {"label": "Tensorflow", "value":"Tensorflow"},
+                    {"label": "Wide And Deep", "value":"WDL"},
+                    {"label": "Generic", "value":"generic"}
                 ]
             }, {
                 "name": "gridConfigFile",
@@ -542,10 +556,15 @@
                 "directive": "input",
                 "element": [
                     {
-                        "name" : "NumHiddenLayers",
-                        "type" : "integer",
-                        "directive": "input",
-                        "defval" : 2
+                       "name" : "NumHiddenLayers",
+                       "type" : "integer",
+                       "directive": "input",
+                       "defval" : 2
+                    }, {
+                      "name" : "TF.alg",
+                      "type" : "text",
+                      "directive": "input",
+                      "defval" : "dnn"
                     }, {
                         "name" : "ActivationFunc",
                         "type" : "list",
@@ -560,13 +579,21 @@
                                 "options": [
                                     {"label": "Sigmoid", "value":"Sigmoid"},
                                     {"label": "Tanh", "value":"Tanh"},
+                                    {"label": "Penalized Tanh", "value":"PTanh"},
                                     {"label": "Log", "value":"Log"},
                                     {"label": "Sin", "value":"Sin"},
                                     {"label": "Linear", "value":"Linear"},
-                                    {"label": "ReLU", "value":"ReLU"}
+                                    {"label": "ReLU", "value":"ReLU"},
+                                    {"label": "LeakyReLU", "value":"LeakyReLU"},
+                                    {"label": "Swish", "value":"Swish"}
                                 ]
                             }                            
                          ]
+                    }, {
+                        "name" : "CheckpointInterval",
+                        "type" : "integer",
+                        "directive": "input",
+                        "defval" : 0
                     }, {
                         "name" : "NumHiddenNodes",
                         "type" : "list",
@@ -580,12 +607,50 @@
                                 "defval": 45
                             }                            
                          ]
+                     }, {
+                        "name" : "NumEmbedColumnIds",
+                        "type" : "list",
+                        "directive": "input",
+                        "elementType" : "integer",
+                        "element": [
+                            {
+                                "name": "dummy",
+                                "type": "integer",
+                                "directive": "input",
+                                "defval": 1
+                            }                            
+                         ]
                     }, {
                         "name" : "LearningRate",
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.1
-                     }, {
+                    }, {
+                        "name" : "WDLL2Reg",
+                        "type" : "float",
+                        "directive": "input",
+                        "defval" : 0.01
+                    }, {
+                    	"name" : "TF.optimizer",
+                    	"type" : "text",
+                    	"directive" : "select",
+                    	"defval" : "adam",
+                    	"options": [
+                    		{"label": "Adam", "value":"adam"},
+                    		{"label": "GradientDescent", "value":"gradientDescent"},
+                    		{"label": "RMSProp ", "value":"RMSProp"}
+                    	]
+                    }, {
+                    	"name" : "TF.loss",
+                    	"type" : "text",
+                    	"directive" : "select",
+                    	"defval" : "squared",
+                    	"options": [
+                            {"label": "Squared", "value":"squared"},
+                            {"label": "Absolute", "value":"absolute"},
+                            {"label": "Log", "value":"log"}
+                        ]
+                    }, {
                         "name" : "Momentum",
                         "type" : "number",
                         "directive": "input",
@@ -613,7 +678,9 @@
                         "options": [
                             {"label": "Default", "value":"default"},
                             {"label": "Gaussian", "value":"gaussian"},
-                            {"label": "Xavier", "value":"Xavier"}
+                            {"label": "Xavier", "value":"Xavier"},
+                            {"label": "He", "value":"He"},
+                            {"label": "Lecun", "value":"Lecun"}
                         ]
                     }, {
                         "name" : "L1orL2",
@@ -751,6 +818,34 @@
                         "type" : "number",
                         "directive": "input",
                         "defval" : 0.1
+                    }, {
+                    	"name" : "FixedLayers",
+                    	"type" : "list",
+                    	"directive": "input",
+                    	"elementType" : "integer",
+                    	"element": [
+                            {
+                                "name": "dummy",
+                                "type": "integer",
+                                "directive": "input"
+                            }                            
+                         ]
+                    }, {
+                        "name" : "FixedBias",
+                        "type": "boolean",
+                        "directive": "checkbox",
+                        "defval": true
+                    }, {
+                        "name": "OutputActivationFunc",
+                        "type": "text",
+                        "directive": "select",
+                        "defval": "Linear",
+                        "options": [
+                            {"label": "Linear", "value":"Linear"},
+                            {"label": "ReLU", "value":"ReLU"},
+                            {"label": "LeakyReLU", "value":"LeakyReLU"},
+                            {"label": "Swish", "value":"Swish"}
+                        ]
                     }
                 ]
             }, {
@@ -894,7 +989,12 @@
                 "type": "boolean",
                 "directive": "input",
                 "defval": true
-             }, {
+            }, { 
+                "name": "normAllColumns",
+                "type": "boolean",
+                "directive": "input",
+                "defval": false
+            }, {
                 "name" : "gbtScoreConvertStrategy",
                 "type" : "text",
                 "directive": "select",

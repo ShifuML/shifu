@@ -20,6 +20,11 @@ package ml.shifu.shifu.udf;
 import java.io.IOException;
 import java.util.Iterator;
 
+import org.apache.pig.data.DataBag;
+import org.apache.pig.data.DataType;
+import org.apache.pig.data.Tuple;
+import org.apache.pig.impl.logicalLayer.schema.Schema;
+
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
@@ -27,13 +32,8 @@ import ml.shifu.shifu.core.binning.AbstractBinning;
 import ml.shifu.shifu.core.binning.CategoricalBinning;
 import ml.shifu.shifu.core.binning.EqualIntervalBinning;
 import ml.shifu.shifu.core.binning.EqualPopulationBinning;
-import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.Constants;
-
-import org.apache.pig.data.DataBag;
-import org.apache.pig.data.DataType;
-import org.apache.pig.data.Tuple;
-import org.apache.pig.impl.logicalLayer.schema.Schema;
 
 /**
  * GenBinningDataUDF class
@@ -87,26 +87,23 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
                     columnId = columnId % super.columnConfigList.size();
                 }
                 columnConfig = super.columnConfigList.get(columnId);
-                if(columnConfig.isHybrid()) {
-                    if(super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)) {
-                        binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin() > 0 ? modelConfig
-                                .getStats().getMaxNumBin() : 1024);
-                    } else {
-                        binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin() > 0 ? modelConfig
-                                .getStats().getMaxNumBin() : 1024);
-                    }
-
-                    this.backUpbinning = new CategoricalBinning(-1, this.maxCategorySize);
-                } else if(columnConfig.isCategorical()) {
-                    binning = new CategoricalBinning(-1, this.maxCategorySize);
+                if(columnConfig.isCategorical()) {
+                    binning = new CategoricalBinning(-1, modelConfig.getMissingOrInvalidValues(),
+                            this.maxCategorySize);
                 } else {
                     if(super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)) {
-                        binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin() > 0 ? modelConfig
-                                .getStats().getMaxNumBin() : 1024);
+                        binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin() > 0
+                                    ? modelConfig.getStats().getMaxNumBin() : 1024,
+                                modelConfig.getMissingOrInvalidValues());
                     } else {
-                        binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin() > 0 ? modelConfig
-                                .getStats().getMaxNumBin() : 1024);
+                        binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin() > 0
+                                ? modelConfig.getStats().getMaxNumBin() : 1024, modelConfig.getMissingOrInvalidValues());
                     }
+                }
+
+                if(columnConfig.isHybrid()) {
+                    this.backUpbinning = new CategoricalBinning(-1, modelConfig.getMissingOrInvalidValues(),
+                            this.maxCategorySize);
                 }
             }
 
@@ -121,7 +118,7 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
                 }
                 if(this.columnConfig.isHybrid()) {
                     // missing value and not number value go to categorical binning
-                    double douVal = CommonUtils.parseNumber(valStr);
+                    double douVal = BinUtils.parseNumber(valStr);
                     Double hybridThreshould = this.columnConfig.getHybridThreshold();
                     if(hybridThreshould == null) {
                         hybridThreshould = Double.NEGATIVE_INFINITY;

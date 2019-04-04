@@ -98,7 +98,8 @@ public class VariableSelector {
         if(modelConfig.getVarSelectFilterNum() > 0) {
             return;
         }
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), columnConfigList);
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                columnConfigList);
         int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         Float filterOutRatio = modelConfig.getVarSelect().getFilterOutRatio();
         int targetCnt = (int) (inputNodeCount * (1.0f - filterOutRatio));
@@ -128,6 +129,10 @@ public class VariableSelector {
         int cntSelected = 0;
 
         for(ColumnConfig config: this.columnConfigList) {
+            if(config == null) {
+                continue;
+            }
+
             if(config.isMeta() || config.isTarget()) {
                 log.info("\t Skip meta, weight or target column: " + config.getColumnName());
             } else if(config.isForceRemove()) {
@@ -144,8 +149,8 @@ public class VariableSelector {
                 }
             } else if(!CommonUtils.isGoodCandidate(config, hasCandidates)) {
                 log.info("\t Incomplete info(please check KS, IV, Mean, or StdDev fields): " + config.getColumnName()
-                    + " or it is not in candidate list");
-            } else if (CollectionUtils.isNotEmpty(candidateColumns)
+                        + " or it is not in candidate list");
+            } else if(CollectionUtils.isNotEmpty(candidateColumns)
                     && !candidateColumns.contains(new NSColumn(config.getColumnName()))) {
                 log.info("\t Not in candidate list, Skip: " + config.getColumnName());
             } else if((config.isCategorical() && !modelConfig.isCategoricalDisabled()) || config.isNumerical()) {
@@ -186,11 +191,7 @@ public class VariableSelector {
         log.info("Expected selected columns:" + expectedVarNum);
 
         // reset to false at first.
-        for(ColumnConfig columnConfig: this.columnConfigList) {
-            if(columnConfig.isFinalSelect()) {
-                columnConfig.setFinalSelect(false);
-            }
-        }
+        resetFinalSelect();
         ColumnConfig config = null;
         while(cntSelected < expectedVarNum) {
             if(key.equalsIgnoreCase("ks")) {
@@ -274,10 +275,22 @@ public class VariableSelector {
 
         // update column config list and set finalSelect to true
         for(int n: selectedColumnNumList) {
-            this.columnConfigList.get(n).setFinalSelect(true);
+            // get ColumnConfig by column id. The id may not the position in array list after support segments
+            ColumnConfig columnConfig = CommonUtils.getColumnConfig(this.columnConfigList, n);
+            if(columnConfig != null) {
+                columnConfig.setFinalSelect(true);
+            }
         }
 
         return columnConfigList;
+    }
+
+    private void resetFinalSelect() {
+        for(ColumnConfig columnConfig: this.columnConfigList) {
+            if(columnConfig.isFinalSelect()) {
+                columnConfig.setFinalSelect(false);
+            }
+        }
     }
 
     private static class Archives {
@@ -330,7 +343,7 @@ public class VariableSelector {
 
                 if(nondominate) {
                     continue;
-                }// # while
+                } // # while
                 if(adominate) {// # candidate solution was dominated
                     return;
                 }

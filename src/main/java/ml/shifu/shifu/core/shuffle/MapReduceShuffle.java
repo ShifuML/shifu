@@ -1,20 +1,9 @@
 package ml.shifu.shifu.core.shuffle;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Splitter;
-import ml.shifu.guagua.hadoop.util.HDPUtils;
-import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
-import ml.shifu.guagua.util.NumberFormatUtils;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.RawSourceData;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
-import ml.shifu.shifu.fs.PathFinder;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -34,10 +23,23 @@ import org.encog.ml.data.MLDataSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Splitter;
+
+import ml.shifu.guagua.hadoop.util.HDPUtils;
+import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
+import ml.shifu.guagua.util.NumberFormatUtils;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.RawSourceData;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.ValueVisitor;
 
 /**
  * Created by zhanhu on 2/22/17.
@@ -56,7 +58,7 @@ public class MapReduceShuffle {
 
     public void run(String rawNormPath) throws IOException, ClassNotFoundException, InterruptedException {
         RawSourceData.SourceType source = this.modelConfig.getDataSet().getSource();
-        Configuration conf = new Configuration();
+        final Configuration conf = new Configuration();
 
         // add jars to hadoop mapper and reducer
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars() });
@@ -79,11 +81,12 @@ public class MapReduceShuffle {
         }
 
         // one can set guagua conf in shifuconfig
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                conf.set(entry.getKey().toString(), entry.getValue().toString());
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                conf.set(key.toString(), value.toString());
             }
-        }
+        });
 
         int shuffleSize = getDataShuffleSize(rawNormPath, source);
         log.info("Try to shuffle data into - {} parts.", shuffleSize);
@@ -111,6 +114,17 @@ public class MapReduceShuffle {
 
         // submit job
         if(job.waitForCompletion(true)) {
+            // copy pig header and schema file at first to make sure such two files are at final output
+            if(ShifuFileUtils.isFileExists(new Path(rawNormPath, ".pig_header"), source)) {
+                ShifuFileUtils.moveTo(new Path(rawNormPath, ".pig_header").toString(),
+                        this.pathFinder.getShuffleDataPath(), source);
+            }
+
+            if(ShifuFileUtils.isFileExists(new Path(rawNormPath, ".pig_schema"), source)) {
+                ShifuFileUtils.moveTo(new Path(rawNormPath, ".pig_schema").toString(),
+                        this.pathFinder.getShuffleDataPath(), source);
+            }
+
             ShifuFileUtils.deleteFile(rawNormPath, source);
             ShifuFileUtils.move(this.pathFinder.getShuffleDataPath(), rawNormPath, source);
         } else {

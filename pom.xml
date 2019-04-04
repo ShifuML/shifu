@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ml.shifu</groupId>
 	<artifactId>shifu</artifactId>
-	<version>0.11.1</version>
+	<version>0.12.0</version>
 	<name>Shifu</name>
 	<description>An open-source, end-to-end and distributed machine learning and data mining framework built on top of Hadoop.</description>
 	<properties>
@@ -14,8 +14,9 @@
 		<rpmDisabled>true</rpmDisabled>
 		<maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
 		<powermock.version>1.5.1</powermock.version>
-		<guagua.version>0.7.7</guagua.version>
+		<guagua.version>0.7.8</guagua.version>
 	</properties>
+
 	<url>https://github.com/ShifuML/shifu/</url>
 	<licenses>
 		<license>
@@ -60,12 +61,32 @@
 			<organization>PayPal</organization>
 			<organizationUrl>http://www.paypal.com</organizationUrl>
 		</developer>
+		<developer>
+			<name>Sharma Nitin</name>
+			<organization>PayPal</organization>
+			<organizationUrl>http://www.paypal.com</organizationUrl>
+		</developer>
+		<developer>
+			<name>Zhu Wayne</name>
+			<organization>PayPal</organization>
+			<organizationUrl>http://www.paypal.com</organizationUrl>
+		</developer>
+		<developer>
+			<name>Wu Devin</name>
+			<organization>PayPal</organization>
+			<organizationUrl>http://www.paypal.com</organizationUrl>
+		</developer>
+		<developer>
+			<name>Bai Fred</name>
+			<organization>PayPal</organization>
+			<organizationUrl>http://www.paypal.com</organizationUrl>
+		</developer>
 	</developers>
 	<scm>
 		<developerConnection>scm:git:https://github.com/shifuml/shifu.git</developerConnection>
 		<connection>scm:git:https://github.com/shifuml/shifu.git</connection>
 		<url>https://github.com/shifuml/shifu.git</url>
-		<tag>shifu-0.11.1</tag>
+		<tag>shifu-0.12.0</tag>
 	</scm>
 	<dependencies>
 		<dependency>
@@ -87,12 +108,12 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-core</artifactId>
-			<version>2.1.2</version>
+			<version>2.9.7</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>2.1.2</version>
+			<version>2.9.7</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.guava</groupId>
@@ -112,7 +133,7 @@
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-compress</artifactId>
-			<version>1.5</version>
+			<version>1.18</version>
 		</dependency>
 		<dependency>
 			<groupId>de.bwaldvogel</groupId>
@@ -177,18 +198,20 @@
 		<dependency>
 			<groupId>org.jpmml</groupId>
 			<artifactId>pmml-model</artifactId>
-			<version>1.1.4</version>
+			<!-- <version>1.1.4</version> -->
+			<version>1.4.1</version>
 		</dependency>
 		<dependency>
 			<groupId>org.jpmml</groupId>
 			<artifactId>pmml-schema</artifactId>
-			<version>1.1.4</version>
+			<!-- <version>1.1.4</version> -->
+			<version>1.3.8</version>
 		</dependency>
 		<dependency>
 			<groupId>org.jpmml</groupId>
 			<artifactId>pmml-evaluator</artifactId>
 			<scope>test</scope>
-			<version>1.1.4</version>
+			<version>1.4.1</version>
 		</dependency>
 		<dependency>
 			<groupId>com.sun.xml.bind</groupId>
@@ -204,6 +227,16 @@
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-lang3</artifactId>
 			<version>3.3.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.pig</groupId>
+			<artifactId>piggybank</artifactId>
+			<version>0.14.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.reflections</groupId>
+			<artifactId>reflections</artifactId>
+			<version>0.9.10</version>
 		</dependency>
 	</dependencies>
 	<build>
@@ -295,8 +328,8 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.1</version>
 				<configuration>
-					<source>1.6</source>
-					<target>1.6</target>
+					<source>1.8</source>
+					<target>1.8</target>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -632,6 +665,7 @@
 			<properties>
 				<platform.version>hdp-yarn</platform.version>
 			</properties>
+
 			<build>
 				<plugins>
 					<plugin>
@@ -683,6 +717,10 @@
 							<groupId>org.mortbay.jetty</groupId>
 							<artifactId>jetty-util</artifactId>
 						</exclusion>
+						<exclusion>
+							<groupId>jdk.tools</groupId>
+							<artifactId>jdk.tools</artifactId>
+						</exclusion>
 					</exclusions>
 				</dependency>
 				<dependency>
@@ -715,6 +753,17 @@
 						</exclusion>
 					</exclusions>
 					<classifier>h2</classifier>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.pig</groupId>
+					<artifactId>piggybank</artifactId>
+					<version>0.14.0</version>
+					<exclusions>
+						<exclusion>
+							<groupId>*</groupId>
+							<artifactId>*</artifactId>
+						</exclusion>
+					</exclusions>
 				</dependency>
 				<dependency>
 					<groupId>dk.brics.automaton</groupId>

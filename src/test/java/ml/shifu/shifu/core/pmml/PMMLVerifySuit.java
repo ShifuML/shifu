@@ -17,28 +17,33 @@ package ml.shifu.shifu.core.pmml;
 
 import java.io.File;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import ml.shifu.shifu.ShifuCLI;
-import ml.shifu.shifu.container.obj.ModelTrainConf;
-import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
-import ml.shifu.shifu.core.pmml.builder.impl.NNSpecifCreator;
-import ml.shifu.shifu.core.processor.ExportModelProcessor;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.dmg.pmml.FieldName;
 import org.dmg.pmml.Model;
 import org.dmg.pmml.PMML;
-import org.jpmml.evaluator.ClassificationMap;
+import org.jpmml.evaluator.Classification;
 import org.jpmml.evaluator.FieldValue;
 import org.jpmml.evaluator.ModelEvaluator;
 import org.jpmml.evaluator.ModelEvaluatorFactory;
-import org.jpmml.evaluator.NeuralNetworkEvaluator;
+import org.jpmml.evaluator.TargetField;
+import org.jpmml.evaluator.Value;
+import org.jpmml.evaluator.neural_network.NeuralNetworkEvaluator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import ml.shifu.shifu.ShifuCLI;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
+import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
+import ml.shifu.shifu.core.pmml.builder.impl.NNSpecifCreator;
+import ml.shifu.shifu.core.processor.ExportModelProcessor;
 
 /**
  * Created by zhanhu on 7/15/16.
@@ -113,7 +118,7 @@ public class PMMLVerifySuit {
         FileUtils.copyDirectory(modelsDir, tmpModelsDir);
 
         // run evaluation set
-        ShifuCLI.runEvalScore(this.evalSetName);
+        ShifuCLI.runEvalScore(this.evalSetName, null);
         File evalScore = new File("evals" + File.separator + this.evalSetName + File.separator + "EvalScore");
 
         Map<String, Object> params = new HashMap<String, Object>();
@@ -174,12 +179,14 @@ public class PMMLVerifySuit {
             for (int index = 0; index < controlSchema.length; index++) {
                 controlCtx.put(controlSchema[index], controlRowValue[index]);
             }
-            Double controlScore = Double.valueOf((String) controlCtx.get(scoreName));
-            Double testScore = Double.valueOf((String) ctx.get(scoreName));
 
-            if ( Math.abs(controlScore - testScore) > errorRange ) {
-                logger.error("The score doens't match {} vs {}.", controlScore, testScore);
-                return false;
+            for (String realScoreName : controlSchema) {
+                Double controlScore = Double.valueOf((String) controlCtx.get(realScoreName));
+                Double testScore = Double.valueOf((String) ctx.get(realScoreName));
+                if ( Math.abs(controlScore - testScore) > errorRange ) {
+                    System.out.println("Row " + row + " - The score doens't match " + controlScore + " vs " + testScore + ".");
+                    return false;
+                }
             }
         }
 
@@ -192,20 +199,55 @@ public class PMMLVerifySuit {
         NeuralNetworkEvaluator evaluator = new NeuralNetworkEvaluator(pmml);
 
         PrintWriter writer = new PrintWriter(OutPath, "UTF-8");
-        writer.println(scoreName);
+        List<TargetField> targetFields = evaluator.getTargetFields();
+        if ( targetFields.size() == 1 ) {
+            writer.println(scoreName);
+        } else {
+            for (int i = 0; i < targetFields.size(); i ++ ) {
+                if ( i > 0 ) {
+                    writer.print("|");
+                }
+                writer.print(scoreName + "_tag_" + i);
+            }
+            writer.println();
+        }
+
         List<Map<FieldName, FieldValue>> input = CsvUtil.load(evaluator, DataPath, sep);
 
         for (Map<FieldName, FieldValue> maps : input) {
-            switch (evaluator.getModel().getFunctionName()) {
+            switch (evaluator.getModel().getMiningFunction()) {
                 case REGRESSION:
-                    Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(maps);
-                    writer.println(regressionTerm.get(new FieldName(AbstractSpecifCreator.FINAL_RESULT)).intValue());
+                    if ( targetFields.size() == 1 ) {
+                        Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(maps);
+                        writer.println(regressionTerm.get(new FieldName(AbstractSpecifCreator.FINAL_RESULT)).intValue());
+                    } else {
+                        Map<FieldName, Double> regressionTerm = (Map<FieldName, Double>) evaluator.evaluate(maps);
+                        List<FieldName> outputFieldList = new ArrayList<FieldName>(regressionTerm.keySet());
+                        Collections.sort(outputFieldList, new Comparator<FieldName>() {
+                            @Override
+                            public int compare(FieldName a, FieldName b) {
+                                return a.getValue().compareTo(b.getValue());
+                            }
+                        });
+                        int j = 0;
+                        for (int i = 0; i < outputFieldList.size(); i ++ ) {
+                            FieldName fieldName = outputFieldList.get(i);
+                            if ( fieldName.getValue().startsWith(AbstractSpecifCreator.FINAL_RESULT) ) {
+                                if (j++ > 0) {
+                                    writer.print("|");
+                                }
+                                writer.print(regressionTerm.get(fieldName));
+                            }
+                        }
+                        writer.println();
+                    }
                     break;
                 case CLASSIFICATION:
-                    Map<FieldName, ClassificationMap<String>> classificationTerm = (Map<FieldName, ClassificationMap<String>>) evaluator.evaluate(maps);
-                    for (ClassificationMap<String> cMap : classificationTerm.values())
-                        for (Map.Entry<String, Double> entry : cMap.entrySet())
-                            System.out.println(entry.getValue() * 1000);
+                    Map<FieldName, Classification<Double>> classificationTerm = (Map<FieldName, Classification<Double>>) evaluator.evaluate(maps);
+                    for (Classification<Double> cMap : classificationTerm.values())
+                        for (Map.Entry<String,Value<Double>> entry : cMap.getValues().entrySet())
+                            System.out.println(entry.getValue().getValue() * 1000);
+                    break;
                 default:
                     break;
             }
@@ -219,7 +261,7 @@ public class PMMLVerifySuit {
             throws Exception {
         PMML pmml = PMMLUtils.loadPMML(pmmlPath);
         Model m =pmml.getModels().get(0);
-        ModelEvaluator<?> evaluator = ModelEvaluatorFactory.getInstance().getModelManager(pmml, m);
+        ModelEvaluator<?> evaluator = ModelEvaluatorFactory.newInstance().newModelEvaluator(pmml, m);
         PrintWriter writer = new PrintWriter(OutPath, "UTF-8");
         writer.println(scoreName);
         List<Map<FieldName, FieldValue>> input = CsvUtil.load(evaluator, DataPath, sep);

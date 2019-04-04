@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,33 @@ import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.SortedMap;
 import java.util.TreeMap;
+
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.jexl2.JexlException;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.pig.impl.util.JarManager;
+import org.encog.ml.data.MLDataSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Predicate;
+import com.google.common.base.Splitter;
 
 import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
@@ -65,36 +93,7 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.fs.SourceFile;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.jexl2.JexlException;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.apache.hadoop.util.GenericOptionsParser;
-import org.apache.pig.impl.util.JarManager;
-import org.encog.ml.data.MLDataSet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicate;
-import com.google.common.base.Splitter;
+import ml.shifu.shifu.util.*;
 
 /**
  * statistics, max/min/avg/std for each column dataset if it's numerical
@@ -125,15 +124,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
             if(getBooleanParam(this.params, Constants.IS_COMPUTE_CORR)) {
                 // 1. validate if run stats before run stats -correlation
-                boolean foundValidMeanValueColumn = false;
-                for(ColumnConfig config: this.columnConfigList) {
-                    if(!config.isMeta() && !config.isTarget()) {
-                        if(config.getMean() != null) {
-                            foundValidMeanValueColumn = true;
-                            break;
-                        }
-                    }
-                }
+                boolean foundValidMeanValueColumn = isMeanCalculated();
 
                 if(!foundValidMeanValueColumn) {
                     log.warn("Some mean value of column is null, could you check if you run 'shifu stats'.");
@@ -149,7 +140,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 // check if can start from existing output
                 boolean reuseCorrResult = Environment.getBoolean("shifu.stats.corr.reuse", Boolean.FALSE);
                 if(reuseCorrResult && ShifuFileUtils.isFileExists(corrPath, SourceType.HDFS)) {
-                    dumpCorrelationResult(source, corrPath);
+                    dumpAndCalculateCorrelationResult(source, corrPath);
                 } else {
                     runCorrMapReduceJob();
                 }
@@ -157,16 +148,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 // 3. save column config list
                 saveColumnConfigList();
             } else if(getBooleanParam(this.params, Constants.IS_COMPUTE_PSI)) {
-                // 1. validate if run stats before run stats -correlation
-                boolean foundValidMeanValueColumn = false;
-                for(ColumnConfig config: this.columnConfigList) {
-                    if(!config.isMeta() && !config.isTarget()) {
-                        if(config.getMean() != null) {
-                            foundValidMeanValueColumn = true;
-                            break;
-                        }
-                    }
-                }
+                boolean foundValidMeanValueColumn = isMeanCalculated();
 
                 if(!foundValidMeanValueColumn) {
                     log.warn("Some mean value of column is null, could you check if you run 'shifu stats'.");
@@ -175,6 +157,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
                 if(StringUtils.isNotEmpty(modelConfig.getPsiColumnName())) {
                     new MapReducerStatsWorker(this, modelConfig, columnConfigList).runPSI();
+                    // save column config list after running PSI successfully
+                    saveColumnConfigList();
                 } else {
                     log.warn("To Run PSI please set your PSI column in dataSet::psiColumnName.");
                 }
@@ -197,11 +181,18 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                     }
                 }
 
+                // user provide candidate variable list or not
+                boolean hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
+
                 List<ColumnConfig> rebinColumns = new ArrayList<ColumnConfig>();
                 List<String> catVariables = getStringList(this.params, Constants.REQUEST_VARS, ",");
                 for(ColumnConfig columnConfig: this.columnConfigList) {
                     if(CollectionUtils.isEmpty(catVariables) || isRequestColumn(catVariables, columnConfig)) {
-                        rebinColumns.add(columnConfig);
+                        if(CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
+                            rebinColumns.add(columnConfig);
+                        } else {
+                            log.warn("Column - {} is not a good candidate. Skip it.", columnConfig.getColumnName());
+                        }
                     }
                 }
 
@@ -243,15 +234,34 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 saveColumnConfigList(backupColumnConfigPath, this.columnConfigList);
             }
 
+            // back up current column config each time as stats will always change CC.json
+            this.backupCurrentColumnConfigToLocal(SDF.format(new Date()));
             syncDataToHdfs(modelConfig.getDataSet().getSource());
             clearUp(ModelStep.STATS);
+        } catch (ShifuException e) {
+            log.error("Error:" + e.getError().toString() + "; msg:" + e.getMessage(), e);
+            return -1;
         } catch (Exception e) {
-            log.error("Error:", e);
+            log.error("Error:" + e.getMessage(), e);
             return -1;
         }
 
         log.info("Step Finished: stats with {} ms", (System.currentTimeMillis() - start));
         return 0;
+    }
+
+    private boolean isMeanCalculated() {
+        // 1. validate if run stats before run stats -correlation
+        boolean foundValidMeanValueColumn = false;
+        for (ColumnConfig config : this.columnConfigList) {
+            if (!config.isMeta() && !config.isTarget()) {
+                if (config.getMean() != null) {
+                    foundValidMeanValueColumn = true;
+                    break;
+                }
+            }
+        }
+        return foundValidMeanValueColumn;
     }
 
     // OptionsParser doesn't to support *.jar currently.
@@ -289,7 +299,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     private void runCorrMapReduceJob() throws IOException, InterruptedException, ClassNotFoundException {
         SourceType source = this.modelConfig.getDataSet().getSource();
-        Configuration conf = new Configuration();
+        final Configuration conf = new Configuration();
 
         String modelConfigPath = ShifuFileUtils.getFileSystemBySourceType(source)
                 .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString();
@@ -297,21 +307,17 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString();
 
         // add jars and files to hadoop mapper and reducer
-        new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars(), "-files",
-                modelConfigPath + "," + columnConfigPath });
+        new GenericOptionsParser(conf,
+                new String[] { "-libjars", addRuntimeJars(), "-files", modelConfigPath + "," + columnConfigPath });
 
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 5000);
-        conf.set(
-                Constants.SHIFU_MODEL_CONFIG,
-                ShifuFileUtils.getFileSystemBySourceType(source)
-                        .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
-        conf.set(
-                Constants.SHIFU_COLUMN_CONFIG,
-                ShifuFileUtils.getFileSystemBySourceType(source)
-                        .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
+        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
+        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
 
         // too many data needed to be transfered to reducer, set default completed maps to a smaller one 0.7 to start
@@ -332,18 +338,19 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
         conf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", true);
 
-        boolean isFastCorrelation = Environment.getProperty("shifu.correlation.fast", "false").equalsIgnoreCase(
-                Boolean.TRUE.toString());
+        boolean isFastCorrelation = Environment.getProperty("shifu.correlation.fast", "false")
+                .equalsIgnoreCase(Boolean.TRUE.toString());
 
         int threads = parseThreadNum();
         conf.setInt("mapreduce.map.cpu.vcores", threads);
 
         // one can set guagua conf in shifuconfig
-        for(Map.Entry<Object, Object> entry: Environment.getProperties().entrySet()) {
-            if(CommonUtils.isHadoopConfigurationInjected(entry.getKey().toString())) {
-                conf.set(entry.getKey().toString(), entry.getValue().toString());
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                conf.set(key.toString(), value.toString());
             }
-        }
+        });
 
         // if one of two memory settings is null, automatically set mapper memory by column size, if not set it from
         // system properties which is set from command line like 'shifu stats -c -Dmapreduce.map.memory.mb=3072
@@ -376,10 +383,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         job.setMapOutputValueClass(CorrelationWritable.class);
 
         job.setInputFormatClass(CombineInputFormat.class);
-        FileInputFormat.setInputPaths(
-                job,
-                ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(
-                        new Path(super.modelConfig.getDataSetRawPath())));
+        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.modelConfig.getDataSetRawPath())));
 
         job.setReducerClass(CorrelationReducer.class);
 
@@ -399,7 +404,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
         // submit job
         if(job.waitForCompletion(true)) {
-            dumpCorrelationResult(source, corrPath);
+            dumpAndCalculateCorrelationResult(source, corrPath);
         } else {
             throw new RuntimeException("MapReduce Correlation Computing Job failed.");
         }
@@ -447,15 +452,9 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         }
 
         conf.set("mapreduce.map.memory.mb", memoryInContainer + "");
-        conf.set(
-                "mapreduce.map.java.opts",
-                "-Xms"
-                        + (memoryInContainer - memoryBuffer)
-                        + "m -Xmx"
-                        + (memoryInContainer - memoryBuffer)
-                        + "m -Xmn"
-                        + youngMemory
-                        + "m -server -XX:MaxPermSize=128M -XX:PermSize=64M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps ");
+        conf.set("mapreduce.map.java.opts", "-Xms" + (memoryInContainer - memoryBuffer) + "m -Xmx"
+                + (memoryInContainer - memoryBuffer) + "m -Xmn" + youngMemory
+                + "m -server -XX:MaxPermSize=128M -XX:PermSize=64M -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps ");
     }
 
     private int parseThreadNum() {
@@ -472,7 +471,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         return threads;
     }
 
-    private void dumpCorrelationResult(SourceType source, String corrPath) throws IOException {
+    private void dumpAndCalculateCorrelationResult(SourceType source, String corrPath) throws IOException {
         String outputFilePattern = corrPath + Path.SEPARATOR + "part-*";
         if(!ShifuFileUtils.isFileExists(outputFilePattern, source)) {
             throw new RuntimeException("Correlation computing output file not exist.");
@@ -493,7 +492,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         String localCorrelationCsv = super.pathFinder.getLocalCorrelationCsvPath();
         ShifuFileUtils.createFileIfNotExists(localCorrelationCsv, SourceType.LOCAL);
         BufferedWriter writer = null;
-        Map<Integer, double[]> finalCorrMap = new HashMap<Integer, double[]>();
+        Map<Integer, double[]> finalCorrMap = new HashMap<>();
         try {
             writer = ShifuFileUtils.getWriter(localCorrelationCsv, SourceType.LOCAL);
             writer.write(getColumnIndexes());
@@ -507,7 +506,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                         || (hasCandidates && !ColumnFlag.Candidate.equals(xColumnConfig.getColumnFlag()))) {
                     continue;
                 }
-                CorrelationWritable xCw = corrMap.get(entry.getKey());
+                CorrelationWritable xCw = entry.getValue();
                 double[] corrArray = new double[this.columnConfigList.size()];
                 for(int i = 0; i < corrArray.length; i++) {
                     ColumnConfig yColumnConfig = this.columnConfigList.get(i);
@@ -525,8 +524,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                         continue;
                     }
 
-                    double numerator = xCw.getAdjustCount()[i] * xCw.getXySum()[i] - xCw.getAdjustSumX()[i]
-                            * xCw.getAdjustSumY()[i];
+                    double numerator = xCw.getAdjustCount()[i] * xCw.getXySum()[i]
+                            - xCw.getAdjustSumX()[i] * xCw.getAdjustSumY()[i];
                     double denominator1 = Math.sqrt(xCw.getAdjustCount()[i] * xCw.getXxSum()[i]
                             - xCw.getAdjustSumX()[i] * xCw.getAdjustSumX()[i]);
                     double denominator2 = Math.sqrt(xCw.getAdjustCount()[i] * xCw.getYySum()[i]
@@ -541,9 +540,10 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                     // if(corrArray[i] > 1.0005d || (entry.getKey() == 54 && i == 2124)) {
                     if(corrArray[i] > 1.0005d) {
                         log.warn("Correlation value for columns {} {} > 1, below is debug info.", entry.getKey(), i);
-                        log.warn("DEBUG: corr {}, value > 1d, numerator " + numerator + " denominator1 " + denominator1
-                                + " denominator2 " + denominator2 + " {}, {}", numerator
-                                / (denominator1 * denominator2), entry.getKey(), i);
+                        log.warn(
+                                "DEBUG: corr {}, value > 1d, numerator " + numerator + " denominator1 " + denominator1
+                                        + " denominator2 " + denominator2 + " {}, {}",
+                                numerator / (denominator1 * denominator2), entry.getKey(), i);
                         log.warn(
                                 "DEBUG: xCw.getAdjustCount()[i] * xCw.getXySum()[i] - xCw.getAdjustSumX()[i]  * xCw.getAdjustSumY()[i] : {} * {} - {} * {} ",
                                 xCw.getAdjustCount()[i], xCw.getXySum()[i], xCw.getAdjustSumX()[i],
@@ -592,8 +592,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
     private SortedMap<Integer, CorrelationWritable> dumpCorrInfo(SourceType source, String outputFilePattern)
             throws IOException, UnsupportedEncodingException {
         SortedMap<Integer, CorrelationWritable> corrMap = new TreeMap<Integer, CorrelationWritable>();
-        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source).globStatus(
-                new Path(outputFilePattern));
+        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source)
+                .globStatus(new Path(outputFilePattern));
         if(globStatus == null || globStatus.length == 0) {
             throw new RuntimeException("Correlation computing output file not exist.");
         }
@@ -617,7 +617,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
 
     /**
      * De-serialize from bytes to object. One should provide the class name before de-serializing the object.
-     * 
+     *
      * @param data
      *            byte array for deserialization
      * @return {@link CorrelationWritable} instance after deserialization
@@ -628,11 +628,10 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
      */
     public CorrelationWritable bytesToObject(byte[] data) {
         if(data == null) {
-            throw new NullPointerException(String.format(
-                    "data and className should not be null. data:%s, className:%s", Arrays.toString(data)));
+            throw new NullPointerException(String.format("data should not be null. data:%s", Arrays.toString(data)));
         }
-        CorrelationWritable result = (CorrelationWritable) ReflectionUtils.newInstance(CorrelationWritable.class
-                .getName());
+        CorrelationWritable result =  ReflectionUtils
+                .newInstance(CorrelationWritable.class.getName());
         DataInputStream dataIn = null;
         try {
             ByteArrayInputStream in = new ByteArrayInputStream(data);
@@ -685,10 +684,10 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             binCountNeg[i] = binInfo.getNegativeCnt();
             binCountPos[i] = binInfo.getPositiveCnt();
         }
-        binCountNeg[binCountNeg.length - 1] = columnConfig.getBinCountNeg().get(
-                columnConfig.getBinCountNeg().size() - 1);
-        binCountPos[binCountPos.length - 1] = columnConfig.getBinCountPos().get(
-                columnConfig.getBinCountPos().size() - 1);
+        binCountNeg[binCountNeg.length - 1] = columnConfig.getBinCountNeg()
+                .get(columnConfig.getBinCountNeg().size() - 1);
+        binCountPos[binCountPos.length - 1] = columnConfig.getBinCountPos()
+                .get(columnConfig.getBinCountPos().size() - 1);
 
         double[] binWeightNeg = new double[binInfos.size() + 1];
         double[] binWeightPos = new double[binInfos.size() + 1];
@@ -698,15 +697,15 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             binWeightPos[i] = binInfo.getWeightPos();
         }
 
-        binWeightNeg[binWeightNeg.length - 1] = columnConfig.getBinWeightedNeg().get(
-                columnConfig.getBinWeightedNeg().size() - 1);
-        binWeightPos[binWeightPos.length - 1] = columnConfig.getBinWeightedPos().get(
-                columnConfig.getBinWeightedPos().size() - 1);
+        binWeightNeg[binWeightNeg.length - 1] = columnConfig.getBinWeightedNeg()
+                .get(columnConfig.getBinWeightedNeg().size() - 1);
+        binWeightPos[binWeightPos.length - 1] = columnConfig.getBinWeightedPos()
+                .get(columnConfig.getBinWeightedPos().size() - 1);
 
-        ColumnStatsCalculator.ColumnMetrics columnCountMetrics = ColumnStatsCalculator.calculateColumnMetrics(
-                binCountNeg, binCountPos);
-        ColumnStatsCalculator.ColumnMetrics columnWeightMetrics = ColumnStatsCalculator.calculateColumnMetrics(
-                binWeightNeg, binWeightPos);
+        ColumnStatsCalculator.ColumnMetrics columnCountMetrics = ColumnStatsCalculator
+                .calculateColumnMetrics(binCountNeg, binCountPos);
+        ColumnStatsCalculator.ColumnMetrics columnWeightMetrics = ColumnStatsCalculator
+                .calculateColumnMetrics(binWeightNeg, binWeightPos);
 
         columnConfig.setBinLength(binInfos.size() + 1);
         if(columnConfig.isCategorical()) {
@@ -736,8 +735,8 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             long missingSumCnt = binCountPos[binCountPos.length - 1] + binCountNeg[binCountNeg.length - 1];
             if(missingSumCnt > 0) {
                 binPosRates.add(binCountPos[binCountPos.length - 1] * 1d / missingSumCnt);
-            } else {
-                binPosRates.add(Double.NaN);
+            } else { // don't add NaN, but use average -- NaN will cause score NaN
+                binPosRates.add(calAverage(binPosRates));
             }
         }
 
@@ -755,6 +754,17 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         columnConfig.getColumnStats().setWeightedKs(columnWeightMetrics.getWoe());
         columnConfig.getColumnStats().setWeightedWoe(columnWeightMetrics.getWoe());
         columnConfig.getColumnBinning().setBinWeightedWoe(columnWeightMetrics.getBinningWoe());
+    }
+
+    private Double calAverage(List<Double> binPosRates) {
+        double average = 0.0;
+        if(CollectionUtils.isNotEmpty(binPosRates)) {
+            for(Double posRate: binPosRates) {
+                average += posRate;
+            }
+            average /= binPosRates.size();
+        }
+        return average;
     }
 
     private List<Double> convertIntoDoubleList(double[] binWeights) {

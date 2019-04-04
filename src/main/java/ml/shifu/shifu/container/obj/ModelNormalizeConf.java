@@ -36,15 +36,18 @@ public class ModelNormalizeConf {
         WOE, WEIGHT_WOE, HYBRID, WEIGHT_HYBRID, 
         WOE_ZSCORE, WOE_ZSCALE, 
         WEIGHT_WOE_ZSCORE, WEIGHT_WOE_ZSCALE,
-        ZSCALE_ONEHOT,
-        DISCRETE_ZSCORE, DISCRETE_ZSCALE // for numerical feature, use low bondwary in each bin, the first bin use min 
+        ONEHOT, ZSCALE_ONEHOT,
+        ASIS_WOE, ASIS_PR, // don't run normalization, just use original value
+        DISCRETE_ZSCORE, DISCRETE_ZSCALE, // for numerical feature, use low bondwary in each bin, the first bin use min 
                         // value, missing value use raw mean value, then do zscale by raw mean and raw std-dev;
                         // for categorical feature, pos rate is used.
-        ;
+        ZSCALE_INDEX, ZSCORE_INDEX, // numerical variable using zscale, categorical variable, using cate index
+        WOE_INDEX, // numerical variable using woe, categorical variable, using cate index
+        WOE_ZSCALE_INDEX; // numerical variable using zscaled woe, categorical variable using cate index
 
         public boolean isWoe() {
             return this == WOE || this == WEIGHT_WOE || this == WOE_ZSCORE || this == WOE_ZSCALE
-                    || this == WEIGHT_WOE_ZSCORE || this == WEIGHT_WOE_ZSCORE;
+                    || this == WEIGHT_WOE_ZSCORE || this == WEIGHT_WOE_ZSCALE;
         }
     }
 
@@ -60,9 +63,12 @@ public class ModelNormalizeConf {
 
     /**
      * STDDev cutoff threshold, if over this value after zscore, such value will be cutoff to current value or negative
-     * of this value.
+     * of this value. 
+     * 
+     * <p>
+     * Starting from 0.12.0, change default 4 to 6 for better tolerance.
      */
-    private Double stdDevCutOff = Double.valueOf(4.0);
+    private Double stdDevCutOff = Double.valueOf(6.0);
 
     /**
      * If do sampling in norm step, training will be impacted by sampling because norm output is train input

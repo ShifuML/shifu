@@ -26,13 +26,14 @@ DEFINE AddColumnNum      ml.shifu.shifu.udf.AddColumnNumUDF('$source_type', '$pa
 DEFINE PopulationCounter ml.shifu.shifu.udf.PopulationCounterUDF('$source_type', '$path_model_config', '$path_column_config', '$value_index');
 DEFINE PSI               ml.shifu.shifu.udf.PSICalculatorUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE IsDataFilterOut   ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
+DEFINE GenPsiDataSchema  ml.shifu.shifu.udf.GenerateDataSchema('$source_type', '$path_model_config', '$path_column_config');
 
-
-data = LOAD '$path_raw_data' USING PigStorage('$delimiter', '-schema');
+data = LOAD '$path_raw_data' USING PigStorage('$delimiter', '-noschema');
 data = FILTER data BY IsDataFilterOut(*);
 
 -- not need to filtering
-data_cols = FOREACH data GENERATE $PSIColumn, AddColumnNum(*);
+data_cols = FOREACH data GENERATE FLATTEN(GenPsiDataSchema(*));
+data_cols = FOREACH data_cols GENERATE $PSIColumn, AddColumnNum(*);
 data_cols = FILTER data_cols BY $1 is not null;
 data_cols = FOREACH data_cols GENERATE $PSIColumn, FLATTEN($1);
 
@@ -45,6 +46,6 @@ population_info = FOREACH population_info GENERATE FLATTEN(counters);
 psi = foreach (group population_info by $0) generate FLATTEN(PSI(*));
 
 rmf $path_psi
-store psi INTO '$path_psi' USING PigStorage('|', '-schema');
+store psi INTO '$path_psi' USING PigStorage('$output_delimiter', '-schema');
 
 

@@ -15,41 +15,41 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
-
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.FloatNeuralStructure;
-import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
-import ml.shifu.shifu.core.dtrain.nn.BasicDropoutLayer;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
-import ml.shifu.shifu.core.dtrain.random.XaiverRandomizer;
+import ml.shifu.shifu.core.dtrain.nn.*;
+import ml.shifu.shifu.core.dtrain.random.HeWeightRandomizer;
+import ml.shifu.shifu.core.dtrain.random.LecunWeightRandomizer;
+import ml.shifu.shifu.core.dtrain.random.XavierWeightRandomizer;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
-
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.encog.Encog;
-import org.encog.engine.network.activation.ActivationLOG;
-import org.encog.engine.network.activation.ActivationLinear;
-import org.encog.engine.network.activation.ActivationSIN;
-import org.encog.engine.network.activation.ActivationSigmoid;
-import org.encog.engine.network.activation.ActivationTANH;
+import org.encog.engine.network.activation.*;
 import org.encog.mathutil.randomize.GaussianRandomizer;
 import org.encog.mathutil.randomize.NguyenWidrowRandomizer;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.layers.BasicLayer;
 import org.encog.neural.networks.structure.NeuralStructure;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.*;
 
 /**
  * Helper class for NN distributed training.
  */
 public final class DTrainUtils {
+
+    private static Logger LOG = LoggerFactory.getLogger(DTrainUtils.class);
 
     public static final String RESILIENTPROPAGATION = "R";
     public static final String SCALEDCONJUGATEGRADIENT = "S";
@@ -57,13 +57,15 @@ public final class DTrainUtils {
     public static final String QUICK_PROPAGATION = "Q";
     public static final String BACK_PROPAGATION = "B";
 
-    public static final String IS_ELM = "IsELM";
-
     public static final String WGT_INIT_GAUSSIAN = "gaussian";
 
     public static final String WGT_INIT_DEFAULT = "default";
 
     public static final String WGT_INIT_XAVIER = "xavier";
+
+    public static final String WGT_INIT_HE = "he";
+
+    public static final String WGT_INIT_LECUN = "lecun";
 
     /**
      * The POSITIVE ETA value. This is specified by the resilient propagation algorithm. This is the percentage by which
@@ -172,7 +174,13 @@ public final class DTrainUtils {
                 }
             }
             if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
-                if(normType.equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT) && config.isCategorical()) {
+                if(normType.equals(ModelNormalizeConf.NormType.ONEHOT)) {
+                    if(config.isCategorical()) {
+                        input += config.getBinCategory().size() + 1;
+                    } else {
+                        input += config.getBinBoundary().size() + 1;
+                    }
+                } else if(normType.equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT) && config.isCategorical()) {
                     input += config.getBinCategory().size() + 1;
                 } else {
                     input += 1;
@@ -200,7 +208,8 @@ public final class DTrainUtils {
      *             if columnConfigList or ColumnConfig object in columnConfigList is null.
      */
     public static int[] getNumericAndCategoricalInputAndOutputCounts(List<ColumnConfig> columnConfigList) {
-        int numericInput = 0, categoricalInput = 0, output = 0, numericCandidateInput = 0, categoricalCandidateInput = 0;
+        int numericInput = 0, categoricalInput = 0, output = 0, numericCandidateInput = 0,
+                categoricalCandidateInput = 0;
         boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
 
         for(ColumnConfig config: columnConfigList) {
@@ -226,7 +235,7 @@ public final class DTrainUtils {
         }
 
         // check if it is after varselect, if not, no variable is set to finalSelect which means, all good variable
-        // should be set as finalSelect TODO, bad practice, refact me
+        // should be set as finalSelect TODO, bad practice, refactor me
         int isVarSelect = 1;
         if(numericInput == 0 && categoricalInput == 0) {
             numericInput = numericCandidateInput;
@@ -235,6 +244,45 @@ public final class DTrainUtils {
         }
 
         return new int[] { numericInput, categoricalInput, output, isVarSelect };
+    }
+
+    public static List<Integer> getNumericalIds(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect){
+        List<Integer> numericalIds = new ArrayList<>();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
+
+        for(ColumnConfig config: columnConfigList) {
+            if(isAfterVarSelect) {
+                if(config.isNumerical() && config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
+                    numericalIds.add(config.getColumnNum());
+                }
+            } else {
+                if(config.isNumerical() && !config.isTarget() && !config.isMeta() &&
+                        CommonUtils.isGoodCandidate(config, hasCandidates)) {
+                    numericalIds.add(config.getColumnNum());
+                }
+            }
+        }
+        return numericalIds;
+    }
+
+    public static List<Integer> getCategoricalIds(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect) {
+        List<Integer> results = new ArrayList<>();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
+
+        for(ColumnConfig config: columnConfigList) {
+            if(isAfterVarSelect) {
+                if(config.isFinalSelect() && !config.isTarget() && !config.isMeta() && config.isCategorical()) {
+                    results.add(config.getColumnNum());
+                }
+            } else {
+                if(!config.isTarget() && !config.isMeta() && CommonUtils.isGoodCandidate(config, hasCandidates)
+                        && config.isCategorical()) {
+                    results.add(config.getColumnNum());
+                }
+            }
+        }
+
+        return results;
     }
 
     public static String getTmpModelName(String tmpModelsFolder, String trainerId, int iteration, String modelPost) {
@@ -246,17 +294,24 @@ public final class DTrainUtils {
         return Math.max(epochs / 25, 20);
     }
 
-//    public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
-//            List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate) {
-//        return generateNetwork(in, out, numLayers, actFunc, hiddenNodeList, isRandomizeWeights, dropoutRate,
-//                WGT_INIT_DEFAULT);
-//    }
+    // public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
+    // List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate) {
+    // return generateNetwork(in, out, numLayers, actFunc, hiddenNodeList, isRandomizeWeights, dropoutRate,
+    // WGT_INIT_DEFAULT);
+    // }
 
     public static BasicNetwork generateNetwork(int in, int out, int numLayers, List<String> actFunc,
-            List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate, String wgtInit) {
+            List<Integer> hiddenNodeList, boolean isRandomizeWeights, double dropoutRate, String wgtInit,
+            boolean isLinearTarget, String outputActivationFunc) {
         final BasicFloatNetwork network = new BasicFloatNetwork();
 
-        network.addLayer(new BasicLayer(new ActivationLinear(), true, in));
+        // in shifuconfig, we have a switch to control enable input layer dropout
+        if(Boolean.valueOf(Environment.getProperty(CommonConstants.SHIFU_TRAIN_NN_INPUTLAYERDROPOUT_ENABLE, "true"))) {
+            // we need to guarantee that input layer dropout rate is 40% of hiddenlayer dropout rate
+            network.addLayer(new BasicDropoutLayer(new ActivationLinear(), true, in, dropoutRate * 0.4d));
+        } else {
+            network.addLayer(new BasicDropoutLayer(new ActivationLinear(), true, in, 0d));
+        }
 
         // int hiddenNodes = 0;
         for(int i = 0; i < numLayers; i++) {
@@ -275,12 +330,30 @@ public final class DTrainUtils {
                 network.addLayer(new BasicDropoutLayer(new ActivationSIN(), true, numHiddenNode, dropoutRate));
             } else if(func.equalsIgnoreCase(NNConstants.NN_RELU)) {
                 network.addLayer(new BasicDropoutLayer(new ActivationReLU(), true, numHiddenNode, dropoutRate));
+            } else if(func.equalsIgnoreCase(NNConstants.NN_LEAKY_RELU)) {
+                network.addLayer(new BasicDropoutLayer(new ActivationLeakyReLU(), true, numHiddenNode, dropoutRate));
+            } else if(func.equalsIgnoreCase(NNConstants.NN_SWISH)) {
+                network.addLayer(new BasicDropoutLayer(new ActivationSwish(), true, numHiddenNode, dropoutRate));
+            } else if (func.equalsIgnoreCase(NNConstants.NN_PTANH)) {
+                network.addLayer(new BasicDropoutLayer(new ActivationPTANH(), true, numHiddenNode, dropoutRate));
             } else {
                 network.addLayer(new BasicDropoutLayer(new ActivationSigmoid(), true, numHiddenNode, dropoutRate));
             }
         }
 
-        network.addLayer(new BasicLayer(new ActivationSigmoid(), false, out));
+        if(isLinearTarget) {
+            if(NNConstants.NN_RELU.equalsIgnoreCase(outputActivationFunc)) {
+                network.addLayer(new BasicLayer(new ActivationReLU(), true, out));
+            } else if(NNConstants.NN_LEAKY_RELU.equalsIgnoreCase(outputActivationFunc)) {
+                network.addLayer(new BasicLayer(new ActivationLeakyReLU(), true, out));
+            } else if(NNConstants.NN_SWISH.equalsIgnoreCase(outputActivationFunc)) {
+                network.addLayer(new BasicLayer(new ActivationSwish(), true, out));
+            } else {
+                network.addLayer(new BasicLayer(new ActivationLinear(), true, out));
+            }
+        } else {
+            network.addLayer(new BasicLayer(new ActivationSigmoid(), false, out));
+        }
 
         NeuralStructure structure = network.getStructure();
         if(network.getStructure() instanceof FloatNeuralStructure) {
@@ -295,7 +368,11 @@ public final class DTrainUtils {
             } else if(wgtInit.equalsIgnoreCase(WGT_INIT_GAUSSIAN)) {
                 new GaussianRandomizer(0, 1).randomize(network);
             } else if(wgtInit.equalsIgnoreCase(WGT_INIT_XAVIER)) {
-                new XaiverRandomizer().randomize(network);
+                new XavierWeightRandomizer().randomize(network);
+            } else if(wgtInit.equalsIgnoreCase(WGT_INIT_HE)) {
+                new HeWeightRandomizer().randomize(network);
+            } else if(wgtInit.equalsIgnoreCase(WGT_INIT_LECUN)) {
+                new LecunWeightRandomizer().randomize(network);
             } else if(wgtInit.equalsIgnoreCase(WGT_INIT_DEFAULT)) {
                 // default randomization
                 network.reset();
@@ -354,10 +431,22 @@ public final class DTrainUtils {
 
     public static int getFeatureInputsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Set<Integer> featureSet) {
-        if(modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)) {
+        if(modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)) {
             int inputCount = 0;
             for(ColumnConfig columnConfig: columnConfigList) {
-                if(columnConfig.isFinalSelect() && featureSet.contains(columnConfig.getColumnNum())) {
+                if(featureSet.contains(columnConfig.getColumnNum())) {
+                    if(columnConfig.isNumerical()) {
+                        inputCount += (columnConfig.getBinBoundary().size() + 1);
+                    } else {
+                        inputCount += (columnConfig.getBinCategory().size() + 1);
+                    }
+                }
+            }
+            return inputCount;
+        } else if(modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)) {
+            int inputCount = 0;
+            for(ColumnConfig columnConfig: columnConfigList) {
+                if(featureSet.contains(columnConfig.getColumnNum())) {
                     if(columnConfig.isNumerical()) {
                         inputCount += 1;
                     } else {
@@ -369,5 +458,109 @@ public final class DTrainUtils {
         } else {
             return featureSet.size();
         }
+    }
+
+    /**
+     * Get Double property value from map.
+     * If the value doesn't exist in the Map or the format is incorrect, use @defval as default
+     * 
+     * @param params
+     *            input Map
+     * @param key
+     *            the key to look up
+     * @param defval
+     *            default value, if the key is not in the map or the value format is illegal
+     * @return
+     *         Double value if the key exists and value format is correct
+     *         or defval
+     */
+    public static Double getDouble(Map<?, ?> params, String key, Double defval) {
+        Double val = defval;
+        if(MapUtils.isNotEmpty(params) && params.containsKey(key)) {
+            Object obj = params.get(key);
+            if(obj != null) {
+                try {
+                    val = Double.valueOf(org.apache.commons.lang3.StringUtils.trimToEmpty(obj.toString()));
+                } catch (Exception e) {
+                    LOG.warn("Export double value for {} in params, but got {}", key, obj, e);
+                }
+            }
+        }
+        return val;
+    }
+
+    /**
+     * Get Boolean property value from map.
+     * If the value doesn't exist in the Map or the format is incorrect, use @defval as default
+     * 
+     * @param params
+     *            input Map
+     * @param key
+     *            the key to look up
+     * @param defval
+     *            default value, if the key is not in the map or the value format is illegal
+     * @return
+     *         Boolean value if the key exists and value format is correct
+     *         or defval
+     */
+    public static Boolean getBoolean(Map<?, ?> params, String key, Boolean defval) {
+        Boolean val = defval;
+        if(MapUtils.isNotEmpty(params) && params.containsKey(key)) {
+            Object obj = params.get(key);
+            if(obj != null) {
+                try {
+                    val = Boolean.valueOf(StringUtils.trimToEmpty(obj.toString()));
+                } catch (Exception e) {
+                    LOG.warn("Export boolean value for {} in params, but got {}", key, obj, e);
+                }
+            }
+        }
+        return val;
+    }
+
+    /**
+     * Get Integer property value from map.
+     * If the value doesn't exist in the Map or the format is incorrect, use @defval as default
+     * 
+     * @param params
+     *            input Map
+     * @param key
+     *            the key to look up
+     * @param defval
+     *            default value, if the key is not in the map or the value format is illegal
+     * @return
+     *         Integer value if the key exists and value format is correct
+     *         or defval
+     */
+    @SuppressWarnings("rawtypes")
+    public static Integer getInt(Map params, String key, Integer defval) {
+        Integer val = defval;
+        if(MapUtils.isNotEmpty(params) && params.containsKey(key)) {
+            Object obj = params.get(key);
+            if(obj != null) {
+                try {
+                    val = Integer.valueOf(StringUtils.trimToEmpty(obj.toString()));
+                } catch (Exception e) {
+                    LOG.warn("Export int value for {} in params, but got {}", key, obj, e);
+                }
+            }
+        }
+        return val;
+    }
+
+    /**
+     * @param columnConfigList the column config list of the model
+     * @return the map mapping from column Id to bin category list size
+     */
+    public static Map<Integer, Integer> getIdBinCategorySizeMap(List<ColumnConfig> columnConfigList) {
+        Map<Integer, Integer> idBinCategoryMap = new HashMap<>(columnConfigList.size());
+        for(ColumnConfig columnConfig : columnConfigList) {
+            if(columnConfig.getBinCategory() != null) {
+                idBinCategoryMap.put(columnConfig.getColumnNum(), columnConfig.getBinCategory().size());
+            } else {
+                idBinCategoryMap.put(columnConfig.getColumnNum(), 0);
+            }
+        }
+        return idBinCategoryMap;
     }
 }

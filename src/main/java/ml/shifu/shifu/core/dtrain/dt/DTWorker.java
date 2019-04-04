@@ -59,8 +59,7 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.ClassUtils;
-import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.*;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
@@ -104,8 +103,7 @@ import com.google.common.base.Splitter;
  * @author Zhang David (pengzhang@paypal.com)
  */
 @ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 800)
-public class DTWorker
-        extends
+public class DTWorker extends
         AbstractWorkerComputable<DTMasterParams, DTWorkerParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
 
     protected static final Logger LOG = LoggerFactory.getLogger(DTWorker.class);
@@ -216,10 +214,9 @@ public class DTWorker
     private Map<Integer, Random> validationRandomMap = new HashMap<Integer, Random>();
 
     /**
-     * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
+     * A splitter to split data with specified delimiter.
      */
-    protected static final Splitter DEFAULT_SPLITTER = Splitter.on(CommonConstants.DEFAULT_COLUMN_SEPARATOR)
-            .trimResults();
+    private Splitter splitter;
 
     /**
      * Index map in which column index and data input array index for fast location.
@@ -335,6 +332,8 @@ public class DTWorker
      */
     private Random sampelNegOnlyRandom = new Random(System.currentTimeMillis() + 1000L);
 
+    private boolean hasCandidates;
+
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
@@ -342,21 +341,20 @@ public class DTWorker
 
     protected boolean isUpSampleEnabled() {
         // only enabled in regression
-        return this.upSampleRng != null
-                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
-                        .isOneVsAll()));
+        return this.upSampleRng != null && (modelConfig.isRegression()
+                || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()));
     }
 
     @Override
     public void init(WorkerContext<DTMasterParams, DTWorkerParams> context) {
         Properties props = context.getProps();
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
-                    SourceType.HDFS.toString()));
+            SourceType sourceType = SourceType
+                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -376,6 +374,12 @@ public class DTWorker
                 }
             }
         }
+        
+        this.hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
+
+        // create Splitter
+        String delimiter = context.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
+        this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
 
         Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
         if(kCrossValidation != null && kCrossValidation > 0) {
@@ -384,16 +388,15 @@ public class DTWorker
         }
 
         Double upSampleWeight = modelConfig.getTrain().getUpSampleWeight();
-        if(Double.compare(upSampleWeight, 1d) != 0
-                && (modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain()
-                        .isOneVsAll()))) {
+        if(Double.compare(upSampleWeight, 1d) != 0 && (modelConfig.isRegression()
+                || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()))) {
             // set mean to upSampleWeight -1 and get sample + 1 to make sure no zero sample value
             LOG.info("Enable up sampling with weight {}.", upSampleWeight);
             this.upSampleRng = new PoissonDistribution(upSampleWeight - 1);
         }
 
-        this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
-                context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
+        this.isContinuousEnabled = Boolean.TRUE.toString()
+                .equalsIgnoreCase(context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
 
         this.workerThreadCount = modelConfig.getTrain().getWorkerThreadCount();
         this.threadPool = Executors.newFixedThreadPool(this.workerThreadCount);
@@ -413,7 +416,8 @@ public class DTWorker
         this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
         this.isOneVsAll = modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll();
 
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(),
+                modelConfig.getTrain().getGridConfigFileContent());
         Map<String, Object> validParams = this.modelConfig.getTrain().getParams();
         if(gs.hasHyperParam()) {
             validParams = gs.getParams(this.trainerId);
@@ -434,10 +438,12 @@ public class DTWorker
                     (long) (Runtime.getRuntime().maxMemory() * memoryFraction * 0.4), new ArrayList<Data>());
         } else {
             if(Double.compare(validationRate, 0d) != 0) {
-                this.trainingData = new MemoryLimitedList<Data>((long) (Runtime.getRuntime().maxMemory()
-                        * memoryFraction * (1 - validationRate)), new ArrayList<Data>());
-                this.validationData = new MemoryLimitedList<Data>((long) (Runtime.getRuntime().maxMemory()
-                        * memoryFraction * validationRate), new ArrayList<Data>());
+                this.trainingData = new MemoryLimitedList<Data>(
+                        (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - validationRate)),
+                        new ArrayList<Data>());
+                this.validationData = new MemoryLimitedList<Data>(
+                        (long) (Runtime.getRuntime().maxMemory() * memoryFraction * validationRate),
+                        new ArrayList<Data>());
             } else {
                 this.trainingData = new MemoryLimitedList<Data>(
                         (long) (Runtime.getRuntime().maxMemory() * memoryFraction), new ArrayList<Data>());
@@ -450,8 +456,8 @@ public class DTWorker
         // regression outputNodeCount is 1, binaryClassfication, it is 1, OneVsAll it is 1, Native classification it is
         // 1, with index of 0,1,2,3 denotes different classes
         this.isAfterVarSelect = (inputOutputIndex[3] == 1);
-        this.isManualValidation = (modelConfig.getValidationDataSetRawPath() != null && !"".equals(modelConfig
-                .getValidationDataSetRawPath()));
+        this.isManualValidation = (modelConfig.getValidationDataSetRawPath() != null
+                && !"".equals(modelConfig.getValidationDataSetRawPath()));
 
         int numClasses = this.modelConfig.isClassification() ? this.modelConfig.getTags().size() : 2;
         String imStr = validParams.get("Impurity").toString();
@@ -503,8 +509,8 @@ public class DTWorker
 
         this.isStratifiedSampling = this.modelConfig.getTrain().getStratifiedSample();
 
-        this.checkpointOutput = new Path(context.getProps().getProperty(
-                CommonConstants.SHIFU_DT_MASTER_CHECKPOINT_FOLDER, "tmp/cp_" + context.getAppId()));
+        this.checkpointOutput = new Path(context.getProps()
+                .getProperty(CommonConstants.SHIFU_DT_MASTER_CHECKPOINT_FOLDER, "tmp/cp_" + context.getAppId()));
 
         LOG.info(
                 "Worker init params:isAfterVarSel={}, treeNum={}, impurity={}, loss={}, learningRate={}, gbdtSampleWithReplacement={}, isRF={}, isGBDT={}, isStratifiedSampling={}, isKFoldCV={}, kCrossValidation={}, dropOutRate={}",
@@ -528,13 +534,13 @@ public class DTWorker
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             TreeModel existingModel = null;
             try {
-                existingModel = (TreeModel) CommonUtils.loadModel(modelConfig, modelPath,
+                existingModel = (TreeModel) ModelSpecLoaderUtils.loadModel(modelConfig, modelPath,
                         ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
             } catch (IOException e) {
                 LOG.error("Error in get existing model, will ignore and start from scratch", e);
             }
             if(existingModel == null) {
-                LOG.warn("No mdel is found even set to continuous model training.");
+                LOG.warn("No model is found even set to continuous model training.");
                 return;
             } else {
                 recoverTrees = existingModel.getTrees();
@@ -560,6 +566,8 @@ public class DTWorker
         if(todoNodes == null) {
             return new DTWorkerParams();
         }
+
+        LOG.info("Start to work: todoNodes size is {}", todoNodes.size());
 
         Map<Integer, NodeStats> statistics = initTodoNodeStats(todoNodes);
 
@@ -623,7 +631,8 @@ public class DTWorker
                                     data.predict = (float) predict;
                                 } else {
                                     // random drop
-                                    boolean drop = (this.dropOutRate > 0.0 && dropOutRandom.nextDouble() < this.dropOutRate);
+                                    boolean drop = (this.dropOutRate > 0.0
+                                            && dropOutRandom.nextDouble() < this.dropOutRate);
                                     if(!drop) {
                                         data.predict += (float) (this.learningRate * predict);
                                     }
@@ -727,8 +736,8 @@ public class DTWorker
                         if(context.getLastMasterResult().isFirstTree() && !lastMasterResult.isSwitchToNextTree()) {
                             Node predictNode = predictNodeIndex(trees.get(currTreeIndex).getNode(), data, true);
                             if(predictNode.getPredict() != null) {
-                                validationError += data.significance
-                                        * loss.computeError((float) (predictNode.getPredict().getPredict()), data.label);
+                                validationError += data.significance * loss
+                                        .computeError((float) (predictNode.getPredict().getPredict()), data.label);
                                 weightedValidationCount += data.significance;
                             }
                         } else {
@@ -1054,16 +1063,12 @@ public class DTWorker
         } else if(columnConfig.isCategorical()) {
             short indexValue = (short) (columnConfig.getBinCategory().size());
             value = indexValue;
-            if(data.inputs[inputIndex] >= 0 && data.inputs[inputIndex] < (short) (columnConfig.getBinCategory().size())) {
+            if(data.inputs[inputIndex] >= 0
+                    && data.inputs[inputIndex] < (short) (columnConfig.getBinCategory().size())) {
                 indexValue = data.inputs[inputIndex];
             } else {
                 // for invalid category, set to last one
                 indexValue = (short) (columnConfig.getBinCategory().size());
-            }
-            if(split.getLeftOrRightCategories().contains(indexValue)) {
-                nextNode = currNode.getLeft();
-            } else {
-                nextNode = currNode.getRight();
             }
 
             Set<Short> childCategories = split.getLeftOrRightCategories();
@@ -1083,9 +1088,9 @@ public class DTWorker
         }
 
         if(nextNode == null) {
-            throw new IllegalStateException("NextNode is null, parent id is " + currNode.getId() + "; parent split is "
-                    + split + "; left is " + currNode.getLeft() + "; right is " + currNode.getRight() + "; value is "
-                    + value);
+            throw new IllegalStateException(
+                    "NextNode is null, parent id is " + currNode.getId() + "; parent split is " + split + "; left is "
+                            + currNode.getLeft() + "; right is " + currNode.getRight() + "; value is " + value);
         }
         return predictNodeIndex(nextNode, data, isForErr);
     }
@@ -1108,8 +1113,7 @@ public class DTWorker
         // use NNConstants.NN_DEFAULT_COLUMN_SEPARATOR to replace getModelConfig().getDataSetDelimiter(), super follows
         // the function in akka mode.
         int index = 0, inputIndex = 0;
-        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
-        for(String input: DEFAULT_SPLITTER.split(currentValue.getWritable().toString())) {
+        for(String input: this.splitter.split(currentValue.getWritable().toString())) {
             if(index == this.columnConfigList.size()) {
                 // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
                 // weight, how to process???
@@ -1135,7 +1139,7 @@ public class DTWorker
                     if(!isAfterVarSelect) {
                         // no variable selected, good candidate but not meta and not target chose
                         if(!columnConfig.isMeta() && !columnConfig.isTarget()
-                                && CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
+                                && CommonUtils.isGoodCandidate(columnConfig, this.hasCandidates)) {
                             if(columnConfig.isNumerical()) {
                                 float floatValue = getFloatValue(input);
                                 // cast is safe as we limit max bin to Short.MAX_VALUE
@@ -1150,8 +1154,8 @@ public class DTWorker
                                     // empty
                                     shortValue = (short) (columnConfig.getBinCategory().size());
                                 } else {
-                                    Integer categoricalIndex = this.columnCategoryIndexMapping.get(
-                                            columnConfig.getColumnNum()).get(input);
+                                    Integer categoricalIndex = this.columnCategoryIndexMapping
+                                            .get(columnConfig.getColumnNum()).get(input);
                                     if(categoricalIndex == null) {
                                         shortValue = -1; // invalid category, set to -1 for last index
                                     } else {
@@ -1190,8 +1194,8 @@ public class DTWorker
                                     // empty
                                     shortValue = (short) (columnConfig.getBinCategory().size());
                                 } else {
-                                    Integer categoricalIndex = this.columnCategoryIndexMapping.get(
-                                            columnConfig.getColumnNum()).get(input);
+                                    Integer categoricalIndex = this.columnCategoryIndexMapping
+                                            .get(columnConfig.getColumnNum()).get(input);
                                     if(categoricalIndex == null) {
                                         shortValue = -1; // invalid category, set to -1 for last index
                                     } else {
@@ -1215,6 +1219,15 @@ public class DTWorker
                 }
             }
             index += 1;
+        }
+
+        // output delimiter in norm can be set by user now and if user set a special one later changed, this exception
+        // is helped to quick find such issue.
+        if(inputIndex != inputs.length) {
+            String delimiter = context.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER,
+                    Constants.DEFAULT_DELIMITER);
+            throw new RuntimeException("Input length is inconsistent with parsing size. Input original size: "
+                    + inputs.length + ", parsing size:" + inputIndex + ", delimiter:" + delimiter + ".");
         }
 
         if(this.isOneVsAll) {
@@ -1478,8 +1491,8 @@ public class DTWorker
         FSDataInputStream stream = null;
         List<TreeNode> trees = null;
         try {
-            if(!ShifuFileUtils
-                    .isFileExists(this.checkpointOutput.toString(), this.modelConfig.getDataSet().getSource())) {
+            if(!ShifuFileUtils.isFileExists(this.checkpointOutput.toString(),
+                    this.modelConfig.getDataSet().getSource())) {
                 return null;
             }
             FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource());
@@ -1502,8 +1515,8 @@ public class DTWorker
     private float[] sampleWeights(float label) {
         float[] sampleWeights = null;
         // sample negative or kFoldCV, sample rate is 1d
-        double sampleRate = (modelConfig.getTrain().getSampleNegOnly() || this.isKFoldCV) ? 1d : modelConfig.getTrain()
-                .getBaggingSampleRate();
+        double sampleRate = (modelConfig.getTrain().getSampleNegOnly() || this.isKFoldCV) ? 1d
+                : modelConfig.getTrain().getBaggingSampleRate();
         int classValue = (int) (label + 0.01f);
         if(this.treeNum == 1 || (this.isGBDT && !this.gbdtSampleWithReplacement)) {
             // if tree == 1 or GBDT, don't use with replacement sampling; for GBDT, every time is one tree

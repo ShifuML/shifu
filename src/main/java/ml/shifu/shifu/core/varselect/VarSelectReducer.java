@@ -169,6 +169,11 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
             sumSquare += info.getSumSquareScoreDiff();
             count += info.getCount();
         }
+
+        LOG.info("The sum is {}", sum);
+        LOG.info("The sumSquare is {}", sumSquare);
+        LOG.info("The count is {}", count);
+
         column.setMean(sum / count);
         column.setRms(Math.sqrt(sumSquare / count));
         column.setVariance((sumSquare / count) - power2(sum / count));
@@ -211,7 +216,10 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
             }
             // for thousands of features, here using 'new' ok
             StringBuilder sb = new StringBuilder(100);
-            sb.append(this.columnConfigList.get((int) pair.key).getColumnName()).append("\t")
+            // after supporting segments, the columns will expansion. the columnId may not the position
+            // in columnConfigList. It's safe to columnId to search (make sure columnNum == columnId)
+            ColumnConfig columnConfig = CommonUtils.getColumnConfig(this.columnConfigList, (int) pair.key);
+            sb.append(columnConfig.getColumnName()).append("\t")
                     .append(pair.value.getMean()).append("\t").append(pair.value.getRms()).append("\t")
                     .append(pair.value.getVariance());
             this.outputValue.set(sb.toString());

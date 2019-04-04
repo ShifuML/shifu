@@ -25,17 +25,17 @@ import ml.shifu.shifu.core.dtrain.dt.TreeNode;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
 
 import org.dmg.pmml.FieldName;
-import org.dmg.pmml.MiningFunctionType;
-import org.dmg.pmml.MiningModel;
+import org.dmg.pmml.MiningFunction;
 import org.dmg.pmml.MiningSchema;
-import org.dmg.pmml.MultipleModelMethodType;
 import org.dmg.pmml.OpType;
-import org.dmg.pmml.Segment;
-import org.dmg.pmml.Segmentation;
 import org.dmg.pmml.Target;
 import org.dmg.pmml.TargetValue;
 import org.dmg.pmml.Targets;
 import org.dmg.pmml.True;
+import org.dmg.pmml.mining.MiningModel;
+import org.dmg.pmml.mining.Segment;
+import org.dmg.pmml.mining.Segmentation;
+import org.dmg.pmml.mining.Segmentation.MultipleModelMethod;
 import org.encog.ml.BasicML;
 
 public class TreeEnsemblePmmlCreator extends AbstractPmmlElementCreator<MiningModel> {
@@ -54,15 +54,15 @@ public class TreeEnsemblePmmlCreator extends AbstractPmmlElementCreator<MiningMo
                 .build(null);
         gbt.setMiningSchema(miningSchema);
         if(treeModel.isClassification()) {
-            gbt.setFunctionName(MiningFunctionType.fromValue("classification"));
+            gbt.setMiningFunction(MiningFunction.fromValue("classification"));
         } else {
-            gbt.setFunctionName(MiningFunctionType.fromValue("regression"));
+            gbt.setMiningFunction(MiningFunction.fromValue("regression"));
         }
         gbt.setTargets(createTargets(this.modelConfig));
 
         Segmentation seg = new Segmentation();
         gbt.setSegmentation(seg);
-        seg.setMultipleModelMethod(MultipleModelMethodType.fromValue("weightedAverage"));
+        seg.setMultipleModelMethod(MultipleModelMethod.fromValue("weightedAverage"));
         List<Segment> list = seg.getSegments();
         int idCount = 0;
         // such case we only support treeModel is one element list
@@ -72,9 +72,10 @@ public class TreeEnsemblePmmlCreator extends AbstractPmmlElementCreator<MiningMo
         for(TreeNode tn: treeModel.getTrees().get(0)) {
             TreeNodePmmlElementCreator tnec = new TreeNodePmmlElementCreator(this.modelConfig, this.columnConfigList,
                     treeModel);
-            org.dmg.pmml.Node root = tnec.convert(tn.getNode());
+
+            org.dmg.pmml.tree.Node root = tnec.convert(tn.getNode());
             TreeModelPmmlElementCreator tmec = new TreeModelPmmlElementCreator(this.modelConfig, this.columnConfigList);
-            org.dmg.pmml.TreeModel tm = tmec.convert(treeModel, root);
+            org.dmg.pmml.tree.TreeModel tm = tmec.convert(treeModel, root);
             tm.setModelName(String.valueOf(idCount));
             Segment segment = new Segment();
             if(treeModel.isGBDT()) {
@@ -97,7 +98,7 @@ public class TreeEnsemblePmmlCreator extends AbstractPmmlElementCreator<MiningMo
 
         Target target = new Target();
 
-        target.setOptype(OpType.CATEGORICAL);
+        target.setOpType(OpType.CATEGORICAL);
         target.setField(new FieldName(modelConfig.getTargetColumnName()));
 
         List<TargetValue> targetValueList = new ArrayList<TargetValue>();
@@ -118,9 +119,9 @@ public class TreeEnsemblePmmlCreator extends AbstractPmmlElementCreator<MiningMo
             targetValueList.add(neg);
         }
 
-        target.withTargetValues(targetValueList);
+        target.addTargetValues(targetValueList.toArray(new TargetValue[targetValueList.size()]));
 
-        targets.withTargets(target);
+        targets.addTargets(target);
 
         return targets;
     }

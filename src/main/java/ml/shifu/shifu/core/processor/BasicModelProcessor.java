@@ -15,21 +15,6 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.Set;
-
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.meta.ValidateResult;
@@ -46,13 +31,13 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.fs.SourceFile;
 import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.JSONUtils;
 import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FileUtils;
@@ -60,6 +45,10 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 /**
  * Model Basic Processor, it helps to do basic manipulate in model, including load/save configuration, copy
@@ -82,6 +71,11 @@ public class BasicModelProcessor {
      * Params for sub steps
      */
     protected Map<String, Object> params;
+
+    /**
+     * Date format to get a valid timestamp folder/file name like
+     */
+    protected static final SimpleDateFormat SDF = new SimpleDateFormat("YYYYMMddHHmmss");
 
     public BasicModelProcessor() {
     }
@@ -106,6 +100,7 @@ public class BasicModelProcessor {
      * @throws Exception
      *             any exception in setup
      */
+    @SuppressWarnings("incomplete-switch")
     protected void setUp(ModelStep step) throws Exception {
         if(hasInitialized()) {
             return;
@@ -129,9 +124,9 @@ public class BasicModelProcessor {
                 // if in stats but stats -c or stats -p or stats -rebin, column update should be called because of
                 // such stats steps should all be called after 'shifu stats', this is actually to call VoidUpdater
                 boolean strictCallVoidUpdate = (step == ModelStep.STATS)
-                        && (getBooleanParam(this.params, Constants.IS_COMPUTE_CORR)
-                            || getBooleanParam(this.params, Constants.IS_COMPUTE_PSI)
-                            || getBooleanParam(this.params, Constants.IS_REBIN));
+                        //  && (getBooleanParam(this.params, Constants.IS_COMPUTE_CORR)
+                        && (getBooleanParam(this.params, Constants.IS_COMPUTE_PSI)
+                                || getBooleanParam(this.params, Constants.IS_REBIN));
 
                 // update ColumnConfig and save to disk
                 ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, columnConfigList, step, strictCallVoidUpdate);
@@ -154,6 +149,8 @@ public class BasicModelProcessor {
                     throw new IllegalArgumentException(
                             "Segment expression is only supported in NN or LR model, please check train:algrithm setting in ModelConfig.json.");
                 }
+                break;
+            default:
                 break;
         }
     }
@@ -193,14 +190,14 @@ public class BasicModelProcessor {
         }
 
         if(!names.contains(new NSColumn(modelConfig.getTargetColumnName()))) {
-            throw new IllegalArgumentException("target column " + modelConfig.getTargetColumnName()
-                    + " does not exist.");
+            throw new IllegalArgumentException(
+                    "target column " + modelConfig.getTargetColumnName() + " does not exist.");
         }
 
         if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())
                 && !names.contains(new NSColumn(modelConfig.getWeightColumnName()))) {
-            throw new IllegalArgumentException("weight column " + modelConfig.getWeightColumnName()
-                    + " does not exist.");
+            throw new IllegalArgumentException(
+                    "weight column " + modelConfig.getWeightColumnName() + " does not exist.");
         }
     }
 
@@ -216,6 +213,17 @@ public class BasicModelProcessor {
      */
     protected void clearUp(ModelStep step) throws IOException {
         // do nothing now
+    }
+
+    /**
+     * Loading ModelConfig from sub-folder
+     * @param subFolder - sub folder in current directory
+     * @return ModelConfig under sub-folder
+     * @throws IOException if fails to load ModelConfig.json
+     */
+    protected ModelConfig loadSubModelConfig(String subFolder) throws IOException {
+        return CommonUtils.loadModelConfig(
+                subFolder + File.separator + Constants.MODEL_CONFIG_JSON_FILE_NAME, SourceType.LOCAL);
     }
 
     /**
@@ -238,6 +246,23 @@ public class BasicModelProcessor {
     public void saveColumnConfigList() throws IOException {
         LOG.info("Saving ColumnConfig...");
         JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), columnConfigList);
+    }
+
+    /**
+     * Backup current {@link #columnConfigList} to a local folder tmp cc.json with timestamp in 'YYYY-MM-dd-HH:mm:SS'
+     * 
+     * @param timestamp - timestamp to back ColumnConfig
+     * @throws IOException
+     *             any IO exception
+     * @throws IllegalArgumentException
+     *             bad input in backupColumnConfigPath
+     */
+    public void backupCurrentColumnConfigToLocal(String timestamp) throws IllegalArgumentException, IOException {
+        String backupColumnConfigPath = this.pathFinder.getBackupColumnConfig(timestamp);
+        if(!ShifuFileUtils.isFileExists(new Path(backupColumnConfigPath), SourceType.LOCAL)) {
+            ShifuFileUtils.createDirIfNotExists(new SourceFile(Constants.TMP, SourceType.LOCAL));
+            saveColumnConfigList(backupColumnConfigPath, this.columnConfigList);
+        }
     }
 
     /**
@@ -455,6 +480,12 @@ public class BasicModelProcessor {
                 modelConfig.getTrain().setNumTrainEpochs(10000);
                 saveModelConfig();
             }
+        } else if(Constants.TENSORFLOW.equalsIgnoreCase(alg)) {
+            // do nothing
+        } else if(Constants.GENERIC.equalsIgnoreCase(alg)) {
+            //do nothing
+        } else if(Constants.WDL.equalsIgnoreCase(alg)) {
+            //do nothing
         } else {
             throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_ALG);
         }
@@ -468,9 +499,10 @@ public class BasicModelProcessor {
      * @throws IOException
      *             in load model config
      */
-    private void loadModelConfig() throws IOException {
-        modelConfig = CommonUtils.loadModelConfig(new Path(CommonUtils.getLocalModelSetPath(otherConfigs),
-                Constants.LOCAL_MODEL_CONFIG_JSON).toString(), SourceType.LOCAL);
+    protected void loadModelConfig() throws IOException {
+        modelConfig = CommonUtils.loadModelConfig(
+                new Path(CommonUtils.getLocalModelSetPath(otherConfigs), Constants.LOCAL_MODEL_CONFIG_JSON).toString(),
+                SourceType.LOCAL);
     }
 
     /**
@@ -490,8 +522,9 @@ public class BasicModelProcessor {
      *             in load column config
      */
     private void loadColumnConfig() throws IOException {
-        columnConfigList = CommonUtils.loadColumnConfigList(new Path(CommonUtils.getLocalModelSetPath(otherConfigs),
-                Constants.LOCAL_COLUMN_CONFIG_JSON).toString(), SourceType.LOCAL, false);
+        columnConfigList = CommonUtils.loadColumnConfigList(
+                new Path(CommonUtils.getLocalModelSetPath(otherConfigs), Constants.LOCAL_COLUMN_CONFIG_JSON).toString(),
+                SourceType.LOCAL, false);
     }
 
     /**
@@ -521,7 +554,8 @@ public class BasicModelProcessor {
 
         BufferedWriter writer = null;
         try {
-            writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(header), Constants.DEFAULT_CHARSET));
+            writer = new BufferedWriter(
+                    new OutputStreamWriter(new FileOutputStream(header), Constants.DEFAULT_CHARSET));
             writer.write("master");
         } catch (IOException e) {
             LOG.error("Fail to create HEAD file to store the current workspace");
@@ -560,6 +594,8 @@ public class BasicModelProcessor {
         paramsMap.put("sampleRate", modelConfig.getNormalizeSampleRate().toString());
         paramsMap.put("sampleNegOnly", ((Boolean) modelConfig.isNormalizeSampleNegOnly()).toString());
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
+        paramsMap.put("is_csv", String.valueOf(Boolean.TRUE.toString().equalsIgnoreCase(
+                Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_CSV, Boolean.FALSE.toString()))));
 
         try {
             String normPigPath = pathFinder.getScriptPath("scripts/Normalize.pig");
@@ -655,7 +691,7 @@ public class BasicModelProcessor {
         return null;
     }
 
-    protected int getIntParam(Map<String, Object> params, String propKey) {
+    protected int getIntParam(Map<String, Object> params, String propKey, int defval) {
         if(MapUtils.isNotEmpty(params) && params.get(propKey) instanceof String) {
             String propVal = (String) params.get(propKey);
             try {
@@ -664,7 +700,11 @@ public class BasicModelProcessor {
                 LOG.warn("Invalid int value for {}. Ignore it...", propKey);
             }
         }
-        return 0;
+        return defval;
+    }
+
+    protected int getIntParam(Map<String, Object> params, String propKey) {
+        return getIntParam(params, propKey, 0);
     }
 
     protected double getDoubleParam(Map<String, Object> params, String propKey, double defval) {
@@ -689,6 +729,29 @@ public class BasicModelProcessor {
             }
         }
         return 0;
+    }
+
+    protected String getStringParam(Map<String, Object> params, String propKey) {
+        if(MapUtils.isNotEmpty(params) && params.get(propKey) instanceof String) {
+            return (String) params.get(propKey);
+        }
+        return null;
+    }
+
+    protected List<EvalConfig> getEvalConfigList(String encodeDataSets) {
+        List<EvalConfig> evalSetList = new ArrayList<EvalConfig>();
+
+        if(StringUtils.isNotBlank(encodeDataSets)) {
+            String[] evalList = encodeDataSets.split(",");
+            for(String eval: evalList) {
+                EvalConfig evalConfig = modelConfig.getEvalConfigByName(eval);
+                if(evalConfig != null) {
+                    evalSetList.add(evalConfig);
+                }
+            }
+        }
+
+        return evalSetList;
     }
 
 }

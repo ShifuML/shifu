@@ -1,0 +1,630 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<PMML xmlns="http://www.dmg.org/PMML-4_2">
+    <Header copyright=" Copyright [2013-2018] PayPal Software Foundation&#xA;&#xA; Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);&#xA; you may not use this file except in compliance with the License.&#xA; You may obtain a copy of the License at&#xA;&#xA;    http://www.apache.org/licenses/LICENSE-2.0&#xA;&#xA; Unless required by applicable law or agreed to in writing, software&#xA; distributed under the License is distributed on an &quot;AS IS&quot; BASIS,&#xA; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.&#xA; See the License for the specific language governing permissions and&#xA; limitations under the License.&#xA;">
+        <Application name="shifu" version="0.12.0-SNAPSHOT"/>
+    </Header>
+    <DataDictionary numberOfFields="6">
+        <DataField name="outlook" optype="categorical" dataType="string"/>
+        <DataField name="temperature" optype="continuous" dataType="double"/>
+        <DataField name="humidity" optype="continuous" dataType="double"/>
+        <DataField name="windy" optype="categorical" dataType="string"/>
+        <DataField name="result" optype="categorical" dataType="string"/>
+        <DataField name="type" optype="continuous" dataType="double"/>
+    </DataDictionary>
+    <NeuralNetwork functionName="regression">
+        <MiningSchema>
+            <MiningField name="outlook" usageType="active" optype="categorical"/>
+            <MiningField name="temperature" usageType="active" optype="continuous"/>
+            <MiningField name="humidity" usageType="active" optype="continuous"/>
+            <MiningField name="windy" usageType="active" optype="categorical"/>
+            <MiningField name="result" usageType="target" optype="categorical"/>
+            <MiningField name="type" usageType="active" optype="continuous"/>
+        </MiningSchema>
+        <Output>
+            <OutputField name="RawResult" optype="continuous" dataType="double" feature="predictedValue"/>
+            <OutputField name="FinalResult" optype="continuous" dataType="double" feature="transformedValue">
+                <NormContinuous field="RawResult">
+                    <LinearNorm orig="0.0" norm="0.0"/>
+                    <LinearNorm orig="1.0" norm="1000.0"/>
+                </NormContinuous>
+            </OutputField>
+        </Output>
+        <ModelStats>
+            <UnivariateStats field="outlook">
+                <DiscrStats>
+                    <Extension name="BinCountNeg" value="[9, 12, 6, 0]"/>
+                    <Extension name="BinWeightedCountPos" value="[6.0, 0.0, 9.0, 0.0]"/>
+                    <Extension name="BinPosRate" value="[0.4, 0.0, 0.6, 0.0]"/>
+                    <Extension name="BinCountPos" value="[6, 0, 9, 0]"/>
+                    <Extension name="BinWeightedCountNeg" value="[9.0, 12.0, 6.0, 0.0]"/>
+                    <Array n="0" type="int"></Array>
+                </DiscrStats>
+            </UnivariateStats>
+            <UnivariateStats field="temperature">
+                <NumericInfo minimum="64.0" maximum="85.0" mean="73.642857" standardDeviation="6.498861" median="73.0"/>
+                <ContStats>
+                    <Extension name="BinCountNeg" value="[3, 0, 6, 3, 0, 3, 6, 0, 3, 3, 0]"/>
+                    <Extension name="BinWeightedCountPos" value="[0.0, 3.0, 0.0, 0.0, 3.0, 3.0, 0.0, 2.0, 0.0, 4.0, 0.0]"/>
+                    <Extension name="BinPosRate" value="[0.0, 1.0, 0.0, 0.0, 1.0, 0.5, 0.0, 1.0, 0.0, 0.5714285714285714, 0.0]"/>
+                    <Extension name="BinCountPos" value="[0, 3, 0, 0, 3, 3, 0, 2, 0, 4, 0]"/>
+                    <Extension name="KS" value="24.444444"/>
+                    <Extension name="BinWOE" value="[-20.828626353504237, 21.416413018006356, -21.521773533614184, -20.828626353504237, 21.416413018006356, 0.5877866645021192, -21.521773533614184, 21.010947910148193, -20.828626353504237, 0.8754687368289, 0.0]"/>
+                    <Extension name="IV" value="28.064565"/>
+                    <Extension name="BinWeightedCountNeg" value="[3.0, 0.0, 6.0, 3.0, 0.0, 3.0, 6.0, 0.0, 3.0, 3.0, 0.0]"/>
+                    <Interval closure="openClosed" leftMargin="-INF" rightMargin="65.0"/>
+                    <Interval closure="openClosed" leftMargin="65.0" rightMargin="68.0"/>
+                    <Interval closure="openClosed" leftMargin="68.0" rightMargin="70.0"/>
+                    <Interval closure="openClosed" leftMargin="70.0" rightMargin="71.0"/>
+                    <Interval closure="openClosed" leftMargin="71.0" rightMargin="72.0"/>
+                    <Interval closure="openClosed" leftMargin="72.0" rightMargin="75.0"/>
+                    <Interval closure="openClosed" leftMargin="75.0" rightMargin="80.0"/>
+                    <Interval closure="openClosed" leftMargin="80.0" rightMargin="81.0"/>
+                    <Interval closure="openClosed" leftMargin="81.0" rightMargin="83.0"/>
+                    <Interval closure="openClosed" leftMargin="83.0" rightMargin="INF"/>
+                </ContStats>
+            </UnivariateStats>
+            <UnivariateStats field="humidity">
+                <NumericInfo minimum="65.0" maximum="96.0" mean="80.214286" standardDeviation="9.699222" median="80.5"/>
+                <ContStats>
+                    <Extension name="BinCountNeg" value="[3, 7, 2, 3, 5, 1, 0, 3, 3, 0]"/>
+                    <Extension name="BinWeightedCountPos" value="[0.0, 3.0, 0.0, 0.0, 3.0, 0.0, 3.0, 3.0, 3.0, 0.0]"/>
+                    <Extension name="BinPosRate" value="[0.0, 0.3, 0.0, 0.0, 0.375, 0.0, 1.0, 0.5, 0.5, 0.0]"/>
+                    <Extension name="BinCountPos" value="[0, 3, 0, 0, 3, 0, 3, 3, 3, 0]"/>
+                    <Extension name="KS" value="37.777778"/>
+                    <Extension name="BinWOE" value="[-20.828626353504237, -0.2595111953707987, -20.423161245846075, -20.828626353504237, 0.07696104109612849, -19.730014066636127, 21.416413018006356, 0.5877866645021192, 0.5877866645021192, 0.0]"/>
+                    <Extension name="IV" value="11.276448"/>
+                    <Extension name="BinWeightedCountNeg" value="[3.0, 7.0, 2.0, 3.0, 5.0, 1.0, 0.0, 3.0, 3.0, 0.0]"/>
+                    <Interval closure="openClosed" leftMargin="-INF" rightMargin="70.0"/>
+                    <Interval closure="openClosed" leftMargin="70.0" rightMargin="75.0"/>
+                    <Interval closure="openClosed" leftMargin="75.0" rightMargin="78.0"/>
+                    <Interval closure="openClosed" leftMargin="78.0" rightMargin="80.0"/>
+                    <Interval closure="openClosed" leftMargin="80.0" rightMargin="82.0"/>
+                    <Interval closure="openClosed" leftMargin="82.0" rightMargin="85.0"/>
+                    <Interval closure="openClosed" leftMargin="85.0" rightMargin="90.0"/>
+                    <Interval closure="openClosed" leftMargin="90.0" rightMargin="95.0"/>
+                    <Interval closure="openClosed" leftMargin="95.0" rightMargin="INF"/>
+                </ContStats>
+            </UnivariateStats>
+            <UnivariateStats field="windy">
+                <DiscrStats>
+                    <Extension name="BinCountNeg" value="[9, 18, 0]"/>
+                    <Extension name="BinWeightedCountPos" value="[9.0, 6.0, 0.0]"/>
+                    <Extension name="BinPosRate" value="[0.5, 0.25, 0.0]"/>
+                    <Extension name="BinCountPos" value="[9, 6, 0]"/>
+                    <Extension name="BinWeightedCountNeg" value="[9.0, 18.0, 0.0]"/>
+                    <Array n="0" type="int"></Array>
+                </DiscrStats>
+            </UnivariateStats>
+            <UnivariateStats field="type">
+                <NumericInfo minimum="1.0" maximum="3.0" mean="2.02439" standardDeviation="0.821213" median="2.0"/>
+                <ContStats>
+                    <Extension name="BinCountNeg" value="[9, 18, 0]"/>
+                    <Extension name="BinWeightedCountPos" value="[4.0, 10.0, 1.0]"/>
+                    <Extension name="BinPosRate" value="[0.3076923076923077, 0.35714285714285715, 1.0]"/>
+                    <Extension name="BinCountPos" value="[4, 10, 1]"/>
+                    <Extension name="KS" value="6.666667"/>
+                    <Extension name="BinWOE" value="[-0.2231435512392097, 0.0, 20.317800730338245]"/>
+                    <Extension name="IV" value="1.369396"/>
+                    <Extension name="BinWeightedCountNeg" value="[9.0, 18.0, 0.0]"/>
+                    <Interval closure="openClosed" leftMargin="-INF" rightMargin="2.0"/>
+                    <Interval closure="openClosed" leftMargin="2.0" rightMargin="INF"/>
+                </ContStats>
+            </UnivariateStats>
+            <UnivariateStats field="temperature_1">
+                <NumericInfo minimum="64.0" maximum="85.0" mean="74.461538" standardDeviation="6.615832" median="73.5"/>
+                <ContStats>
+                    <Extension name="BinCountNeg" value="[1, 1, 1, 1, 0, 1, 2, 1, 1, 0]"/>
+                    <Extension name="BinWeightedCountPos" value="[0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 2.0, 0.0]"/>
+                    <Extension name="BinPosRate" value="[0.0, 0.0, 0.0, 0.0, 1.0, 0.5, 0.0, 0.0, 0.6666666666666666, 0.0]"/>
+                    <Extension name="BinCountPos" value="[0, 0, 0, 0, 1, 1, 0, 0, 2, 0]"/>
+                    <Extension name="KS" value="44.444444"/>
+                    <Extension name="BinWOE" value="[-20.828626353504237, -20.828626353504237, -20.828626353504237, -20.828626353504237, 21.639556569220566, 0.810930215716329, -21.521773533614184, -20.828626353504237, 1.504077396076274, 0.0]"/>
+                    <Extension name="IV" value="22.461513"/>
+                    <Extension name="BinWeightedCountNeg" value="[1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 2.0, 1.0, 1.0, 0.0]"/>
+                    <Interval closure="openClosed" leftMargin="-INF" rightMargin="68.0"/>
+                    <Interval closure="openClosed" leftMargin="68.0" rightMargin="69.0"/>
+                    <Interval closure="openClosed" leftMargin="69.0" rightMargin="70.0"/>
+                    <Interval closure="openClosed" leftMargin="70.0" rightMargin="71.0"/>
+                    <Interval closure="openClosed" leftMargin="71.0" rightMargin="72.0"/>
+                    <Interval closure="openClosed" leftMargin="72.0" rightMargin="75.0"/>
+                    <Interval closure="openClosed" leftMargin="75.0" rightMargin="81.0"/>
+                    <Interval closure="openClosed" leftMargin="81.0" rightMargin="83.0"/>
+                    <Interval closure="openClosed" leftMargin="83.0" rightMargin="INF"/>
+                </ContStats>
+            </UnivariateStats>
+            <UnivariateStats field="humidity_1">
+                <NumericInfo minimum="65.0" maximum="96.0" mean="80.692308" standardDeviation="10.119162" median="81.66666666666667"/>
+                <ContStats>
+                    <Extension name="BinCountNeg" value="[1, 3, 1, 2, 0, 1, 1, 0]"/>
+                    <Extension name="BinWeightedCountPos" value="[0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0]"/>
+                    <Extension name="BinPosRate" value="[0.0, 0.0, 0.0, 0.3333333333333333, 1.0, 0.5, 0.5, 0.0]"/>
+                    <Extension name="BinCountPos" value="[0, 0, 0, 1, 1, 1, 1, 0]"/>
+                    <Extension name="KS" value="55.555556"/>
+                    <Extension name="BinWOE" value="[-20.828626353504237, -21.927238641572348, -20.828626353504237, 0.11778303560638355, 21.639556569220566, 0.810930215716329, 0.810930215716329, 0.0]"/>
+                    <Extension name="IV" value="17.576082"/>
+                    <Extension name="BinWeightedCountNeg" value="[1.0, 3.0, 1.0, 2.0, 0.0, 1.0, 1.0, 0.0]"/>
+                    <Interval closure="openClosed" leftMargin="-INF" rightMargin="70.0"/>
+                    <Interval closure="openClosed" leftMargin="70.0" rightMargin="78.0"/>
+                    <Interval closure="openClosed" leftMargin="78.0" rightMargin="80.0"/>
+                    <Interval closure="openClosed" leftMargin="80.0" rightMargin="85.0"/>
+                    <Interval closure="openClosed" leftMargin="85.0" rightMargin="90.0"/>
+                    <Interval closure="openClosed" leftMargin="90.0" rightMargin="95.0"/>
+                    <Interval closure="openClosed" leftMargin="95.0" rightMargin="INF"/>
+                </ContStats>
+            </UnivariateStats>
+        </ModelStats>
+        <Targets>
+            <Target field="result" optype="categorical">
+                <TargetValue value="Don't Play" displayValue="Positive"/>
+                <TargetValue value="Play" displayValue="Negative"/>
+            </Target>
+        </Targets>
+        <LocalTransformations>
+            <DerivedField name="outlook_woe" optype="continuous" dataType="double">
+                <MapValues mapMissingTo="0.0" defaultValue="0.0" outputColumn="out" dataType="double">
+                    <FieldColumnPair field="outlook" column="origin"/>
+                    <InlineTable>
+                        <row>
+                            <origin>rain</origin>
+                            <out>-0.1823215567439547</out>
+                        </row>
+                        <row>
+                            <origin>overcast</origin>
+                            <out>22.214920713949127</out>
+                        </row>
+                        <row>
+                            <origin>sunny</origin>
+                            <out>-0.9932517727269501</out>
+                        </row>
+                    </InlineTable>
+                </MapValues>
+            </DerivedField>
+            <DerivedField name="outlook_woe_zscale" optype="continuous" dataType="double">
+                <NormContinuous mapMissingTo="0.0" field="outlook_woe" outliers="asExtremeValues">
+                    <LinearNorm orig="-35.80012029190849" norm="-4.0"/>
+                    <LinearNorm orig="47.654665464543065" norm="4.0"/>
+                </NormContinuous>
+            </DerivedField>
+            <DerivedField name="temperature_woe" optype="continuous" dataType="double">
+                <Discretize field="temperature" mapMissingTo="0.0" defaultValue="0.0" dataType="double">
+                    <DiscretizeBin binValue="20.828626353504237">
+                        <Interval closure="openOpen" rightMargin="65.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="-21.416413018006356">
+                        <Interval closure="closedOpen" leftMargin="65.0" rightMargin="68.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="21.521773533614184">
+                        <Interval closure="closedOpen" leftMargin="68.0" rightMargin="70.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="20.828626353504237">
+                        <Interval closure="closedOpen" leftMargin="70.0" rightMargin="71.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="-21.416413018006356">
+                        <Interval closure="closedOpen" leftMargin="71.0" rightMargin="72.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="-0.5877866645021191">
+                        <Interval closure="closedOpen" leftMargin="72.0" rightMargin="75.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="21.521773533614184">
+                        <Interval closure="closedOpen" leftMargin="75.0" rightMargin="80.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="-21.010947910148193">
+                        <Interval closure="closedOpen" leftMargin="80.0" rightMargin="81.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="20.828626353504237">
+                        <Interval closure="closedOpen" leftMargin="81.0" rightMargin="83.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="-0.8754687368289001">
+                        <Interval closure="closedOpen" leftMargin="83.0"/>
+                    </DiscretizeBin>
+                </Discretize>
+            </DerivedField>
+            <DerivedField name="temperature_woe_zscale" optype="continuous" dataType="double">
+                <NormContinuous mapMissingTo="0.0" field="temperature_woe" outliers="asExtremeValues">
+                    <LinearNorm orig="-60.453229013094756" norm="-4.0"/>
+                    <LinearNorm orig="73.0981597041309" norm="4.0"/>
+                </NormContinuous>
+            </DerivedField>
+            <DerivedField name="humidity_woe" optype="continuous" dataType="double">
+                <Discretize field="humidity" mapMissingTo="0.0" defaultValue="0.0" dataType="double">
+                    <DiscretizeBin binValue="20.828626353504237">
+                        <Interval closure="openOpen" rightMargin="70.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="0.2595111953707987">
+                        <Interval closure="closedOpen" leftMargin="70.0" rightMargin="75.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="20.423161245846075">
+                        <Interval closure="closedOpen" leftMargin="75.0" rightMargin="78.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="20.828626353504237">
+                        <Interval closure="closedOpen" leftMargin="78.0" rightMargin="80.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="-0.07696104109612843">
+                        <Interval closure="closedOpen" leftMargin="80.0" rightMargin="82.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="19.730014066636127">
+                        <Interval closure="closedOpen" leftMargin="82.0" rightMargin="85.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="-21.416413018006356">
+                        <Interval closure="closedOpen" leftMargin="85.0" rightMargin="90.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="-0.5877866645021191">
+                        <Interval closure="closedOpen" leftMargin="90.0" rightMargin="95.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="-0.5877866645021191">
+                        <Interval closure="closedOpen" leftMargin="95.0"/>
+                    </DiscretizeBin>
+                </Discretize>
+            </DerivedField>
+            <DerivedField name="humidity_woe_zscale" optype="continuous" dataType="double">
+                <NormContinuous mapMissingTo="0.0" field="humidity_woe" outliers="asExtremeValues">
+                    <LinearNorm orig="-40.89756469913442" norm="-4.0"/>
+                    <LinearNorm orig="46.43208085514624" norm="4.0"/>
+                </NormContinuous>
+            </DerivedField>
+            <DerivedField name="windy_woe" optype="continuous" dataType="double">
+                <MapValues mapMissingTo="0.0" defaultValue="0.0" outputColumn="out" dataType="double">
+                    <FieldColumnPair field="windy" column="origin"/>
+                    <InlineTable>
+                        <row>
+                            <origin>true</origin>
+                            <out>-0.5877866647687856</out>
+                        </row>
+                        <row>
+                            <origin>false</origin>
+                            <out>0.5108256236659906</out>
+                        </row>
+                    </InlineTable>
+                </MapValues>
+            </DerivedField>
+            <DerivedField name="windy_woe_zscale" optype="continuous" dataType="double">
+                <NormContinuous mapMissingTo="0.0" field="windy_woe" outliers="asExtremeValues">
+                    <LinearNorm orig="-2.161057379859159" norm="-4.0"/>
+                    <LinearNorm orig="2.2410409513899037" norm="4.0"/>
+                </NormContinuous>
+            </DerivedField>
+            <DerivedField name="type_woe" optype="continuous" dataType="double">
+                <Discretize field="type" mapMissingTo="-20.317800730338245" defaultValue="-20.317800730338245" dataType="double">
+                    <DiscretizeBin binValue="0.22314355123920965">
+                        <Interval closure="openOpen" rightMargin="2.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="0.0">
+                        <Interval closure="closedOpen" leftMargin="2.0"/>
+                    </DiscretizeBin>
+                </Discretize>
+            </DerivedField>
+            <DerivedField name="type_woe_zscale" optype="continuous" dataType="double">
+                <NormContinuous mapMissingTo="0.0" field="type_woe" outliers="asExtremeValues">
+                    <LinearNorm orig="-13.005629933308365" norm="-4.0"/>
+                    <LinearNorm orig="12.17625209691653" norm="4.0"/>
+                </NormContinuous>
+            </DerivedField>
+            <DerivedField name="temperature_1_woe" optype="continuous" dataType="double">
+                <Discretize field="temperature" mapMissingTo="0.0" defaultValue="0.0" dataType="double">
+                    <DiscretizeBin binValue="20.828626353504237">
+                        <Interval closure="openOpen" rightMargin="68.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="20.828626353504237">
+                        <Interval closure="closedOpen" leftMargin="68.0" rightMargin="69.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="20.828626353504237">
+                        <Interval closure="closedOpen" leftMargin="69.0" rightMargin="70.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="20.828626353504237">
+                        <Interval closure="closedOpen" leftMargin="70.0" rightMargin="71.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="-21.639556569220566">
+                        <Interval closure="closedOpen" leftMargin="71.0" rightMargin="72.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="-0.810930215716329">
+                        <Interval closure="closedOpen" leftMargin="72.0" rightMargin="75.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="21.521773533614184">
+                        <Interval closure="closedOpen" leftMargin="75.0" rightMargin="81.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="20.828626353504237">
+                        <Interval closure="closedOpen" leftMargin="81.0" rightMargin="83.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="-1.504077396076274">
+                        <Interval closure="closedOpen" leftMargin="83.0"/>
+                    </DiscretizeBin>
+                </Discretize>
+            </DerivedField>
+            <DerivedField name="temperature_1_woe_zscale" optype="continuous" dataType="double">
+                <NormContinuous mapMissingTo="0.0" field="temperature_1_woe" outliers="asExtremeValues">
+                    <LinearNorm orig="-48.260261641306194" norm="-4.0"/>
+                    <LinearNorm orig="66.63149697143966" norm="4.0"/>
+                </NormContinuous>
+            </DerivedField>
+            <DerivedField name="humidity_1_woe" optype="continuous" dataType="double">
+                <Discretize field="humidity" mapMissingTo="0.0" defaultValue="0.0" dataType="double">
+                    <DiscretizeBin binValue="20.828626353504237">
+                        <Interval closure="openOpen" rightMargin="70.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="21.927238641572348">
+                        <Interval closure="closedOpen" leftMargin="70.0" rightMargin="78.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="20.828626353504237">
+                        <Interval closure="closedOpen" leftMargin="78.0" rightMargin="80.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="-0.11778303560638351">
+                        <Interval closure="closedOpen" leftMargin="80.0" rightMargin="85.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="-21.639556569220566">
+                        <Interval closure="closedOpen" leftMargin="85.0" rightMargin="90.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="-0.810930215716329">
+                        <Interval closure="closedOpen" leftMargin="90.0" rightMargin="95.0"/>
+                    </DiscretizeBin>
+                    <DiscretizeBin binValue="-0.810930215716329">
+                        <Interval closure="closedOpen" leftMargin="95.0"/>
+                    </DiscretizeBin>
+                </Discretize>
+            </DerivedField>
+            <DerivedField name="humidity_1_woe_zscale" optype="continuous" dataType="double">
+                <NormContinuous mapMissingTo="0.0" field="humidity_1_woe" outliers="asExtremeValues">
+                    <LinearNorm orig="-48.58552364929671" norm="-4.0"/>
+                    <LinearNorm orig="61.23203781742294" norm="4.0"/>
+                </NormContinuous>
+            </DerivedField>
+            <DerivedField name="bias" optype="continuous" dataType="double">
+                <Constant>1</Constant>
+            </DerivedField>
+        </LocalTransformations>
+        <NeuralInputs>
+            <NeuralInput id="0,0">
+                <DerivedField name="outlook_woe_zscale" optype="continuous" dataType="double">
+                    <FieldRef field="outlook_woe_zscale"/>
+                </DerivedField>
+            </NeuralInput>
+            <NeuralInput id="0,1">
+                <DerivedField name="temperature_woe_zscale" optype="continuous" dataType="double">
+                    <FieldRef field="temperature_woe_zscale"/>
+                </DerivedField>
+            </NeuralInput>
+            <NeuralInput id="0,2">
+                <DerivedField name="humidity_woe_zscale" optype="continuous" dataType="double">
+                    <FieldRef field="humidity_woe_zscale"/>
+                </DerivedField>
+            </NeuralInput>
+            <NeuralInput id="0,3">
+                <DerivedField name="windy_woe_zscale" optype="continuous" dataType="double">
+                    <FieldRef field="windy_woe_zscale"/>
+                </DerivedField>
+            </NeuralInput>
+            <NeuralInput id="0,4">
+                <DerivedField name="type_woe_zscale" optype="continuous" dataType="double">
+                    <FieldRef field="type_woe_zscale"/>
+                </DerivedField>
+            </NeuralInput>
+            <NeuralInput id="0,5">
+                <DerivedField name="temperature_1_woe_zscale" optype="continuous" dataType="double">
+                    <FieldRef field="temperature_1_woe_zscale"/>
+                </DerivedField>
+            </NeuralInput>
+            <NeuralInput id="0,6">
+                <DerivedField name="humidity_1_woe_zscale" optype="continuous" dataType="double">
+                    <FieldRef field="humidity_1_woe_zscale"/>
+                </DerivedField>
+            </NeuralInput>
+            <NeuralInput id="bias">
+                <DerivedField name="bias" optype="continuous" dataType="double">
+                    <FieldRef field="bias"/>
+                </DerivedField>
+            </NeuralInput>
+        </NeuralInputs>
+        <NeuralLayer numberOfNeurons="20" activationFunction="tanh">
+            <Neuron id="1,0" bias="-0.14063513073610712">
+                <Con from="0,0" weight="-0.45136747916726516"/>
+                <Con from="0,1" weight="-0.057706661778124856"/>
+                <Con from="0,2" weight="0.5329300229832515"/>
+                <Con from="0,3" weight="0.31311261407772545"/>
+                <Con from="0,4" weight="0.27910086437067066"/>
+                <Con from="0,5" weight="0.6238667756244226"/>
+                <Con from="0,6" weight="0.39208928487115285"/>
+            </Neuron>
+            <Neuron id="1,1" bias="-0.09174482900038478">
+                <Con from="0,0" weight="0.7970283101438232"/>
+                <Con from="0,1" weight="0.8103698906580842"/>
+                <Con from="0,2" weight="-0.4431984081668276"/>
+                <Con from="0,3" weight="0.015776473646220868"/>
+                <Con from="0,4" weight="0.30480310733028804"/>
+                <Con from="0,5" weight="-0.09471246513525695"/>
+                <Con from="0,6" weight="0.23496880700621733"/>
+            </Neuron>
+            <Neuron id="1,2" bias="0.1631973311166883">
+                <Con from="0,0" weight="-0.39785910056745805"/>
+                <Con from="0,1" weight="-0.503136265206744"/>
+                <Con from="0,2" weight="-0.6099283940773856"/>
+                <Con from="0,3" weight="0.335832176987173"/>
+                <Con from="0,4" weight="-0.011694094187043109"/>
+                <Con from="0,5" weight="-0.5013245577981651"/>
+                <Con from="0,6" weight="-0.24712325197610108"/>
+            </Neuron>
+            <Neuron id="1,3" bias="0.1834281482516918">
+                <Con from="0,0" weight="-0.5500295850608481"/>
+                <Con from="0,1" weight="-0.7111641797064364"/>
+                <Con from="0,2" weight="0.042658714682134447"/>
+                <Con from="0,3" weight="0.4872511516999129"/>
+                <Con from="0,4" weight="0.09667920131697881"/>
+                <Con from="0,5" weight="-0.2698869041944435"/>
+                <Con from="0,6" weight="0.48398650261813697"/>
+            </Neuron>
+            <Neuron id="1,4" bias="-0.48397807173998014">
+                <Con from="0,0" weight="0.6910564206290937"/>
+                <Con from="0,1" weight="-0.13653347608514277"/>
+                <Con from="0,2" weight="-0.34849468574899545"/>
+                <Con from="0,3" weight="0.308365272450847"/>
+                <Con from="0,4" weight="0.3330168852470956"/>
+                <Con from="0,5" weight="-0.3749593505593202"/>
+                <Con from="0,6" weight="-0.05958209448079603"/>
+            </Neuron>
+            <Neuron id="1,5" bias="0.45841020659260423">
+                <Con from="0,0" weight="0.8547488320272545"/>
+                <Con from="0,1" weight="0.7156548348026492"/>
+                <Con from="0,2" weight="0.11203135552480759"/>
+                <Con from="0,3" weight="0.17955344358035136"/>
+                <Con from="0,4" weight="0.48795493209065294"/>
+                <Con from="0,5" weight="0.47852653267493117"/>
+                <Con from="0,6" weight="0.20050524438112766"/>
+            </Neuron>
+            <Neuron id="1,6" bias="0.33343130509960783">
+                <Con from="0,0" weight="0.36234099066542935"/>
+                <Con from="0,1" weight="0.8184352025819804"/>
+                <Con from="0,2" weight="-0.16668515087473806"/>
+                <Con from="0,3" weight="0.22521498484383146"/>
+                <Con from="0,4" weight="-0.2571034423930116"/>
+                <Con from="0,5" weight="0.5320526177200794"/>
+                <Con from="0,6" weight="0.019487905244245585"/>
+            </Neuron>
+            <Neuron id="1,7" bias="0.19943513003611296">
+                <Con from="0,0" weight="-0.11908255893394137"/>
+                <Con from="0,1" weight="-0.12594630600146564"/>
+                <Con from="0,2" weight="-0.13330758688809077"/>
+                <Con from="0,3" weight="0.38041067608934803"/>
+                <Con from="0,4" weight="-0.6126551388837926"/>
+                <Con from="0,5" weight="0.4266470948309012"/>
+                <Con from="0,6" weight="0.5700033259549822"/>
+            </Neuron>
+            <Neuron id="1,8" bias="-0.6953340729563372">
+                <Con from="0,0" weight="-0.09212488655013552"/>
+                <Con from="0,1" weight="0.08714297492882661"/>
+                <Con from="0,2" weight="-0.3680217699344759"/>
+                <Con from="0,3" weight="0.5270962143110758"/>
+                <Con from="0,4" weight="-0.318615783097393"/>
+                <Con from="0,5" weight="-0.728504819113868"/>
+                <Con from="0,6" weight="0.11576450197041539"/>
+            </Neuron>
+            <Neuron id="1,9" bias="-0.46098431510994287">
+                <Con from="0,0" weight="0.10092691877582621"/>
+                <Con from="0,1" weight="-2.1098122782832247"/>
+                <Con from="0,2" weight="-0.500693043326429"/>
+                <Con from="0,3" weight="0.40752049493090103"/>
+                <Con from="0,4" weight="0.4296928117683054"/>
+                <Con from="0,5" weight="-0.010199100822290528"/>
+                <Con from="0,6" weight="-0.34441185212965447"/>
+            </Neuron>
+            <Neuron id="1,10" bias="-0.27144583051425203">
+                <Con from="0,0" weight="-0.5427002394735541"/>
+                <Con from="0,1" weight="0.36799606066662166"/>
+                <Con from="0,2" weight="0.04787860318392614"/>
+                <Con from="0,3" weight="0.40810342306661784"/>
+                <Con from="0,4" weight="-0.4366661082890284"/>
+                <Con from="0,5" weight="0.2560112943009395"/>
+                <Con from="0,6" weight="-0.47363020001658607"/>
+            </Neuron>
+            <Neuron id="1,11" bias="-0.4739520683544954">
+                <Con from="0,0" weight="-0.3784754740487795"/>
+                <Con from="0,1" weight="0.5885328180788799"/>
+                <Con from="0,2" weight="0.23933095574208285"/>
+                <Con from="0,3" weight="-0.07924953135007766"/>
+                <Con from="0,4" weight="-0.33432305784788"/>
+                <Con from="0,5" weight="0.6666011620790759"/>
+                <Con from="0,6" weight="-0.22171758906165528"/>
+            </Neuron>
+            <Neuron id="1,12" bias="0.16168653032444136">
+                <Con from="0,0" weight="0.22493146955644044"/>
+                <Con from="0,1" weight="-0.13242850276398563"/>
+                <Con from="0,2" weight="-0.6367329978652869"/>
+                <Con from="0,3" weight="-0.15820809983472647"/>
+                <Con from="0,4" weight="-0.6080788835973143"/>
+                <Con from="0,5" weight="-0.5667627198406446"/>
+                <Con from="0,6" weight="-0.03803378058322565"/>
+            </Neuron>
+            <Neuron id="1,13" bias="-0.7690127234339017">
+                <Con from="0,0" weight="-0.1587128992722323"/>
+                <Con from="0,1" weight="0.49938790454881754"/>
+                <Con from="0,2" weight="-0.15886296421794913"/>
+                <Con from="0,3" weight="-0.43671860385605493"/>
+                <Con from="0,4" weight="0.03560467732358181"/>
+                <Con from="0,5" weight="-0.09680660793674636"/>
+                <Con from="0,6" weight="-0.2876990670396697"/>
+            </Neuron>
+            <Neuron id="1,14" bias="-0.335764344033177">
+                <Con from="0,0" weight="0.6284994932872063"/>
+                <Con from="0,1" weight="-0.09731106101929718"/>
+                <Con from="0,2" weight="0.47293693750209814"/>
+                <Con from="0,3" weight="0.27014747664239"/>
+                <Con from="0,4" weight="-0.43692544384577103"/>
+                <Con from="0,5" weight="0.3101642989602638"/>
+                <Con from="0,6" weight="0.19212380243020064"/>
+            </Neuron>
+            <Neuron id="1,15" bias="-0.25685068676956235">
+                <Con from="0,0" weight="-0.480801973099951"/>
+                <Con from="0,1" weight="-0.42380011007737745"/>
+                <Con from="0,2" weight="-0.37477158225138624"/>
+                <Con from="0,3" weight="-0.36921735091480384"/>
+                <Con from="0,4" weight="-0.26787635109161695"/>
+                <Con from="0,5" weight="0.33413757191011506"/>
+                <Con from="0,6" weight="0.4466328539368383"/>
+            </Neuron>
+            <Neuron id="1,16" bias="-0.25266730559985634">
+                <Con from="0,0" weight="-0.3388068918328621"/>
+                <Con from="0,1" weight="-0.30316403472602516"/>
+                <Con from="0,2" weight="-0.048659303455307105"/>
+                <Con from="0,3" weight="-0.4498767946964347"/>
+                <Con from="0,4" weight="-3.643535777376629"/>
+                <Con from="0,5" weight="0.6303634901308762"/>
+                <Con from="0,6" weight="0.04357012292648168"/>
+            </Neuron>
+            <Neuron id="1,17" bias="-0.6154510796249036">
+                <Con from="0,0" weight="-0.17519577164849906"/>
+                <Con from="0,1" weight="0.0012340988899824188"/>
+                <Con from="0,2" weight="0.08362501627758721"/>
+                <Con from="0,3" weight="-0.5199106983275805"/>
+                <Con from="0,4" weight="-0.3819427005763466"/>
+                <Con from="0,5" weight="-0.28231578487015674"/>
+                <Con from="0,6" weight="0.5033255609119299"/>
+            </Neuron>
+            <Neuron id="1,18" bias="-0.2159265421936888">
+                <Con from="0,0" weight="0.04807707631797443"/>
+                <Con from="0,1" weight="-0.7302606699574916"/>
+                <Con from="0,2" weight="0.0903465129588215"/>
+                <Con from="0,3" weight="0.4562499522367258"/>
+                <Con from="0,4" weight="0.053861180449440896"/>
+                <Con from="0,5" weight="0.23918068339702925"/>
+                <Con from="0,6" weight="-0.5717541611229597"/>
+            </Neuron>
+            <Neuron id="1,19" bias="-0.1976562520711609">
+                <Con from="0,0" weight="-1.2739785219949495"/>
+                <Con from="0,1" weight="0.3876030490988502"/>
+                <Con from="0,2" weight="-0.8500442006152067"/>
+                <Con from="0,3" weight="0.3187367949106518"/>
+                <Con from="0,4" weight="0.11598496238317202"/>
+                <Con from="0,5" weight="0.056342263292535874"/>
+                <Con from="0,6" weight="-0.32586025689994114"/>
+            </Neuron>
+        </NeuralLayer>
+        <NeuralLayer numberOfNeurons="1" activationFunction="logistic">
+            <Neuron id="2,0" bias="-0.5046838650404027">
+                <Con from="1,0" weight="-0.1686845334126749"/>
+                <Con from="1,1" weight="-1.0560842467015554"/>
+                <Con from="1,2" weight="0.5798116852214573"/>
+                <Con from="1,3" weight="0.7057953328095076"/>
+                <Con from="1,4" weight="-0.2949163876875196"/>
+                <Con from="1,5" weight="-1.2379850604292386"/>
+                <Con from="1,6" weight="-0.7463389099639566"/>
+                <Con from="1,7" weight="-0.25614535922674575"/>
+                <Con from="1,8" weight="0.7385007068053078"/>
+                <Con from="1,9" weight="0.003649843441252513"/>
+                <Con from="1,10" weight="-0.008025046092164608"/>
+                <Con from="1,11" weight="-0.47339535929593024"/>
+                <Con from="1,12" weight="0.20550560997342943"/>
+                <Con from="1,13" weight="0.12236787964860456"/>
+                <Con from="1,14" weight="-0.3289808370202648"/>
+                <Con from="1,15" weight="0.25880001630562416"/>
+                <Con from="1,16" weight="0.11661489714398565"/>
+                <Con from="1,17" weight="0.368736964212424"/>
+                <Con from="1,18" weight="0.3041332935384887"/>
+                <Con from="1,19" weight="0.027323472407954442"/>
+            </Neuron>
+        </NeuralLayer>
+        <NeuralOutputs numberOfOutputs="1">
+            <NeuralOutput outputNeuron="2,0">
+                <DerivedField optype="continuous" dataType="double">
+                    <FieldRef field="result"/>
+                </DerivedField>
+            </NeuralOutput>
+        </NeuralOutputs>
+    </NeuralNetwork>
+</PMML>

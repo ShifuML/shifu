@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,7 +70,7 @@ public class CategoricalBinning extends AbstractBinning<String> {
      */
     @Override
     public void addData(String val) {
-        String fval = StringUtils.trimToEmpty(val);
+        String fval = (val == null ? "" : val);
         if(!isMissingVal(fval)) {
             if(isValid) {
                 categoricalVals.add(fval);
@@ -126,10 +127,10 @@ public class CategoricalBinning extends AbstractBinning<String> {
             categoricalVals.clear();
         }
 
-        String[] objStrArr = objValStr.split(Character.toString(FIELD_SEPARATOR), -1);
+        String[] objStrArr = CommonUtils.split(objValStr, Character.toString(FIELD_SEPARATOR));
         this.isValid = Boolean.valueOf(objStrArr[4]);
         if(objStrArr.length > 5 && StringUtils.isNotBlank(objStrArr[5])) {
-            String[] elements = objStrArr[5].split(Character.toString(SETLIST_SEPARATOR), -1);
+            String[] elements = CommonUtils.split(objStrArr[5], Character.toString(SETLIST_SEPARATOR));
             for(String element: elements) {
                 categoricalVals.add(element);
             }

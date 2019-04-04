@@ -340,6 +340,16 @@ public class EncogFloatEGBFile {
             this.headerBuffer.putFloat(input.length);
             this.headerBuffer.putFloat(ideal.length);
 
+            // add extra 8-bytes to make it occupy total 24 bytes header
+            this.headerBuffer.put((byte) '0');
+            this.headerBuffer.put((byte) '0');
+            this.headerBuffer.put((byte) '0');
+            this.headerBuffer.put((byte) '0');
+            this.headerBuffer.put((byte) '0');
+            this.headerBuffer.put((byte) '0');
+            this.headerBuffer.put((byte) '0');
+            this.headerBuffer.put((byte) '0');
+
             this.numberOfRecords = 0;
             this.recordCount = this.inputCount + this.idealCount + 1;
             this.recordSize = this.recordCount * EncogFloatEGBFile.FLOAT_SIZE;
