@@ -587,7 +587,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if (this.modelConfig.getNormalize().getNormType() == NormType.ZSCALE_INDEX) {
             // Running wide and deep
             globalConf.set("shifu.application.python-script-path",
-                    super.getPathFinder().getScriptPath("scripts/wnp_ssgd.py"));
+                    super.getPathFinder().getScriptPath("scripts/wnp_ssgd_not_embadding.py"));
             
             setSelectedColumnForWideDeep(globalConf);
         } else {

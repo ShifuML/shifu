@@ -16,6 +16,9 @@
  
 Shifu Change Log
 
+Changes for Shifu-0.13.0
+	* Integration of Tensorflow
+
 Changes for Shifu-0.11.2
     * Bug on GBT version when loading GBT model: if use static version, it will cause issue when loading multi GBT 
       models
