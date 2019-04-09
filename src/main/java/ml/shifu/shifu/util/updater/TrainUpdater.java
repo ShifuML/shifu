@@ -18,43 +18,8 @@ import org.apache.commons.collections.CollectionUtils;
  */
 public class TrainUpdater extends BasicUpdater {
 
-    private boolean isForSegs = false;
-
-    private List<String> segs;
-
     public TrainUpdater(ModelConfig modelConfig) throws IOException {
         super(modelConfig);
-
-        segs = modelConfig.getSegmentFilterExpressions();
-        if(segs.size() > 0) {
-            this.isForSegs = true;
-        }
-
-        this.setMeta = new HashSet<NSColumn>();
-        if(CollectionUtils.isNotEmpty(modelConfig.getMetaColumnNames())) {
-            for(String meta: modelConfig.getMetaColumnNames()) {
-                setMeta.add(new NSColumn(meta));
-                if(this.isForSegs) {
-                    for(int i = 0; i < segs.size(); i++) {
-                        setMeta.add(new NSColumn(meta + "_" + (i + 1)));
-                    }
-                }
-            }
-        }
-
-        setHybridColumns = new HashSet<NSColumn>();
-        hybridColumnNames = modelConfig.getHybridColumnNames();
-        if(hybridColumnNames != null && hybridColumnNames.size() > 0) {
-            for(Entry<String, Double> entry: hybridColumnNames.entrySet()) {
-                setHybridColumns.add(new NSColumn(entry.getKey()));
-                if(this.isForSegs) {
-                    for(int i = 0; i < segs.size(); i++) {
-                        setHybridColumns.add(new NSColumn(entry.getKey() + "_" + (i + 1)));
-                    }
-                }
-            }
-        }
-
     }
 
     @Override

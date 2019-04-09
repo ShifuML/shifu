@@ -265,7 +265,7 @@ public class ModelInspector {
         ValidateResult result = new ValidateResult(true);
 
         if(modelConfig.isClassification() && (modelConfig.getBinningMethod() == BinningMethod.EqualPositive
-                || modelConfig.getBinningMethod() == BinningMethod.EqualNegtive
+                || modelConfig.getBinningMethod() == BinningMethod.EqualNegative
                 || modelConfig.getBinningMethod() == BinningMethod.WeightEqualPositive
                 || modelConfig.getBinningMethod() == BinningMethod.WeightEqualNegative)) {
             ValidateResult tmpResult = new ValidateResult(false,
