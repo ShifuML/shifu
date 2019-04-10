@@ -502,6 +502,10 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
         this.serializationType = serializationType;
     }
 
+    public int getInputNum() {
+        return this.denseColumnIds.size() + this.wideColumnIds.size();
+    }
+
     public void updateWeights(WideAndDeep wnd) {
         this.initWeight(wnd);
     }

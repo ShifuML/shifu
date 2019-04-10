@@ -1019,6 +1019,10 @@ public final class CommonUtils {
         return "lr".equalsIgnoreCase(alg);
     }
 
+    public static boolean isWDLModel(String alg) {
+        return "wdl".equalsIgnoreCase(alg);
+    }
+
     public static boolean isRandomForestAlgorithm(String alg) {
         return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg);
     }
