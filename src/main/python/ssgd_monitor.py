@@ -31,7 +31,7 @@ BUILD_MODEL_BY_CONF_ENABLE = True
 REPLICAS_TO_AGGREGATE_RATIO = 1
 
 DELIMITER = '|'
-BATCH_SIZE = 100
+BATCH_SIZE = 128
 
 # read from env
 cluster_spec = json.loads(os.environ["CLUSTER_SPEC"])
