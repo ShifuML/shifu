@@ -5,7 +5,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.udf.NormalizeUDF.CategoryMissingNormType;
+import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.encog.ml.data.MLDataPair;

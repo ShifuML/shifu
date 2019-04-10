@@ -29,7 +29,8 @@ import ml.shifu.shifu.core.dtrain.wdl.weight.Zero;
  *
  * @author : Wu Devin (haifwu@paypal.com)
  */
-public interface WeightInitializer<SELF extends WeightInitializer> {
+public interface WeightInitializer<SELF extends WeightInitializer<?>> {
+
     enum InitMethod {
         /**
          * Init all weight with {@link Zero}
@@ -67,7 +68,9 @@ public interface WeightInitializer<SELF extends WeightInitializer> {
 
         /**
          * Get InitMethod from method name
-         * @param method the method name
+         * 
+         * @param method
+         *            the method name
          * @return InitMethod
          */
         public static InitMethod getInitMethod(String method) {
@@ -75,7 +78,7 @@ public interface WeightInitializer<SELF extends WeightInitializer> {
             if(method == null) {
                 return defaultMethod;
             }
-            for(InitMethod m : InitMethod.values()) {
+            for(InitMethod m: InitMethod.values()) {
                 if(m.name().toLowerCase().equals(method.toLowerCase())) {
                     return m;
                 }
@@ -87,14 +90,16 @@ public interface WeightInitializer<SELF extends WeightInitializer> {
     /**
      * Init weight according to the method
      *
-     * @param method, the init method
+     * @param method,
+     *            the init method
      */
     void initWeight(InitMethod method);
 
     /**
      * init weight according to an existing model
      *
-     * @param updateModel model to copy weight from
+     * @param updateModel
+     *            model to copy weight from
      */
     void initWeight(SELF updateModel);
 

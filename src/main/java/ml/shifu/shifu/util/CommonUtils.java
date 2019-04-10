@@ -1567,6 +1567,49 @@ public final class CommonUtils {
     }
 
     /**
+     * Simple name without name space part. For segment expansion, only retain raw column name but not current column
+     * name.
+     *
+     * @param columnConfig
+     *            the column configuration
+     * @param columnConfigList
+     *            the column config list inculding all segment expansion columns if have
+     * @param segmentExpansions
+     *            segment expansion expressions
+     * @param dataSetHeaders
+     *            data set headers for all raw columns
+     * @return the simple name not including name space part
+     */
+    public static String getSimpleColumnName(ColumnConfig columnConfig, List<ColumnConfig> columnConfigList,
+            List<String> segmentExpansions, String[] dataSetHeaders) {
+        if(segmentExpansions == null || segmentExpansions.size() == 0) {
+            return getSimpleColumnName(columnConfig.getColumnName());
+        }
+
+        // if(columnConfigList.size() != dataSetHeaders.size() * (segmentExpansions.size() + 1)) {
+        // throw new IllegalStateException(
+        // "Segment expansion enabled but # of columns in ColumnConfig.json is not consistent with segment expansion
+        // files.");
+        // }
+
+        if(columnConfig.getColumnNum() >= dataSetHeaders.length) {
+            return getSimpleColumnName(
+                    columnConfigList.get(columnConfig.getColumnNum() % dataSetHeaders.length).getColumnName());
+        } else {
+            return getSimpleColumnName(columnConfig.getColumnName());
+        }
+    }
+
+    public static String getSimpleColumnName(String columnName) {
+        // remove name-space in column name to make it be called by simple name
+        if(columnName.contains(CommonConstants.NAMESPACE_DELIMITER)) {
+            columnName = columnName.substring(columnName.lastIndexOf(CommonConstants.NAMESPACE_DELIMITER)
+                    + CommonConstants.NAMESPACE_DELIMITER.length(), columnName.length());
+        }
+        return columnName;
+    }
+    
+    /**
      * Return first two lines split string array. This is used to detect data schema and check if data
      * schema is the
      * same as data.

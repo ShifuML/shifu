@@ -17,7 +17,7 @@ package ml.shifu.shifu.core;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
-import ml.shifu.shifu.udf.NormalizeUDF.CategoryMissingNormType;
+import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
 import ml.shifu.shifu.util.BinUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -255,6 +255,8 @@ public class Normalizer {
                 return OneHotNormalize(config, raw);
             case ZSCALE_ONEHOT:
                 return zscaleOneHotNormalize(config, raw, cutoff, categoryMissingNormType);
+            case ZSCALE_ORDINAL:
+                return zscaleOrdinalNormalize(config, raw, cutoff, categoryMissingNormType);
             case DISCRETE_ZSCORE:
             case DISCRETE_ZSCALE:
                 return discreteZScoreNormalize(config, raw, cutoff, categoryMissingNormType);
@@ -387,6 +389,17 @@ public class Normalizer {
         }
         normData[binNum] = 1.0d;
         return Arrays.asList(normData);
+    }
+
+    private static List<Double> zscaleOrdinalNormalize(ColumnConfig config, Object raw, Double cutoff,
+            CategoryMissingNormType categoryMissingNormType) {
+        if(config.isNumerical()) {
+            return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, false);
+        } else {
+            int binNum = BinUtils.getBinNum(config, raw);
+            Double[] normVals = new Double[]{(double) binNum};
+            return Arrays.asList(normVals);
+        }
     }
 
     private static List<Double> zscaleOneHotNormalize(ColumnConfig config, Object raw, Double cutoff,

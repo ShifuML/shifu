@@ -23,7 +23,7 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import ml.shifu.shifu.udf.NormalizeUDF.PrecisionType;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import java.io.IOException;
 
 /**
