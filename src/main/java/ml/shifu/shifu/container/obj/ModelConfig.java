@@ -30,13 +30,11 @@ import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
-import org.hsqldb.lib.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 
 import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
@@ -666,25 +664,33 @@ public class ModelConfig {
     
     @JsonIgnore
 	public Map<String, Integer> getCategoricalColumnHashSeedConf() throws IOException {
-		String defaultCategoricalColumnHashFile = Constants.COLUMN_META_FOLDER_NAME + File.separator
-				+ Constants.DEFAULT_CATEGORICAL_HASH_FILE;
-		if (ShifuFileUtils.isFileExists(defaultCategoricalColumnHashFile, SourceType.LOCAL)) {
-			LOG.warn(
-					"'dataSet::categoricalColumnHashSeedFile' is not set while default categoricalColumnHashSeedFile: {} is found, default categorical file will be used.",
-					defaultCategoricalColumnHashFile);
-		} else {
-			LOG.warn(
-					"'dataSet::categoricalColumnHashSeedFile' is not set and default categoricalColumnHashSeedFile: {} is not found, no categorical config files, please check and set categorical config file in 'dataSet::categoricalColumnNameFile'.",
-					defaultCategoricalColumnHashFile);
-			return new HashMap<String, Integer>();
-		}
-		List<String> hashPairs = CommonUtils.readConfFileIntoList(defaultCategoricalColumnHashFile, SourceType.LOCAL);
+        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter()
+                : this.getHeaderDelimiter();
+        String categoricalHashSeedConfFile = dataSet.getCategoricalHashSeedConfFile();
+        if(StringUtils.isBlank(categoricalHashSeedConfFile)) {
+    		String defaultCategoricalHashFile = Constants.COLUMN_META_FOLDER_NAME + File.separator
+    				+ Constants.DEFAULT_CATEGORICAL_HASH_FILE;
+            if(ShifuFileUtils.isFileExists(defaultCategoricalHashFile, SourceType.LOCAL)) {
+            	categoricalHashSeedConfFile = defaultCategoricalHashFile;
+                LOG.warn(
+                        "'dataSet::categoricalColumnHashSeedConfFile' is not set while default categoricalColumnHashSeedConfFile: {} is found, default categorical file will be used.",
+                        defaultCategoricalHashFile);
+            } else {
+                LOG.warn(
+                        "'dataSet::categoricalColumnHashSeedConfFile' is not set and default categoricalColumnHashSeedConfFile: {} is not found, no categorical config files, please check and set categorical config file in 'dataSet::categoricalColumnNameFile'.",
+                        defaultCategoricalHashFile);
+                return new HashMap<String,Integer>();
+            }
+        }
+
+		List<String> hashPairs = CommonUtils.readConfFileIntoList(categoricalHashSeedConfFile, SourceType.LOCAL);
 		Map<String, Integer> columnHashSeeds = new HashMap<String, Integer>();
 		try {
 			for (String pair : hashPairs) {
-				if (StringUtil.isEmpty(pair))
+				LOG.info("seedvalues:"+pair);
+				if (StringUtils.isEmpty(pair))
 					continue;
-				String[] values = pair.split(Constants.DEFAULT_DELIMITER);
+                String[] values = CommonUtils.split(pair, delimiter);
 				if (values != null && values.length == 2) {
 					columnHashSeeds.put(CommonUtils.normColumnName(values[0]), Integer.parseInt(values[1]));
 				}

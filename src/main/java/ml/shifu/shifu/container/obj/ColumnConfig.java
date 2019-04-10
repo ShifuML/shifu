@@ -109,7 +109,6 @@ public class ColumnConfig {
      * ---------------------------------------------------------------------------
      */
 
-    @JsonIgnore
     public int getHashSeed() {
 		return hashSeed;
 	}
@@ -546,6 +545,7 @@ public class ColumnConfig {
         output.writeUTF(columnFlag.toString());
         output.writeBoolean(finalSelect);
         output.writeDouble(hybridThreshold);
+        output.writeInt(hashSeed);
         columnStats.write(output);
         columnBinning.write(output);
         if (sampleValues == null || sampleValues.isEmpty()) {
@@ -571,6 +571,7 @@ public class ColumnConfig {
         columnFlag = ColumnFlag.valueOf(input.readUTF());
         finalSelect = input.readBoolean();
         hybridThreshold = input.readDouble();
+        hashSeed = input.readInt();
         columnStats = new ColumnStats();
         columnStats.read(input);
         columnBinning = new ColumnBinning();
