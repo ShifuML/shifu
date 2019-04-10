@@ -300,10 +300,10 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 isFirst = true;
                 nodeStatsMap = params.getNodeStatsMap();
             } else {
-                Map<Integer, NodeStats> currNodeStatsmap = params.getNodeStatsMap();
+                Map<Integer, NodeStats> currNodeStatsMap = params.getNodeStatsMap();
                 for(Entry<Integer, NodeStats> entry: nodeStatsMap.entrySet()) {
                     NodeStats resultNodeStats = entry.getValue();
-                    mergeNodeStats(resultNodeStats, currNodeStatsmap.get(entry.getKey()));
+                    mergeNodeStats(resultNodeStats, currNodeStatsMap.get(entry.getKey()));
                 }
                 // set to null after merging, release memory at the earliest stage
                 params.setNodeStatsMap(null);
