@@ -93,6 +93,10 @@ import ml.shifu.shifu.util.ValueVisitor;
 public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
     private static Logger log = LoggerFactory.getLogger(MapReducerStatsWorker.class);
+
+    public static final Long MINIMUM_DISTINCT_CNT = 2L;
+    public static final Long MAXIMUM_DISTINCT_CNT = 1000L;
+
     protected PathFinder pathFinder = null;
 
     public MapReducerStatsWorker(BasicModelProcessor processor, ModelConfig modelConfig,
@@ -596,12 +600,12 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(columnConfigList,
                 modelConfig.getPsiColumnName());
 
-        if(columnConfig == null || (!columnConfig.isMeta() && !columnConfig.isCategorical())) {
-            log.warn(
-                    "Unable to use the PSI column {} specify in ModelConfig to compute PSI\n"
-                            + "neither meta nor categorical type",
-                    columnConfig != null ? columnConfig.getColumnName() : "unknown");
-
+        if(columnConfig == null || isBadPSIColumn(columnConfig.getColumnStats().getDistinctCount())) {
+            log.error("Unable to use the PSI column {} specify in ModelConfig to compute PSI\n"
+                            + "the distinct count {} should be [2, 1000]",
+                    columnConfig != null ? columnConfig.getColumnName() : "unknown",
+                    columnConfig != null ? (columnConfig.getColumnStats().getDistinctCount() == null ?
+                            "null" : columnConfig.getColumnStats().getDistinctCount()): "null");
             return;
         }
 
@@ -654,4 +658,9 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         log.info("The Unit Stats is stored in - {}.", ccUnitStatsFile);
         log.info("Run PSI - done.");
     }
+
+    private boolean isBadPSIColumn(Long distinctCount) {
+        return (distinctCount == null || distinctCount < MINIMUM_DISTINCT_CNT || distinctCount > MAXIMUM_DISTINCT_CNT);
+    }
+
 }

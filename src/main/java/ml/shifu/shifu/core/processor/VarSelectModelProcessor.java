@@ -209,6 +209,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                             // copy training log to SE train.log
                             ShifuFileUtils.move(trainLogFile,
                                     new File(pathFinder.getVarSelDir(), trainLogFile).getPath(), SourceType.LOCAL);
+                            // copy models to varsel directory
+                            copyModelSpec(pathFinder.getModelsPath(SourceType.LOCAL), pathFinder.getVarSelDir(), (i-1));
 
                             String varSelectMSEOutputPath = pathFinder
                                     .getVarSelectMSEOutputPath(modelConfig.getDataSet().getSource());
@@ -946,7 +948,23 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
         return map; // should be a bug, if it always return null
     }
-    
+
+    /**
+     * Coopy model spec under modelsPath to varSelDir folder
+     * @param modelsPath - model spec path, like ./models
+     * @param varSelDir - valsel directory
+     * @param i - round of iteration
+     * @throws IOException
+     */
+    private void copyModelSpec(String modelsPath, String varSelDir, int i) throws IOException {
+        File sourceFolder = new File(modelsPath);
+        File[] modelFiles = sourceFolder.listFiles();
+        for ( File mf : modelFiles ) {
+            ShifuFileUtils.copy(mf.getPath(),
+                    varSelDir + File.separator + mf.getName() + "." + i, SourceType.LOCAL);
+        }
+    }
+
     @Override
     protected void clearUp(ModelStep step) throws IOException {
         try {
