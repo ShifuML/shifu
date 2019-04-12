@@ -381,7 +381,7 @@ def main(_):
             ctf = tl.generate_chrome_trace_format()
             logging.info("ctf:" + str(ctf))
 
-            f = tf.gfile.GFile(final_model_path + "/timeline.json", mode="w+")
+            f = tf.gfile.GFile(tmp_model_path + "/timeline.json", mode="w+")
             f.write(ctf)
             time.sleep(40) # grace period to wait before closing session
 
