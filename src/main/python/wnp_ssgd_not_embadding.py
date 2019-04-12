@@ -22,6 +22,9 @@ import json
 import socket
 from tensorflow.python.client import timeline
 from tensorflow.contrib.layers.python.layers import embedding_ops
+from tensorflow.contrib.opt.python.training import lazy_adam_optimizer
+from tensorflow.python.ops import math_ops
+from tensorflow.python.framework import dtypes
 
 HIDDEN_NODES_COUNT = 20
 VALID_TRAINING_DATA_RATIO = 0.1
@@ -67,6 +70,21 @@ def embedding_lookup(embedding, ids):
     return tf.sparse_tensor_dense_matmul(sparse, embedding, adjoint_a=True)
 '''
 
+
+def embedding_lookup(embedding, ids):
+    batch_size = tf.shape(ids, out_type=tf.int64)
+    logging.info("ids shape: " + str(tf.shape(ids)))
+    row_number = tf.range(0, batch_size[0], 1, tf.int64)
+    logging.info("row_number shape: " + str(tf.shape(row_number)))
+    indices = tf.stack([row_number, ids], axis=1)
+    logging.info("indices shape: " + str(tf.shape(indices)))
+    values = tf.ones(tf.cast(batch_size, tf.int32), tf.int64)
+    logging.info("values shape: " + str(tf.shape(values)))
+    sparse = tf.SparseTensor(indices=indices, values=values, dense_shape=[batch_size[0], embedding.shape[0]])
+    logging.info("sparse shape: " + str(tf.shape(sparse)))
+    return embedding_ops.embedding_lookup_sparse_with_distributed_aggregation(embedding, sparse, None)
+
+
 # vocabs is each category number of possible categories [3,3] for example.
 def wide_model(numeric_input, category_input, vocabs):
     transpose_category_input = tf.transpose(category_input)
@@ -81,10 +99,11 @@ def wide_model(numeric_input, category_input, vocabs):
         # Pick one column from category input
         col = tf.gather(transpose_category_input, [i])[0]
         #col = tf.nn.embedding_lookup(transpose_category_input, [i])[0]
-
+        #logging.info("col shape: " + str(col.shape))
         # Same as make [0001]*[w1,w2,w3,w4] = lookup w4
         #embedded_col = embedding_lookup(tf.identity(embedding), col)  # number * embedding output number
-        embedded_col = embedding_ops.embedding_lookup_unique(embedding, col)
+        #embedded_col = embedding_ops.embedding_lookup_sparse_with_distributed_aggregation(embedding, col, None)#idx=col, segment_ids=tf.range(0, 8, 1, tf.int32))
+        embedded_col = embedding_lookup(embedding, col)
 
         if category_sum is None:
             category_sum = embedded_col
@@ -114,8 +133,9 @@ def deep_model(numeric_input, category_input, vocabs, hidden1, hidden2, hidden3)
         col = tf.gather(transpose_category_input, [i])[0]
         #col = tf.nn.embedding_lookup(transpose_category_input, [i])[0]
 
-        embedding_category = embedding_ops.embedding_lookup_unique(embedding, col)
+        #embedding_category = embedding_ops.embedding_lookup_sparse_with_distributed_aggregation(embedding, category_input, None)#, idx=col, segment_ids=tf.range(0, 8, 1, tf.int32))#math_ops.cast(col, dtypes.int32))
         #embedding_category = embedding_lookup(tf.identity(embedding), col)  # batch_size*embedding_output_cnt
+        embedding_category = embedding_lookup(embedding, col)
 
         numeric_input = tf.concat([numeric_input, embedding_category], 1)
 
@@ -179,7 +199,8 @@ def model(numeric_input, category_input, y_, sample_weight, model_conf, vocabs):
         learning_rate = 0.003
     opt = tf.train.SyncReplicasOptimizer(
         #tf.train.GradientDescentOptimizer(learning_rate),
-        tf.train.AdamOptimizer(learning_rate=learning_rate),
+        #tf.train.AdamOptimizer(learning_rate=learning_rate),
+        lazy_adam_optimizer.LazyAdamOptimizer(learning_rate= learning_rate),
         replicas_to_aggregate=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE * REPLICAS_TO_AGGREGATE_RATIO),
         total_num_replicas=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE),
         name="shifu_sync_replicas")
@@ -570,10 +591,10 @@ def export_generic_config(export_dir):
     config_json_str += "        \"shifu_category_input_0\"\n"
     config_json_str += "      ],\n"
     config_json_str += "    \"properties\": {\n"
-    config_json_str += "         \"algorithm\": \"tensorflow\",\n"
+    config_json_str += "         \"algorithm\": \"tensorflow_wnp\",\n"
     config_json_str += "         \"tags\": [\"serve\"],\n"
     config_json_str += "         \"outputnames\": \"shifu_output_0\",\n"
-    config_json_str += "         \"normtype\": \"ZSCALE\"\n"
+    config_json_str += "         \"normtype\": \"ZSCALE_INDEX\"\n"
     config_json_str += "      }\n"
     config_json_str += "}"
     f = tf.gfile.GFile(export_dir + "/GenericModelConfig.json", mode="w+")
