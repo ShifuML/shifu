@@ -133,6 +133,11 @@ public interface CommonConstants {
     public static final String TF_ALG = "TF.alg";
 
 
+    /* --------------   varsel Constants  ---------------------- */
+    public static final String OP_METRIC = "OpMetric";
+    public static final String OP_UNIT = "OpUnit";
+
+
     /**
      * Version 2: support final selected columns
      * Version 3: in Node to change wgtCnt float to double

@@ -211,6 +211,8 @@ public interface Constants {
 
     public static final String FILTER_BY_SE = "SE";
 
+    public static final String FILTER_BY_SC = "SC";
+
     public static final String FILTER_BY_VOTED = "V";
 
     public static final String FILTER_BY_FI = "FI";
