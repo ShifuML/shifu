@@ -266,6 +266,13 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
         this.inputsMLData.setData(this.inputs);
         // compute candidate model score , cache first layer of sum values in such call method, cache flag here is true
         double candidateModelScore = cacheNetwork.compute(inputsMLData, true, -1).getData()[0];
+        // output the actual score as column id -1, then user could know the actual catch rate
+        // before dropping any variables
+        ColumnScore actualScore = new ColumnScore();
+        actualScore.setColumnTag((int)this.outputs[0]);
+        actualScore.setWeight(weight);
+        actualScore.setSensitivityScore(candidateModelScore);
+        context.write(new LongWritable(-1), actualScore);
 
         for(int i = 0; i < this.inputs.length; i++) {
             // cache flag is false to reuse cache sum of first layer of values.
@@ -273,7 +280,6 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
             ColumnScore columnScore = new ColumnScore();
             columnScore.setColumnTag((int)this.outputs[0]);
             columnScore.setWeight(weight);
-            // columnScore.setRealScore(candidateModelScore); // don't need save real score
             columnScore.setSensitivityScore(currentModelScore);
             context.write(new LongWritable(this.columnIndexes[i]), columnScore);
             if(this.recordCount % 1000 == 0) {

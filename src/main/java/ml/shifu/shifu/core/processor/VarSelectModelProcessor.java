@@ -219,6 +219,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                                 ShifuFileUtils.copyToLocal(
                                         new SourceFile(varSelectMSEOutputPath, modelConfig.getDataSet().getSource()),
                                         Constants.HADOOP_PART_PREFIX, varSelMSEHistPath);
+                                ShifuFileUtils.sortFile(varSelMSEHistPath, "\t", 2, true);
                             } else {
                                 ShifuFileUtils.copyToLocal(
                                         new SourceFile(varSelectMSEOutputPath, modelConfig.getDataSet().getSource()),
@@ -1005,7 +1006,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         List<Integer> candidateColumnIds = new ArrayList<>();
         for (VarSelPerf perf : varSelPerfList) {
-            candidateColumnIds.add(perf.columnId);
+            if (perf.columnId > - 1) { // remove overall column
+                candidateColumnIds.add(perf.columnId);
+            }
         }
         
         System.out.println(candidateColumnIds);
@@ -1349,10 +1352,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             line = StringUtils.trimToEmpty(line);
             String[] fields = line.split("\t");
             VarSelPerf perf = null;
-            if (fields != null && fields.length == 2) {
+            if (fields != null && fields.length == 3) {
                 perf = new VarSelPerf();
                 perf.columnId = Integer.parseInt(fields[0]);
-                perf.sensitivityPerf = Double.parseDouble(fields[1]);
+                perf.sensitivityPerf = Double.parseDouble(fields[2]);
             }
             return perf;
         }

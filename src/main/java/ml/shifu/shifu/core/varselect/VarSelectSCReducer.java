@@ -36,6 +36,7 @@ import java.util.List;
 public class VarSelectSCReducer extends Reducer<LongWritable, ColumnScore, LongWritable, Text> {
 
     private final static Logger LOG = LoggerFactory.getLogger(VarSelectSCReducer.class);
+    private final static String OVERALL = "Overall_NoColumnDrop";
 
     /**
      * Model Config read from HDFS
@@ -128,7 +129,9 @@ public class VarSelectSCReducer extends Reducer<LongWritable, ColumnScore, LongW
         }
 
         VarSelPerfGenerator generator = new VarSelPerfGenerator(columnScores, this.opMetric, this.opUnit);
-        Text output = new Text(Double.toString(generator.getSensitivityPerf()));
+        ColumnConfig columnConfig = CommonUtils.getColumnConfig(this.columnConfigList, (int)key.get());
+        String name = ((columnConfig == null) ? OVERALL : columnConfig.getColumnName());
+        Text output = new Text(name + "\t" + Double.toString(generator.getSensitivityPerf()));
         context.write(key, output);
     }
 
