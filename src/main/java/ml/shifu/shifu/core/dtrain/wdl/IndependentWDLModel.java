@@ -176,6 +176,20 @@ public class IndependentWDLModel {
     }
 
     public float[] compute(double[] data) {
+        if(data == null) {
+            return null;
+        }
+        float[] fData = new float[data.length];
+        for(int i = 0; i < data.length; i++) {
+            fData[i] = (float) data[i];
+        }
+        return compute(fData);
+    }
+
+    public float[] compute(float[] data) {
+        if(data == null) {
+            return null;
+        }
         return compute(getDenseInputs(data), getEmbedInputs(data), getWideInputs(data));
     }
 
@@ -340,7 +354,7 @@ public class IndependentWDLModel {
         return embedInputs;
     }
 
-    private List<SparseInput> getEmbedInputs(double[] data) {
+    private List<SparseInput> getEmbedInputs(float[] data) {
         List<SparseInput> embedInputs = new ArrayList<>();
         for(int columnId: this.wnd.getEmbedColumnIds()) {
             if(columnId < data.length) {
@@ -372,13 +386,13 @@ public class IndependentWDLModel {
         return numericalValues;
     }
 
-    private float[] getDenseInputs(double[] data) {
+    private float[] getDenseInputs(float[] data) {
         List<Integer> denseColumnIds = this.wnd.getDenseColumnIds();
         float[] numericalValues = new float[denseColumnIds.size()];
         for(int i = 0; i < numericalValues.length; i++) {
             int index = denseColumnIds.get(i);
             if(index < data.length) {
-                numericalValues[i] = (float) data[index];
+                numericalValues[i] = data[index];
             } else {
                 numericalValues[i] = getMissingNumericalValue(index);
             }
@@ -405,7 +419,7 @@ public class IndependentWDLModel {
         return wideInputs;
     }
 
-    private List<SparseInput> getWideInputs(double[] data) {
+    private List<SparseInput> getWideInputs(float[] data) {
         List<SparseInput> wideInputs = new ArrayList<>();
         for(int columnId: this.wnd.getWideColumnIds()) {
             if(columnId < data.length) {

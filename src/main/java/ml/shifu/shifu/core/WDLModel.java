@@ -19,10 +19,12 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import org.encog.ml.BasicML;
-import org.encog.ml.MLRegression;
 import org.encog.ml.data.MLData;
 import org.encog.ml.data.basic.BasicMLData;
 
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLData;
+import ml.shifu.shifu.core.dtrain.dataset.FloatMLData;
+import ml.shifu.shifu.core.dtrain.wdl.FloatMLRegression;
 import ml.shifu.shifu.core.dtrain.wdl.IndependentWDLModel;
 
 /**
@@ -31,7 +33,7 @@ import ml.shifu.shifu.core.dtrain.wdl.IndependentWDLModel;
  * 
  * @author juguo
  */
-public class WDLModel extends BasicML implements MLRegression {
+public class WDLModel extends BasicML implements FloatMLRegression {
 
     /**
      * WDL model instance without dependency on encog.
@@ -61,6 +63,11 @@ public class WDLModel extends BasicML implements MLRegression {
             dRes[i] = result[i];
         }
         return new BasicMLData(dRes);
+    }
+
+    @Override
+    public FloatMLData compute(FloatMLData input) {
+        return new BasicFloatMLData(independentWDLModel.compute(input.getData()));
     }
 
     @Override
