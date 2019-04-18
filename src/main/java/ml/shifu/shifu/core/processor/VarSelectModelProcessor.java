@@ -26,10 +26,13 @@ import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
 import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.VariableSelector;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.dvarsel.*;
 import ml.shifu.shifu.core.dvarsel.wrapper.CandidateGenerator;
@@ -49,6 +52,7 @@ import ml.shifu.shifu.util.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.jexl2.JexlException;
 import org.apache.commons.lang.StringUtils;
@@ -73,10 +77,7 @@ import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.Reader;
+import java.io.*;
 import java.util.*;
 
 /**
@@ -146,6 +147,27 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     log.info("-----  Done -----");
                 } else {
                     log.warn("No variables auto filter history is found.");
+                }
+            } else if(getVarSelFile() != null) {
+                String varselFile = getVarSelFile();
+                Set<String> toSelectColumnSet = guessSelectColumnSet(varselFile);
+                int selectVarsCnt = 0;
+                if (CollectionUtils.isNotEmpty(toSelectColumnSet)) {
+                    for (ColumnConfig columnConfig : this.columnConfigList) {
+                        // reset firstly
+                        columnConfig.setFinalSelect(false);
+                        // columnConfig.setColumnFlag(null);
+
+                        // select if specified
+                        if (toSelectColumnSet.contains(columnConfig.getColumnName())) {
+                            log.info("variable {} is selected.", columnConfig.getColumnName());
+                            columnConfig.setFinalSelect(true);
+                            selectVarsCnt ++;
+                        }
+                    }
+                    log.info("Totally, there are {} variables are selected based on {}", selectVarsCnt, varselFile);
+                } else {
+                    log.warn("Illegal file  - {}, or there is no variables in it.", varselFile);
                 }
             } else {
                 // sync to make sure load from hdfs config is consistent with local configuration
@@ -361,6 +383,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     public boolean getIsRecoverAuto() {
         return getBooleanParam(this.otherConfigs, Constants.IS_TO_RECOVER_AUTO);
+    }
+
+    public String getVarSelFile() {
+        return getStringParam(this.otherConfigs, Constants.VAR_SEL_FILE);
     }
 
     private void validateParameters() throws Exception {
@@ -1308,6 +1334,51 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             corr[i - 2] = Double.parseDouble(columns[i].trim());
         }
         return corr;
+    }
+
+    private Set<String> guessSelectColumnSet(String varselFile) throws IOException {
+        Set<String> toSelectedVars = new HashSet<>();
+
+        if (varselFile.endsWith("." + Constants.NN.toLowerCase())) {
+            // 1. user specify .nn file as input
+            List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(varselFile, ModelTrainConf.ALGORITHM.NN);
+            if (CollectionUtils.isNotEmpty(models)) {
+                BasicML model = models.get(0);
+                if (model instanceof BasicFloatNetwork) {
+                    Set<Integer> featureSets = ((BasicFloatNetwork) model).getFeatureSet();
+                    for (ColumnConfig columnConfig : this.columnConfigList) {
+                        if (featureSets.contains(columnConfig.getColumnNum())) {
+                            toSelectedVars.add(columnConfig.getColumnName());
+                        }
+                    }
+                }
+            }
+        } else if (varselFile.endsWith("." + Constants.GBT.toLowerCase())
+                || varselFile.endsWith("." + Constants.RF.toLowerCase())) {
+            // 2. user specify .gbt or .rf file as input
+            IndependentTreeModel treeModel = IndependentTreeModel.loadFromStream(new FileInputStream(varselFile));
+            toSelectedVars.addAll(treeModel.getNumNameMapping().values());
+        } else if (varselFile.startsWith(Constants.COLUMN_CONFIG_JSON_FILE_NAME)) {
+            List<ColumnConfig> srcColumnConfigs = CommonUtils.loadColumnConfigList(varselFile, SourceType.LOCAL);
+            for (ColumnConfig columnConfig : srcColumnConfigs) {
+                if (columnConfig.isFinalSelect()) {
+                    toSelectedVars.add(columnConfig.getColumnName());
+                }
+            }
+        } else if (varselFile.endsWith(".txt") || varselFile.endsWith(".vars") || varselFile.endsWith(".names")) {
+            // 3. user specify .txt, .vars or .names file as input
+            List<String> vars = FileUtils.readLines(new File(varselFile));
+            for (String var : vars ) {
+                String fvar = StringUtils.trimToEmpty(var);
+                if (fvar.startsWith("#") || fvar.startsWith("//")) {
+                    continue; // skip comments
+                } else {
+                    toSelectedVars.add(fvar);
+                }
+            }
+        }
+
+        return toSelectedVars;
     }
 
     /**

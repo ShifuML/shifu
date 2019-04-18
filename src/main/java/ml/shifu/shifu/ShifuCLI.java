@@ -112,6 +112,7 @@ public class ShifuCLI {
     private static final String FILTER_AUTO = "autofilter";
     private static final String RECOVER_AUTO = "recoverauto";
     private static final String RECURSIVE = "r";
+    private static final String VAR_SEL_FILE = "f";
 
     // for evaluation
     private static final String LIST = "list";
@@ -254,6 +255,7 @@ public class ShifuCLI {
                     params.put(Constants.IS_TO_FILTER_AUTO, cmd.hasOption(FILTER_AUTO));
                     params.put(Constants.IS_TO_RECOVER_AUTO, cmd.hasOption(RECOVER_AUTO));
                     params.put(Constants.RECURSIVE_CNT, cmd.getOptionValue(RECURSIVE));
+                    params.put(Constants.VAR_SEL_FILE, cmd.getOptionValue(VAR_SEL_FILE));
 
                     // variable selected step
                     status = selectModelVar(params);
@@ -721,6 +723,8 @@ public class ShifuCLI {
                 .withDescription("Recover auto filtered variables from history.").create(RECOVER_AUTO);
         Option opt_recursive = OptionBuilder.hasArg().withDescription("Run variable selection recursively")
                 .create(RECURSIVE);
+        Option opt_varsel_file = OptionBuilder.hasArg().withDescription("Run variable selection based on file")
+                .create(VAR_SEL_FILE);
 
         Option opt_correlation = OptionBuilder.hasArg(false)
                 .withDescription("Compute correlation value for all column pairs.").create(CORRELATION);
@@ -780,6 +784,7 @@ public class ShifuCLI {
         opts.addOption(opt_filter_auto);
         opts.addOption(opt_recover_auto);
         opts.addOption(opt_recursive);
+        opts.addOption(opt_varsel_file);
 
         opts.addOption(opt_eval);
         opts.addOption(opt_init);
@@ -836,6 +841,7 @@ public class ShifuCLI {
                 "\tvarselect/varsel -autofilter            Auto filter variables by MissingRate, KS/IV, and Correlation.");
         System.out.println("\tvarselect/varsel -recoverauto           Recover those variables that are auto-filtered.");
         System.out.println("\tvarselect/varsel -r                     Run variable selection recursively.");
+        System.out.println("\tvarselect/varsel -f <file>              Run variable selection based on some file. The file could be raw file, model spec or ColumnConfig.json.");
         System.out.println("\tnormalize/norm/transform [-shuffle]     Normalize the columns with finalSelect as true.");
         System.out.println("\ttrain [-dry] [-shuffle]                 Train the model with the normalized data.");
         System.out.println("\tposttrain                               Post-process data after training models.");
