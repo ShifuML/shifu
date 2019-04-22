@@ -3,10 +3,11 @@
 
 <configuration>
 
+
   <!-- Application configurations -->
   <property>
     <description>Default queue to submit to YARN.</description>
-    <name>shifu.yarn.queue</name>
+    <name>shifu.application.yarn.queue</name>
     <value>default</value>
   </property>
 
@@ -45,27 +46,9 @@
     <name>shifu.application.glibc-binary-path</name>
     <value>/x/home/website/glibc2.17</value>
   </property>
-  
-    <property>
-    <description>The trining python code path</description>
-    <name>shifu.application.python-script-path</name>
-    <value>../scripts/ssgd_monitor.py</value>
-  </property>
-
-	<property>
-    <description>shell to trigger python script</description>
-    <name>shifu.application.python-shell-path</name>
-    <value>../bin/dist_pytrain.sh</value>
-  </property>
-
-    <property>
-    <description>Training data path on hdfs</description>
-    <name>shifu.application.training-data-path</name>
-    <!-- <value>/user/pengzhang/ModelSets/cam2015-BNN/tmp/NormalizedData/</value> -->
-    <value>/user/webai/tmp/data/</value>
-  </property>
 
   <!-- Task configurations -->
+  <!-- Could change by User -->
   <property>
     <description>JVM opts for each TaskExecutor.</description>
     <name>shifu.task.executor.jvm.opts</name>
@@ -104,22 +87,25 @@
   </property>
 
   <!-- PS configurations -->
+  <!-- Could change by User -->
   <property>
     <description>Parameter server memory size, requested as a string (e.g. '2g' or '2048m').</description>
     <name>shifu.ps.memory</name>
     <value>4g</value>
   </property>
 
+  <!-- Could change by User -->
   <property>
     <description>Number of vcores per parameter server.</description>
     <name>shifu.ps.vcores</name>
     <value>2</value>
   </property>
 
+  <!-- Could change by User -->
   <property>
     <description>Number of parameter servers to request.</description>
     <name>shifu.ps.instances</name>
-    <value>2</value>
+    <value>8</value>
   </property>
 <!-- 
   <property>
@@ -135,12 +121,14 @@
     <value>0</value>
   </property>
 
+<!-- Could change by User -->
   <property>
     <description>Worker memory size, requested as a string (e.g. '2g' or '2048m').</description>
     <name>shifu.worker.memory</name>
     <value>10g</value>
   </property>
 
+<!-- Could change by User -->
   <property>
     <description>Number of vcores per worker.</description>
     <name>shifu.worker.vcores</name>

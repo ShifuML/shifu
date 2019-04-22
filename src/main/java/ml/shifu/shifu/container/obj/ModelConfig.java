@@ -687,7 +687,6 @@ public class ModelConfig {
 		Map<String, Integer> columnHashSeeds = new HashMap<String, Integer>();
 		try {
 			for (String pair : hashPairs) {
-				LOG.info("seedvalues:"+pair);
 				if (StringUtils.isEmpty(pair))
 					continue;
                 String[] values = CommonUtils.split(pair, delimiter);
@@ -699,7 +698,6 @@ public class ModelConfig {
 			LOG.error("Hash value must be integer", e);
 		}
 		return columnHashSeeds;
-
 	}
 
     @JsonIgnore

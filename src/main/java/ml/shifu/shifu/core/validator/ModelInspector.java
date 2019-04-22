@@ -221,7 +221,8 @@ public class ModelInspector {
             List<String> forceSelectColumns = modelConfig.getListForceSelect();
 
             if(CollectionUtils.isNotEmpty(metaColumns) && metaColumns.contains(modelConfig.getTargetColumnName())) {
-                result.addCause("The target column name shouldn't be in the meta column conf.");
+                // target column can be meta column but being ignored in meta
+                LOG.warn("The target column is in the meta column conf (meta config for tag column is ignored).");
             }
 
             if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())
@@ -264,7 +265,7 @@ public class ModelInspector {
         ValidateResult result = new ValidateResult(true);
 
         if(modelConfig.isClassification() && (modelConfig.getBinningMethod() == BinningMethod.EqualPositive
-                || modelConfig.getBinningMethod() == BinningMethod.EqualNegtive
+                || modelConfig.getBinningMethod() == BinningMethod.EqualNegative
                 || modelConfig.getBinningMethod() == BinningMethod.WeightEqualPositive
                 || modelConfig.getBinningMethod() == BinningMethod.WeightEqualNegative)) {
             ValidateResult tmpResult = new ValidateResult(false,
@@ -287,15 +288,13 @@ public class ModelInspector {
         if(CollectionUtils.isEmpty(modelConfig.getTags())) {
             if(!(BinningMethod.EqualInterval.equals(modelConfig.getStats().getBinningMethod())
                     || BinningMethod.EqualTotal.equals(modelConfig.getStats().getBinningMethod()))) {
-                result = ValidateResult.mergeResult(result,
-                        new ValidateResult(false,
-                                Arrays.asList("For numerical target, only EqualInterval and EqualTotal are allowed")));
+                result = ValidateResult.mergeResult(result, new ValidateResult(false,
+                        Arrays.asList("For numerical target, only EqualInterval and EqualTotal are allowed")));
             }
 
             if(BinningAlgorithm.DynamicBinning.equals(modelConfig.getBinningAlgorithm())) {
-                result = ValidateResult.mergeResult(result,
-                        new ValidateResult(false,
-                                Arrays.asList("For numerical target, DynamicBinning is not allowed")));
+                result = ValidateResult.mergeResult(result, new ValidateResult(false,
+                        Arrays.asList("For numerical target, DynamicBinning is not allowed")));
             }
         }
 
@@ -557,7 +556,7 @@ public class ModelInspector {
                     tmpResult.getCauses().add("Loss should be in [log,squared,absolute].");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
-                
+
                 Object TFOptimizer = params.get("TF.optimizer");
                 if(TFOptimizer != null && !"adam".equalsIgnoreCase(TFOptimizer.toString())
                         && !"gradientDescent".equalsIgnoreCase(TFOptimizer.toString())
@@ -567,7 +566,7 @@ public class ModelInspector {
                     tmpResult.getCauses().add("tensorflow optimizer should be in [RMSProp,gradientDescent,adam].");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
-                
+
                 int layerCnt = (Integer) params.get(CommonConstants.NUM_HIDDEN_LAYERS);
                 if(layerCnt < 0) {
                     ValidateResult tmpResult = new ValidateResult(true);
@@ -621,19 +620,20 @@ public class ModelInspector {
                 }
 
                 Object fixedLayersObj = params.get(CommonConstants.FIXED_LAYERS);
-                if (fixedLayersObj != null) {
+                if(fixedLayersObj != null) {
                     List<Integer> fixedLayers = (List<Integer>) fixedLayersObj;
-                    for (int layer : fixedLayers) {
-                        if (layer <= 0 || layer > (layerCnt+1)) {
+                    for(int layer: fixedLayers) {
+                        if(layer <= 0 || layer > (layerCnt + 1)) {
                             ValidateResult tmpResult = new ValidateResult(true);
                             tmpResult.setStatus(false);
-                            tmpResult.getCauses().add("Fixed layer id " + layer +
-                                    " is invaild. It should be between 0 and hidden layer cnt +  output layer:" + (layerCnt + 1));
+                            tmpResult.getCauses().add("Fixed layer id " + layer
+                                    + " is invaild. It should be between 0 and hidden layer cnt +  output layer:"
+                                    + (layerCnt + 1));
                             result = ValidateResult.mergeResult(result, tmpResult);
                         }
                     }
                 }
-                
+
                 Object miniBatchsO = params.get(CommonConstants.MINI_BATCH);
                 if(miniBatchsO != null) {
                     Integer miniBatchs = Integer.valueOf(miniBatchsO.toString());

@@ -25,7 +25,6 @@ import ml.shifu.shifu.combo.CsvFile;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractSpecifCreator;
 import ml.shifu.shifu.core.processor.EvalModelProcessor;
 import ml.shifu.shifu.core.processor.ExportModelProcessor;
-import org.testng.annotations.Test;
 
 /**
  * Created by zhanhu on 2/8/17.
@@ -34,7 +33,7 @@ public class PMMLScoreGenTest {
 
     public static final double EPS = 1e-6;
 
-    @Test
+//    @Test
     public void testBaggingPmml() throws Exception {
         verifyPmml("TestNN", "src/test/resources/example/bagging-pmml/ModelConfig.json",
                 "src/test/resources/example/bagging-pmml/ColumnConfig.json",

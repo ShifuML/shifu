@@ -400,6 +400,7 @@
                     {"label":"same as weight woe zscale mode", "value":"WEIGHT_WOE_ZSCORE"},
                     {"label":"OneHot for categorical and numerical", "value":"ONEHOT"},
                     {"label":"zscore and OneHot for categorical", "value":"ZSCALE_ONEHOT"},
+                    {"label":"zscore and Ordinal for categorical", "value":"ZSCALE_ORDINAL"},
                     {"label":"Discrete numerical feature in each bin and positive rate for categorical feature", "value":"DISCRETE_ZSCALE"},
                     {"label":"Discrete numerical feature in each bin and positive rate for categorical feature", "value":"DISCRETE_ZSCORE"},
                     {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCALE_INDEX"},
@@ -546,7 +547,7 @@
                     {"label": "Random Forest", "value":"RF"},
                     {"label": "Gradient Boost Decision Tree", "value":"GBT"},
                     {"label": "Tensorflow", "value":"Tensorflow"},
-                    {"label": "Wide And Deep", "value":"WND"},
+                    {"label": "Wide And Deep", "value":"WDL"},
                     {"label": "Generic", "value":"generic"}
                 ]
             }, {
@@ -630,8 +631,8 @@
                         "directive": "input",
                         "defval" : 0.1
                     }, {
-                        "name" : "WNDL2Reg",
-                        "type" : "number",
+                        "name" : "WDLL2Reg",
+                        "type" : "float",
                         "directive": "input",
                         "defval" : 0.01
                     }, {

@@ -116,4 +116,29 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
         return PigStatusReporter.getInstance() != null
                 && PigStatusReporter.getInstance().getCounter(group, counter) != null;
     }
+
+    /**
+     * Get property value from UDF job context, or get it from @Environment
+     * @param udfPropertyName UDF property name
+     * @param defval default value, if there is no such property
+     * @return property value or default value
+     */
+    protected String getUdfProperty(String udfPropertyName, String defval) {
+        String udfPropertyVal;
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            udfPropertyVal = UDFContext.getUDFContext().getJobConf().get(udfPropertyName, defval);
+        } else {
+            udfPropertyVal = Environment.getProperty(udfPropertyName, defval);
+        }
+        return udfPropertyVal;
+    }
+
+    /**
+     * Get property value from UDF job context, or get it from @Environment
+     * @param udfPropertyName UDF property name
+     * @return property value or null
+     */
+    protected String getUdfProperty(String udfPropertyName) {
+        return getUdfProperty(udfPropertyName, null);
+    }
 }

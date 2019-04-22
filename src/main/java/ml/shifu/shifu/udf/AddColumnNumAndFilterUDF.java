@@ -248,7 +248,7 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
                 || modelConfig.getBinningMethod().equals(BinningMethod.EqualTotal)
                 || modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)
                 || (modelConfig.getBinningMethod().equals(BinningMethod.EqualPositive) && isPositive)
-                || (modelConfig.getBinningMethod().equals(BinningMethod.EqualNegtive) && !isPositive)
+                || (modelConfig.getBinningMethod().equals(BinningMethod.EqualNegative) && !isPositive)
                 || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualTotal)
                 || modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualInterval)
                 || (modelConfig.getBinningMethod().equals(BinningMethod.WeightEqualPositive) && isPositive)
