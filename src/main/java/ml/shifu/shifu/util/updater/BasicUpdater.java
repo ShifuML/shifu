@@ -153,9 +153,7 @@ public class BasicUpdater {
             // meta and other columns are set to numerical if user not set it in categorical column configuration file
             columnConfig.setColumnType(ColumnType.N);
         }
-        LOG.info("seedsize:"+this.categoricalColumnHashSeeds.size());
         if(this.categoricalColumnHashSeeds!=null&&this.categoricalColumnHashSeeds.containsKey(varName)) {
-        	LOG.info("hash seed for column "+varName+":"+this.categoricalColumnHashSeeds.get(varName));
         	columnConfig.setHashSeed(this.categoricalColumnHashSeeds.get(varName));
         }
     }
