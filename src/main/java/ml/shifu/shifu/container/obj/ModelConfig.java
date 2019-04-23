@@ -672,12 +672,12 @@ public class ModelConfig {
     				+ Constants.DEFAULT_CATEGORICAL_HASH_FILE;
             if(ShifuFileUtils.isFileExists(defaultCategoricalHashFile, SourceType.LOCAL)) {
             	categoricalHashSeedConfFile = defaultCategoricalHashFile;
-                LOG.warn(
-                        "'dataSet::categoricalColumnHashSeedConfFile' is not set while default categoricalColumnHashSeedConfFile: {} is found, default categorical file will be used.",
+                LOG.info(
+                        "'dataSet::categoricalColumnHashSeedConfFile' is not set while default categoricalColumnHashSeedConfFile: {} is found, default categorical hash seed file will be used.",
                         defaultCategoricalHashFile);
             } else {
-                LOG.warn(
-                        "'dataSet::categoricalColumnHashSeedConfFile' is not set and default categoricalColumnHashSeedConfFile: {} is not found, no categorical config files, please check and set categorical config file in 'dataSet::categoricalColumnNameFile'.",
+                LOG.info(
+                        "'dataSet::categoricalColumnHashSeedConfFile' is not set and default categoricalColumnHashSeedConfFile: {} is not found, no categorical hash seed files.",
                         defaultCategoricalHashFile);
                 return new HashMap<String,Integer>();
             }
@@ -695,7 +695,7 @@ public class ModelConfig {
 				}
 			}
 		} catch (NumberFormatException e) {
-			LOG.error("Hash value must be integer", e);
+			LOG.error("Hash seed value must be integer", e);
 		}
 		return columnHashSeeds;
 	}
