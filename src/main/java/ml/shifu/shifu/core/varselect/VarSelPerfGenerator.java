@@ -71,7 +71,7 @@ public class VarSelPerfGenerator {
     private double genOpPerf() {
         double totalAll = (opMetric.equals(OpMetric.ACTION_RATE)
                 ? this.totalUnitCount : this.totalWeightSum);
-        double totalPostive = (opMetric.equals(OpMetric.ACTION_RATE)
+        double totalPositive = (opMetric.equals(OpMetric.ACTION_RATE)
                 ? this.totalPosUnitCount : this.totalPosWeightSum);
 
         double opPerf = 0.0d;
@@ -89,7 +89,7 @@ public class VarSelPerfGenerator {
 
                 opPoint = (accumulateTotal / totalAll);
                 if (opPoint > this.opUnit) {
-                    opPerf = (accumulatePositive / totalPostive);
+                    opPerf = (accumulatePositive / totalPositive);
                     break;
                 }
             }
@@ -102,7 +102,7 @@ public class VarSelPerfGenerator {
 
                 opPoint = (accumulateTotal / totalAll);
                 if (opPoint > this.opUnit) {
-                    opPerf = (accumulatePositive / totalPostive);
+                    opPerf = (accumulatePositive / totalPositive);
                     break;
                 }
 

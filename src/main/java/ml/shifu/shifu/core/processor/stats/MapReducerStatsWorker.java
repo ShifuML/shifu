@@ -638,7 +638,11 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                     int columnNum = Integer.parseInt(output[0]);
                     ColumnConfig config = this.columnConfigList.get(columnNum);
                     config.setPSI(Double.parseDouble(output[1]));
-                    unitStats.add(output[0] + "|" + output[2]);
+                    unitStats.add(output[0]
+                            + "|" + output[2] // PSI std
+                            + "|" + output[3] // cosine
+                            + "|" + output[4] // cosine std
+                            + "|" + output[5]);
                     // config.setUnitStats(
                     //        Arrays.asList(StringUtils.split(output[2], CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
                 } catch (Exception e) {
