@@ -205,10 +205,15 @@ public class ParallelGradient {
 
         double errorSum = 0d;
         for(int i = 0; i < this.threadCount; i++) {
-            errorSum += this.subGradients[i].getError() * (trainHighs[i] - trainLows[i] + 1)
-                    * this.getNetwork().getOutputCount();
+            // System.out.println(i + "-th error is:" + this.subGradients[i].getError()
+            //        + ", while its highs=" + trainHighs[i] + "|lows" + trainLows[i]
+            //        + ", and output count is:" + this.getNetwork().getOutputCount());
+            errorSum += this.subGradients[i].getError(); //* (trainHighs[i] - trainLows[i] + 1)
+                    //* this.getNetwork().getOutputCount();
         }
-        this.trainError = errorSum / (this.training.getRecordCount() * this.getNetwork().getOutputCount());
+
+        // System.out.println("sum of error is:" + errorSum + ", while total train records count:" + this.training.getRecordSum());
+        this.trainError = errorSum;// / (this.training.getRecordCount() * this.getNetwork().getOutputCount());
         return finalGradients;
     }
 
