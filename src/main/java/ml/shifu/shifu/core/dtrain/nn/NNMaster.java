@@ -253,7 +253,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         }
 
         LOG.debug("ELM gradients debug for 0 gradient {}", this.globalNNParams.getGradients()[0]);
-        LOG.debug("Total Count is {}. totalWorkerCount is {}", totalCount, totalWorkerCount);
+        LOG.info("Total Count is {}. totalWorkerCount is {}", totalCount, totalWorkerCount);
         LOG.info("Total Train Error is {}. totalTrainSum is {}", totalTrainError, totalTrainSum);
         LOG.info("Total Test Error is {}. totalTestSum is {}", totalTestError, totalTestSum);
 
