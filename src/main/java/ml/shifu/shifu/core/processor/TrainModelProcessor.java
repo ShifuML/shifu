@@ -557,9 +557,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      */
     private void generateGlobalConf() throws IOException {
         if(HDFSUtils.getLocalFS().exists(new Path(globalDefaultConfFile.getName()))) {
-            // local project already have global conf, so we do not copy it again
-            LOG.info("Project already has global conf");
-            return;
+            LOG.info("Project already has global conf, we will remove it...");
+            HDFSUtils.getLocalFS().moveToLocalFile(new Path(globalDefaultConfFile.getName()), 
+                    new Path(globalDefaultConfFile.getName() + "_" + System.currentTimeMillis()));
         }
 
         Configuration globalConf = new Configuration(false);
