@@ -87,6 +87,7 @@ public interface Constants {
     public static final String SVM = "svm";
     public static final String NN = "nn";
     public static final String GBT = "GBT";
+    public static final String RF = "rf";
     public static final String GENERIC = "generic";
     public static final String TENSORFLOW = "tensorflow";
     public static final String WDL = "WDL";
@@ -211,6 +212,8 @@ public interface Constants {
 
     public static final String FILTER_BY_SE = "SE";
 
+    public static final String FILTER_BY_SC = "SC";
+
     public static final String FILTER_BY_VOTED = "V";
 
     public static final String FILTER_BY_FI = "FI";
@@ -328,6 +331,8 @@ public interface Constants {
     public static final String IS_TO_SHUFFLE_DATA = "IS_TO_SHUFFLE_DATA";
 
     public static final String STRICT_MODE = "STRICT";
+
+    public static final String VAR_SEL_FILE = "VAR_SEL_FILE";
 
     /**
      * GBT score range is not in [0, 1], to make it in [0, 1], such strategies are provided with case insensitive.

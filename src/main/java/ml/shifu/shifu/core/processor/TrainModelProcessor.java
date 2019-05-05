@@ -557,9 +557,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      */
     private void generateGlobalConf() throws IOException {
         if(HDFSUtils.getLocalFS().exists(new Path(globalDefaultConfFile.getName()))) {
-            // local project already have global conf, so we do not copy it again
-            LOG.info("Project already has global conf");
-            return;
+            LOG.info("Project already has global conf, we will remove it...");
+            HDFSUtils.getLocalFS().moveToLocalFile(new Path(globalDefaultConfFile.getName()), 
+                    new Path(globalDefaultConfFile.getName() + "_" + System.currentTimeMillis()));
         }
 
         Configuration globalConf = new Configuration(false);
@@ -944,14 +944,18 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             }
         }
 
+        int totalModels = 0;
+        int foundModels = 0;
         if(isKFoldCV) {
+            totalModels = kCrossValidation;
             // k-fold we also copy model files at last, such models can be used for evaluation
-            for(int i = 0; i < baggingNum; i++) {
+            for(int i = 0; i < kCrossValidation; i++) {
                 String modelName = getModelName(i);
                 Path modelPath = fileSystem
                         .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
                 if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
                     copyModelToLocal(modelName, modelPath, sourceType);
+                    foundModels ++;
                 } else {
                     LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
                             modelPath.toString());
@@ -968,16 +972,18 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             LOG.info("K-fold cross validation on distributed training finished in {}ms.",
                     System.currentTimeMillis() - start);
         } else if(gs.hasHyperParam()) {
+            totalModels = gs.getFlattenParams().size();
             // select the best parameter composite in grid search
             LOG.info("Original grid search params: {}", modelConfig.getParams());
             Map<String, Object> params = findBestParams(sourceType, fileSystem, gs);
             // temp copy all models for evaluation
-            for(int i = 0; i < baggingNum; i++) {
+            for(int i = 0; i < totalModels; i++) {
                 String modelName = getModelName(i);
                 Path modelPath = fileSystem
                         .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
-                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath) && (status == 0)) {
+                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
                     copyModelToLocal(modelName, modelPath, sourceType);
+                    foundModels ++;
                 } else {
                     LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
                             modelPath.toString());
@@ -986,13 +992,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             LOG.info("The best parameters in grid search is {}", params);
             LOG.info("Grid search on distributed training finished in {}ms.", System.currentTimeMillis() - start);
         } else { // if(!gs.hasHyperParam())
+            totalModels = baggingNum;
             // copy model files at last.
             for(int i = 0; i < baggingNum; i++) {
                 String modelName = getModelName(i);
                 Path modelPath = fileSystem
                         .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
-                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath) && (status == 0)) {
+                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
                     copyModelToLocal(modelName, modelPath, sourceType);
+                    foundModels ++;
                 } else {
                     LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
                             modelPath.toString());
@@ -1023,7 +1031,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
 
         if(status != 0) {
-            LOG.error("Error may occurred. There is no model generated. Please check!");
+            LOG.error("Error may occurred. {} / {} models are generated. Please check!", totalModels, foundModels);
         }
         return status;
     }

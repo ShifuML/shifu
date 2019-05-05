@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.udf;
 
+import ml.shifu.shifu.core.ColumnStatsCalculator;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
@@ -89,7 +90,8 @@ public class PopulationCounterUDF extends AbstractTrainerUDF<Tuple> {
             Tuple tuple = iter.next();
             if (tuple != null && tuple.size() != 0) {
                 Object value = tuple.get(index);
-                counter.addData((value == null) ? null : value.toString());
+                Boolean tag = (Boolean) tuple.get(index + 1);
+                counter.addData(tag, (value == null) ? null : value.toString());
             }
         }
 
@@ -100,7 +102,8 @@ public class PopulationCounterUDF extends AbstractTrainerUDF<Tuple> {
         output.set(1, StringUtils.join(dataBin, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
 
         String unit = (groupInfo.get(0) == null ? "" : groupInfo.get(0).toString());
-        output.set(2,  toStatsText(unit, counter.getUnitMean(), counter.getMissingRate(), counter.getTotalInstCnt()));
+        output.set(2,  toStatsText(unit, counter.getUnitMean(),
+                counter.getMissingRate(), counter.getTotalInstCnt(), counter.getDistMetrics()));
 
         return output;
     }
@@ -116,10 +119,13 @@ public class PopulationCounterUDF extends AbstractTrainerUDF<Tuple> {
         }
     }
 
-    private String toStatsText(String unit, double mean, double missingRate, long totalInstCnt) {
+    private String toStatsText(String unit, double mean, double missingRate, long totalInstCnt, ColumnStatsCalculator.ColumnMetrics metrics) {
         return unit
                 + "^" + Double.toString(mean)
                 + "^" + Double.toString(missingRate)
-                + "^" + Long.toString(totalInstCnt);
+                + "^" + Long.toString(totalInstCnt)
+                + "^" + (metrics == null ? 0.0d : metrics.getIv())
+                + "^" + (metrics == null ? 0.0d : metrics.getKs());
+
     }
 }
