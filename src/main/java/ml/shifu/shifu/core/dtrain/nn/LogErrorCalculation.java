@@ -36,10 +36,11 @@ public class LogErrorCalculation implements ml.shifu.shifu.core.dtrain.nn.ErrorC
      * @return The current error for the neural network.
      */
     public final double calculate() {
-        if(this.setSize == 0) {
-            return 0;
-        }
-        return this.globalError / this.setSize;
+//        if(this.setSize == 0) {
+//            return 0;
+//        }
+//        return this.globalError / this.setSize;
+        return this.globalError;
     }
 
     /**

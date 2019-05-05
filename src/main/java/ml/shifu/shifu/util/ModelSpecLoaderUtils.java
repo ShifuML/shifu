@@ -785,13 +785,18 @@ public class ModelSpecLoaderUtils {
         }
 
         File modelsPathDir = new File(modelsPath);
-
-        File[] modelFiles = modelsPathDir.listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(File dir, String name) {
-                return name.endsWith("." + alg.name().toLowerCase());
+        File[] modelFiles = null;
+        if (modelsPathDir.isDirectory()) { // user provide a directory
+            modelFiles = modelsPathDir.listFiles(new FilenameFilter() {
+                @Override public boolean accept(File dir, String name) {
+                    return name.endsWith("." + alg.name().toLowerCase());
+                }
+            });
+        } else { // user provide a single model spec
+            if (modelsPath.endsWith("." + alg.name().toLowerCase())) {
+                modelFiles = new File[]{modelsPathDir};
             }
-        });
+        }
 
         if(modelFiles != null) {
             // sort file names

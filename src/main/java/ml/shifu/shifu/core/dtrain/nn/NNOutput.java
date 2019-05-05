@@ -175,8 +175,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
                     .getTrainError() : context.getMasterResult().getTestError());
             if ( currentError < this.minTestError ) {
                 this.minTestError = currentError;
-                this.optimizedWeights = Arrays.copyOf(context.getMasterResult().getWeights(),
-                        context.getMasterResult().getWeights().length);
+                // the optimizedWeights are the weights just evaluated, not current weights after applying gradients
+                this.optimizedWeights = context.getMasterResult().getEvaluatedWeights();
+                context.getMasterResult().setEvaluatedWeights(null);
                 LOG.info("change minTestError to {}, and update best weights at {}-th epoch.",
                         this.minTestError, context.getCurrentIteration());
             }

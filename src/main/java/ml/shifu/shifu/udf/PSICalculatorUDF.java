@@ -17,12 +17,12 @@ package ml.shifu.shifu.udf;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.apache.pig.data.DataBag;
+import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
-import org.apache.pig.impl.util.Utils;
-import org.apache.pig.parser.ParserException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -64,10 +64,14 @@ public class PSICalculatorUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
-        Iterator<Tuple> iter = databag.iterator();
+
         Double psi = 0D;
+        double cosine = 0.0d;
+        SummaryStatistics psiStats = new SummaryStatistics();
+        SummaryStatistics cosStats = new SummaryStatistics();
         List<String> unitStats = new ArrayList<String>();
 
+        Iterator<Tuple> iter = databag.iterator();
         while (iter.hasNext()) {
             Tuple tuple = iter.next();
             if (tuple != null && tuple.size() != 0) {
@@ -92,11 +96,17 @@ public class PSICalculatorUDF extends AbstractTrainerUDF<Tuple> {
                         if (logNum <= 0) {
                             continue;
                         } else {
-                            psi = psi + ((sub / total - expected.get(i)) * Math.log(logNum));
+                            double unitPsi = ((sub / total - expected.get(i)) * Math.log(logNum));
+                            psi = psi + unitPsi;
+                            psiStats.addValue(unitPsi);
                         }
                     }
                     i ++;
                 }
+
+                double unitCosine = calculateCosine(expected, subCounter);
+                cosine = cosine + unitCosine;
+                cosStats.addValue(unitCosine);
 
                 unitStats.add((String) tuple.get(2));
             }
@@ -105,21 +115,54 @@ public class PSICalculatorUDF extends AbstractTrainerUDF<Tuple> {
         // sort by unit
         Collections.sort(unitStats);
 
-        Tuple output = TupleFactory.getInstance().newTuple(3);
+        Tuple output = TupleFactory.getInstance().newTuple(6);
         output.set(0, columnId);
         output.set(1, psi);
-        output.set(2, StringUtils.join(unitStats, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+        output.set(2, psiStats.getStandardDeviation());
+        output.set(3, cosine);
+        output.set(4, cosStats.getStandardDeviation());
+        output.set(5, StringUtils.join(unitStats, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
 
         return output;
     }
 
+    private double calculateCosine(List<Double> totalVector, List<Double> subVector) {
+        assert totalVector != null && subVector != null
+                && totalVector.size() != 0 && totalVector.size() == subVector.size();
+
+        double multi = 0.0d;
+        double squareX = 0.0d, squareY= 0.0d;
+        for (int i = 0; i < totalVector.size(); i ++ ) {
+            double x = totalVector.get(i);
+            double y = subVector.get(i);
+
+            multi = multi + x * y;
+            squareX = squareX + x * x;
+            squareY = squareY + y * y;
+        }
+
+        double divisor = Math.sqrt(squareX) *  Math.sqrt(squareY);
+        if ( divisor < 1e-10) {
+            return 0;
+        }
+        return multi / divisor;
+    }
+
+    /**
+     * output the schema for evaluation score
+     */
     public Schema outputSchema(Schema input) {
         try {
-            return Utils
-                .getSchemaFromString("PSIInfo:Tuple(columnId : int, psi : double, unitstats : chararray)");
-        } catch (ParserException e) {
-            log.debug("Error when generating output schema.", e);
-            // just ignore
+            Schema tupleSchema = new Schema();
+            tupleSchema.add(new Schema.FieldSchema("columnId", DataType.INTEGER));
+            tupleSchema.add(new Schema.FieldSchema("psi", DataType.DOUBLE));
+            tupleSchema.add(new Schema.FieldSchema("psiStd", DataType.DOUBLE));
+            tupleSchema.add(new Schema.FieldSchema("cosine", DataType.DOUBLE));
+            tupleSchema.add(new Schema.FieldSchema("cosStd", DataType.DOUBLE));
+            tupleSchema.add(new Schema.FieldSchema("unitstats", DataType.CHARARRAY));
+            return new Schema(new Schema.FieldSchema("PSIInfo", tupleSchema, DataType.TUPLE));
+        } catch (IOException e) {
+            log.error("Error in outputSchema", e);
             return null;
         }
     }

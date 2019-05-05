@@ -99,15 +99,11 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
             return binBorders;
         }
 
-        double delta = (maxVal - minVal) * 0.0005;
-        double startVal = minVal - delta;
-        double endVal = maxVal + delta;
-
-        double binInterval = (endVal - startVal) / (super.expectedBinningNum - 1);
-        double val = startVal;
-        for(int i = 1; i < super.expectedBinningNum; i++) {
-            val = val + binInterval;
-            binBorders.add(val);
+        double binInterval = (maxVal - minVal) / (super.expectedBinningNum - 1);
+        double startVal = minVal + binInterval / 2;
+        for(int i = 0; i < super.expectedBinningNum - 1; i++) {
+            binBorders.add(startVal);
+            startVal = startVal + binInterval;
         }
 
         return binBorders;
