@@ -145,24 +145,24 @@ public class IndependentTreeModel {
     private String gbtScoreConvertStrategy = Constants.GBT_SCORE_RAW_CONVETER;
 
     /**
-     * IF current scoring is for gbt sigmoid convert, a flag here to avoid multiple string comparsion, for old sigmoid
+     * IF current scoring is for gbt sigmoid convert, a flag here to avoid multiple string comparison, for old sigmoid
      * transform, which is code without scale: <code>1 / (1 + Math.min(1.0E19, Math.exp(- score))); </code>.
      */
     private boolean isGBTOldSigmoidConvert;
 
     /**
-     * IF current scoring is for gbt sigmoid convert, a flag here to avoid multiple string comparsion, for new sigmoid
+     * IF current scoring is for gbt sigmoid convert, a flag here to avoid multiple string comparison, for new sigmoid
      * transform, which is code without scale: <code>1 / (1 + Math.min(1.0E19, Math.exp(-20 * score))); </code>.
      */
     private boolean isGBTSigmoidConvert;
 
     /**
-     * IF current scoring is for gbt cut off convert, a flag here to avoid multiple string comparsion
+     * IF current scoring is for gbt cut off convert, a flag here to avoid multiple string comparison
      */
     private boolean isGBTCutoffConvert;
 
     /**
-     * IF current scoring is raw gbt score, a flag here to avoid multiple string comparsion
+     * IF current scoring is raw gbt score, a flag here to avoid multiple string comparison
      */
     @SuppressWarnings("unused")
     private boolean isGBTRawScore;
@@ -502,7 +502,7 @@ public class IndependentTreeModel {
 
     /**
      * Covert score to probability value which are in [0, 1], for GBT regression, scores can not be [0, 1]. Round score
-     * to 1.0E19 to avoid NaN in final return result. Sigmoid function is old one for compatablity:
+     * to 1.0E19 to avoid NaN in final return result. Sigmoid function is old one for compatibility:
      * <code>1 / (1 + Math.min(1.0E19, Math.exp(- 20 * score))); </code>.
      * 
      * @param score
