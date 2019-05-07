@@ -37,10 +37,11 @@ public class SquaredErrorCalculation implements ml.shifu.shifu.core.dtrain.nn.Er
      */
     @Override
     public final double calculate() {
-        if(this.setSize == 0) {
-            return 0;
-        }
-        return this.globalError / this.setSize;
+//        if(this.setSize == 0) {
+//            return 0;
+//        }
+//        return this.globalError / this.setSize;
+        return this.globalError;
     }
 
     /**
@@ -78,8 +79,8 @@ public class SquaredErrorCalculation implements ml.shifu.shifu.core.dtrain.nn.Er
     @Override
     public final void updateError(final double[] actual, final double[] ideal, final double significance) {
         for(int i = 0; i < actual.length; i++) {
-            double delta = (ideal[i] - actual[i]) * significance;
-            this.globalError += delta * delta;
+            double delta = (ideal[i] - actual[i]) ;
+            this.globalError += delta * delta * significance;
         }
         this.setSize += ideal.length;
     }

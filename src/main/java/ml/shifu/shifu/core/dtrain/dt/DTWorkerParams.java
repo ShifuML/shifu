@@ -315,6 +315,7 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
                     }
                 }
             }
+            that.setNodeStatsMap(null); // set to null, for memory release
         }
 
         return this;

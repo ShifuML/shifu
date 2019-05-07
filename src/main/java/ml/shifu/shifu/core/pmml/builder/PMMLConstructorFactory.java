@@ -85,6 +85,12 @@ public class PMMLConstructorFactory {
         } else if(normType == ModelNormalizeConf.NormType.ZSCALE_ONEHOT) {
             localTransformationsCreator = new ZscoreOneHotLocalTransformCreator(modelConfig, columnConfigList,
                     isConcise);
+        } else if(normType == ModelNormalizeConf.NormType.ASIS_PR) {
+            localTransformationsCreator = new AsisZscoreLocalTransformCreator(modelConfig, columnConfigList,
+                    isConcise);
+        } else if(normType == ModelNormalizeConf.NormType.ASIS_WOE) {
+            localTransformationsCreator = new AsisWoeLocalTransformCreator(modelConfig, columnConfigList,
+                    isConcise);
         } else {
             localTransformationsCreator = new ZscoreLocalTransformCreator(modelConfig, columnConfigList, isConcise);
         }

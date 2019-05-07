@@ -331,7 +331,7 @@ public class Normalizer {
      *            input column value
      * @param cutoff
      *            standard deviation cut off
-     * @param categoryMissingNormType
+     * @param cateIndexMap
      *            missing categorical value norm type
      * @return normalized value for ZScore method.
      */
@@ -397,6 +397,9 @@ public class Normalizer {
             return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, false);
         } else {
             int binNum = BinUtils.getBinNum(config, raw);
+            if (binNum < 0) {
+                binNum = config.getBinCategory().size();
+            }
             Double[] normVals = new Double[]{(double) binNum};
             return Arrays.asList(normVals);
         }

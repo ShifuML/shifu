@@ -15,16 +15,83 @@
  */
 package ml.shifu.shifu.udf.stats;
 
-import java.util.List;
+import ml.shifu.shifu.core.ColumnStatsCalculator;
+import ml.shifu.shifu.core.ColumnStatsCalculator.ColumnMetrics;
+
+import java.util.*;
 
 /**
  * Created by Mark on 5/27/2016.
  */
 public abstract class Counter {
 
-    public abstract void addData(String val);
-    public abstract List<Long> getCounter();
-    public abstract double getUnitMean();
-    public abstract double getMissingRate();
-    public abstract long getTotalInstCnt();
+    protected int binLen;
+    protected Set<String> missingValSet;
+    protected long[] positiveCounter;
+    protected long[] negativeCounter;
+    protected double unitSum;
+
+    public Counter(int binLen, Set<String> missingValSet) {
+        this.binLen = binLen;
+        this.missingValSet = missingValSet;
+        this.positiveCounter = new long[binLen + 1];
+        Arrays.fill(positiveCounter, 0L);
+        this.negativeCounter = new long[binLen + 1];
+        Arrays.fill(negativeCounter, 0L);
+        this.unitSum = 0.0d;
+    }
+
+    public abstract void addData(Boolean tag, String val);
+
+    public List<Long> getCounter() {
+        List<Long> totalCounter = new ArrayList<>();
+        for(int i = 0; i < binLen + 1; i++) {
+            totalCounter.add(this.positiveCounter[i] + this.negativeCounter[i]);
+        }
+        return totalCounter;
+    }
+
+    public long[] getPositiveCounter() {
+        return this.positiveCounter;
+    }
+
+    public long[] getNegativeCounter() {
+        return this.negativeCounter;
+    }
+
+    public double getUnitMean() {
+        long total = getTotalInstCnt();
+
+        double unitMean;
+        if(total == 0 || total == getTotalMissingCnt()) {
+            // no instance or all missing
+            unitMean = Double.NaN;
+        } else {
+            unitMean = this.unitSum / total;
+        }
+
+        return unitMean;
+    }
+
+    public double getMissingRate() {
+        long total = getTotalInstCnt();
+        double missingInstCnt = getTotalMissingCnt();
+        return ((total != 0) ? missingInstCnt / total : 0.0);
+    }
+
+    public long getTotalInstCnt() {
+        long total = 0;
+        for ( int i = 0; i < binLen + 1; i ++) {
+            total = total + this.positiveCounter[i] + this.negativeCounter[i];
+        }
+        return total;
+    }
+
+    protected long getTotalMissingCnt() {
+        return this.positiveCounter[binLen] + this.negativeCounter[binLen];
+    }
+
+    public ColumnMetrics getDistMetrics() {
+        return ColumnStatsCalculator.calculateColumnMetrics(this.negativeCounter, this.positiveCounter);
+    }
 }
