@@ -24,6 +24,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * {@link EmbedFieldLayer} is for each column like sparse categorical feature. The input of this layer is one-hot
  * encoding while the output is dense vector.
@@ -39,6 +42,7 @@ import java.util.Map.Entry;
  */
 public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[], float[], EmbedFieldLayer>
         implements WeightInitializer<EmbedFieldLayer> {
+    private static final Logger LOG = LoggerFactory.getLogger(EmbedFieldLayer.class);
 
     /**
      * [in, out] array for deep matrix weights
@@ -97,8 +101,12 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
         this.lastInput = si;
         int valueIndex = si.getValueIndex();
         float[] results = new float[this.out];
-        for(int i = 0; i < results.length; i++) {
-            results[i] = si.getValue() * this.getWeights()[valueIndex][i];
+        if(valueIndex < weights.length && valueIndex >= 0) {
+            for(int i = 0; i < results.length; i++) {
+                results[i] = si.getValue() * this.getWeights()[valueIndex][i];
+            }
+        } else {
+            LOG.error("valueIndex=" + valueIndex + ", columnId=" + columnId + ", in=" + in + ", out=" + out);
         }
         return results;
     }

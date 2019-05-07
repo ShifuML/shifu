@@ -162,15 +162,17 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public float[] forward(float[] denseInputs, List<SparseInput> embedInputs, List<SparseInput> wideInputs) {
         // wide layer forward
-        LOG.error("Forward in WideAndDeep: denseInputs: " + denseInputs.length + " embedInputs: " + embedInputs.size() + " wideInputs:" + wideInputs.size());
+        LOG.debug("Forward in WideAndDeep: denseInputs: " + denseInputs.length + " embedInputs: " + embedInputs.size()
+                + " wideInputs:" + wideInputs.size());
 
         float[] wlLogits = this.wl.forward(new Tuple(wideInputs, denseInputs));
-        if(wlLogits.length > 0) {
-            LOG.error("wlLogits size is " + wlLogits.length + " the first value :" + wlLogits[0]);
-        } else {
-            LOG.error("wlLogits size is 0");
+        if(LOG.isDebugEnabled()) {
+            if(wlLogits != null && wlLogits.length > 0) {
+                LOG.debug("wlLogits size is " + wlLogits.length + " the first value :" + wlLogits[0]);
+            } else {
+                LOG.debug("wlLogits size is 0");
+            }
         }
-
 
         // deep layer forward
         float[] dilOuts = this.dil.forward(denseInputs);
@@ -186,10 +188,12 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
             }
         }
         float[] dnnLogits = this.finalLayer.forward(inputs);
-        if(dnnLogits.length > 0) {
-            LOG.error("dnnLogits length: " + dnnLogits.length + " first value is " + dnnLogits[0]);
-        } else {
-            LOG.error("dnnLogits length is 0");
+        if(LOG.isDebugEnabled()) {
+            if(dnnLogits != null && dnnLogits.length > 0) {
+                LOG.debug("dnnLogits length: " + dnnLogits.length + " first value is " + dnnLogits[0]);
+            } else {
+                LOG.debug("dnnLogits length is 0");
+            }
         }
 
         // merge wide and deep together
@@ -197,7 +201,7 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
         float[] logits = new float[dnnLogits.length];
         for(int i = 0; i < logits.length; i++) {
             logits[i] += wlLogits[i] + dnnLogits[i];
-            LOG.error("logits[" + i + "]:= " + logits[i] + "wlLogits="  + logits[i] + " dnnLogits=" + dnnLogits[i]);
+            LOG.debug("logits[" + i + "]:= " + logits[i] + "wlLogits=" + logits[i] + " dnnLogits=" + dnnLogits[i]);
         }
         return logits;
     }
@@ -206,7 +210,7 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
     public float[] backward(float[] predicts, float[] actuals, float sig) {
         float[] grad2Logits = new float[predicts.length];
         for(int i = 0; i < grad2Logits.length; i++) {
-            grad2Logits[i] = (predicts[i] - actuals[i]) * (predicts[i] * (1- predicts[i])) * sig;
+            grad2Logits[i] = (predicts[i] - actuals[i]) * (predicts[i] * (1 - predicts[i])) * sig;
             // error * sigmoid derivertive * weight
         }
         // wide layer backward, as wide layer in LR actually in backward, only gradients computation is needed.
@@ -542,7 +546,7 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
     @Override
     public void initWeight(WideAndDeep updateModel) {
         AssertUtils.assertListNotNullAndSizeEqual(this.hiddenLayers, updateModel.getHiddenLayers());
-        for(int i = 0; i < this.hiddenLayers.size(); i ++) {
+        for(int i = 0; i < this.hiddenLayers.size(); i++) {
             // There are two type of layer: DenseLayer, Activation. We only need to init DenseLayer
             if(this.hiddenLayers.get(i) instanceof DenseLayer) {
                 ((DenseLayer) this.hiddenLayers.get(i)).initWeight((DenseLayer) updateModel.getHiddenLayers().get(i));
@@ -551,6 +555,11 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
         this.finalLayer.initWeight(updateModel.getFinalLayer());
         this.ecl.initWeight(updateModel.getEcl());
         this.wl.initWeight(updateModel.getWl());
+    }
+
+    public void write(DataOutput out, SerializationType serializationType) throws IOException {
+        this.serializationType = serializationType;
+        write(out);
     }
 
     /*
@@ -567,10 +576,8 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
         if(this.hiddenLayers == null) {
             out.writeInt(NULL);
         } else {
-            List<DenseLayer> denseLayers = this.hiddenLayers.stream()
-                    .filter(layer -> layer instanceof DenseLayer)
-                    .map(layer -> (DenseLayer) layer)
-                    .collect(Collectors.toList());
+            List<DenseLayer> denseLayers = this.hiddenLayers.stream().filter(layer -> layer instanceof DenseLayer)
+                    .map(layer -> (DenseLayer) layer).collect(Collectors.toList());
             out.writeInt(denseLayers.size());
             denseLayers.forEach(denseLayer -> {
                 try {
@@ -650,7 +657,7 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
         AssertUtils.assertListNotNullAndSizeEqual(this.actiFuncs, hiddenDenseLayer);
         hiddenDenseLayer.forEach(denseLayer -> LOG.info(String.valueOf(denseLayer)));
         this.hiddenLayers = new ArrayList<>(this.actiFuncs.size() * 2);
-        for(int i = 0; i < hiddenDenseLayer.size(); i ++) {
+        for(int i = 0; i < hiddenDenseLayer.size(); i++) {
             this.hiddenLayers.add(hiddenDenseLayer.get(i));
             this.hiddenLayers.add(ActivationFactory.getInstance().getActivation(this.actiFuncs.get(i)));
         }

@@ -97,7 +97,7 @@ public class NormalUtils {
                             } else {
                                 inputList.add(index * 1d);
                             }
-                        } else if(CommonUtils.isWDLModel(alg) && config.isCategorical()) {
+                        } else if(CommonUtils.isWDLModel(alg)) {
                             List<Double> normalizeValue = Normalizer.fullNormalize(config, val, cutoff,
                                     modelConfig.getNormalizeType(), categoryMissingNormType,
                                     binCategoryMap.get(config.getColumnNum()));
@@ -105,6 +105,8 @@ public class NormalUtils {
                         } else {
                             inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val));
                         }
+                    } else if(CommonUtils.isWDLModel(alg)) {
+                        inputList.add(-1.0);
                     }
                 } else {
                     if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config, hasCandidates)) {
@@ -118,9 +120,16 @@ public class NormalUtils {
                             } else {
                                 inputList.add(index * 1d);
                             }
+                        } else if(CommonUtils.isWDLModel(alg)) {
+                            List<Double> normalizeValue = Normalizer.fullNormalize(config, val, cutoff,
+                                    modelConfig.getNormalizeType(), categoryMissingNormType,
+                                    binCategoryMap.get(config.getColumnNum()));
+                            inputList.addAll(normalizeValue);
                         } else {
                             inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val));
                         }
+                    } else if(CommonUtils.isWDLModel(alg)) {
+                        inputList.add(-1.0);
                     }
                 }
             }
