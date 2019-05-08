@@ -1337,9 +1337,11 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     private Set<String> guessSelectColumnSet(String varselFile) throws IOException {
+        String fileName = new File(varselFile).getName();
+
         Set<String> toSelectedVars = new HashSet<>();
 
-        if (varselFile.endsWith("." + Constants.NN.toLowerCase())) {
+        if (fileName.endsWith("." + Constants.NN.toLowerCase())) {
             // 1. user specify .nn file as input
             List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(varselFile, ModelTrainConf.ALGORITHM.NN);
             if (CollectionUtils.isNotEmpty(models)) {
@@ -1353,19 +1355,19 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     }
                 }
             }
-        } else if (varselFile.endsWith("." + Constants.GBT.toLowerCase())
-                || varselFile.endsWith("." + Constants.RF.toLowerCase())) {
+        } else if (fileName.endsWith("." + Constants.GBT.toLowerCase())
+                || fileName.endsWith("." + Constants.RF.toLowerCase())) {
             // 2. user specify .gbt or .rf file as input
             IndependentTreeModel treeModel = IndependentTreeModel.loadFromStream(new FileInputStream(varselFile));
             toSelectedVars.addAll(treeModel.getNumNameMapping().values());
-        } else if (varselFile.startsWith(Constants.COLUMN_CONFIG_JSON_FILE_NAME)) {
+        } else if (fileName.startsWith(Constants.COLUMN_CONFIG_JSON_FILE_NAME)) {
             List<ColumnConfig> srcColumnConfigs = CommonUtils.loadColumnConfigList(varselFile, SourceType.LOCAL);
             for (ColumnConfig columnConfig : srcColumnConfigs) {
                 if (columnConfig.isFinalSelect()) {
                     toSelectedVars.add(columnConfig.getColumnName());
                 }
             }
-        } else if (varselFile.endsWith(".txt") || varselFile.endsWith(".vars") || varselFile.endsWith(".names")) {
+        } else if (fileName.endsWith(".txt") || fileName.endsWith(".vars") || fileName.endsWith(".names")) {
             // 3. user specify .txt, .vars or .names file as input
             List<String> vars = FileUtils.readLines(new File(varselFile));
             for (String var : vars ) {
