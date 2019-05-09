@@ -1010,6 +1010,10 @@ public final class CommonUtils {
     public static boolean isTreeModel(String alg) {
         return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
     }
+    
+    public static boolean isTensorFlowModel(String alg) {
+        return Constants.TF_ALG_NAME.equalsIgnoreCase(alg);
+    }
 
     public static boolean isNNModel(String alg) {
         return "nn".equalsIgnoreCase(alg);

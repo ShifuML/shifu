@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.encog.ml.BasicML;
 import org.encog.ml.MLRegression;
 import org.encog.ml.data.basic.BasicMLData;
 import org.encog.persist.PersistorRegistry;
@@ -183,8 +184,12 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.LOCAL);
         // load model from local d-cache model file
-        model = (MLRegression) ModelSpecLoaderUtils.loadModel(modelConfig,
-                new Path("model0." + modelConfig.getAlgorithm().toLowerCase()), fs);
+        if(CommonUtils.isTensorFlowModel(this.modelConfig.getAlgorithm())) {
+            this.model = (MLRegression) (ModelSpecLoaderUtils.loadBasicModels(this.modelConfig, null).get(0));
+        } else {
+            model = (MLRegression) ModelSpecLoaderUtils.loadModel(modelConfig,
+                    new Path("model0." + modelConfig.getAlgorithm().toLowerCase()), fs);
+        }
         LOG.debug("After load model class {} with time {}ms and memory {} in thread {}.", model.getClass().getName(),
                 (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(),
                 Thread.currentThread().getName());
