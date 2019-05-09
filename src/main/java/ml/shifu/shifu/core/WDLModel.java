@@ -31,7 +31,7 @@ import ml.shifu.shifu.core.dtrain.wdl.IndependentWDLModel;
  * {@link WDLModel} is to load WideAndDeep models from Encog interfaces. If user wouldn't like to depend on encog,
  * {@link IndependentWDLModel} can be used to execute WideAndDeep model from Shifu.
  * 
- * @author juguo
+ * @author Guo, Junshi
  */
 public class WDLModel extends BasicML implements FloatMLRegression {
 
@@ -51,6 +51,7 @@ public class WDLModel extends BasicML implements FloatMLRegression {
 
     @Override
     public int getOutputCount() {
+        // TODO: change this if we want to support multiple classification
         return 1;
     }
 
@@ -73,7 +74,6 @@ public class WDLModel extends BasicML implements FloatMLRegression {
     @Override
     public void updateProperties() {
         // No need to implement
-
     }
 
     public static WDLModel loadFromStream(InputStream input) throws IOException {
