@@ -240,7 +240,9 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
 
     @Override
     public void initWeight(WideDenseLayer updateModel) {
-        this.weights = updateModel.getWeights();
+        for(int i = 0; i < this.in; i++) {
+            this.weights[i] = updateModel.getWeights()[i];
+        }
     }
 
     @Override
@@ -253,7 +255,7 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
     }
 
     @Override
-    public void update(WideDenseLayer gradLayer, Optimizer optimizer) {
-        optimizer.update(this.weights, gradLayer.getwGrads());
+    public void update(WideDenseLayer gradLayer, Optimizer optimizer, String uniqueKey) {
+        optimizer.update(this.weights, gradLayer.getwGrads(), uniqueKey);
     }
 }

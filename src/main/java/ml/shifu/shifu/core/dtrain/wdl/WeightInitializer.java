@@ -51,7 +51,11 @@ public interface WeightInitializer<SELF extends WeightInitializer<?>> {
         /**
          * Init all Weight use {@link RangeRandom}
          */
-        ZERO_ONE_RANGE_RANDOM(new RangeRandom(0, 1));
+        ZERO_ONE_RANGE_RANDOM(new RangeRandom(0, 1)),
+        /**
+         * Init weight range from -1 to 1 {@link RangeRandom}
+         */
+        NEGATIVE_POSITIVE_ONE_RANGE_RANDOM(new RangeRandom(-1, 1));
 
         private Initialisable initialisable;
 

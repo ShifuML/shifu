@@ -36,7 +36,6 @@ import java.util.Map.Entry;
 public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[], float[], WideFieldLayer>
         implements WeightInitializer<WideFieldLayer> {
     private static final Logger LOG = LoggerFactory.getLogger(WideFieldLayer.class);
-
     /**
      * [in] float array of weights
      */
@@ -204,7 +203,9 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
 
     @Override
     public void initWeight(WideFieldLayer updateModel) {
-        this.weights = updateModel.getWeights();
+        for(int i = 0; i < this.in; i++) {
+            this.weights[i] = updateModel.getWeights()[i];
+        }
     }
 
     /*
@@ -286,7 +287,7 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
     }
 
     @Override
-    public void update(WideFieldLayer gradLayer, Optimizer optimizer) {
-        optimizer.update(this.weights, gradLayer.getwGrads());
+    public void update(WideFieldLayer gradLayer, Optimizer optimizer, String uniqueKey) {
+        optimizer.update(this.weights, gradLayer.getwGrads(), uniqueKey);
     }
 }

@@ -693,10 +693,10 @@ public class WDLWorker extends
             float predict = sigmoid(logits[0]);
             float error = predict - data.label;
             // TODO, logloss, squredloss, weighted error or not
-            System.out.println("error in worker" + error + " logits[0]= " + logits[0] + " weight=" + data.weight);
             trainSumError += data.weight * error * error;
             this.wnd.backward(new float[] { predict }, new float[] { data.label }, data.getWeight());
         }
+        System.out.println("error in worker" + trainSumError);
 
         // compute validation error
         for(Data data: validationData) {

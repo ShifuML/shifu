@@ -25,48 +25,62 @@ import java.util.Map.Entry;
 public interface Optimizer {
 
     /**
-     * @return the learning rate for this optimizer
+     * Set train size
+     *
+     * @param trainSize
+     *        the train size
      */
-    double getLearningRate();
-
-    /**
-     * In some optimizer, learning rate will be updated as well.
-     * 
-     * @param learningRate
-     *            the new learning rate
-     */
-    void setLearningRate(double learningRate);
+    void setTrainSize(float trainSize);
 
     /**
      * Update gradient in @param weight
      * 
      * @param weight
-     *            weight to be updated
+     *          weight to be updated
      * @param grad
-     *            the gradients
+     *          the gradients
+     * @param uniqueKey
+     *          unique key identify the call upstream
      */
-    void update(float[] weight, float[] grad);
+    void update(float[] weight, float[] grad, String uniqueKey);
+
 
     /**
-     * 
+     * Update gradient in @param weight
+     *
      * @param weight
-     *            weight to be updated
+     *          weight to be updated
      * @param grad
-     *            sparse representation of gradients
+     *          sparse representation of gradients
+     * @param uniqueKey
+     *          unique key identify the call upstream, usually the class name
      */
-    void update(float[] weight, Map<Integer, Float> grad);
+    void update(float[] weight, Map<Integer, Float> grad, String uniqueKey);
 
-    default void batchUpdate(float[][] weights, float[][] grads) {
+    /**
+     * Update gradient in @param weight
+     *
+     * @param gradient
+     *          gradient value
+     * @param uniqueKey
+     *          unique key identify the call upstream, usually the class name
+     * @return
+     *          weight update
+     */
+    float updateWeight(float gradient, String uniqueKey);
+
+    default void batchUpdate(float[][] weights, float[][] grads, String uniqueKey) {
         if(weights == null || weights.length == 0 || grads == null || weights.length != grads.length) {
+            System.out.println("Error when batch update, return");
             return;
         }
         int in = weights.length;
         for(int i = 0; i < in; i++) {
-            update(weights[i], grads[i]);
+            update(weights[i], grads[i], "bl" + uniqueKey + i);
         }
     }
 
-    default void batchUpdate(float[][] weights, Map<Integer, float[]> grads) {
+    default void batchUpdate(float[][] weights, Map<Integer, float[]> grads, String uniqueKey) {
         if(weights == null || weights.length == 0 || grads == null || grads.size() == 0) {
             return;
         }
@@ -74,7 +88,7 @@ public interface Optimizer {
         for(Entry<Integer, float[]> entry: grads.entrySet()) {
             int index = entry.getKey();
             if(index < in) {
-                update(weights[index], entry.getValue());
+                update(weights[index], entry.getValue(), "bm" + uniqueKey + index);
             }
         }
     }

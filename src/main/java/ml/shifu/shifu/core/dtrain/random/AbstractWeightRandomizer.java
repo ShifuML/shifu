@@ -35,13 +35,11 @@ public abstract class AbstractWeightRandomizer implements Randomizer {
     /**
      * The y2 value.
      */
-    @SuppressWarnings("unused")
     protected double y2;
 
     /**
      * Should we use the last value.
      */
-    @SuppressWarnings("unused")
     protected boolean useLast = false;
 
     protected GenerateRandom rnd;

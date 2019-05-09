@@ -19,7 +19,6 @@ import java.io.*;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;

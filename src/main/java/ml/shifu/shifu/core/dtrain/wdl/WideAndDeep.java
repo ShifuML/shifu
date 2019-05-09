@@ -22,14 +22,12 @@ import static ml.shifu.shifu.core.dtrain.wdl.SerializationUtil.NULL;
 import ml.shifu.shifu.core.dtrain.wdl.activation.*;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.util.Tuple;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
@@ -201,8 +199,8 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
         float[] logits = new float[dnnLogits.length];
         for(int i = 0; i < logits.length; i++) {
             logits[i] += wlLogits[i] + dnnLogits[i];
-            LOG.debug("logits[" + i + "]:= " + logits[i] + "wlLogits=" + logits[i] + " dnnLogits=" + dnnLogits[i]);
         }
+        LOG.error("Wide score:" + wlLogits[0] + ", Deep score:" + dnnLogits[0] + ", score all:" + logits[0]);
         return logits;
     }
 
@@ -213,6 +211,7 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
             grad2Logits[i] = (predicts[i] - actuals[i]) * (predicts[i] * (1 - predicts[i])) * sig;
             // error * sigmoid derivertive * weight
         }
+
         // wide layer backward, as wide layer in LR actually in backward, only gradients computation is needed.
         this.wl.backward(grad2Logits);
 
@@ -524,7 +523,7 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
      * Init the weights in WideAndDeeep Model and it's sub module
      */
     public void initWeights() {
-        InitMethod defaultMode = InitMethod.ZERO_ONE_RANGE_RANDOM;
+        InitMethod defaultMode = InitMethod.NEGATIVE_POSITIVE_ONE_RANGE_RANDOM;
         initWeight(defaultMode);
         LOG.error("Init weight be called with mode:" + defaultMode.name());
     }
@@ -733,20 +732,20 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
 
     @SuppressWarnings("rawtypes")
     public void update(WideAndDeep gradWnd, Optimizer optimizer) {
-        this.dil.update(gradWnd.getDil(), optimizer);
+        this.dil.update(gradWnd.getDil(), optimizer, StringUtils.EMPTY);
 
         List<Layer> gradHLs = gradWnd.getHiddenLayers();
         int hlSize = hiddenLayers.size();
         for(int i = 0; i < hlSize; i++) {
             Layer tmpLayer = this.hiddenLayers.get(i);
             if(tmpLayer instanceof DenseLayer) {
-                ((DenseLayer) tmpLayer).update((DenseLayer) gradHLs.get(i), optimizer);
+                ((DenseLayer) tmpLayer).update((DenseLayer) gradHLs.get(i), optimizer, "h" + i);
             }
         }
 
-        this.finalLayer.update(gradWnd.getFinalLayer(), optimizer);
-        this.ecl.update(gradWnd.getEcl(), optimizer);
-        this.wl.update(gradWnd.getWl(), optimizer);
+        this.finalLayer.update(gradWnd.getFinalLayer(), optimizer, "f");
+        this.ecl.update(gradWnd.getEcl(), optimizer, "e");
+        this.wl.update(gradWnd.getWl(), optimizer, "w");
     }
 
 }

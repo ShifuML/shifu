@@ -31,8 +31,12 @@ public class AdaGrad implements Optimizer {
     }
 
     @Override
-    public void update(float[] weight, float[] grad) {
-        if(weight == null || weight.length == 0 || grad == null || grad.length == 0 || weight.length != grad.length) {
+    public void setTrainSize(float trainSize) {
+    }
+
+    @Override
+    public void update(float[] weight, float[] grad, String uniqueKey) {
+        if(weight == null || grad == null || grad.length == 0 || weight.length != grad.length) {
             return;
         }
         int len = weight.length;
@@ -50,7 +54,7 @@ public class AdaGrad implements Optimizer {
     }
 
     @Override
-    public void update(float[] weight, Map<Integer, Float> grad) {
+    public void update(float[] weight, Map<Integer, Float> grad, String uniqueKey) {
         if(weight == null || weight.length == 0 || grad == null || grad.size() == 0) {
             return;
         }
@@ -72,11 +76,14 @@ public class AdaGrad implements Optimizer {
     }
 
     @Override
+    public float updateWeight(float gradient, String uniqueKey) {
+        return Double.valueOf(this.learningRate * gradient).floatValue();
+    }
+
     public double getLearningRate() {
         return this.learningRate;
     }
 
-    @Override
     public void setLearningRate(double learningRate) {
         this.learningRate = learningRate;
     }

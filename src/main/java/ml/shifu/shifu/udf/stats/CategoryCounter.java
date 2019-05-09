@@ -22,6 +22,7 @@ import java.util.*;
  */
 public class CategoryCounter extends Counter {
 
+    @SuppressWarnings("unused")
     private List<String> categories;
     private List<Double> binPosRate;
     private Map<String, Integer> categoryValIndex;
