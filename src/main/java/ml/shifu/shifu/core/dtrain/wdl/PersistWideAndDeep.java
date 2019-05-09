@@ -134,7 +134,8 @@ public class PersistWideAndDeep {
      * @return A list of specific object
      * @throws IOException IOException when IO operation
      */
-    @SuppressWarnings("unchecked") private static <T> List<T> readList(DataInputStream dis, Class<?> tClass) throws IOException {
+    @SuppressWarnings("unchecked") 
+    private static <T> List<T> readList(DataInputStream dis, Class<?> tClass) throws IOException {
         int size = dis.readInt();
         List<T> list = new ArrayList<>(size);
         for(int i = 0; i < size; i++){

@@ -696,7 +696,6 @@ public class WDLWorker extends
             trainSumError += data.weight * error * error;
             this.wnd.backward(new float[] { predict }, new float[] { data.label }, data.getWeight());
         }
-        System.out.println("error in worker" + trainSumError);
 
         // compute validation error
         for(Data data: validationData) {

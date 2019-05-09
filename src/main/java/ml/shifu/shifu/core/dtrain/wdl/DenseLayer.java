@@ -344,9 +344,9 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
 
     @Override
     public void update(DenseLayer gradLayer, Optimizer optimizer, String uniqueKey) {
-        LOG.error("Before update: weights" + Arrays.deepToString(this.weights));
+        LOG.info("Before update: weights: {}", Arrays.deepToString(this.weights));
         optimizer.batchUpdate(this.weights, gradLayer.getwGrads(), uniqueKey);
-        LOG.error("After update: weights" + Arrays.deepToString(this.weights));
+        LOG.info("After update: weights: {}" + Arrays.deepToString(this.weights));
         optimizer.update(this.bias, gradLayer.getbGrads(), uniqueKey);
     }
 }

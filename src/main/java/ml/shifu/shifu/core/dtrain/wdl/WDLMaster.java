@@ -173,7 +173,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         // apply optimizer
         this.optimizer.setTrainSize(Double.valueOf(aggregation.getTrainCount()).floatValue());
         this.wnd.update(aggregation.getWnd(), optimizer);
-        LOG.error("train size:" + aggregation.getTrainCount() + ", error:" + aggregation.getTrainError());
+        LOG.info("train size: {}, error: {}", aggregation.getTrainCount(),  aggregation.getTrainError());
 
         // construct master result which contains WideAndDeep current model weights
         WDLParams params = new WDLParams();

@@ -200,7 +200,7 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
         for(int i = 0; i < logits.length; i++) {
             logits[i] += wlLogits[i] + dnnLogits[i];
         }
-        LOG.error("Wide score:" + wlLogits[0] + ", Deep score:" + dnnLogits[0] + ", score all:" + logits[0]);
+        LOG.info("Wide score:{}, Deep score:{} , score all:{}", wlLogits[0], dnnLogits[0], logits[0]);
         return logits;
     }
 
@@ -525,7 +525,7 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
     public void initWeights() {
         InitMethod defaultMode = InitMethod.NEGATIVE_POSITIVE_ONE_RANGE_RANDOM;
         initWeight(defaultMode);
-        LOG.error("Init weight be called with mode:" + defaultMode.name());
+        LOG.info("Init weight be called with mode:{}", defaultMode.name());
     }
 
     @SuppressWarnings("rawtypes")
