@@ -229,7 +229,7 @@ public class Scorer {
 
     public ScoreObject scoreNsData(MLDataPair inputPair, Map<NSColumn, String> rawNsDataMap) {
         if(inputPair == null && !this.alg.equalsIgnoreCase(NNConstants.NN_ALG_NAME)) {
-            inputPair = NormalUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig, columnConfigList,
+            inputPair = NormalUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig, selectedColumnConfigList,
                     rawNsDataMap, cutoff, alg, categoryMissingNormType);
         }
 
@@ -408,10 +408,10 @@ public class Scorer {
                 }
             } else if(model instanceof WDLModel) {
                 final WDLModel wdl = (WDLModel) model;
-                // if(wdl.getInputCount() != pair.getInput().size()) {
-                // throw new RuntimeException("WDL and input size mismatch: wdl input Size = " + wdl.getInputCount()
-                // + "; data input Size = " + pair.getInput().size());
-                // }
+                if(wdl.getInputCount() != pair.getInput().size()) {
+                    throw new RuntimeException("WDL and input size mismatch: wdl input Size = " + wdl.getInputCount()
+                            + "; data input Size = " + pair.getInput().size());
+                }
 
                 Callable<MLData> callable = new Callable<MLData>() {
                     @Override

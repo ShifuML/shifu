@@ -19,6 +19,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.StringUtils;
 import ml.shifu.shifu.core.dtrain.nn.NNColumnStats;
 import ml.shifu.shifu.util.CommonUtils;
@@ -32,6 +33,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -115,6 +117,13 @@ public class BinaryWDLSerializer {
             fos.writeInt(csList.size());
             for(NNColumnStats cs: csList) {
                 cs.write(fos);
+            }
+
+            Map<Integer, Integer> columnMapping = DTrainUtils.getColumnMapping(columnConfigList);
+            fos.writeInt(columnMapping.size());
+            for(Entry<Integer, Integer> entry: columnMapping.entrySet()) {
+                fos.writeInt(entry.getKey());
+                fos.writeInt(entry.getValue());
             }
 
             // persist WideAndDeep Model
