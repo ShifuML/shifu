@@ -82,11 +82,11 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
 
     @Override
     public float[] forward(float[] inputs) {
-        LOG.error("WideDenseLayer weights:" + Arrays.toString(this.weights));
+        LOG.debug("WideDenseLayer weights:" + Arrays.toString(this.weights));
         this.lastInput = inputs;
         float[] results = new float[1];
         for(int i = 0; i < inputs.length; i++) {
-            LOG.error("inputs[i]=" + inputs[i] + "this.weights[i]=" + this.weights[i]);
+            LOG.debug("inputs[i]=" + inputs[i] + "this.weights[i]=" + this.weights[i]);
             results[0] += inputs[i] * this.weights[i];
         }
         return results;

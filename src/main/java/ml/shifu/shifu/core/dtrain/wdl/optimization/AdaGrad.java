@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 /**
- * @author juguo
+ * @author Guo, Junshi
  *
  */
 public class AdaGrad implements Optimizer {

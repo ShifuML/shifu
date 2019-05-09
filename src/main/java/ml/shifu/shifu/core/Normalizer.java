@@ -272,18 +272,19 @@ public class Normalizer {
 
     /**
      * Adding new API with cateIndeMap parameter without change normalize API.
+     * 
      * @param config
-     *              the ColumnConfig
+     *            the ColumnConfig
      * @param raw
-     *              the raw input
+     *            the raw input
      * @param cutoff
-     *              the cutoff value
+     *            the cutoff value
      * @param type
-     *              normalize type
+     *            normalize type
      * @param categoryMissingNormType
-     *              the category missing normal type
+     *            the category missing normal type
      * @param cateIndexMap
-     *              the cateIndexMap map from category to index
+     *            the cateIndexMap map from category to index
      * @return normalized value
      */
     public static List<Double> fullNormalize(ColumnConfig config, Object raw, Double cutoff,
@@ -297,7 +298,7 @@ public class Normalizer {
                 if(config.isNumerical()) {
                     return woeNormalize(config, raw, false);
                 } else if(config.isCategorical()) {
-                    Integer index = cateIndexMap.get(raw == null ? "" : raw.toString());
+                    Integer index = cateIndexMap == null ? null : cateIndexMap.get(raw == null ? "" : raw.toString());
                     if(index == null || index == -1) {
                         // last index for null category
                         index = config.getBinCategory().size();
@@ -308,7 +309,7 @@ public class Normalizer {
                 if(config.isNumerical()) {
                     return woeZScoreNormalize(config, raw, cutoff, false);
                 } else if(config.isCategorical()) {
-                    Integer index = cateIndexMap.get(raw == null ? "" : raw.toString());
+                    Integer index = cateIndexMap == null ? null : cateIndexMap.get(raw == null ? "" : raw.toString());
                     if(index == null || index == -1) {
                         // last index for null category
                         index = config.getBinCategory().size();
@@ -341,7 +342,7 @@ public class Normalizer {
             double value = parseRawValue(config, raw, null);
             return Arrays.asList(computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff));
         } else if(config.isCategorical()) {
-            Integer index = cateIndexMap.get(raw == null ? "" : raw.toString());
+            Integer index = cateIndexMap == null ? null : cateIndexMap.get(raw == null ? "" : raw.toString());
             if(index == null || index == -1) {
                 // last index for null category
                 index = config.getBinCategory().size();

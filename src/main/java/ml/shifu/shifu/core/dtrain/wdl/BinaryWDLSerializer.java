@@ -85,7 +85,7 @@ public class BinaryWDLSerializer {
 
             // write column stats to output
             List<NNColumnStats> csList = new ArrayList<>();
-            for(ColumnConfig cc : columnConfigList) {
+            for(ColumnConfig cc: columnConfigList) {
                 if(columnIndexNameMapping.containsKey(cc.getColumnNum())) {
                     NNColumnStats cs = new NNColumnStats();
                     cs.setCutoff(modelConfig.getNormalizeStdDevCutOff());
@@ -113,12 +113,12 @@ public class BinaryWDLSerializer {
             }
 
             fos.writeInt(csList.size());
-            for(NNColumnStats cs : csList) {
+            for(NNColumnStats cs: csList) {
                 cs.write(fos);
             }
 
             // persist WideAndDeep Model
-            wideAndDeep.write(fos);
+            wideAndDeep.write(fos, SerializationType.MODEL_SPEC);
         } finally {
             IOUtils.closeStream(fos);
         }
@@ -126,7 +126,7 @@ public class BinaryWDLSerializer {
 
     private static Map<Integer, String> getIndexNameMapping(List<ColumnConfig> columnConfigList) {
         Map<Integer, String> columnIndexNameMapping = new HashMap<>(columnConfigList.size());
-        for(ColumnConfig columnConfig : columnConfigList) {
+        for(ColumnConfig columnConfig: columnConfigList) {
             if(columnConfig.isFinalSelect()) {
                 columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
             }
@@ -134,7 +134,7 @@ public class BinaryWDLSerializer {
 
         if(columnIndexNameMapping.size() == 0) {
             boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
-            for(ColumnConfig columnConfig : columnConfigList) {
+            for(ColumnConfig columnConfig: columnConfigList) {
                 if(CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
                     columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
                 }

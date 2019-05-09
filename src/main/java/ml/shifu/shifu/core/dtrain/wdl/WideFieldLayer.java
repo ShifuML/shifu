@@ -86,11 +86,16 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
 
     @Override
     public float[] forward(SparseInput si) {
-        LOG.error("WideFiledLayer weights:" + Arrays.toString(this.weights));
+        LOG.debug("WideFiledLayer weights:" + Arrays.toString(this.weights));
         this.lastInput = si;
         int valueIndex = si.getValueIndex();
-        LOG.error("si.getValue() = " + si.getValue() + "this.weights[valueIndex]=" + this.weights[valueIndex] );
-        return new float[] { si.getValue() * this.weights[valueIndex] };
+        if(valueIndex < this.weights.length && valueIndex >= 0) {
+            LOG.debug("si.getValue() = " + si.getValue() + "this.weights[valueIndex]=" + this.weights[valueIndex]);
+            return new float[] { si.getValue() * this.weights[valueIndex] };
+        }
+        LOG.error("si.getValue() = " + si.getValue() + ", valueIndex=" + valueIndex + ", columnId=" + columnId
+                + ", value index out of range, returning 0 for null categories");
+        return new float[] { 0.f };
     }
 
     @Override
