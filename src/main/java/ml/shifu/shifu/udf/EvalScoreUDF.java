@@ -49,6 +49,7 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
 
 /**
  * Calculate the score for each evaluation data
@@ -143,7 +144,8 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
 
         // move model runner construction in exec to avoid OOM error in client side if model is too big like RF
         // TODO not to load model but only to check model file cnt
-        this.modelCnt = ModelSpecLoaderUtils.getBasicModelsCnt(modelConfig, evalConfig, evalConfig.getDataSet().getSource());
+        this.modelCnt = ModelSpecLoaderUtils.getBasicModelsCnt(modelConfig, evalConfig,
+                evalConfig.getDataSet().getSource());
         this.subModelsCnt = ModelSpecLoaderUtils.getSubModelsCnt(modelConfig, this.columnConfigList, evalConfig,
                 evalConfig.getDataSet().getSource());
 
@@ -161,8 +163,8 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
                     this.modelCnt = 1;
                 } else {
                     // native multiple classification model cnt is bagging num
-                    this.modelCnt = (this.modelCnt >= modelConfig.getBaggingNum()
-                            ? modelConfig.getBaggingNum() : this.modelCnt);
+                    this.modelCnt = (this.modelCnt >= modelConfig.getBaggingNum() ? modelConfig.getBaggingNum()
+                            : this.modelCnt);
                 }
             }
             this.mcPredictor = new MultiClsTagPredictor(this.modelConfig);
@@ -224,9 +226,9 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
 
     @SuppressWarnings("deprecation")
     public Tuple exec(Tuple input) throws IOException {
-        if (isCsvFormat) {
+        if(isCsvFormat) {
             String firstCol = ((input.get(0) == null) ? "" : input.get(0).toString());
-            if (this.headers[0].equals(CommonUtils.normColumnName(firstCol))) {
+            if(this.headers[0].equals(CommonUtils.normColumnName(firstCol))) {
                 // Column value == Column Header? It's the first line of file?
                 // TODO what to do if the column value == column name? ...
                 return null;
@@ -241,10 +243,11 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
                     evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb(),
                     evalConfig.getGbtScoreConvertStrategy());
             this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,
-                    evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,this.isMultiThreadScoring);
+                    evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,
+                    this.isMultiThreadScoring, this.getCategoryMissingNormType());
 
-            List<ModelSpec> subModels = ModelSpecLoaderUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
-                    evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb(),
+            List<ModelSpec> subModels = ModelSpecLoaderUtils.loadSubModels(modelConfig, this.columnConfigList,
+                    evalConfig, evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb(),
                     evalConfig.getGbtScoreConvertStrategy());
             if(CollectionUtils.isNotEmpty(subModels)) {
                 for(ModelSpec modelSpec: subModels) {
@@ -278,7 +281,7 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
                 models = models.subList(0, this.modelCnt);
                 this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,
                         evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,
-                        this.isMultiThreadScoring);
+                        this.isMultiThreadScoring, this.getCategoryMissingNormType());
             }
             this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
             log.info("DEBUG: model cnt " + this.modelCnt + " sub models cnt " + modelRunner.getSubModelsCnt());
@@ -476,9 +479,9 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
     @SuppressWarnings("deprecation")
     private void incrementTagCounters(String tag, String weight, long runModelInterval) {
         if(tag == null || weight == null) {
-            if ( System.currentTimeMillis() % 50 == 0 ) {
-                log.warn("tag is empty " + tag + " or weight is empty " + weight
-                        + ". And execution time - " + runModelInterval);
+            if(System.currentTimeMillis() % 50 == 0) {
+                log.warn("tag is empty " + tag + " or weight is empty " + weight + ". And execution time - "
+                        + runModelInterval);
             }
             return;
         }
@@ -550,7 +553,7 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
             boolean isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
 
             if(isLinearTarget || modelConfig.isRegression()) {
-                if (this.modelCnt > 0) {
+                if(this.modelCnt > 0) {
                     addModelSchema(tupleSchema, this.modelCnt, "");
                 } else if(MapUtils.isEmpty(this.subModelsCnt)) {
                     throw new IllegalStateException("No any model found!");
@@ -679,5 +682,21 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
 
     private String formatPigNS(String name) {
         return name.replaceAll("-", "_");
+    }
+
+    private CategoryMissingNormType getCategoryMissingNormType() {
+        CategoryMissingNormType categoryMissingNormType = null;
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            categoryMissingNormType = CategoryMissingNormType
+                    .of(UDFContext.getUDFContext().getJobConf().get(Constants.SHIFU_NORM_CATEGORY_MISSING_NORM));
+        } else {
+            categoryMissingNormType = CategoryMissingNormType
+                    .of(Environment.getProperty(Constants.SHIFU_NORM_CATEGORY_MISSING_NORM));
+        }
+        if(categoryMissingNormType == null) {
+            categoryMissingNormType = CategoryMissingNormType.POSRATE;
+        }
+        log.info("'categoryMissingNormType' is set to: " + categoryMissingNormType);
+        return categoryMissingNormType;
     }
 }

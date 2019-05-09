@@ -41,6 +41,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.core.ModelRunner;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
 import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -68,6 +69,17 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
      * (name, column config) map for quick index
      */
     private Map<String, ColumnConfig> columnConfigMap = new HashMap<String, ColumnConfig>();
+
+    /**
+     * For categorical feature, a map is used to save query time in execution
+     */
+    private Map<Integer, Map<String, Integer>> categoricalIndexMap = new HashMap<Integer, Map<String, Integer>>();
+
+    /**
+     * In Zscore norm type, how to process category default missing value norm, by default use mean, another option is
+     * POSRATE.
+     */
+    private CategoryMissingNormType categoryMissingNormType = CategoryMissingNormType.POSRATE;
 
     /**
      * Valid meta size which is in final output
@@ -166,12 +178,28 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
             }
         }
 
-        // 4. do populate columnConfigMap at first
+        // 4. build categorical index map
+        for(ColumnConfig config: columnConfigList) {
+            if(config.isCategorical()) {
+                Map<String, Integer> map = new HashMap<String, Integer>();
+                if(config.getBinCategory() != null) {
+                    for(int i = 0; i < config.getBinCategory().size(); i++) {
+                        List<String> catValues = CommonUtils.flattenCatValGrp(config.getBinCategory().get(i));
+                        for(String cval: catValues) {
+                            map.put(cval, i);
+                        }
+                    }
+                }
+                this.categoricalIndexMap.put(config.getColumnNum(), map);
+            }
+        }
+
+        // 5. do populate columnConfigMap at first
         for(ColumnConfig columnConfig: this.columnConfigList) {
             columnConfigMap.put(columnConfig.getColumnName(), columnConfig);
         }
 
-        // 5. append real valid features
+        // 6. append real valid features
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         boolean isAfterVarSelect = (inputOutputIndex[3] == 1);
         for(ColumnConfig columnConfig: this.columnConfigList) {
@@ -227,6 +255,7 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
         }
 
         setPrecisionType();
+        setCategoryMissingNormType();
     }
 
     private void setPrecisionType() {
@@ -243,10 +272,24 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
         log.info("Precision type is set to: " + this.precisionType);
     }
 
+    private void setCategoryMissingNormType() {
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            this.categoryMissingNormType = CategoryMissingNormType
+                    .of(UDFContext.getUDFContext().getJobConf().get(Constants.SHIFU_NORM_CATEGORY_MISSING_NORM));
+        } else {
+            this.categoryMissingNormType = CategoryMissingNormType
+                    .of(Environment.getProperty(Constants.SHIFU_NORM_CATEGORY_MISSING_NORM));
+        }
+        if(this.categoryMissingNormType == null) {
+            this.categoryMissingNormType = CategoryMissingNormType.POSRATE;
+        }
+        log.info("'categoryMissingNormType' is set to: " + this.categoryMissingNormType);
+    }
+
     public Tuple exec(Tuple input) throws IOException {
-        if (isCsvFormat) {
+        if(isCsvFormat) {
             String firstCol = ((input.get(0) == null) ? "" : input.get(0).toString());
-            if (this.headers[0].equals(CommonUtils.normColumnName(firstCol))) {
+            if(this.headers[0].equals(CommonUtils.normColumnName(firstCol))) {
                 // Column value == Column Header? It's the first line of file?
                 // TODO what to do if the column value == column name? ...
                 return null;
@@ -283,8 +326,9 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
                 tuple.append(raw);
             } else {
                 ColumnConfig columnConfig = this.columnConfigMap.get(name);
-                List<Double> normVals = Normalizer.normalize(columnConfig, raw,
-                        this.modelConfig.getNormalizeStdDevCutOff(), this.modelConfig.getNormalizeType());
+                List<Double> normVals = Normalizer.fullNormalize(columnConfig, raw,
+                        this.modelConfig.getNormalizeStdDevCutOff(), this.modelConfig.getNormalizeType(),
+                        this.categoryMissingNormType, this.categoricalIndexMap.get(columnConfig.getColumnNum()));
                 if(this.isOutputRaw) {
                     tuple.append(raw);
                 }

@@ -26,7 +26,7 @@ import ml.shifu.guagua.io.Combinable;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 
 /**
- * @author juguo
+ * @author Guo, Junshi
  */
 public abstract class AbstractLayer<FIN, FOUT, BIN, BOUT, SELF extends Bytable>
         implements Layer<FIN, FOUT, BIN, BOUT>, Bytable, Combinable<SELF> {

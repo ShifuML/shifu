@@ -37,6 +37,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.executor.ExecutorManager;
+import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
 import ml.shifu.shifu.util.CommonUtils;
 
 /**
@@ -68,27 +69,36 @@ public class ModelRunner {
      * Run model in parallel. Size is # of sub-models.
      */
     private ExecutorManager<Pair<String, ScoreObject>> executorManager;
-
+    /**
+     * In Zscore norm type, how to process category default missing value norm, by default use mean, another option is
+     * POSRATE.
+     */
+    private CategoryMissingNormType categoryMissingNormType = CategoryMissingNormType.POSRATE;
 
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
             String dataDelimiter, List<BasicML> models) {
         this(modelConfig, columnConfigList, header, dataDelimiter, models, 0);
     }
 
+    // TODO: pass category missing norm type
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
             String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex) {
-        this(modelConfig, columnConfigList, header, dataDelimiter, models, outputHiddenLayerIndex, false);
+        this(modelConfig, columnConfigList, header, dataDelimiter, models, outputHiddenLayerIndex, false,
+                CategoryMissingNormType.POSRATE);
     }
 
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
-            String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex, boolean isMultiThread) {
+            String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex, boolean isMultiThread,
+            CategoryMissingNormType categoryMissingNormType) {
         this.modelConfig = modelConfig;
         this.columnConfigList = columnConfigList;
         this.header = header;
         this.dataDelimiter = dataDelimiter;
         this.isMultiThread = isMultiThread;
+        this.categoryMissingNormType = categoryMissingNormType;
         this.scorer = new Scorer(models, columnConfigList, modelConfig.getAlgorithm(), modelConfig,
                 modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex, isMultiThread);
+        this.scorer.setCategoryMissingNormType(categoryMissingNormType);
     }
 
     /**
@@ -204,8 +214,8 @@ public class ModelRunner {
                 log.info("MultiThread is enabled in ModelRunner, threadPoolSize = " + threadPoolSize);
             }
 
-            List<Callable<Pair<String, ScoreObject>>> tasks
-                    = new ArrayList<Callable<Pair<String, ScoreObject>>>(this.subScorers.size());
+            List<Callable<Pair<String, ScoreObject>>> tasks = new ArrayList<Callable<Pair<String, ScoreObject>>>(
+                    this.subScorers.size());
 
             Iterator<Map.Entry<String, Scorer>> iterator = this.subScorers.entrySet().iterator();
             while(iterator.hasNext()) {
@@ -219,7 +229,7 @@ public class ModelRunner {
                         ScoreObject so = subScorer.scoreNsData(rawDataNsMap);
                         if(so != null) {
                             return Pair.of(modelName, so);
-                        }else {
+                        } else {
                             return null;
                         }
                     }
@@ -228,22 +238,22 @@ public class ModelRunner {
                 tasks.add(callable);
             }
 
-            if ( this.isMultiThread && this.subScorers.size() > 1) {
-               List<Pair<String, ScoreObject>> results = this.executorManager.submitTasksAndWaitResults(tasks);
-               for ( Pair<String, ScoreObject> result : results ) {
-                   if (result != null) {
-                       scoreResult.addSubModelScore(result.getLeft(), result.getRight());
-                   }
-               }
+            if(this.isMultiThread && this.subScorers.size() > 1) {
+                List<Pair<String, ScoreObject>> results = this.executorManager.submitTasksAndWaitResults(tasks);
+                for(Pair<String, ScoreObject> result: results) {
+                    if(result != null) {
+                        scoreResult.addSubModelScore(result.getLeft(), result.getRight());
+                    }
+                }
             } else {
-                for ( Callable<Pair<String, ScoreObject>> task : tasks ) {
+                for(Callable<Pair<String, ScoreObject>> task: tasks) {
                     Pair<String, ScoreObject> result = null;
                     try {
                         result = task.call();
                     } catch (Exception e) {
                         // do nothing
                     }
-                    if (result != null) {
+                    if(result != null) {
                         scoreResult.addSubModelScore(result.getLeft(), result.getRight());
                     }
                 }
@@ -257,19 +267,21 @@ public class ModelRunner {
      * add @ModelSpec as sub-model. Create scorer for sub-model
      * 
      * @param modelSpec
-     *     - model spec for sub model
+     *            - model spec for sub model
      * @param isMultiThread
-     *     - use multi-thread to run scoring or not
+     *            - use multi-thread to run scoring or not
      */
     public void addSubModels(ModelSpec modelSpec, boolean isMultiThread) {
         if(this.subScorers == null) {
             this.subScorers = new TreeMap<String, Scorer>();
         }
 
-        this.subScorers.put(modelSpec.getModelName(),
-                new Scorer(modelSpec.getModels(), modelSpec.getColumnConfigList(), modelSpec.getAlgorithm().name(),
-                        modelSpec.getModelConfig(), modelSpec.getModelConfig().getNormalizeStdDevCutOff(),
-                        isMultiThread));
+        Scorer scorer = new Scorer(modelSpec.getModels(), modelSpec.getColumnConfigList(),
+                modelSpec.getAlgorithm().name(), modelSpec.getModelConfig(),
+                modelSpec.getModelConfig().getNormalizeStdDevCutOff(), isMultiThread);
+        scorer.setCategoryMissingNormType(categoryMissingNormType);
+
+        this.subScorers.put(modelSpec.getModelName(), scorer);
     }
 
     /**

@@ -112,11 +112,11 @@ public class IndependentWDLModel {
     private Map<Integer, Double> wgtWoeStddevMap;
 
     private IndependentWDLModel(WideAndDeep wideAndDeep, NormType normType, Map<Integer, Double> cutOffMap,
-                                Map<Integer, String> numNameMap, Map<Integer, Map<String, Integer>> cateIndexMap,
-                                Map<Integer, List<Double>> numerBinBoundaries, Map<Integer, List<Double>> numerWoes,
-                                Map<Integer, List<Double>> numerWgtWoes, Map<Integer, Double> numerMeanMap,
-                                Map<Integer, Double> numerStddevMap, Map<Integer, Double> woeMeanMap, Map<Integer, Double> woeStddevMap,
-                                Map<Integer, Double> wgtWoeMeanMap, Map<Integer, Double> wgtWoeStddevMap) {
+            Map<Integer, String> numNameMap, Map<Integer, Map<String, Integer>> cateIndexMap,
+            Map<Integer, List<Double>> numerBinBoundaries, Map<Integer, List<Double>> numerWoes,
+            Map<Integer, List<Double>> numerWgtWoes, Map<Integer, Double> numerMeanMap,
+            Map<Integer, Double> numerStddevMap, Map<Integer, Double> woeMeanMap, Map<Integer, Double> woeStddevMap,
+            Map<Integer, Double> wgtWoeMeanMap, Map<Integer, Double> wgtWoeStddevMap) {
         this.wnd = wideAndDeep;
         this.normType = normType;
         this.cutOffMap = cutOffMap;
@@ -175,12 +175,32 @@ public class IndependentWDLModel {
         return compute(getDenseInputs(dataMap), getEmbedInputs(dataMap), getWideInputs(dataMap));
     }
 
+    public float[] compute(double[] data) {
+        if(data == null) {
+            return null;
+        }
+        float[] fData = new float[data.length];
+        for(int i = 0; i < data.length; i++) {
+            fData[i] = (float) data[i];
+        }
+        return compute(fData);
+    }
+
+    public float[] compute(float[] data) {
+        if(data == null) {
+            return null;
+        }
+        return compute(getDenseInputs(data), getEmbedInputs(data), getWideInputs(data));
+    }
+
     /**
      * Load model instance from input stream which is saved in WDLOutput for specified binary format.
      *
-     * @param input the input stream, flat input stream or gzip input stream both OK
+     * @param input
+     *            the input stream, flat input stream or gzip input stream both OK
      * @return the nn model instance
-     * @throws IOException any IOException in de-serialization.
+     * @throws IOException
+     *             any IOException in de-serialization.
      */
     public static IndependentWDLModel loadFromStream(InputStream input) throws IOException {
         return loadFromStream(input, true);
@@ -189,10 +209,13 @@ public class IndependentWDLModel {
     /**
      * Load model instance from input stream which is saved in WDLOutput for specified binary format.
      *
-     * @param input              the input stream, flat input stream or gzip input stream both OK
-     * @param isRemoveNameSpace, is remove name space or not
+     * @param input
+     *            the input stream, flat input stream or gzip input stream both OK
+     * @param isRemoveNameSpace,
+     *            is remove name space or not
      * @return the WideAndDeep model instance
-     * @throws IOException any IOException in de-serialization.
+     * @throws IOException
+     *             any IOException in de-serialization.
      */
 
     public static IndependentWDLModel loadFromStream(InputStream input, boolean isRemoveNameSpace) throws IOException {
@@ -269,7 +292,7 @@ public class IndependentWDLModel {
                         // merged category should be flatten, use own split function to avoid depending on guava jar in
                         // prediction
                         String[] splits = StringUtils.split(currCate, Constants.CATEGORICAL_GROUP_VAL_DELIMITER);
-                        for(String str : splits) {
+                        for(String str: splits) {
                             cateIndexMap.put(str, j);
                         }
                     } else {
@@ -309,7 +332,8 @@ public class IndependentWDLModel {
     }
 
     /**
-     * @param version the version to set
+     * @param version
+     *            the version to set
      */
     public static void setVersion(int version) {
         IndependentWDLModel.version = version;
@@ -318,7 +342,7 @@ public class IndependentWDLModel {
     private List<SparseInput> getEmbedInputs(Map<String, Object> dataMap) {
         List<SparseInput> embedInputs = new ArrayList<>();
         Object value;
-        for(Integer columnId : this.wnd.getEmbedColumnIds()) {
+        for(Integer columnId: this.wnd.getEmbedColumnIds()) {
             value = getValueByColumnId(columnId, dataMap);
             if(value != null) {
                 embedInputs.add(new SparseInput(columnId, getValueIndex(columnId, value.toString())));
@@ -330,8 +354,20 @@ public class IndependentWDLModel {
         return embedInputs;
     }
 
+    private List<SparseInput> getEmbedInputs(float[] data) {
+        List<SparseInput> embedInputs = new ArrayList<>();
+        for(int columnId: this.wnd.getEmbedColumnIds()) {
+            if(columnId < data.length) {
+                embedInputs.add(new SparseInput(columnId, (int) data[columnId]));
+            } else {
+                embedInputs.add(new SparseInput(columnId, getMissingTypeCategory(columnId)));
+            }
+        }
+        return embedInputs;
+    }
+
     private int getMissingTypeCategory(int columnId) {
-        //TODO if this right? Current return +1 of the last index
+        // TODO if this right? Current return +1 of the last index
         return this.cateIndexMap.get(columnId).values().size();
     }
 
@@ -350,6 +386,20 @@ public class IndependentWDLModel {
         return numericalValues;
     }
 
+    private float[] getDenseInputs(float[] data) {
+        List<Integer> denseColumnIds = this.wnd.getDenseColumnIds();
+        float[] numericalValues = new float[denseColumnIds.size()];
+        for(int i = 0; i < numericalValues.length; i++) {
+            int index = denseColumnIds.get(i);
+            if(index < data.length) {
+                numericalValues[i] = data[index];
+            } else {
+                numericalValues[i] = getMissingNumericalValue(index);
+            }
+        }
+        return numericalValues;
+    }
+
     private int getValueIndex(int columnId, String value) {
         return this.cateIndexMap.get(columnId).get(value);
     }
@@ -357,12 +407,24 @@ public class IndependentWDLModel {
     private List<SparseInput> getWideInputs(Map<String, Object> dataMap) {
         List<SparseInput> wideInputs = new ArrayList<>();
         Object value;
-        for(Integer columnId : this.wnd.getWideColumnIds()) {
+        for(Integer columnId: this.wnd.getWideColumnIds()) {
             value = getValueByColumnId(columnId, dataMap);
             if(value != null) {
                 wideInputs.add(new SparseInput(columnId, getValueIndex(columnId, value.toString())));
             } else {
                 // when the value missing
+                wideInputs.add(new SparseInput(columnId, getMissingTypeCategory(columnId)));
+            }
+        }
+        return wideInputs;
+    }
+
+    private List<SparseInput> getWideInputs(float[] data) {
+        List<SparseInput> wideInputs = new ArrayList<>();
+        for(int columnId: this.wnd.getWideColumnIds()) {
+            if(columnId < data.length) {
+                wideInputs.add(new SparseInput(columnId, (int) data[columnId]));
+            } else {
                 wideInputs.add(new SparseInput(columnId, getMissingTypeCategory(columnId)));
             }
         }
