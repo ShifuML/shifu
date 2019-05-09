@@ -20,6 +20,8 @@ import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.StringUtils;
 import ml.shifu.shifu.core.dtrain.nn.NNColumnStats;
+import ml.shifu.shifu.exception.ShifuErrorCode;
+import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.Constants;
 
@@ -110,13 +112,18 @@ public class IndependentWDLModel {
      * Mapping for (columnNum, weightedWoeStddev) for all columns
      */
     private Map<Integer, Double> wgtWoeStddevMap;
+    /**
+     * Mapping for (ColumnNum, index in double[] array)
+     */
+    private Map<Integer, Integer> columnNumIndexMapping;
 
     private IndependentWDLModel(WideAndDeep wideAndDeep, NormType normType, Map<Integer, Double> cutOffMap,
             Map<Integer, String> numNameMap, Map<Integer, Map<String, Integer>> cateIndexMap,
             Map<Integer, List<Double>> numerBinBoundaries, Map<Integer, List<Double>> numerWoes,
             Map<Integer, List<Double>> numerWgtWoes, Map<Integer, Double> numerMeanMap,
             Map<Integer, Double> numerStddevMap, Map<Integer, Double> woeMeanMap, Map<Integer, Double> woeStddevMap,
-            Map<Integer, Double> wgtWoeMeanMap, Map<Integer, Double> wgtWoeStddevMap) {
+            Map<Integer, Double> wgtWoeMeanMap, Map<Integer, Double> wgtWoeStddevMap,
+            Map<Integer, Integer> columnNumIndexMapping) {
         this.wnd = wideAndDeep;
         this.normType = normType;
         this.cutOffMap = cutOffMap;
@@ -131,6 +138,7 @@ public class IndependentWDLModel {
         this.woeStddevMap = woeStddevMap;
         this.wgtWoeMeanMap = wgtWoeMeanMap;
         this.wgtWoeStddevMap = wgtWoeStddevMap;
+        this.columnNumIndexMapping = columnNumIndexMapping;
     }
 
     /**
@@ -317,11 +325,17 @@ public class IndependentWDLModel {
             cutoffMap.put(columnNum, cs.getCutoff());
         }
 
+        int columnMappingSize = dis.readInt();
+        Map<Integer, Integer> columnMapping = new HashMap<Integer, Integer>(columnMappingSize, 1f);
+        for(int i = 0; i < columnMappingSize; i++) {
+            columnMapping.put(dis.readInt(), dis.readInt());
+        }
+
         WideAndDeep wideAndDeep = new WideAndDeep();
         wideAndDeep.readFields(dis);
         return new IndependentWDLModel(wideAndDeep, normType, cutoffMap, numNameMap, cateIndexMapping,
                 numerBinBoundaries, numerWoes, numerWgtWoes, numerMeanMap, numerStddevMap, woeMeanMap, woeStddevMap,
-                wgtWoeMeanMap, wgtWoeStddevMap);
+                wgtWoeMeanMap, wgtWoeStddevMap, columnMapping);
     }
 
     /**
@@ -357,10 +371,10 @@ public class IndependentWDLModel {
     private List<SparseInput> getEmbedInputs(float[] data) {
         List<SparseInput> embedInputs = new ArrayList<>();
         for(int columnId: this.wnd.getEmbedColumnIds()) {
-            if(columnId < data.length) {
-                embedInputs.add(new SparseInput(columnId, (int) data[columnId]));
+            if(this.columnNumIndexMapping.containsKey(columnId)) {
+                embedInputs.add(new SparseInput(columnId, (int) data[this.columnNumIndexMapping.get(columnId)]));
             } else {
-                embedInputs.add(new SparseInput(columnId, getMissingTypeCategory(columnId)));
+                throw new ShifuException(ShifuErrorCode.ERROR_LESS_COL);
             }
         }
         return embedInputs;
@@ -390,11 +404,11 @@ public class IndependentWDLModel {
         List<Integer> denseColumnIds = this.wnd.getDenseColumnIds();
         float[] numericalValues = new float[denseColumnIds.size()];
         for(int i = 0; i < numericalValues.length; i++) {
-            int index = denseColumnIds.get(i);
-            if(index < data.length) {
-                numericalValues[i] = data[index];
+            int columnNum = denseColumnIds.get(i);
+            if(this.columnNumIndexMapping.containsKey(columnNum)) {
+                numericalValues[i] = data[this.columnNumIndexMapping.get(columnNum)];
             } else {
-                numericalValues[i] = getMissingNumericalValue(index);
+                throw new ShifuException(ShifuErrorCode.ERROR_LESS_COL);
             }
         }
         return numericalValues;
@@ -422,10 +436,10 @@ public class IndependentWDLModel {
     private List<SparseInput> getWideInputs(float[] data) {
         List<SparseInput> wideInputs = new ArrayList<>();
         for(int columnId: this.wnd.getWideColumnIds()) {
-            if(columnId < data.length) {
-                wideInputs.add(new SparseInput(columnId, (int) data[columnId]));
+            if(this.columnNumIndexMapping.containsKey(columnId)) {
+                wideInputs.add(new SparseInput(columnId, (int) data[this.columnNumIndexMapping.get(columnId)]));
             } else {
-                wideInputs.add(new SparseInput(columnId, getMissingTypeCategory(columnId)));
+                throw new ShifuException(ShifuErrorCode.ERROR_LESS_COL);
             }
         }
         return wideInputs;
