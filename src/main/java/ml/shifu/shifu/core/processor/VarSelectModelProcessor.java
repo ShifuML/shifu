@@ -152,17 +152,17 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 String varselFile = getVarSelFile();
                 Set<String> toSelectColumnSet = guessSelectColumnSet(varselFile);
                 int selectVarsCnt = 0;
-                if (CollectionUtils.isNotEmpty(toSelectColumnSet)) {
-                    for (ColumnConfig columnConfig : this.columnConfigList) {
+                if(CollectionUtils.isNotEmpty(toSelectColumnSet)) {
+                    for(ColumnConfig columnConfig: this.columnConfigList) {
                         // reset firstly
                         columnConfig.setFinalSelect(false);
                         // columnConfig.setColumnFlag(null);
 
                         // select if specified
-                        if (toSelectColumnSet.contains(columnConfig.getColumnName())) {
+                        if(toSelectColumnSet.contains(columnConfig.getColumnName())) {
                             log.info("variable {} is selected.", columnConfig.getColumnName());
                             columnConfig.setFinalSelect(true);
-                            selectVarsCnt ++;
+                            selectVarsCnt++;
                         }
                     }
                     log.info("Totally, there are {} variables are selected based on {}", selectVarsCnt, varselFile);
@@ -214,9 +214,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_ST)
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_SC)) {
                         if(!Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())
-                                && !Constants.LR.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+                                && !Constants.LR.equalsIgnoreCase(modelConfig.getAlgorithm())
+                                && !CommonUtils.isTensorFlowModel(modelConfig.getAlgorithm())) {
                             throw new IllegalArgumentException(
-                                    "Filter by SE/ST only works well in NN/LR. Please check your modelconfig::train.");
+                                    "Filter by SE/ST only works well in NN/LR/TensorFlow. Please check your modelconfig::train.");
                         }
                         int recursiveCnt = getRecursiveCnt();
                         int i = 0;
@@ -230,14 +231,15 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                             ShifuFileUtils.move(trainLogFile,
                                     new File(pathFinder.getVarSelDir(), trainLogFile).getPath(), SourceType.LOCAL);
                             // copy models to varsel directory
-                            copyModelSpec(pathFinder.getModelsPath(SourceType.LOCAL), pathFinder.getVarSelDir(), (i-1));
+                            copyModelSpec(pathFinder.getModelsPath(SourceType.LOCAL), pathFinder.getVarSelDir(),
+                                    (i - 1));
 
                             String varSelectMSEOutputPath = pathFinder
                                     .getVarSelectMSEOutputPath(modelConfig.getDataSet().getSource());
                             // even fail to run SE, still to create an empty se.x file
                             String varSelMSEHistPath = pathFinder.getVarSelMSEHistPath(i - 1);
                             ShifuFileUtils.createFileIfNotExists(varSelMSEHistPath, SourceType.LOCAL);
-                            if (filterBy.equalsIgnoreCase(Constants.FILTER_BY_SC)) {
+                            if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_SC)) {
                                 ShifuFileUtils.copyToLocal(
                                         new SourceFile(varSelectMSEOutputPath, modelConfig.getDataSet().getSource()),
                                         Constants.HADOOP_PART_PREFIX, varSelMSEHistPath);
@@ -257,13 +259,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     }
                 } else {
                     boolean hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
-                    if ( this.modelConfig.getVarSelect().getForceEnable()
-                            && CollectionUtils.isNotEmpty(this.modelConfig.getListForceSelect()) ) {
-                        log.info("Force Selection is enabled ... " +
-                                    "for multi-classification, currently only use it to selected variables.");
-                        for (ColumnConfig config : this.columnConfigList) {
-                            if ( config.isForceSelect() ) {
-                                if (!CommonUtils.isGoodCandidate(config, hasCandidates, modelConfig.isRegression())) {
+                    if(this.modelConfig.getVarSelect().getForceEnable()
+                            && CollectionUtils.isNotEmpty(this.modelConfig.getListForceSelect())) {
+                        log.info("Force Selection is enabled ... "
+                                + "for multi-classification, currently only use it to selected variables.");
+                        for(ColumnConfig config: this.columnConfigList) {
+                            if(config.isForceSelect()) {
+                                if(!CommonUtils.isGoodCandidate(config, hasCandidates, modelConfig.isRegression())) {
                                     log.warn("!! Variable - {} is not a good candidate. But it is in forceselect list",
                                             config.getColumnName());
                                 }
@@ -273,8 +275,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         log.info("{} variables are selected by force.", this.modelConfig.getListForceSelect().size());
                     } else {
                         // multiple classification, select all candidate at first, TODO add SE for multi-classification
-                        for (ColumnConfig config : this.columnConfigList) {
-                            if (CommonUtils.isGoodCandidate(config, hasCandidates, modelConfig.isRegression())) {
+                        for(ColumnConfig config: this.columnConfigList) {
+                            if(CommonUtils.isGoodCandidate(config, hasCandidates, modelConfig.isRegression())) {
                                 config.setFinalSelect(true);
                             }
                         }
@@ -686,7 +688,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         // 2.3 create se job
         Job job = null;
-        if (modelConfig.getVarSelect().getFilterBy().equalsIgnoreCase(Constants.FILTER_BY_SC)) {
+        if(modelConfig.getVarSelect().getFilterBy().equalsIgnoreCase(Constants.FILTER_BY_SC)) {
             job = createSCMapReduceJob(source, conf, varSelectMSEOutputPath);
         } else {
             job = createSEMapReduceJob(source, conf, varSelectMSEOutputPath);
@@ -940,13 +942,14 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         try {
             int targetCnt = 0; // total variable count that user want to select
             List<Integer> candidateColumnIdList = null;
-            if (modelConfig.getVarSelect().getFilterBy().equalsIgnoreCase(Constants.FILTER_BY_SC)) {
+            if(modelConfig.getVarSelect().getFilterBy().equalsIgnoreCase(Constants.FILTER_BY_SC)) {
                 candidateColumnIdList = getCandidateVariableList(source, varSelectMSEOutputPath);
                 targetCnt = (int) (candidateColumnIdList.size()
                         * (1.0f - modelConfig.getVarSelect().getFilterOutRatio()));
             } else {
                 // here only works for 1 reducer
-                FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source).globStatus(new Path(outputFilePattern));
+                FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source)
+                        .globStatus(new Path(outputFilePattern));
                 if(globStatus == null || globStatus.length == 0) {
                     throw new RuntimeException("Var select MSE stats output file not exist.");
                 }
@@ -986,7 +989,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             }
 
             log.info("{} variables are selected.", selectCnt);
-            if (modelConfig.getVarSelect().getFilterBy().equalsIgnoreCase(Constants.FILTER_BY_SC)) {
+            if(modelConfig.getVarSelect().getFilterBy().equalsIgnoreCase(Constants.FILTER_BY_SC)) {
                 log.info(
                         "Sensitivity analysis report is in {}/part-* file(s) with format 'column_index\tsensitivity_perf'.",
                         varSelectMSEOutputPath);
@@ -1014,16 +1017,17 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         HdfsPartFile partFile = new HdfsPartFile(varSelectMSEOutputPath, sourceType);
         List<VarSelPerf> varSelPerfList = new ArrayList<>();
         String line = null;
-        while ((line = partFile.readLine()) != null) {
+        while((line = partFile.readLine()) != null) {
             VarSelPerf perf = VarSelPerf.create(line);
-            if (perf != null) {
+            if(perf != null) {
                 varSelPerfList.add(perf);
             }
         }
         partFile.close();
 
         Collections.sort(varSelPerfList, new Comparator<VarSelPerf>() {
-            @Override public int compare(VarSelPerf from, VarSelPerf to) {
+            @Override
+            public int compare(VarSelPerf from, VarSelPerf to) {
                 return Double.compare(from.sensitivityPerf, to.sensitivityPerf);
             }
         });
@@ -1031,16 +1035,15 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         System.out.println(varSelPerfList);
 
         List<Integer> candidateColumnIds = new ArrayList<>();
-        for (VarSelPerf perf : varSelPerfList) {
-            if (perf.columnId > - 1) { // remove overall column
+        for(VarSelPerf perf: varSelPerfList) {
+            if(perf.columnId > -1) { // remove overall column
                 candidateColumnIds.add(perf.columnId);
             }
         }
-        
+
         System.out.println(candidateColumnIds);
         return candidateColumnIds;
     }
-
 
     private Map<Integer, ColumnStatistics> readSEValuesToMap(String seOutputFiles, SourceType source)
             throws IOException {
@@ -1078,17 +1081,20 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     /**
      * Coopy model spec under modelsPath to varSelDir folder
-     * @param modelsPath - model spec path, like ./models
-     * @param varSelDir - valsel directory
-     * @param i - round of iteration
+     * 
+     * @param modelsPath
+     *            - model spec path, like ./models
+     * @param varSelDir
+     *            - valsel directory
+     * @param i
+     *            - round of iteration
      * @throws IOException
      */
     private void copyModelSpec(String modelsPath, String varSelDir, int i) throws IOException {
         File sourceFolder = new File(modelsPath);
         File[] modelFiles = sourceFolder.listFiles();
-        for ( File mf : modelFiles ) {
-            ShifuFileUtils.copy(mf.getPath(),
-                    varSelDir + File.separator + mf.getName() + "." + i, SourceType.LOCAL);
+        for(File mf: modelFiles) {
+            ShifuFileUtils.copy(mf.getPath(), varSelDir + File.separator + mf.getName() + "." + i, SourceType.LOCAL);
         }
     }
 
@@ -1341,38 +1347,38 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         Set<String> toSelectedVars = new HashSet<>();
 
-        if (fileName.endsWith("." + Constants.NN.toLowerCase())) {
+        if(fileName.endsWith("." + Constants.NN.toLowerCase())) {
             // 1. user specify .nn file as input
             List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(varselFile, ModelTrainConf.ALGORITHM.NN);
-            if (CollectionUtils.isNotEmpty(models)) {
+            if(CollectionUtils.isNotEmpty(models)) {
                 BasicML model = models.get(0);
-                if (model instanceof BasicFloatNetwork) {
+                if(model instanceof BasicFloatNetwork) {
                     Set<Integer> featureSets = ((BasicFloatNetwork) model).getFeatureSet();
-                    for (ColumnConfig columnConfig : this.columnConfigList) {
-                        if (featureSets.contains(columnConfig.getColumnNum())) {
+                    for(ColumnConfig columnConfig: this.columnConfigList) {
+                        if(featureSets.contains(columnConfig.getColumnNum())) {
                             toSelectedVars.add(columnConfig.getColumnName());
                         }
                     }
                 }
             }
-        } else if (fileName.endsWith("." + Constants.GBT.toLowerCase())
+        } else if(fileName.endsWith("." + Constants.GBT.toLowerCase())
                 || fileName.endsWith("." + Constants.RF.toLowerCase())) {
             // 2. user specify .gbt or .rf file as input
             IndependentTreeModel treeModel = IndependentTreeModel.loadFromStream(new FileInputStream(varselFile));
             toSelectedVars.addAll(treeModel.getNumNameMapping().values());
-        } else if (fileName.startsWith(Constants.COLUMN_CONFIG_JSON_FILE_NAME)) {
+        } else if(fileName.startsWith(Constants.COLUMN_CONFIG_JSON_FILE_NAME)) {
             List<ColumnConfig> srcColumnConfigs = CommonUtils.loadColumnConfigList(varselFile, SourceType.LOCAL);
-            for (ColumnConfig columnConfig : srcColumnConfigs) {
-                if (columnConfig.isFinalSelect()) {
+            for(ColumnConfig columnConfig: srcColumnConfigs) {
+                if(columnConfig.isFinalSelect()) {
                     toSelectedVars.add(columnConfig.getColumnName());
                 }
             }
-        } else if (fileName.endsWith(".txt") || fileName.endsWith(".vars") || fileName.endsWith(".names")) {
+        } else if(fileName.endsWith(".txt") || fileName.endsWith(".vars") || fileName.endsWith(".names")) {
             // 3. user specify .txt, .vars or .names file as input
             List<String> vars = FileUtils.readLines(new File(varselFile));
-            for (String var : vars ) {
+            for(String var: vars) {
                 String fvar = StringUtils.trimToEmpty(var);
-                if (fvar.startsWith("#") || fvar.startsWith("//")) {
+                if(fvar.startsWith("#") || fvar.startsWith("//")) {
                     continue; // skip comments
                 } else {
                     toSelectedVars.add(fvar);
@@ -1421,11 +1427,12 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     public static class VarSelPerf {
         public int columnId;
         public double sensitivityPerf;
+
         public static VarSelPerf create(String line) {
             line = StringUtils.trimToEmpty(line);
             String[] fields = line.split("\t");
             VarSelPerf perf = null;
-            if (fields != null && fields.length == 3) {
+            if(fields != null && fields.length == 3) {
                 perf = new VarSelPerf();
                 perf.columnId = Integer.parseInt(fields[0]);
                 perf.sensitivityPerf = Double.parseDouble(fields[2]);
@@ -1441,8 +1448,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     public static void main(String[] args) throws IOException {
         VarSelectModelProcessor inst = new VarSelectModelProcessor();
-        List<Integer> columnIds =
-                inst.getCandidateVariableList(SourceType.LOCAL, "src/test/resources/example/sc");
+        List<Integer> columnIds = inst.getCandidateVariableList(SourceType.LOCAL, "src/test/resources/example/sc");
         System.out.println(columnIds);
     }
 

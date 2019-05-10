@@ -374,7 +374,7 @@ public class DTWorker extends
                 }
             }
         }
-        
+
         this.hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
 
         // create Splitter
@@ -1114,6 +1114,7 @@ public class DTWorker extends
         // the function in akka mode.
         int index = 0, inputIndex = 0;
         for(String input: this.splitter.split(currentValue.getWritable().toString())) {
+            // if no wgt column at last field of line, significance will be bypassed and set to default 1
             if(index == this.columnConfigList.size()) {
                 // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
                 // weight, how to process???

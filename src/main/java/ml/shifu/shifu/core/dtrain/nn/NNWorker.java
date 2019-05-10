@@ -79,8 +79,12 @@ public class NNWorker extends AbstractNNWorker<Text> {
 
         String[] fields = Lists.newArrayList(this.splitter.split(currentValue.getWritable().toString()))
                 .toArray(new String[0]);
-        int pos = 0;
 
+        // if has wgt column or not, shifu norm will write one more wgt column at last pos of fields, for some case, not
+        // from shifu norm outputs, no such column, but we need support such training
+        // FIXME doesn't work in ONEHOT
+        boolean hasWgtClm = this.columnConfigList.size() + 1 == fields.length;
+        int pos = 0;
         for(pos = 0; pos < fields.length;) {
             String input = fields[pos];
             // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
@@ -88,7 +92,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
             floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
 
-            if(pos == fields.length - 1) {
+            if(hasWgtClm && pos == fields.length - 1) {
                 // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
                 // weight, how to process???
                 if(StringUtils.isBlank(modelConfig.getWeightColumnName())) {
@@ -134,11 +138,11 @@ public class NNWorker extends AbstractNNWorker<Text> {
                     pos++;
                 } else {
                     if(subFeatureSet.contains(index)) {
-                        if ( columnConfig.isMeta() || columnConfig.isForceRemove() ) {
+                        if(columnConfig.isMeta() || columnConfig.isForceRemove()) {
                             // it shouldn't happen here
                             pos += 1;
-                        } else if ( columnConfig != null && columnConfig.isNumerical()
-                                && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT) ) {
+                        } else if(columnConfig != null && columnConfig.isNumerical()
+                                && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)) {
                             for(int k = 0; k < columnConfig.getBinBoundary().size() + 1; k++) {
                                 String tval = fields[pos];
                                 // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
@@ -168,9 +172,9 @@ public class NNWorker extends AbstractNNWorker<Text> {
                         }
                         hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
                     } else {
-                        if ( !CommonUtils.isToNormVariable(columnConfig, hasCandidates, modelConfig.isRegression()) ) {
+                        if(!CommonUtils.isToNormVariable(columnConfig, hasCandidates, modelConfig.isRegression())) {
                             pos += 1;
-                        } else if ( columnConfig.isNumerical()
+                        } else if(columnConfig.isNumerical()
                                 && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)
                                 && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 0) {
                             pos += (columnConfig.getBinBoundary().size() + 1);
@@ -188,11 +192,11 @@ public class NNWorker extends AbstractNNWorker<Text> {
             index += 1;
         }
 
-        if ( index != this.columnConfigList.size() || pos != fields.length - 1 ) {
-            throw new RuntimeException("Wrong data indexing. ColumnConfig index = " + index
-                    + ", while it should be " + columnConfigList.size() + ". "
-                    + "Data Pos = " + pos
-                    + ", while it should be " + (fields.length - 1));
+        
+        if(hasWgtClm && (index != this.columnConfigList.size() || pos != fields.length - 1)) {
+            throw new RuntimeException("Wrong data indexing. ColumnConfig index = " + index + ", while it should be "
+                    + columnConfigList.size() + ". " + "Data Pos = " + pos + ", while it should be "
+                    + (fields.length - 1));
         }
 
         // output delimiter in norm can be set by user now and if user set a special one later changed, this exception

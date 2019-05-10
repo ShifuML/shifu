@@ -256,6 +256,7 @@ public class WDLWorker extends
         int index = 0, numIndex = 0, cateIndex = 0;
         // use guava Splitter to iterate only once
         for(String input: this.splitter.split(currentValue.getWritable().toString())) {
+            // if no wgt column at last pos, no need process here 
             if(index == this.columnConfigList.size()) {
                 significance = getWeightValue(input);
                 break; // the last field is significance, break here

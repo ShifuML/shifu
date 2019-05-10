@@ -148,9 +148,14 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
         long start = System.currentTimeMillis();
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.LOCAL);
+
         // load model from local d-cache model file
-        model = (MLRegression) ModelSpecLoaderUtils.loadModel(modelConfig,
-                new Path("model0." + modelConfig.getAlgorithm().toLowerCase()), fs);
+        if(CommonUtils.isTensorFlowModel(modelConfig.getAlgorithm())) {
+            this.model = (MLRegression) (ModelSpecLoaderUtils.loadBasicModels(modelConfig, null).get(0));
+        } else {
+            model = (MLRegression) ModelSpecLoaderUtils.loadModel(modelConfig,
+                    new Path("model0." + modelConfig.getAlgorithm().toLowerCase()), fs);
+        }
         LOG.debug("After load model class {} with time {}ms and memory {} in thread {}.", model.getClass().getName(),
                 (System.currentTimeMillis() - start), MemoryUtils.getRuntimeMemoryStats(),
                 Thread.currentThread().getName());
@@ -218,7 +223,7 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
 
         boolean isAfterVarSelect = (inputOutputIndex[0] != 0);
         // cache all feature list for sampling features
-        if (CollectionUtils.isEmpty(this.featureSet)) {
+        if(CollectionUtils.isEmpty(this.featureSet)) {
             this.featureSet = new HashSet<Integer>(NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect));
             this.inputs = new double[this.featureSet.size()];
         }
@@ -269,7 +274,7 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
         // output the actual score as column id -1, then user could know the actual catch rate
         // before dropping any variables
         ColumnScore actualScore = new ColumnScore();
-        actualScore.setColumnTag((int)this.outputs[0]);
+        actualScore.setColumnTag((int) this.outputs[0]);
         actualScore.setWeight(weight);
         actualScore.setSensitivityScore(candidateModelScore);
         context.write(new LongWritable(-1), actualScore);
@@ -278,7 +283,7 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
             // cache flag is false to reuse cache sum of first layer of values.
             double currentModelScore = cacheNetwork.compute(inputsMLData, false, i).getData()[0];
             ColumnScore columnScore = new ColumnScore();
-            columnScore.setColumnTag((int)this.outputs[0]);
+            columnScore.setColumnTag((int) this.outputs[0]);
             columnScore.setWeight(weight);
             columnScore.setSensitivityScore(currentModelScore);
             context.write(new LongWritable(this.columnIndexes[i]), columnScore);

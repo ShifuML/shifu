@@ -86,6 +86,10 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
 
         Tuple tuple = currentValue.getWritable();
 
+        // if has wgt column or not, shifu norm will write one more wgt column at last pos of fields, for some case, not
+        // from shifu norm outputs, no such column, but we need support such training
+        boolean hasWgtClm = this.columnConfigList.size() + 1 == tuple.size();
+        
         // back from foreach to for loop because of in earlier version, tuple cannot be iterable.
         for(int i = 0; i < tuple.size(); i++) {
             Object element = null;
@@ -107,7 +111,7 @@ public class NNParquetWorker extends AbstractNNWorker<Tuple> {
             // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
             floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
 
-            if(index == (super.inputNodeCount + super.outputNodeCount)) {
+            if(hasWgtClm && index == (super.featureInputsCnt + super.outputNodeCount)) {
                 // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
                 // weight, how to process???
                 if(StringUtils.isBlank(modelConfig.getWeightColumnName())) {

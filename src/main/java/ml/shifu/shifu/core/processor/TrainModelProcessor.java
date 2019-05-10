@@ -449,7 +449,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private void cleanTmpModelPath() {
-        if(!modelConfig.getTrain().getIsContinuous()) {
+        // if var select job and not continue model training 
+        if(this.isForVarSelect || !modelConfig.getTrain().getIsContinuous() ) {
             try {
                 FileSystem fs = HDFSUtils.getFS();
                 // delete all old models if not continuous
@@ -460,7 +461,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 fs.rename(srcTmpModelPath, mvTmpModelPath);
                 fs.mkdirs(srcTmpModelPath);
             } catch (Exception e) {
-                LOG.warn("Failed to move tmp HDFS path", e);
+                LOG.warn("Failed to move tmp HDFS path, such error can be ignored", e);
             }
         }
     }
