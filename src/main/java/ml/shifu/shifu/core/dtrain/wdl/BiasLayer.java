@@ -140,8 +140,8 @@ public class BiasLayer extends AbstractLayer<Float, Float, Float, Float, BiasLay
     }
 
     @Override
-    public void update(BiasLayer gradLayer, Optimizer optimizer) {
-        this.weight -= gradLayer.getwGrad() * optimizer.getLearningRate();
+    public void update(BiasLayer gradLayer, Optimizer optimizer, String uniqueKey) {
+        this.weight -= optimizer.updateWeight(gradLayer.getwGrad(), uniqueKey);
     }
 
 }

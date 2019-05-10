@@ -85,7 +85,6 @@ public class WideLayer
     public float[] forward(Tuple<List<SparseInput>, float[]> input) {
         LOG.debug("Debug in Wide Layer: with input first " + input.getFirst().size() + " second " + input.getSecond().length);
         AssertUtils.assertListNotNullAndSizeEqual(this.getLayers(), input.getFirst());
-
         float[] results = new float[layers.get(0).getOutDim()];
         for(int i = 0; i < getLayers().size(); i++) {
             float[] fOuts = this.getLayers().get(i).forward(input.getFirst().get(i));
@@ -109,7 +108,6 @@ public class WideLayer
             results[j] += bias.forward(1f);
             LOG.debug("after add bias result " + j + " is " + results[j]);
         }
-
         return results;
     }
 
@@ -272,14 +270,14 @@ public class WideLayer
     }
 
     @Override
-    public void update(WideLayer gradLayer, Optimizer optimizer) {
+    public void update(WideLayer gradLayer, Optimizer optimizer, String uniqueKey) {
         List<WideFieldLayer> gradWFLs = gradLayer.getLayers();
         int wflSize = this.layers.size();
         for(int i = 0; i < wflSize; i++) {
-            this.layers.get(i).update(gradWFLs.get(i), optimizer);
+            this.layers.get(i).update(gradWFLs.get(i), optimizer, uniqueKey + "w" + i);
         }
-        this.denseLayer.update(gradLayer.getDenseLayer(), optimizer);
-        this.bias.update(gradLayer.getBias(), optimizer);
+        this.denseLayer.update(gradLayer.getDenseLayer(), optimizer, "d");
+        this.bias.update(gradLayer.getBias(), optimizer, "b");
     }
 
 }

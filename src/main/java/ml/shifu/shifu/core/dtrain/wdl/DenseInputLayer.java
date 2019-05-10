@@ -86,7 +86,7 @@ public class DenseInputLayer extends AbstractLayer<float[], float[], float[], fl
     }
 
     @Override
-    public void update(DenseInputLayer gradLayer, Optimizer optimizer) {
+    public void update(DenseInputLayer gradLayer, Optimizer optimizer, String uniqueKey) {
         // no need to update output dimension
     }
 

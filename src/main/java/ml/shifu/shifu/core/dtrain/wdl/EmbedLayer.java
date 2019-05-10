@@ -161,11 +161,11 @@ public class EmbedLayer
     }
 
     @Override
-    public void update(EmbedLayer gradLayer, Optimizer optimizer) {
+    public void update(EmbedLayer gradLayer, Optimizer optimizer, String uniqueKey) {
         List<EmbedFieldLayer> gradEFLs = gradLayer.getEmbedLayers();
         int size = this.embedLayers.size();
         for(int i = 0; i < size; i++) {
-            this.embedLayers.get(i).update(gradEFLs.get(i), optimizer);
+            this.embedLayers.get(i).update(gradEFLs.get(i), optimizer, uniqueKey + i);
         }
     }
 }

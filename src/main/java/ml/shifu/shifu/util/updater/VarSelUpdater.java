@@ -1,10 +1,6 @@
 package ml.shifu.shifu.util.updater;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map.Entry;
-
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;

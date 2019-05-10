@@ -200,7 +200,7 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
     }
 
     public void initGrads() {
-        this.wGrads = new HashMap<Integer, float[]>();
+        this.wGrads = new HashMap<>();
     }
 
     @Override
@@ -210,7 +210,11 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
 
     @Override
     public void initWeight(EmbedFieldLayer updateModel) {
-        this.weights = updateModel.getWeights();
+        for(int i = 0; i < this.in; i++) {
+            for(int j = 0; j < this.out; j++) {
+                this.weights[i][j] = updateModel.getWeights()[i][j];
+            }
+        }
     }
 
     /*
@@ -300,7 +304,7 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
     }
 
     @Override
-    public void update(EmbedFieldLayer gradLayer, Optimizer optimizer) {
-        optimizer.batchUpdate(this.weights, gradLayer.getwGrads());
+    public void update(EmbedFieldLayer gradLayer, Optimizer optimizer, String uniqueKey) {
+        optimizer.batchUpdate(this.weights, gradLayer.getwGrads(), uniqueKey);
     }
 }

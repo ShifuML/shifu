@@ -86,7 +86,6 @@ public class WDLOutput extends BasicMasterInterceptor<WDLParams, WDLParams> {
     /**
      * ColumnConfig list reference
      */
-    @SuppressWarnings("unused")
     private List<ColumnConfig> columnConfigList;
 
     /**

@@ -36,6 +36,11 @@ import ml.shifu.shifu.core.dtrain.wdl.IndependentWDLModel;
 public class WDLModel extends BasicML implements FloatMLRegression {
 
     /**
+     * Serial UID
+     */
+    private static final long serialVersionUID = 1889747539482747865L;
+
+    /**
      * WDL model instance without dependency on encog.
      */
     IndependentWDLModel independentWDLModel;
