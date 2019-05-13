@@ -210,6 +210,7 @@ public class ModelSpecLoaderUtils {
      *            generic model files
      * @param sourceType
      *            source type
+     * @return list of model object after loading from path list
      * @throws IOException
      *             Exception when fail to load generic models
      */
@@ -285,8 +286,8 @@ public class ModelSpecLoaderUtils {
      * @throws IOException
      *             Exception when fail to load basic models
      */
-    public static List<Path> locateBasicModels(ModelConfig modelConfig, EvalConfig evalConfig,
-            SourceType sourceType) throws IOException {
+    public static List<Path> locateBasicModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
+            throws IOException {
         // we have to register PersistBasicFloatNetwork for loading such models
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
 
@@ -392,14 +393,15 @@ public class ModelSpecLoaderUtils {
             // no such existing model, return null.
             return null;
         }
-        
+
         // TF for dedicated model loader
         if(Constants.GENERIC.equalsIgnoreCase(modelConfig.getAlgorithm()) // generic or TensorFlow algorithm
                 || Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
             // only 1 model
-            return loadGenericModels(modelConfig, Arrays.asList(modelPath), modelConfig.getDataSet().getSource()).get(0);
+            return loadGenericModels(modelConfig, Arrays.asList(modelPath), modelConfig.getDataSet().getSource())
+                    .get(0);
         }
-        
+
         // we have to register PersistBasicFloatNetwork for loading such models
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
         FSDataInputStream stream = null;
@@ -476,7 +478,7 @@ public class ModelSpecLoaderUtils {
                 }
             }
         }
-        
+
         List<Path> paths = new ArrayList<>();
         for(FileStatus fileStatus: fileList) {
             paths.add(fileStatus.getPath());
@@ -523,7 +525,7 @@ public class ModelSpecLoaderUtils {
                 }
             }
         }
-        
+
         List<Path> paths = new ArrayList<>();
         for(FileStatus fileStatus: fileList) {
             paths.add(fileStatus.getPath());

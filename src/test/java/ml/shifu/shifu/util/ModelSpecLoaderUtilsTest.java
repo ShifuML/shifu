@@ -1,17 +1,18 @@
 package ml.shifu.shifu.util;
 
-import ml.shifu.shifu.container.obj.EvalConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.fs.FileStatus;
-import org.testng.Assert;
-import org.testng.annotations.Test;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.fs.Path;
+import org.testng.Assert;
+import org.testng.annotations.Test;
+
+import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 
 /**
  * Copyright [2013-2018] PayPal Software Foundation
@@ -39,7 +40,7 @@ public class ModelSpecLoaderUtilsTest {
         File dstModels = new File("models");
         FileUtils.copyDirectory(srcModels, dstModels);
 
-        List<FileStatus> modelFiles = ModelSpecLoaderUtils.findModels(modelConfig, null, SourceType.LOCAL);
+        List<Path> modelFiles = ModelSpecLoaderUtils.findModels(modelConfig, null, SourceType.LOCAL);
         Assert.assertEquals(5, modelFiles.size());
 
         EvalConfig evalConfig = modelConfig.getEvalConfigByName("EvalA");
