@@ -240,7 +240,11 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         loadModel();
 
         // Copy mode to here
-        cacheNetwork = copy((BasicFloatNetwork) model);
+        if(CommonUtils.isTensorFlowModel(modelConfig.getAlgorithm())) {
+            cacheNetwork = null;
+        } else {
+            cacheNetwork = copy((BasicFloatNetwork) model);
+        }
 
         this.filterBy = context.getConfiguration().get(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE,
                 Constants.FILTER_BY_SE);
@@ -280,6 +284,10 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     @Override
     protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
         recordCount += 1L;
+
+        if(recordCount % 200 == 0) {
+            LOG.info("Count {} with Memory used by {}.", recordCount, MemoryUtils.getRuntimeMemoryStats());
+        }
         int index = 0, inputsIndex = 0, outputsIndex = 0;
         for(String input: this.splitter.split(value.toString())) {
             double doubleValue = NumberFormatUtils.getDouble(input.trim(), 0.0d);
@@ -301,11 +309,29 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
 
         this.inputsMLData.setData(this.inputs);
         // compute candidate model score , cache first layer of sum values in such call method, cache flag here is true
-        double candidateModelScore = cacheNetwork.compute(inputsMLData, true, -1).getData()[0];
+        double candidateModelScore;
+        if(CommonUtils.isTensorFlowModel(modelConfig.getAlgorithm())) {
+            candidateModelScore = this.model.compute(inputsMLData).getData(0);
+        } else {
+            candidateModelScore = cacheNetwork.compute(inputsMLData, true, -1).getData()[0];
+        }
 
         for(int i = 0; i < this.inputs.length; i++) {
             // cache flag is false to reuse cache sum of first layer of values.
-            double currentModelScore = cacheNetwork.compute(inputsMLData, false, i).getData()[0];
+            double currentModelScore;
+            if(CommonUtils.isTensorFlowModel(modelConfig.getAlgorithm())) {
+                double[] newInputs = new double[inputsMLData.getData().length];
+                for(int j = 0; j < newInputs.length; j++) {
+                    if(j != i) {
+                        newInputs[j] = inputsMLData.getData()[j];
+                    }
+                }
+                currentModelScore = this.model.compute(new BasicMLData(newInputs)).getData(0);
+                // currentModelScore = 0;
+            } else {
+                currentModelScore = cacheNetwork.compute(inputsMLData, false, i).getData()[0];
+            }
+
             double diff = 0d;
             if(Constants.FILTER_BY_ST.equalsIgnoreCase(this.filterBy)) {
                 // ST

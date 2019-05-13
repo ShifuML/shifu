@@ -15,40 +15,22 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Splitter;
-import ml.shifu.guagua.GuaguaConstants;
-import ml.shifu.guagua.hadoop.util.HDPUtils;
-import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
-import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
-import ml.shifu.shifu.column.NSColumn;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
-import ml.shifu.shifu.container.obj.ModelTrainConf;
-import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.VariableSelector;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
-import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
-import ml.shifu.shifu.core.dvarsel.*;
-import ml.shifu.shifu.core.dvarsel.wrapper.CandidateGenerator;
-import ml.shifu.shifu.core.dvarsel.wrapper.WrapperMasterConductor;
-import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
-import ml.shifu.shifu.core.history.VarSelDesc;
-import ml.shifu.shifu.core.history.VarSelReason;
-import ml.shifu.shifu.core.mr.input.CombineInputFormat;
-import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
-import ml.shifu.shifu.core.varselect.*;
-import ml.shifu.shifu.exception.ShifuErrorCode;
-import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.fs.PathFinder;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.fs.SourceFile;
-import ml.shifu.shifu.util.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.Reader;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.Set;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -77,8 +59,56 @@ import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.util.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Splitter;
+
+import ml.shifu.guagua.GuaguaConstants;
+import ml.shifu.guagua.hadoop.util.HDPUtils;
+import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
+import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
+import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
+import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.VariableSelector;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.core.dvarsel.VarSelMaster;
+import ml.shifu.shifu.core.dvarsel.VarSelMasterResult;
+import ml.shifu.shifu.core.dvarsel.VarSelOutput;
+import ml.shifu.shifu.core.dvarsel.VarSelWorker;
+import ml.shifu.shifu.core.dvarsel.VarSelWorkerResult;
+import ml.shifu.shifu.core.dvarsel.wrapper.CandidateGenerator;
+import ml.shifu.shifu.core.dvarsel.wrapper.WrapperMasterConductor;
+import ml.shifu.shifu.core.dvarsel.wrapper.WrapperWorkerConductor;
+import ml.shifu.shifu.core.history.VarSelDesc;
+import ml.shifu.shifu.core.history.VarSelReason;
+import ml.shifu.shifu.core.mr.input.CombineInputFormat;
+import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
+import ml.shifu.shifu.core.varselect.ColumnInfo;
+import ml.shifu.shifu.core.varselect.ColumnScore;
+import ml.shifu.shifu.core.varselect.ColumnStatistics;
+import ml.shifu.shifu.core.varselect.VarSelectMapper;
+import ml.shifu.shifu.core.varselect.VarSelectReducer;
+import ml.shifu.shifu.core.varselect.VarSelectSCMapper;
+import ml.shifu.shifu.core.varselect.VarSelectSCReducer;
+import ml.shifu.shifu.exception.ShifuErrorCode;
+import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.fs.SourceFile;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.HdfsPartFile;
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
+import ml.shifu.shifu.util.ValueVisitor;
 
 /**
  * Variable selection processor, select the variable based on KS/IV value, or
@@ -436,7 +466,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
     }
 
-    private void votedVariablesSelection() throws ClassNotFoundException, IOException, InterruptedException {
+    private void votedVariablesSelection() throws ClassNotFoundException, IOException, InterruptedException, Exception {
         log.info("Start voted variables selection ");
         // sync data back to hdfs
         super.syncDataToHdfs(modelConfig.getDataSet().getSource());
@@ -521,7 +551,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     @SuppressWarnings("unused")
-    private void prepareVarSelParams(final List<String> args, final SourceType sourceType) {
+    private void prepareVarSelParams(final List<String> args, final SourceType sourceType) throws Exception {
         args.add("-libjars");
 
         args.add(addRuntimeJars());
@@ -618,7 +648,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     // GuaguaOptionsParser doesn't to support *.jar currently.
-    private String addRuntimeJars() {
+    private String addRuntimeJars() throws ClassNotFoundException, FileNotFoundException, IOException {
         List<String> jars = new ArrayList<String>(16);
         // jackson-databind-*.jar
         jars.add(JarManager.findContainingJar(ObjectMapper.class));
@@ -648,8 +678,17 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         jars.add(JarManager.findContainingJar(ZooKeeper.class));
         // netty-*.jar
         jars.add(JarManager.findContainingJar(ServerBootstrap.class));
-
+        // common jexl related jar
         jars.add(JarManager.findContainingJar(JexlException.class));
+
+        if(CommonUtils.isTensorFlowModel(this.modelConfig.getAlgorithm())) {
+            jars.add(JarManager.findContainingJar(Class.forName("ml.shifu.shifu.tensorflow.TensorflowModel")));
+            String tJar = JarManager.findContainingJar(Class.forName("org.tensorflow.Tensors"));
+            log.info("TF jar {}.", tJar);
+            jars.add(tJar);
+            jars.add(tJar.replaceAll("libtensorflow", "libtensorflow_jni"));
+            jars.add(tJar.replaceAll("libtensorflow", "tensorflow"));
+        }
 
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
         if(StringUtils.isNotBlank(hdpVersion)) {
@@ -713,7 +752,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             log.error("VarSelect SE hadoop job is failed, please re-try varselect step.");
         }
     }
-
+    
     private Job createSEMapReduceJob(SourceType source, Configuration conf, String varSelectMSEOutputPath)
             throws IOException {
         @SuppressWarnings("deprecation")
@@ -792,8 +831,12 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private int getMultiThreadCount() {
         int threads;
         try {
-            threads = Integer.parseInt(Environment.getProperty(Constants.SHIFU_VARSEL_SE_MULTI_THREAD,
-                    Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD + ""));
+            if(CommonUtils.isTensorFlowModel(this.modelConfig.getAlgorithm())) {
+                threads = Integer.parseInt(Environment.getProperty(Constants.SHIFU_VARSEL_SE_MULTI_THREAD, "1"));
+            } else {
+                threads = Integer.parseInt(Environment.getProperty(Constants.SHIFU_VARSEL_SE_MULTI_THREAD,
+                        Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD + ""));
+            }
         } catch (Exception e) {
             log.warn("'shifu.varsel.se.multi.thread' should be a int value, set default value: {}",
                     Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD);
@@ -802,16 +845,22 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         return threads;
     }
 
-    private void prepareSEJobConf(SourceType source, final Configuration conf) throws IOException {
+    private void prepareSEJobConf(SourceType source, final Configuration conf) throws Exception {
         String modelConfigPath = ShifuFileUtils.getFileSystemBySourceType(source)
                 .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString();
         String columnConfigPath = ShifuFileUtils.getFileSystemBySourceType(source)
                 .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString();
         // only the first model is sued for sensitivity analysis
-        String seModelPath = ShifuFileUtils.getFileSystemBySourceType(source).makeQualified(
-                new Path(super.getPathFinder().getModelsPath(), "model0." + modelConfig.getAlgorithm().toLowerCase()))
-                .toString();
-        String filePath = modelConfigPath + "," + columnConfigPath + "," + seModelPath;
+        String filePath = null;
+        if(CommonUtils.isTensorFlowModel(this.modelConfig.getAlgorithm())) {
+            filePath = modelConfigPath + "," + columnConfigPath;
+        } else {
+            String seModelPath = ShifuFileUtils.getFileSystemBySourceType(source)
+                    .makeQualified(new Path(super.getPathFinder().getModelsPath(),
+                            "model0." + modelConfig.getAlgorithm().toLowerCase()))
+                    .toString();
+            filePath = modelConfigPath + "," + columnConfigPath + "," + seModelPath;
+        }
 
         // add jars and files to hadoop mapper and reducer
         new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars(), "-files", filePath });
@@ -829,8 +878,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // set mapreduce.job.max.split.locations to 100 to suppress warnings
         conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 5000);
 
-        // Tmp set to false because of some cluster by default use gzip while CombineInputFormat will split gzip file (a
-        // bug)
+        // Tmp false because of some cluster by default use gzip while CombineInputFormat will split gzip file (a bug)
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, false);
         conf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", true);
 
@@ -1448,9 +1496,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     public static void main(String[] args) throws IOException {
-        VarSelectModelProcessor inst = new VarSelectModelProcessor();
-        List<Integer> columnIds = inst.getCandidateVariableList(SourceType.LOCAL, "src/test/resources/example/sc");
-        System.out.println(columnIds);
+        String sss = "/hadoop/home/pengzhang/shifu/shifu-0.13.0-SNAPSHOT/lib/libtensorflow-1.4.0.jar";
+        System.out.println(sss.replaceAll("libtensorflow", "libtensorflow_jni"));
+        System.out.println(sss.replaceAll("libtensorflow", "tensorflow"));
+
     }
 
 }

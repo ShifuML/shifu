@@ -50,7 +50,7 @@ import java.util.*;
 
 public class ModelSpecLoaderUtils {
 
-    private static final Logger log = LoggerFactory.getLogger(ModelSpecLoaderUtils.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ModelSpecLoaderUtils.class);
 
     /**
      * Avoid using new for our utility class.
@@ -187,7 +187,7 @@ public class ModelSpecLoaderUtils {
                 throw new RuntimeException("Load generic model failed.");
             }
             models = loadGenericModels(modelConfig, genericModelConfigs, sourceType);
-            log.debug("return generic model {}", models.size());
+            LOG.debug("return generic model {}", models.size());
             return models;
         }
 
@@ -216,28 +216,28 @@ public class ModelSpecLoaderUtils {
      */
     public static List<BasicML> loadGenericModels(ModelConfig modelConfig, List<Path> genericModelConfigs,
             SourceType sourceType) throws IOException {
-        FileSystem hdfs = HDFSUtils.getFS();
-        PathFinder pathFinder = new PathFinder(modelConfig);
-
-        String src = pathFinder.getModelsPath(sourceType);
-        File f = new File(System.getProperty(Constants.USER_DIR) + "/models");
+        String src = new PathFinder(modelConfig).getModelsPath(sourceType);
+        // use a random folder to load models
+        String currUserDir = System.getProperty(Constants.USER_DIR) + File.separator + System.currentTimeMillis()
+                + new Random().nextInt();
+        HDFSUtils.getLocalFS().mkdirs(new Path(currUserDir));
+        String modelsDir = currUserDir + File.separator + Constants.MODELS;
         // check if model dir is exist
-        if(!f.exists()) {
-            hdfs.copyToLocalFile(false, new Path(src), // source
-                    new Path(System.getProperty(Constants.USER_DIR)), true);
+        if(!new File(modelsDir).exists()) {
+            HDFSUtils.getFS().copyToLocalFile(false, new Path(src), new Path(modelsDir), true);
         }
 
         List<BasicML> results = new ArrayList<>();
         for(Path fst: genericModelConfigs) {
-            GenericModelConfig gmc = CommonUtils.loadJSON( // loading as GenericModelConfig
-                    fst.toString(), sourceType, GenericModelConfig.class);
+            // loading as GenericModelConfig
+            GenericModelConfig gmc = CommonUtils.loadJSON(fst.toString(), sourceType, GenericModelConfig.class);
             String alg = (String) gmc.getProperties().get(Constants.GENERIC_ALGORITHM);
-            String genericModelPath = System.getProperty(Constants.USER_DIR) // <usr.dir>
-                    + File.separator + Constants.MODELS; // + /models
-            // + File.separator + modelConfig.getBasic().getName(); // + /ModelName
-            gmc.getProperties().put(Constants.GENERIC_MODEL_PATH, genericModelPath);
-            log.info("Generic model path is : {}.", gmc.getProperties().get(Constants.GENERIC_MODEL_PATH));
-            if(Constants.TENSORFLOW.equals(alg)) {
+            gmc.getProperties().put(Constants.GENERIC_MODEL_PATH, modelsDir);
+            LOG.info("Generic model path is : {}.", modelsDir);
+            if(!CommonUtils.isTensorFlowModel(alg)) {
+                throw new java.lang.UnsupportedOperationException(
+                        "Algorithm: " + alg + " is not supported in generic model yet.");
+            } else {
                 try {
                     // Initiate a evaluator class instance which used for evaluation
                     Class<?> clazz = Class.forName(ComputeImplClass.Tensorflow.getClassName());
@@ -247,8 +247,6 @@ public class ModelSpecLoaderUtils {
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
-            } else {
-                throw new RuntimeException("Algorithm: " + alg + " is not supported in generic model yet.");
             }
         }
         return results;
@@ -298,6 +296,7 @@ public class ModelSpecLoaderUtils {
             listStatus = findGenericModels(modelConfig, evalConfig, sourceType);
             // if models not found, continue which makes eval works when training is in progress.
             if(CollectionUtils.isNotEmpty(listStatus)) {
+                LOG.debug(" locateBasicModels Path of tf models {}", listStatus);
                 return listStatus;
             }
         }
@@ -530,6 +529,8 @@ public class ModelSpecLoaderUtils {
         for(FileStatus fileStatus: fileList) {
             paths.add(fileStatus.getPath());
         }
+        
+        LOG.debug(" findGenericModels Path of tf models {}", paths);
 
         return paths;
     }
@@ -601,7 +602,7 @@ public class ModelSpecLoaderUtils {
                 }
             }
         } catch (IOException e) {
-            log.error("Error occurred when loading sub-models.", e);
+            LOG.error("Error occurred when loading sub-models.", e);
         }
 
         return modelSpecs;
@@ -758,7 +759,7 @@ public class ModelSpecLoaderUtils {
                 }
             }
         } catch (IOException e) {
-            log.error("Error occurred when finnding sub-models.", e);
+            LOG.error("Error occurred when finnding sub-models.", e);
         }
 
         return subModelsCnt;
