@@ -752,7 +752,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             log.error("VarSelect SE hadoop job is failed, please re-try varselect step.");
         }
     }
-    
+
     private Job createSEMapReduceJob(SourceType source, Configuration conf, String varSelectMSEOutputPath)
             throws IOException {
         @SuppressWarnings("deprecation")
@@ -831,12 +831,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private int getMultiThreadCount() {
         int threads;
         try {
-            if(CommonUtils.isTensorFlowModel(this.modelConfig.getAlgorithm())) {
-                threads = Integer.parseInt(Environment.getProperty(Constants.SHIFU_VARSEL_SE_MULTI_THREAD, "1"));
-            } else {
-                threads = Integer.parseInt(Environment.getProperty(Constants.SHIFU_VARSEL_SE_MULTI_THREAD,
-                        Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD + ""));
-            }
+            threads = Integer.parseInt(Environment.getProperty(Constants.SHIFU_VARSEL_SE_MULTI_THREAD,
+                    Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD + ""));
         } catch (Exception e) {
             log.warn("'shifu.varsel.se.multi.thread' should be a int value, set default value: {}",
                     Constants.SHIFU_DEFAULT_VARSEL_SE_MULTI_THREAD);
