@@ -101,6 +101,9 @@
                 "name": "targetColumnName",
                 "type": "text",
                 "directive": "input"
+            }, {"name": "dateColumnName",
+                "type": "text",
+                "directive": "input"
             }, {
                 "name": "posTags",
                 "type" : "list",

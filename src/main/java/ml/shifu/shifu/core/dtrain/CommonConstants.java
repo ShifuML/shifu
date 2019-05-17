@@ -63,6 +63,8 @@ public interface CommonConstants {
 
     public static final String SHIFU_UPDATEBINNING_REDUCER = "shifu.updatebinning.reducer";
 
+    public static final String SHIFU_DAILYSTAT_REDUCER = "shifu.dailystat.reducer";
+
     public static final String SHIFU_NN_FEATURE_SUBSET = "shifu.nn.feature.subset";
 
     public static final String SHIFU_TREE_CHECKPOINT_INTERVAL = "shifu.tree.checkpoint.interval";
@@ -132,11 +134,9 @@ public interface CommonConstants {
 
     public static final String TF_ALG = "TF.alg";
 
-
     /* --------------   varsel Constants  ---------------------- */
     public static final String OP_METRIC = "OpMetric";
     public static final String OP_UNIT = "OpUnit";
-
 
     /**
      * Version 2: support final selected columns

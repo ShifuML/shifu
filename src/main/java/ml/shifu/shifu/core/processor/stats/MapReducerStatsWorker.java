@@ -86,6 +86,10 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.ValueVisitor;
+import org.apache.hadoop.mapreduce.Partitioner;
+import ml.shifu.shifu.core.binning.DailyStatComputeMapper;
+import ml.shifu.shifu.core.binning.DailyStatComputeReducer;
+import ml.shifu.shifu.core.binning.DailyStatInfoWritable;
 
 /**
  * Created by zhanhu on 6/30/16.
@@ -176,6 +180,9 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             processor.syncDataToHdfs(modelConfig.getDataSet().getSource());
         }
 
+        //run daily stat compute
+        updateDailyStatWithMRJob();
+
         return true;
     }
 
@@ -245,6 +252,75 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         log.info("Updating binning info ...");
         updateBinningInfoWithMRJob();
     }
+
+    protected void updateDailyStatWithMRJob() throws IOException, InterruptedException, ClassNotFoundException {
+        RawSourceData.SourceType source = this.modelConfig.getDataSet().getSource();
+
+
+        Configuration conf = new Configuration();
+        prepareJobConf(source, conf, null);
+
+        @SuppressWarnings("deprecation")
+        Job job = new Job(conf, "Shifu: Daily Stats Job : " + this.modelConfig.getModelSetName());
+        job.setJarByClass(getClass());
+        job.setMapperClass(DailyStatComputeMapper.class);
+        job.setMapOutputKeyClass(Text.class);
+        job.setMapOutputValueClass(DailyStatInfoWritable.class);
+        job.setInputFormatClass(CombineInputFormat.class);
+        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.modelConfig.getDataSetRawPath())));
+
+        job.setReducerClass(DailyStatComputeReducer.class);
+
+        int mapperSize = new CombineInputFormat().getSplits(job).size();
+        log.info("DEBUG: Test mapper size is {} ", mapperSize);
+        Integer reducerSize = Environment.getInt(CommonConstants.SHIFU_DAILYSTAT_REDUCER);
+        if(reducerSize != null) {
+            job.setNumReduceTasks(Environment.getInt(CommonConstants.SHIFU_DAILYSTAT_REDUCER, 20));
+        } else {
+            // By average, each reducer handle 100 variables
+            int newReducerSize = (this.columnConfigList.size() / 100) + 1;
+            // if(newReducerSize < 1) {
+            // newReducerSize = 1;
+            // }
+            // if(newReducerSize > 500) {
+            // newReducerSize = 500;
+            // }
+            log.info("Adjust daily stat info reducer size to {} ", newReducerSize);
+            job.setNumReduceTasks(newReducerSize);
+        }
+        job.setOutputKeyClass(NullWritable.class);
+        job.setOutputValueClass(Text.class);
+        job.setOutputFormatClass(TextOutputFormat.class);
+
+        String preTrainingInfo = this.pathFinder.getPreTrainingStatsPath(source);
+        FileOutputFormat.setOutputPath(job, new Path(preTrainingInfo));
+
+        // clean output firstly
+        ShifuFileUtils.deleteFile(preTrainingInfo, source);
+
+        // submit job
+        if(!job.waitForCompletion(true)) {
+            throw new RuntimeException("MapReduce Job Updating daily stat Info failed.");
+        } else {
+            long totalValidCount = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT")
+                    .getValue();
+            long invalidTagCount = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")
+                    .getValue();
+            long filterOut = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT")
+                    .getValue();
+            long weightExceptions = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "WEIGHT_EXCEPTION")
+                    .getValue();
+            log.info(
+                    "Total valid records {}, invalid tag records {}, filter out records {}, weight exception records {}",
+                    totalValidCount, invalidTagCount, filterOut, weightExceptions);
+
+            if(totalValidCount > 0L && invalidTagCount * 1d / totalValidCount >= 0.8d) {
+                log.warn("Too many invalid tags, please check you configuration on positive tags and negative tags.");
+            }
+        }
+    }
+
 
     protected void updateBinningInfoWithMRJob() throws IOException, InterruptedException, ClassNotFoundException {
         RawSourceData.SourceType source = this.modelConfig.getDataSet().getSource();
@@ -588,6 +664,21 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             return lVal;
         }
     }
+
+    /**
+     * Calculate daily statistic
+     * @throws IOException
+     *             in scanners read exception
+     */
+    public void runDailyStat() throws IOException {
+        log.info("Run Daily stat to use {} to compute the daily stat ");
+        ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(columnConfigList,
+                modelConfig.getPsiColumnName());
+
+        Map<String, String> paramsMap = new HashMap<>();
+        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/PSI.pig"), paramsMap);
+    }
+
 
     /**
      * Calculate the PSI

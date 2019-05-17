@@ -137,6 +137,7 @@ public interface Constants {
     public static final String DEFAULT_DELIMITER = "|";
 
     public static final String BINNING_INFO_FILE_NAME = "binning_info.txt";
+    public static final String DAILY_STAT_INFO_FILE_NAME = "daily_stat.txt";
 
     public static final String AUTO_TYPE_PATH = "AutoTypePath";
     public static final String PRE_TRAINING_STATS = "PreTrainingStats";
