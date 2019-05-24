@@ -415,12 +415,18 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 if (CollectionUtils.isNotEmpty(firstUnitStats)) {
                     builder.append(modelConfig.getBasic().getVersion()).append(",");
                     ColumnAdditionalInfo additionalInfo = ccUnitStatsMap.get(columnConfig.getColumnNum());
-                    builder.append(additionalInfo.getPsiStd()).append(',');
-                    builder.append(additionalInfo.getCosine()).append(',');
-                    builder.append(additionalInfo.getCosStd()).append(',');
-                    builder.append(splitUnitStatsToColumn(
-                            ccUnitStatsMap.get(columnConfig.getColumnNum()).getUnitStats(), firstUnitStats.size()))
-                            .append("\n");
+                    if (additionalInfo != null) {
+                        builder.append(additionalInfo.getPsiStd()).append(',');
+                        builder.append(additionalInfo.getCosine()).append(',');
+                        builder.append(additionalInfo.getCosStd()).append(',');
+                        builder.append(splitUnitStatsToColumn(additionalInfo.getUnitStats(),
+                                firstUnitStats.size())).append("\n");
+                    } else { // append empty
+                        builder.append(',');
+                        builder.append(',');
+                        builder.append(',');
+                        builder.append(splitUnitStatsToColumn(null, firstUnitStats.size())).append("\n");
+                    }
                 } else {
                     builder.append(modelConfig.getBasic().getVersion()).append("\n");
                 }
@@ -463,7 +469,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     }
 
     private String splitUnitStatsToColumn(List<String> unitStats, int size) {
-        List<String> unitHeaders = new ArrayList<String>(size * 3);
+        List<String> unitHeaders = new ArrayList<String>(size * 5);
         if ( CollectionUtils.isEmpty(unitStats) || unitStats.size() != size ) {
             Collections.fill(unitHeaders, "");
         } else {
