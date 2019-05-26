@@ -48,12 +48,28 @@ public class ResilientOptimizer implements Optimizer{
             }
             return lastOptimizerMap.get(uniqueKey);
         }
-        if(random.nextInt(10000) < 10) {
-            LOG.error("Can not find " + uniqueKey + " in lastOptimizerMap");
-            LOG.error("current train size:" + this.trainSize);
-        }
-        return random.nextFloat() * 2 - 1;
+        return 0;
     }
+
+    private float getLastValue(String uniqueKey, float gradient) {
+        if(lastOptimizerMap.containsKey(uniqueKey)) {
+            if(random.nextInt(10000) < 10) {
+                LOG.error("cache hit: " + uniqueKey + "->" + lastOptimizerMap.get(uniqueKey));
+            }
+            return lastOptimizerMap.get(uniqueKey);
+        }
+        if(uniqueKey.endsWith("g")) {
+            return 1;
+        } else if(uniqueKey.endsWith("d")) {
+            return gradient * this.reg;
+        } else if(uniqueKey.endsWith("u")) {
+            return gradient * this.reg;
+        } else {
+            LOG.error("query key format not allowed:" + uniqueKey);
+            return 0;
+        }
+    }
+
 
     private String getLastGradientKey(String uniqueKey) {
         return uniqueKey + "g";
@@ -73,6 +89,7 @@ public class ResilientOptimizer implements Optimizer{
             return;
         }
         int len = weight.length;
+        LOG.info("train size: " + this.trainSize);
         for(int i = 0; i < len; i++) {
             weight[i] += (updateWeight(grad[i], uniqueKey + i) - this.reg * weight[i] / this.trainSize);
         }
@@ -87,7 +104,7 @@ public class ResilientOptimizer implements Optimizer{
         for(Map.Entry<Integer, Float> entry: grad.entrySet()) {
             int i = entry.getKey();
             if(i < weight.length) {
-                weight[i] += (updateWeight(entry.getValue(), uniqueKey + i) - this.reg * weight[i] / this.trainSize);
+                weight[i] -= updateWeight(entry.getValue(), uniqueKey + i);
             }
         }
     }
@@ -97,6 +114,7 @@ public class ResilientOptimizer implements Optimizer{
         String updateValueKey = getUpdateValueKey(uniqueKey);
         String lastDeltaKey = getLastDeltaKey(uniqueKey);
         String lastGradientKey = getLastGradientKey(uniqueKey);
+
 
         final int change = DTrainUtils.sign(gradient * getLastValue(lastGradientKey));
         float weightChange = 0;
@@ -118,12 +136,15 @@ public class ResilientOptimizer implements Optimizer{
             lastOptimizerMap.put(lastGradientKey, 0f);
         } else {
             // if change==0 then there is no change to the delta
-            final double delta = getLastValue(updateValueKey);
+            final double delta = getLastValue(updateValueKey, gradient);
             weightChange = Double.valueOf(DTrainUtils.sign(gradient) * delta).floatValue();
             lastOptimizerMap.put(lastGradientKey, gradient);
         }
 
         lastOptimizerMap.put(lastDeltaKey, weightChange);
+        LOG.info("last delta {}, last gradient {}, last updated value {}, gradient {}, weight change {}",
+                getLastValue(lastDeltaKey), getLastValue(lastGradientKey), getLastValue(updateValueKey),
+                gradient, weightChange);
         // apply the weight change, if any
         return weightChange;
     }

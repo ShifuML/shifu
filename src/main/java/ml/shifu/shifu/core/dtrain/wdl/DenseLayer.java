@@ -193,12 +193,15 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
         // gradients compute and L2 reg here
         for(int i = 0; i < this.in; i++) {
             for(int j = 0; j < this.out; j++) {
-                this.wGrads[i][j] += (this.lastInput[i] * backInputs[j]); // basic derivatives
-                this.wGrads[i][j] += (this.l2reg * this.weights[i][j]);// l2 loss derivatives
+                // basic derivatives
+                this.wGrads[i][j] += (this.lastInput[i] * backInputs[j]);
+                // l2 loss derivatives
+                this.wGrads[i][j] += (this.l2reg * backInputs[j]);
             }
         }
         for(int j = 0; j < this.out; j++) {
-            this.bGrads[j] = (backInputs[j]); // no need l2 reg here as bias no need
+            // no need l2 reg here as bias no need
+            this.bGrads[j] = (backInputs[j]);
         }
 
         // compute back inputs
@@ -344,9 +347,9 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
 
     @Override
     public void update(DenseLayer gradLayer, Optimizer optimizer, String uniqueKey) {
-        LOG.info("Before update: weights: {}", Arrays.deepToString(this.weights));
+//        LOG.info("Before update: weights: {}", Arrays.deepToString(this.weights));
         optimizer.batchUpdate(this.weights, gradLayer.getwGrads(), uniqueKey);
-        LOG.info("After update: weights: {}" + Arrays.deepToString(this.weights));
+//        LOG.info("After update: weights: {}" + Arrays.deepToString(this.weights));
         optimizer.update(this.bias, gradLayer.getbGrads(), uniqueKey);
     }
 }

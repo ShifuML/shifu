@@ -104,8 +104,10 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
         int valueIndex = this.lastInput.getValueIndex();
         Float grad = this.wGrads.get(valueIndex);
         float tmpGrad = grad == null ? 0 : grad;
-        tmpGrad += (this.lastInput.getValue() * backInputs[0]); // category value here is 1f
-        tmpGrad += (this.l2reg * this.weights[valueIndex]); // l2 loss
+        // category value here is 1f
+        tmpGrad += (this.lastInput.getValue() * backInputs[0]);
+        // l2 loss
+        tmpGrad += (this.l2reg * backInputs[0]);
         this.wGrads.put(valueIndex, tmpGrad);
 
         // no need compute backward outputs as it is last layer

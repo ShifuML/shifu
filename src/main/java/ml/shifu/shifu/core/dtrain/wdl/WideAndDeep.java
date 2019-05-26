@@ -200,7 +200,7 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
         for(int i = 0; i < logits.length; i++) {
             logits[i] += wlLogits[i] + dnnLogits[i];
         }
-        LOG.info("Wide score:{}, Deep score:{} , score all:{}", wlLogits[0], dnnLogits[0], logits[0]);
+//        LOG.info("Wide score:{}, Deep score:{} , score all:{}", wlLogits[0], dnnLogits[0], logits[0]);
         return logits;
     }
 
@@ -208,7 +208,7 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
     public float[] backward(float[] predicts, float[] actuals, float sig) {
         float[] grad2Logits = new float[predicts.length];
         for(int i = 0; i < grad2Logits.length; i++) {
-            grad2Logits[i] = (predicts[i] - actuals[i]) * (predicts[i] * (1 - predicts[i])) * sig;
+            grad2Logits[i] = (predicts[i] - actuals[i]) * (predicts[i] - actuals[i]);
             // error * sigmoid derivertive * weight
         }
 
@@ -520,7 +520,7 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
     }
 
     /**
-     * Init the weights in WideAndDeeep Model and it's sub module
+     * Init the weights in WideAndDeep Model and it's sub module
      */
     public void initWeights() {
         InitMethod defaultMode = InitMethod.NEGATIVE_POSITIVE_ONE_RANGE_RANDOM;
@@ -578,6 +578,7 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
             List<DenseLayer> denseLayers = this.hiddenLayers.stream().filter(layer -> layer instanceof DenseLayer)
                     .map(layer -> (DenseLayer) layer).collect(Collectors.toList());
             out.writeInt(denseLayers.size());
+
             denseLayers.forEach(denseLayer -> {
                 try {
                     denseLayer.write(out, this.serializationType);
