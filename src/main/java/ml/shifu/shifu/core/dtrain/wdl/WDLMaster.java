@@ -171,9 +171,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         WDLParams aggregation = aggregateWorkerGradients(context);
 
         // apply optimizer
-        LOG.info("Before update final layer, weight[0][0]= {}", this.wnd.getFinalLayer().getWeights()[0][0]);
         this.wnd.update(aggregation.getWnd(), optimizer);
-        LOG.info("After update final layer, weight[0][0]= {}", this.wnd.getFinalLayer().getWeights()[0][0]);
         LOG.info("train size: {}, error: {}", aggregation.getTrainCount(),  aggregation.getTrainError());
 
         // construct master result which contains WideAndDeep current model weights

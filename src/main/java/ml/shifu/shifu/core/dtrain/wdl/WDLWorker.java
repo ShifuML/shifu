@@ -693,9 +693,8 @@ public class WDLWorker extends
             float[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data), getWideInputs(data));
             float predict = sigmoid(logits[0]);
             float error = predict - data.label;
-            LOG.info("score {} predit {} label {}", logits[0], predict, data.label);
             // TODO, logloss, squredloss, weighted error or not
-            trainSumError += error * error * data.getWeight();
+            trainSumError +=  data.getWeight() * error * error;
             this.wnd.backward(new float[] { predict }, new float[] { data.label }, data.getWeight());
         }
 

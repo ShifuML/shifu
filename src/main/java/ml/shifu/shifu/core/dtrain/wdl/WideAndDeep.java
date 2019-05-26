@@ -200,7 +200,6 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
         for(int i = 0; i < logits.length; i++) {
             logits[i] += wlLogits[i] + dnnLogits[i];
         }
-//        LOG.info("Wide score:{}, Deep score:{} , score all:{}", wlLogits[0], dnnLogits[0], logits[0]);
         return logits;
     }
 
