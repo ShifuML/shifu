@@ -25,14 +25,6 @@ import java.util.Map.Entry;
 public interface Optimizer {
 
     /**
-     * Set train size
-     *
-     * @param trainSize
-     *        the train size
-     */
-    void setTrainSize(float trainSize);
-
-    /**
      * Update gradient in @param weight
      * 
      * @param weight
