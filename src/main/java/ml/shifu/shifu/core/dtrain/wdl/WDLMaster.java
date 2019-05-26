@@ -22,8 +22,8 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.GradientDescent;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.ResilientOptimizer;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.io.IOUtils;
@@ -152,7 +152,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
                 wideColumnIds, hiddenNodes, actFunc, l2reg);
         // TODO: make this configurable
         if(null == this.optimizer) {
-            this.optimizer = new ResilientOptimizer(learningRate);
+            this.optimizer = new GradientDescent(learningRate);
         } else {
             LOG.error("Try to init optimizer in master!");
         }
