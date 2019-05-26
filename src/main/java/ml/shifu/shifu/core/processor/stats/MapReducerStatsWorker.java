@@ -86,10 +86,9 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.ValueVisitor;
-import org.apache.hadoop.mapreduce.Partitioner;
-import ml.shifu.shifu.core.binning.DailyStatComputeMapper;
-import ml.shifu.shifu.core.binning.DailyStatComputeReducer;
-import ml.shifu.shifu.core.binning.DailyStatInfoWritable;
+import ml.shifu.shifu.core.dailystat.DateStatComputeMapper;
+import ml.shifu.shifu.core.dailystat.DateStatComputeReducer;
+import ml.shifu.shifu.core.dailystat.DateStatInfoWritable;
 
 /**
  * Created by zhanhu on 6/30/16.
@@ -181,7 +180,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         }
 
         //run daily stat compute
-        updateDailyStatWithMRJob();
+        updateDateStatWithMRJob();
 
         return true;
     }
@@ -253,24 +252,28 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         updateBinningInfoWithMRJob();
     }
 
-    protected void updateDailyStatWithMRJob() throws IOException, InterruptedException, ClassNotFoundException {
-        RawSourceData.SourceType source = this.modelConfig.getDataSet().getSource();
+    protected void updateDateStatWithMRJob() throws IOException, InterruptedException, ClassNotFoundException {
+        if(StringUtils.isEmpty(this.modelConfig.getDateColumnName())){
+            log.info("Date column name is not set in ModelConfig file, will cancel updateDateStatWithMRJob.");
+            return ;
+        }
 
+        RawSourceData.SourceType source = this.modelConfig.getDataSet().getSource();
 
         Configuration conf = new Configuration();
         prepareJobConf(source, conf, null);
 
         @SuppressWarnings("deprecation")
-        Job job = new Job(conf, "Shifu: Daily Stats Job : " + this.modelConfig.getModelSetName());
+        Job job = new Job(conf, "Shifu: Date Stats Job : " + this.modelConfig.getModelSetName());
         job.setJarByClass(getClass());
-        job.setMapperClass(DailyStatComputeMapper.class);
+        job.setMapperClass(DateStatComputeMapper.class);
         job.setMapOutputKeyClass(Text.class);
-        job.setMapOutputValueClass(DailyStatInfoWritable.class);
+        job.setMapOutputValueClass(DateStatInfoWritable.class);
         job.setInputFormatClass(CombineInputFormat.class);
         FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
                 .makeQualified(new Path(super.modelConfig.getDataSetRawPath())));
 
-        job.setReducerClass(DailyStatComputeReducer.class);
+        job.setReducerClass(DateStatComputeReducer.class);
 
         int mapperSize = new CombineInputFormat().getSplits(job).size();
         log.info("DEBUG: Test mapper size is {} ", mapperSize);
@@ -286,7 +289,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             // if(newReducerSize > 500) {
             // newReducerSize = 500;
             // }
-            log.info("Adjust daily stat info reducer size to {} ", newReducerSize);
+            log.info("Adjust date stat info reducer size to {} ", newReducerSize);
             job.setNumReduceTasks(newReducerSize);
         }
         job.setOutputKeyClass(NullWritable.class);
@@ -301,7 +304,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         // submit job
         if(!job.waitForCompletion(true)) {
-            throw new RuntimeException("MapReduce Job Updating daily stat Info failed.");
+            throw new RuntimeException("MapReduce Job Updating date stat Info failed.");
         } else {
             long totalValidCount = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT")
                     .getValue();
@@ -664,21 +667,6 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             return lVal;
         }
     }
-
-    /**
-     * Calculate daily statistic
-     * @throws IOException
-     *             in scanners read exception
-     */
-    public void runDailyStat() throws IOException {
-        log.info("Run Daily stat to use {} to compute the daily stat ");
-        ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(columnConfigList,
-                modelConfig.getPsiColumnName());
-
-        Map<String, String> paramsMap = new HashMap<>();
-        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/PSI.pig"), paramsMap);
-    }
-
 
     /**
      * Calculate the PSI

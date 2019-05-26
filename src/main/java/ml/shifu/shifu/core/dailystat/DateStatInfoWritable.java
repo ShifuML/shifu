@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.binning;
+package ml.shifu.shifu.core.dailystat;
 
 import ml.shifu.shifu.core.ColumnStatsCalculator;
-import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
 import org.apache.hadoop.io.Writable;
 
 import java.io.DataInput;
@@ -26,14 +25,9 @@ import java.nio.charset.Charset;
 import java.util.*;
 
 /**
- * {@link DailyStatInfoWritable} is to store column statistics collected from mapper and aggregated in reducer.
+ * {@link DateStatInfoWritable} is to store column statistics collected from mapper and aggregated in reducer.
  */
-public class DailyStatInfoWritable implements Writable {
-
-    /**
-     * A flag to not if no records in that mapper task, then in reducer, it will be ignored
-     */
-    private boolean isEmpty = false;
+public class DateStatInfoWritable implements Writable {
 
     //variable, date, VariableStatInfo
     private Map<String, VariableStatInfo> variableDailyStatInfo = new HashMap<>();
@@ -86,7 +80,6 @@ public class DailyStatInfoWritable implements Writable {
                 out.writeDouble(entry.getValue().binWeightNeg[i]);
             }
         }
-        out.writeBoolean(this.isEmpty);
     }
 
     @Override
@@ -140,24 +133,7 @@ public class DailyStatInfoWritable implements Writable {
             }
         }
 
-        this.isEmpty = in.readBoolean();
     }
-
-    /**
-     * @return the isEmpty
-     */
-    public boolean isEmpty() {
-        return isEmpty;
-    }
-
-    /**
-     * @param isEmpty
-     *            the isEmpty to set
-     */
-    public void setEmpty(boolean isEmpty) {
-        this.isEmpty = isEmpty;
-    }
-
 
     public static class VariableStatInfo {
 

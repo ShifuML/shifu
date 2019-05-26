@@ -1,5 +1,5 @@
 /*
- * Copyright [2012-2015] PayPal Software Foundation
+ * Copyright [2012-2019] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,26 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.binning;
+package ml.shifu.shifu.core.dailystat;
 
-import com.clearspring.analytics.stream.cardinality.CardinalityMergeException;
-import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ColumnStatsCalculator;
-import ml.shifu.shifu.core.ColumnStatsCalculator.ColumnMetrics;
-import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
-import ml.shifu.shifu.core.binning.obj.AbstractBinInfo;
-import ml.shifu.shifu.core.binning.obj.CategoricalBinInfo;
-import ml.shifu.shifu.udf.CalculateStatsUDF;
-import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -47,15 +37,15 @@ import java.util.*;
  * Collect all statistics together in reducer.
  * 
  * <p>
- * The same format with previous output to make sure consistent with output processing functions.
+ * Reducer first calculate sum value, then do the aggregate
  * 
  * <p>
  * Only one reducer to make sure all info can be collected together. One reducer is not bottleneck as some times we only
  * have thousands of variables.
  */
-public class DailyStatComputeReducer extends Reducer<Text, DailyStatInfoWritable, NullWritable, Text> {
+public class DateStatComputeReducer extends Reducer<Text, DateStatInfoWritable, NullWritable, Text> {
 
-    private final static Logger LOG = LoggerFactory.getLogger(DailyStatComputeReducer.class);
+    private final static Logger LOG = LoggerFactory.getLogger(DateStatComputeReducer.class);
 
     private static final double EPS = 1e-6;
 
@@ -121,28 +111,25 @@ public class DailyStatComputeReducer extends Reducer<Text, DailyStatInfoWritable
     }
 
     @Override
-    protected void reduce(Text key, Iterable<DailyStatInfoWritable> values, Context context)
+    protected void reduce(Text key, Iterable<DateStatInfoWritable> values, Context context)
             throws IOException, InterruptedException {
         long start = System.currentTimeMillis();
 
-        Map<String, DailyStatInfoWritable.VariableStatInfo> result = new HashMap<>();
+        Map<String, DateStatInfoWritable.VariableStatInfo> result = new HashMap<>();
 
-        LOG.info("reduce key." + key);
         //Merge into result
-        for(DailyStatInfoWritable info: values) {
-            if(info.isEmpty() || MapUtils.isEmpty(info.getVariableDailyStatInfo())) {
+        for(DateStatInfoWritable info: values) {
+            if(MapUtils.isEmpty(info.getVariableDailyStatInfo())) {
                 // mapper has no stats, skip it
                 continue;
             }
-            LOG.info("Daily status info size." + info.getVariableDailyStatInfo().size());
-            for(Map.Entry<String, DailyStatInfoWritable.VariableStatInfo> entry : info.getVariableDailyStatInfo().entrySet()){
-                DailyStatInfoWritable.VariableStatInfo variableStatInfo = result.get(entry.getKey());
-                LOG.info("Init." + entry.getKey() + " " + variableStatInfo);
+            for(Map.Entry<String, DateStatInfoWritable.VariableStatInfo> entry : info.getVariableDailyStatInfo().entrySet()){
+                DateStatInfoWritable.VariableStatInfo variableStatInfo = result.get(entry.getKey());
                 if(variableStatInfo == null){
-                    variableStatInfo = new DailyStatInfoWritable.VariableStatInfo();
+                    variableStatInfo = new DateStatInfoWritable.VariableStatInfo();
                     result.put(entry.getKey(), variableStatInfo);
                 }
-                DailyStatInfoWritable.VariableStatInfo statInfo = entry.getValue();
+                DateStatInfoWritable.VariableStatInfo statInfo = entry.getValue();
                 variableStatInfo.setColumnConfigIndex(statInfo.getColumnConfigIndex());
                 ColumnConfig columnConfig = this.columnConfigList.get(statInfo.getColumnConfigIndex());
                 variableStatInfo.setTotalCount(variableStatInfo.getTotalCount() + statInfo.getTotalCount());
@@ -185,18 +172,15 @@ public class DailyStatComputeReducer extends Reducer<Text, DailyStatInfoWritable
                     variableStatInfo.getBinCountTotal()[i] += statInfo.getBinCountPos() == null ? 0 : statInfo.getBinCountPos()[i];
                     variableStatInfo.getBinCountTotal()[i] += statInfo.getBinCountNeg() == null ? 0 : statInfo.getBinCountNeg()[i];
                 }
-                LOG.info("reduce variableStatInfo." + variableStatInfo);
             }
         }
 
         //calculate result
-        for (Map.Entry<String, DailyStatInfoWritable.VariableStatInfo> entry: result.entrySet()){
-            DailyStatInfoWritable.VariableStatInfo variableStatInfo = entry.getValue();
+        for (Map.Entry<String, DateStatInfoWritable.VariableStatInfo> entry: result.entrySet()){
+            DateStatInfoWritable.VariableStatInfo variableStatInfo = entry.getValue();
             ColumnConfig columnConfig = this.columnConfigList.get(variableStatInfo.getColumnConfigIndex());
-            LOG.info("Column index:" + variableStatInfo.getColumnConfigIndex());
             //for numerical, need to do special process
             if(columnConfig.isNumerical()) {
-                LOG.info("BinBoundary:" + columnConfig.getBinBoundary().size());
                 long p25Count = variableStatInfo.getTotalCount() / 4;
                 long medianCount = p25Count * 2;
                 long p75Count = p25Count * 3;
@@ -206,7 +190,6 @@ public class DailyStatComputeReducer extends Reducer<Text, DailyStatInfoWritable
                     double left = getCutoffBoundary(columnConfig.getBinBoundary().get(i), variableStatInfo.getMax(), variableStatInfo.getMin());
                     double right = ((i == columnConfig.getBinBoundary().size() - 1) ?
                             variableStatInfo.getMax() : getCutoffBoundary(columnConfig.getBinBoundary().get(i + 1), variableStatInfo.getMax(), variableStatInfo.getMin()));
-                    LOG.info("stats left" + left + ", right" + right + ", currentCount" + currentCount + ", p25Count" + p25Count + ",getBinCountTotal" + variableStatInfo.getBinCountTotal()[i]);
                     if (p25Count >= currentCount && p25Count < currentCount + variableStatInfo.getBinCountTotal()[i]) {
                         variableStatInfo.setP25th(((p25Count - currentCount) / (double) variableStatInfo.getBinCountTotal()[i])
                                 * ( right - left) + left);
@@ -225,7 +208,6 @@ public class DailyStatComputeReducer extends Reducer<Text, DailyStatInfoWritable
                     }
                     currentCount += variableStatInfo.getBinCountTotal()[i];
                 }
-                LOG.info("stats" + variableStatInfo);
             }
 
             double[] binPosRate;
@@ -249,7 +231,6 @@ public class DailyStatComputeReducer extends Reducer<Text, DailyStatInfoWritable
                 variableStatInfo.setSum(0d);
                 variableStatInfo.setSquaredSum(0d);
                 for(int i = 0; i < binPosRate.length; i++) {
-                    LOG.info("stats loop cate" + variableStatInfo);
                     if(!Double.isNaN(binPosRate[i])) {
                         if(Double.compare(variableStatInfo.getMax(), binPosRate[i]) < 0) {
                             variableStatInfo.setMax(binPosRate[i]);
@@ -259,14 +240,13 @@ public class DailyStatComputeReducer extends Reducer<Text, DailyStatInfoWritable
                             variableStatInfo.setMin(binPosRate[i]);
                         }
                         long binCount = variableStatInfo.getBinCountPos()[i] + variableStatInfo.getBinCountNeg()[i];
-                        variableStatInfo.setSum(binPosRate[i] * binCount);
+                        variableStatInfo.setSum(variableStatInfo.getSum() + binPosRate[i] * binCount);
                         double squaredVal = binPosRate[i] * binPosRate[i];
-                        variableStatInfo.setSquaredSum(squaredVal * binCount);
-                        variableStatInfo.setTripleSum(squaredVal * binPosRate[i] * binCount);
-                        variableStatInfo.setQuarticSum(squaredVal * squaredVal * binCount);
+                        variableStatInfo.setSquaredSum(variableStatInfo.getSquaredSum() + squaredVal * binCount);
+                        variableStatInfo.setTripleSum(variableStatInfo.getTripleSum() + squaredVal * binPosRate[i] * binCount);
+                        variableStatInfo.setQuarticSum(variableStatInfo.getQuarticSum() + squaredVal * squaredVal * binCount);
                     }
                 }
-                LOG.info("stats cate" + variableStatInfo);
             }
 
             long realCount = this.statsExcludeMissingValue ? (variableStatInfo.getTotalCount() - variableStatInfo.getMissingCount()) : variableStatInfo.getTotalCount();
@@ -281,11 +261,9 @@ public class DailyStatComputeReducer extends Reducer<Text, DailyStatInfoWritable
                     variableStatInfo.getQuarticSum()));
 
             if(modelConfig.isRegression()) {
-                LOG.info("ColumnCountMetrics." + ColumnStatsCalculator.calculateColumnMetrics(variableStatInfo.getBinCountNeg(), variableStatInfo.getBinCountPos()));
                 variableStatInfo.setColumnCountMetrics(ColumnStatsCalculator.calculateColumnMetrics(variableStatInfo.getBinCountNeg(), variableStatInfo.getBinCountPos()));
                 variableStatInfo.setColumnWeightMetrics(ColumnStatsCalculator.calculateColumnMetrics(variableStatInfo.getBinWeightNeg(), variableStatInfo.getBinWeightPos()));
             }
-            LOG.info("before logout variableStatInfo." + variableStatInfo);
             sb.append(key)
                     // variable name
                     .append(Constants.DEFAULT_DELIMITER).append(entry.getKey())

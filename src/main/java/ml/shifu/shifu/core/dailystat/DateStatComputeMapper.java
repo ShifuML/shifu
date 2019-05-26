@@ -1,5 +1,5 @@
 /*
- * Copyright [2012-2015] PayPal Software Foundation
+ * Copyright [2012-2019] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.binning;
+package ml.shifu.shifu.core.dailystat;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
-import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper.CountAndFrequentItems;
-import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
 import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.MapReduceUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.io.ByteWritable;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -38,16 +31,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.nio.charset.Charset;
 import java.util.*;
 
 /**
- * {@link DailyStatComputeMapper} is a mapper to update local data statistics given bin boundary list.
+ * {@link DateStatComputeMapper} is a mapper to generate sum and count data group by variable and date
  * 
  * <p>
- * Bin boundary list is got by using distributed cache. After read bin boundary list, by iterate each record, to update
- * count and weighted value in each bin.
- * 
+ * Daily stat compute is used to calculate all the statistic values like min, max, mean, woe, ks, skewness, kurtosis
+ * by date and variable
+ *
  * <p>
  * This map-reduce job is to solve issue in group by all data together per each column in pig version. It is job with
  * mappers and one reducer. The scalability is very good.
@@ -58,9 +50,9 @@ import java.util.*;
  * <p>
  * 'median' can not be computed through such distributed solution.
  */
-public class DailyStatComputeMapper extends Mapper<LongWritable, Text, Text, DailyStatInfoWritable> {
+public class DateStatComputeMapper extends Mapper<LongWritable, Text, Text, DateStatInfoWritable> {
 
-    private final static Logger LOG = LoggerFactory.getLogger(DailyStatComputeMapper.class);
+    private final static Logger LOG = LoggerFactory.getLogger(DateStatComputeMapper.class);
 
     /**
      * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
@@ -100,7 +92,7 @@ public class DailyStatComputeMapper extends Mapper<LongWritable, Text, Text, Dai
     /**
      * A map to store all statistics for all columns.
      */
-    private Map<String, DailyStatInfoWritable> dailyStatInfo;
+    private Map<String, DateStatInfoWritable> dailyStatInfo;
 
     /**
      * Output key cache to avoid new operation.
@@ -166,7 +158,7 @@ public class DailyStatComputeMapper extends Mapper<LongWritable, Text, Text, Dai
 
         loadDateColumnNum();
 
-        this.dailyStatInfo = new HashMap<String, DailyStatInfoWritable>(this.columnConfigList.size(), 1f);
+        this.dailyStatInfo = new HashMap<String, DateStatInfoWritable>(this.columnConfigList.size(), 1f);
 
 
         this.outputKey = new Text();
@@ -180,7 +172,6 @@ public class DailyStatComputeMapper extends Mapper<LongWritable, Text, Text, Dai
         this.isThrowforWeightException = "true"
                 .equalsIgnoreCase(context.getConfiguration().get("shifu.weight.exception", "false"));
 
-        LOG.debug("Daily stat info: {}", this.dailyStatInfo);
         this.isLinearTarget = (CollectionUtils.isEmpty(modelConfig.getTags())
                 && CommonUtils.getTargetColumnConfig(columnConfigList).isNumerical());
     }
@@ -239,7 +230,6 @@ public class DailyStatComputeMapper extends Mapper<LongWritable, Text, Text, Dai
     @Override
     protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
         String valueStr = value.toString();
-        LOG.info("Start map." + key + " " + value);
         if(valueStr == null || valueStr.length() == 0 || valueStr.trim().length() == 0) {
             LOG.warn("Empty input.");
             return;
@@ -324,23 +314,22 @@ public class DailyStatComputeMapper extends Mapper<LongWritable, Text, Text, Dai
         boolean isInvalidValue = false;
 
         String variableName = columnConfig.getColumnName().toLowerCase();
-        DailyStatInfoWritable dailyStatInfoWritable = this.dailyStatInfo.get(variableName);
+        DateStatInfoWritable dateStatInfoWritable = this.dailyStatInfo.get(variableName);
 
-        if(dailyStatInfoWritable == null) {
-            dailyStatInfoWritable = new DailyStatInfoWritable();
-            this.dailyStatInfo.put(variableName, dailyStatInfoWritable);
+        if(dateStatInfoWritable == null) {
+            dateStatInfoWritable = new DateStatInfoWritable();
+            this.dailyStatInfo.put(variableName, dateStatInfoWritable);
         }
         String dateVal = "";
         if(dateColumnNum >= 0) {
             dateVal = units[dateColumnNum].toLowerCase();
         }
-        Map<String, DailyStatInfoWritable.VariableStatInfo> map = dailyStatInfoWritable.getVariableDailyStatInfo();
-        DailyStatInfoWritable.VariableStatInfo variableStatInfo = map.get(dateVal);
+        Map<String, DateStatInfoWritable.VariableStatInfo> map = dateStatInfoWritable.getVariableDailyStatInfo();
+        DateStatInfoWritable.VariableStatInfo variableStatInfo = map.get(dateVal);
         if(variableStatInfo == null){
-            variableStatInfo = new DailyStatInfoWritable.VariableStatInfo();
+            variableStatInfo = new DateStatInfoWritable.VariableStatInfo();
             map.put(dateVal, variableStatInfo);
         }
-        LOG.info("columnIndex="+columnIndex);
         variableStatInfo.setColumnConfigIndex(columnIndex);
         variableStatInfo.setTotalCount(variableStatInfo.getTotalCount() + 1L);
 
@@ -363,7 +352,6 @@ public class DailyStatComputeMapper extends Mapper<LongWritable, Text, Text, Dai
                 binNum = lastBinIndex;
             }
 
-            LOG.info("isRegression:" + modelConfig.isRegression() + ", tag:" + tag + ", posTags:" + posTags.size() + ", negTags:" + negTags.size() + ", binNum:" + binNum);
             if(modelConfig.isRegression()) {
                 if(posTags.contains(tag)) {
                     variableStatInfo.getBinCountPos()[binNum] += 1L;
@@ -470,15 +458,12 @@ public class DailyStatComputeMapper extends Mapper<LongWritable, Text, Text, Dai
      */
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException {
-        LOG.debug("Column binning info: {}", this.dailyStatInfo);
 
-        for(Map.Entry<String, DailyStatInfoWritable> entry: this.dailyStatInfo.entrySet()) {
+        for(Map.Entry<String, DateStatInfoWritable> entry: this.dailyStatInfo.entrySet()) {
             this.outputKey.set(entry.getKey());
-            for(Map.Entry<String, DailyStatInfoWritable.VariableStatInfo> inEntry : entry.getValue().getVariableDailyStatInfo().entrySet()){
-
+            for(Map.Entry<String, DateStatInfoWritable.VariableStatInfo> inEntry : entry.getValue().getVariableDailyStatInfo().entrySet()){
                 LOG.info("output." + entry.getKey() + " " + inEntry.getKey() + " " + inEntry.getValue());
             }
-
             context.write(this.outputKey, entry.getValue());
         }
     }
