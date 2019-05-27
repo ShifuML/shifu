@@ -22,13 +22,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import ml.shifu.shifu.util.CommonUtils;
-import parquet.Log;
-
 import org.apache.commons.lang.StringUtils;
-import org.apache.pig.builtin.LOG;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import ml.shifu.shifu.util.CommonUtils;
 
 /**
  * CategoricalBinning class
@@ -71,7 +69,6 @@ public class CategoricalBinning extends AbstractBinning<String> {
     public CategoricalBinning(int binningNum, List<String> missingValList, int maxCategorySize, int hashSeed) {
         this(binningNum, missingValList, maxCategorySize);
         this.hashSeed =  hashSeed;
-        log.info("categoricalhashseed:"+hashSeed);
     }
 
     /*
@@ -83,25 +80,24 @@ public class CategoricalBinning extends AbstractBinning<String> {
      * @see ml.shifu.shifu.core.binning.AbstractBinning#addData(java.lang.Object)
      */
     @Override
-    public void addData(String val) {
-        String fval = (val == null ? "" : val);
-        log.info("hashfeature test");
-        if(!isMissingVal(fval)) {
-            if(isValid&&this.hashSeed<=0) {
-                categoricalVals.add(fval);
-            }
-            else if(isValid&&this.hashSeed>0) {
-            	categoricalVals.add(fval.hashCode()%this.hashSeed+"");
-            }
+	public void addData(String val) {
+		String fval = (val == null ? "" : val);
+		log.info("hashfeature test");
+		if (!isMissingVal(fval)) {
+			if (isValid && this.hashSeed <= 0) {
+				categoricalVals.add(fval);
+			} else if (isValid && this.hashSeed > 0) {
+				categoricalVals.add(fval.hashCode() % this.hashSeed + "");
+			}
 
-            if(categoricalVals.size() > maxCategorySize) {
-                isValid = false;
-                categoricalVals.clear();
-            }
-        } else {
-            super.incMissingValCnt();
-        }
-    }
+			if (categoricalVals.size() > maxCategorySize) {
+				isValid = false;
+				categoricalVals.clear();
+			}
+		} else {
+			super.incMissingValCnt();
+		}
+	}
 
     /*
      * (non-Javadoc)

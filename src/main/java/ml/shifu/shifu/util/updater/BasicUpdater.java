@@ -15,7 +15,6 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.validator.ModelInspector;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
-import parquet.Log;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;

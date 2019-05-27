@@ -662,26 +662,26 @@ public class ModelConfig {
         return CommonUtils.readConfNamesAsList(categoricalColumnNameFile, SourceType.LOCAL, delimiter);
     }
     
-    @JsonIgnore
+	@JsonIgnore
 	public Map<String, Integer> getCategoricalColumnHashSeedConf() throws IOException {
-        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter()
-                : this.getHeaderDelimiter();
-        String categoricalHashSeedConfFile = dataSet.getCategoricalHashSeedConfFile();
-        if(StringUtils.isBlank(categoricalHashSeedConfFile)) {
-    		String defaultCategoricalHashFile = Constants.COLUMN_META_FOLDER_NAME + File.separator
-    				+ Constants.DEFAULT_CATEGORICAL_HASH_FILE;
-            if(ShifuFileUtils.isFileExists(defaultCategoricalHashFile, SourceType.LOCAL)) {
-            	categoricalHashSeedConfFile = defaultCategoricalHashFile;
-                LOG.info(
-                        "'dataSet::categoricalColumnHashSeedConfFile' is not set while default categoricalColumnHashSeedConfFile: {} is found, default categorical hash seed file will be used.",
-                        defaultCategoricalHashFile);
-            } else {
-                LOG.info(
-                        "'dataSet::categoricalColumnHashSeedConfFile' is not set and default categoricalColumnHashSeedConfFile: {} is not found, no categorical hash seed files.",
-                        defaultCategoricalHashFile);
-                return new HashMap<String,Integer>();
-            }
-        }
+		String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter()
+				: this.getHeaderDelimiter();
+		String categoricalHashSeedConfFile = dataSet.getCategoricalHashSeedConfFile();
+		if (StringUtils.isBlank(categoricalHashSeedConfFile)) {
+			String defaultCategoricalHashFile = Constants.COLUMN_META_FOLDER_NAME + File.separator
+					+ Constants.DEFAULT_CATEGORICAL_HASH_FILE;
+			if (ShifuFileUtils.isFileExists(defaultCategoricalHashFile, SourceType.LOCAL)) {
+				categoricalHashSeedConfFile = defaultCategoricalHashFile;
+				LOG.info(
+						"'dataSet::categoricalColumnHashSeedConfFile' is not set while default categoricalColumnHashSeedConfFile: {} is found, default categorical hash seed file will be used.",
+						defaultCategoricalHashFile);
+			} else {
+				LOG.info(
+						"'dataSet::categoricalColumnHashSeedConfFile' is not set and default categoricalColumnHashSeedConfFile: {} is not found, no categorical hash seed files.",
+						defaultCategoricalHashFile);
+				return new HashMap<String, Integer>();
+			}
+		}
 
 		List<String> hashPairs = CommonUtils.readConfFileIntoList(categoricalHashSeedConfFile, SourceType.LOCAL);
 		Map<String, Integer> columnHashSeeds = new HashMap<String, Integer>();
@@ -689,7 +689,7 @@ public class ModelConfig {
 			for (String pair : hashPairs) {
 				if (StringUtils.isEmpty(pair))
 					continue;
-                String[] values = CommonUtils.split(pair, delimiter);
+				String[] values = CommonUtils.split(pair, delimiter);
 				if (values != null && values.length == 2) {
 					columnHashSeeds.put(CommonUtils.normColumnName(values[0]), Integer.parseInt(values[1]));
 				}
