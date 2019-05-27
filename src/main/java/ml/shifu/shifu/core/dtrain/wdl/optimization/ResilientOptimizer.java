@@ -41,6 +41,7 @@ public class ResilientOptimizer implements Optimizer{
 
 
     private static Map<String, Float> lastGradientMap = new HashMap<>();
+    private static Map<String, Float> lastUpdateValueMap = new HashMap<>();
     private Random random = new Random(System.currentTimeMillis());
     private float learningRate;
 
@@ -86,20 +87,36 @@ public class ResilientOptimizer implements Optimizer{
 
     @Override
     public float updateWeight(float gradient, String uniqueKey) {
-        final int change = DTrainUtils.sign(gradient * getLastGradient(uniqueKey));
         float gradientWeightUpdate = this.learningRate * gradient;
 
-        if(! hasGradientValue(uniqueKey) || change == 0) {
+        if (! hasGradientValue(uniqueKey)) {
+            // This is the case, especially when init the model and it's first iteration
+            saveCurrentGradient(uniqueKey, gradient);
+            lastUpdateValueMap.put(uniqueKey, gradientWeightUpdate);
+            return gradientWeightUpdate;
+        }
+        final int change = DTrainUtils.sign(gradient * getLastGradient(uniqueKey));
+        saveCurrentGradient(uniqueKey, gradient);
+        if(change == 0) {
             // Fall back to gradient method
             return gradientWeightUpdate;
         } else if(change > 0) {
-            return gradientWeightUpdate * INCREASE;
-        } else if(change < 0) {
-            return gradientWeightUpdate * DECREASE;
+            float updateValue = gradientWeightUpdate * INCREASE;
+            if(lastUpdateValueMap.containsKey(uniqueKey)) {
+                // update based on last update value, this will greatly boost the speed of convergence
+                updateValue = lastUpdateValueMap.get(uniqueKey) * INCREASE;
+            }
+            lastUpdateValueMap.put(uniqueKey, updateValue);
+            return updateValue;
+        } else {
+            float updateValue = gradientWeightUpdate * DECREASE;
+            if(lastUpdateValueMap.containsKey(uniqueKey)) {
+                // update based on last update value, this will greatly boost the speed of convergence
+                updateValue = -1 * lastUpdateValueMap.get(uniqueKey) * DECREASE;
+            }
+            lastUpdateValueMap.put(uniqueKey, updateValue);
+            return updateValue;
         }
-        // Save current gradient value
-        saveCurrentGradient(uniqueKey, gradient);
-        return gradientWeightUpdate;
     }
 
 }
