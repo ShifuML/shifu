@@ -5,6 +5,8 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.basic.BasicMLData;
@@ -29,29 +31,47 @@ import java.util.*;
 
 public class NormalUtils {
 
+    public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
+            ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
+            double cutoff, String alg) {
+        return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff, alg,
+                CategoryMissingNormType.POSRATE);
+    }
+
     /**
      * Assemble map data to Encog standard input format. If no variable selected(noVarSel = true), all candidate
      * variables will be selected.
      *
-     * @param binCategoryMap   categorical map
-     * @param noVarSel         if after var select
-     * @param modelConfig      model config instance
-     * @param columnConfigList column config list
-     * @param rawNsDataMap     raw NSColumn data
-     * @param cutoff           cut off value
-     * @param alg              algorithm used in model
+     * @param binCategoryMap
+     *            categorical map
+     * @param noVarSel
+     *            if after var select
+     * @param modelConfig
+     *            model config instance
+     * @param columnConfigList
+     *            column config list
+     * @param rawNsDataMap
+     *            raw NSColumn data
+     * @param cutoff
+     *            cut off value
+     * @param alg
+     *            algorithm used in model
+     * @param categoryMissingNormType
+     *            missing categorical value norm type, only used in WDL model
      * @return data pair instance
-     * @throws NullPointerException  if input is null
-     * @throws NumberFormatException if column value is not number format.
+     * @throws NullPointerException
+     *             if input is null
+     * @throws NumberFormatException
+     *             if column value is not number format.
      */
     public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
-            double cutoff, String alg) {
+            double cutoff, String alg, CategoryMissingNormType categoryMissingNormType) {
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
 
         List<Double> inputList = new ArrayList<Double>();
         boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
-        for(ColumnConfig config : columnConfigList) {
+        for(ColumnConfig config: columnConfigList) {
             if(config == null) {
                 continue;
             }
@@ -77,6 +97,11 @@ public class NormalUtils {
                             } else {
                                 inputList.add(index * 1d);
                             }
+                        } else if(CommonUtils.isWDLModel(alg)) {
+                            List<Double> normalizeValue = Normalizer.fullNormalize(config, val, cutoff,
+                                    modelConfig.getNormalizeType(), categoryMissingNormType,
+                                    binCategoryMap.get(config.getColumnNum()));
+                            inputList.addAll(normalizeValue);
                         } else {
                             inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val));
                         }
@@ -93,6 +118,11 @@ public class NormalUtils {
                             } else {
                                 inputList.add(index * 1d);
                             }
+                        } else if(CommonUtils.isWDLModel(alg)) {
+                            List<Double> normalizeValue = Normalizer.fullNormalize(config, val, cutoff,
+                                    modelConfig.getNormalizeType(), categoryMissingNormType,
+                                    binCategoryMap.get(config.getColumnNum()));
+                            inputList.addAll(normalizeValue);
                         } else {
                             inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val));
                         }
@@ -115,10 +145,14 @@ public class NormalUtils {
      * Simple name without name space part. For segment expansion, only retain raw column name but not current column
      * name.
      *
-     * @param columnConfig      the column configuration
-     * @param columnConfigList  the column config list inculding all segment expansion columns if have
-     * @param segmentExpansions segment expansion expressions
-     * @param dataSetHeaders    data set headers for all raw columns
+     * @param columnConfig
+     *            the column configuration
+     * @param columnConfigList
+     *            the column config list inculding all segment expansion columns if have
+     * @param segmentExpansions
+     *            segment expansion expressions
+     * @param dataSetHeaders
+     *            data set headers for all raw columns
      * @return the simple name not including name space part
      */
     public static String getSimpleColumnName(ColumnConfig columnConfig, List<ColumnConfig> columnConfigList,
@@ -144,46 +178,65 @@ public class NormalUtils {
     /**
      * Get column name without namespace
      *
-     * @param columnName - full column name
+     * @param columnName
+     *            - full column name
      * @return column name without namespace
      */
     public static String getSimpleColumnName(String columnName) {
         // remove name-space in column name to make it be called by simple name
         if(columnName.contains(CommonConstants.NAMESPACE_DELIMITER)) {
-            columnName = columnName.substring(
-                    columnName.lastIndexOf(CommonConstants.NAMESPACE_DELIMITER) + CommonConstants.NAMESPACE_DELIMITER
-                            .length(), columnName.length());
+            columnName = columnName.substring(columnName.lastIndexOf(CommonConstants.NAMESPACE_DELIMITER)
+                    + CommonConstants.NAMESPACE_DELIMITER.length(), columnName.length());
         }
         return columnName;
+    }
+
+    public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
+            ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
+            double cutoff, String alg, Set<Integer> featureSet) {
+        return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff, alg,
+                featureSet, CategoryMissingNormType.POSRATE);
     }
 
     /**
      * Assemble map data to Encog standard input format. If no variable selected(noVarSel = true), all candidate
      * variables will be selected.
      *
-     * @param binCategoryMap   categorical map
-     * @param noVarSel         if after var select
-     * @param modelConfig      model config instance
-     * @param columnConfigList column config list
-     * @param rawNsDataMap     raw NSColumn data
-     * @param cutoff           cut off value
-     * @param alg              algorithm used in model
-     * @param featureSet       feature set used in NN model
+     * @param binCategoryMap
+     *            categorical map
+     * @param noVarSel
+     *            if after var select
+     * @param modelConfig
+     *            model config instance
+     * @param columnConfigList
+     *            column config list
+     * @param rawNsDataMap
+     *            raw NSColumn data
+     * @param cutoff
+     *            cut off value
+     * @param alg
+     *            algorithm used in model
+     * @param featureSet
+     *            feature set used in NN model
+     * @param categoryMissingNormType
+     *            missing categorical value norm type, only used in WDL model
      * @return data pair instance
-     * @throws NullPointerException  if input is null
-     * @throws NumberFormatException if column value is not number format.
+     * @throws NullPointerException
+     *             if input is null
+     * @throws NumberFormatException
+     *             if column value is not number format.
      */
     public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
-            double cutoff, String alg, Set<Integer> featureSet) {
+            double cutoff, String alg, Set<Integer> featureSet, CategoryMissingNormType categoryMissingNormType) {
         if(CollectionUtils.isEmpty(featureSet)) {
             return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff,
-                    alg);
+                    alg, categoryMissingNormType);
         }
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
 
         List<Double> inputList = new ArrayList<Double>();
-        for(ColumnConfig config : columnConfigList) {
+        for(ColumnConfig config: columnConfigList) {
             if(config == null) {
                 continue;
             }
@@ -207,6 +260,11 @@ public class NormalUtils {
                         } else {
                             inputList.add(index * 1d);
                         }
+                    } else if(CommonUtils.isWDLModel(alg) && config.isCategorical()) {
+                        List<Double> normalizeValue = Normalizer.fullNormalize(config, val, cutoff,
+                                modelConfig.getNormalizeType(), categoryMissingNormType,
+                                binCategoryMap.get(config.getColumnNum()));
+                        inputList.addAll(normalizeValue);
                     } else {
                         inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val));
                     }
@@ -230,8 +288,10 @@ public class NormalUtils {
      * 1) when training model, get all available features before start
      * 2) get all available features before doing variable selection
      *
-     * @param columnConfigList - ColumnConfig list to check
-     * @param isAfterVarSelect - true for training, false for variable selection
+     * @param columnConfigList
+     *            - ColumnConfig list to check
+     * @param isAfterVarSelect
+     *            - true for training, false for variable selection
      * @return - available feature list
      */
     public static List<Integer> getAllFeatureList(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect) {
@@ -239,18 +299,19 @@ public class NormalUtils {
 
         List<Integer> features = new ArrayList<Integer>();
         List<String> wrongFeatures = new ArrayList<String>();
-        for(ColumnConfig config : columnConfigList) {
+        for(ColumnConfig config: columnConfigList) {
             if(isAfterVarSelect) {
                 if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
                     // only select numerical feature with getBinBoundary().size() larger than 1
                     // or categorical feature with getBinCategory().size() larger than 0
                     if((config.isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 0)
                             || (config.isCategorical() && config.getBinCategory() != null
-                            && config.getBinCategory().size() > 0)) {
+                                    && config.getBinCategory().size() > 0)) {
                         features.add(config.getColumnNum());
-                    } else if((config.isNumerical() && (config.getBinBoundary() == null
-                            || config.getBinBoundary().size() <= 0)) || (config.isCategorical() && (
-                            config.getBinCategory() == null || config.getBinCategory().size() <= 0))) {
+                    } else if((config.isNumerical()
+                            && (config.getBinBoundary() == null || config.getBinBoundary().size() <= 0))
+                            || (config.isCategorical()
+                                    && (config.getBinCategory() == null || config.getBinCategory().size() <= 0))) {
                         wrongFeatures.add(config.getColumnName());
                     }
                 }
@@ -260,11 +321,12 @@ public class NormalUtils {
                     // or categorical feature with getBinCategory().size() larger than 0
                     if((config.isNumerical() && config.getBinBoundary() != null && config.getBinBoundary().size() > 0)
                             || (config.isCategorical() && config.getBinCategory() != null
-                            && config.getBinCategory().size() > 0)) {
+                                    && config.getBinCategory().size() > 0)) {
                         features.add(config.getColumnNum());
-                    } else if((config.isNumerical() && (config.getBinBoundary() == null
-                            || config.getBinBoundary().size() <= 0)) || (config.isCategorical() && (
-                            config.getBinCategory() == null || config.getBinCategory().size() <= 0))) {
+                    } else if((config.isNumerical()
+                            && (config.getBinBoundary() == null || config.getBinBoundary().size() <= 0))
+                            || (config.isCategorical()
+                                    && (config.getBinCategory() == null || config.getBinCategory().size() <= 0))) {
                         wrongFeatures.add(config.getColumnName());
                     }
                 }
@@ -282,7 +344,8 @@ public class NormalUtils {
     /**
      * Convert (String, String) raw data map to (NSColumn, String) data map
      *
-     * @param rawDataMap - (String, String) raw data map
+     * @param rawDataMap
+     *            - (String, String) raw data map
      * @return (NSColumn, String) data map
      */
     public static Map<NSColumn, String> convertRawMapToNsDataMap(Map<String, String> rawDataMap) {
@@ -291,7 +354,7 @@ public class NormalUtils {
         }
 
         Map<NSColumn, String> nsDataMap = new HashMap<NSColumn, String>();
-        for(String key : rawDataMap.keySet()) {
+        for(String key: rawDataMap.keySet()) {
             nsDataMap.put(new NSColumn(key), rawDataMap.get(key));
         }
         return nsDataMap;
@@ -300,12 +363,16 @@ public class NormalUtils {
     /**
      * Normalize variable by (modelType, normMethod). One variable val could be normalized into multi double value
      *
-     * @param modelConfig - to check modelType. TreeModel or NN/LR model?
-     * @param cutoff      - cutoff for ZScale
-     * @param config      - variable configuration
-     * @param val         - raw variable value
+     * @param modelConfig
+     *            - to check modelType. TreeModel or NN/LR model?
+     * @param cutoff
+     *            - cutoff for ZScale
+     * @param config
+     *            - variable configuration
+     * @param val
+     *            - raw variable value
      * @return - most normalization method return 1 element double list,
-     * but OneHot will will return multi-elements double list
+     *         but OneHot will will return multi-elements double list
      */
     private static List<Double> computeNumericNormResult(ModelConfig modelConfig, double cutoff, ColumnConfig config,
             String val) {
@@ -336,8 +403,10 @@ public class NormalUtils {
     /**
      * Get data from raw data map (with {@link NSColumn} as key)
      *
-     * @param rawNsDataMap raw data map to look up
-     * @param key - {@link NSColumn} for variable
+     * @param rawNsDataMap
+     *            raw data map to look up
+     * @param key
+     *            - {@link NSColumn} for variable
      * @return raw value map
      */
     public static String getNSVariableVal(Map<NSColumn, String> rawNsDataMap, NSColumn key) {
@@ -349,7 +418,8 @@ public class NormalUtils {
      * Get missing value of ColumnConfig. Now 'mean' value is used as missing value.
      * If mean is null, use 0.0
      *
-     * @param config {@link ColumnConfig}
+     * @param config
+     *            {@link ColumnConfig}
      * @return - default missing value of ColumnConfig
      */
     public static double defaultMissingValue(ColumnConfig config) {

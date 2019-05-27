@@ -78,6 +78,11 @@ public class BasicFloatMLDataSet implements Serializable, FloatMLDataSet, Clonea
     private List<FloatMLDataPair> data = new ArrayList<FloatMLDataPair>();
 
     /**
+     * The sum of significance for all records
+     */
+    private double recordSum = 0.0;
+
+    /**
      * Default constructor.
      */
     public BasicFloatMLDataSet() {
@@ -165,7 +170,7 @@ public class BasicFloatMLDataSet implements Serializable, FloatMLDataSet, Clonea
      */
     @Override
     public void add(final FloatMLData theData) {
-        this.data.add(new BasicFloatMLDataPair(theData));
+        this.add(new BasicFloatMLDataPair(theData));
     }
 
     /**
@@ -173,8 +178,7 @@ public class BasicFloatMLDataSet implements Serializable, FloatMLDataSet, Clonea
      */
     @Override
     public void add(final FloatMLData inputData, final FloatMLData idealData) {
-        final FloatMLDataPair pair = new BasicFloatMLDataPair(inputData, idealData);
-        this.data.add(pair);
+        this.add(new BasicFloatMLDataPair(inputData, idealData));
     }
 
     /**
@@ -183,6 +187,7 @@ public class BasicFloatMLDataSet implements Serializable, FloatMLDataSet, Clonea
     @Override
     public void add(final FloatMLDataPair inputData) {
         this.data.add(inputData);
+        this.recordSum += inputData.getSignificance();
     }
 
     /**
@@ -248,6 +253,8 @@ public class BasicFloatMLDataSet implements Serializable, FloatMLDataSet, Clonea
         if(pair.getIdealArray() != null) {
             pair.setIdealArray(source.getIdealArray());
         }
+        // set significance, or weight won't take effect
+        pair.setSignificance(source.getSignificance());
     }
 
     /**
@@ -256,6 +263,14 @@ public class BasicFloatMLDataSet implements Serializable, FloatMLDataSet, Clonea
     @Override
     public final long getRecordCount() {
         return this.data.size();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final double getRecordSum() {
+        return this.recordSum;
     }
 
     /**

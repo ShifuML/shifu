@@ -74,7 +74,6 @@ public class TensorflowTrainer {
     @SuppressWarnings("unused")
     private List<ColumnConfig> ccList;
 
-    @SuppressWarnings("unused")
     private ModelConfig modelConfig;
 
     private PathFinder pathFinder;
@@ -84,16 +83,12 @@ public class TensorflowTrainer {
 
     private char delimiter;
 
-    @SuppressWarnings("unused")
     private String lossFunc;
 
-    @SuppressWarnings("unused")
     private String optimizer;
 
-    @SuppressWarnings("unused")
     private String weightInitializer;
     
-    @SuppressWarnings("unused")
     private Integer miniBatch;
     
     private int epoch = 100;

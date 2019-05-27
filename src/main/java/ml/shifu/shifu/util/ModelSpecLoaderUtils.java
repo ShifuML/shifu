@@ -50,7 +50,7 @@ import java.util.*;
 
 public class ModelSpecLoaderUtils {
 
-    private static final Logger log = LoggerFactory.getLogger(ModelSpecLoaderUtils.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ModelSpecLoaderUtils.class);
 
     /**
      * Avoid using new for our utility class.
@@ -77,7 +77,8 @@ public class ModelSpecLoaderUtils {
         if(modelConfig == null || (!Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm()) // NN model
                 && !Constants.SVM.equalsIgnoreCase(modelConfig.getAlgorithm()) // SVM model
                 && !Constants.LR.equalsIgnoreCase(modelConfig.getAlgorithm()) // LR model
-                && !CommonUtils.isTreeModel(modelConfig.getAlgorithm()))) {
+                && !CommonUtils.isTreeModel(modelConfig.getAlgorithm())
+                && !CommonUtils.isTensorFlowModel(modelConfig.getAlgorithm()))) {
             throw new IllegalArgumentException(modelConfig == null ? "modelConfig is null."
                     : String.format(" invalid model algorithm %s.", modelConfig.getAlgorithm()));
         }
@@ -103,10 +104,10 @@ public class ModelSpecLoaderUtils {
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
 
         List<BasicML> models = new ArrayList<BasicML>();
-        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
+        List<Path> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
-            for(FileStatus f: modelFileStats) {
-                models.add(loadModel(modelConfig, f.getPath(), fs));
+            for(Path f: modelFileStats) {
+                models.add(loadModel(modelConfig, f, fs));
             }
         }
 
@@ -181,19 +182,19 @@ public class ModelSpecLoaderUtils {
         // check if eval generic model, if so bypass the Shifu model loader procedure
         if(Constants.GENERIC.equalsIgnoreCase(modelConfig.getAlgorithm()) // generic or TensorFlow algorithm
                 || Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
-            List<FileStatus> genericModelConfigs = findGenericModels(modelConfig, evalConfig, sourceType);
+            List<Path> genericModelConfigs = findGenericModels(modelConfig, evalConfig, sourceType);
             if(genericModelConfigs.isEmpty()) {
                 throw new RuntimeException("Load generic model failed.");
             }
-            loadGenericModels(modelConfig, genericModelConfigs, sourceType, models);
-            log.debug("return generic model {}", models.size());
+            models = loadGenericModels(modelConfig, genericModelConfigs, sourceType);
+            LOG.debug("return generic model {}", models.size());
             return models;
         }
 
-        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
+        List<Path> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
-            for(FileStatus fst: modelFileStats) {
-                models.add(loadModel(modelConfig, fst.getPath(), fs, gbtConvertToProb, gbtScoreConvertStrategy));
+            for(Path fst: modelFileStats) {
+                models.add(loadModel(modelConfig, fst, fs, gbtConvertToProb, gbtScoreConvertStrategy));
             }
         }
 
@@ -209,48 +210,46 @@ public class ModelSpecLoaderUtils {
      *            generic model files
      * @param sourceType
      *            source type
-     * @param models
-     *            models list to have the result
+     * @return list of model object after loading from path list
      * @throws IOException
      *             Exception when fail to load generic models
      */
-    public static void loadGenericModels(ModelConfig modelConfig, List<FileStatus> genericModelConfigs,
-            SourceType sourceType, List<BasicML> models) throws IOException {
-        FileSystem hdfs = HDFSUtils.getFS();
-        PathFinder pathFinder = new PathFinder(modelConfig);
-
-        String src = pathFinder.getModelsPath(sourceType);
-        File f = new File(System.getProperty(Constants.USER_DIR) + "/models");
+    public static List<BasicML> loadGenericModels(ModelConfig modelConfig, List<Path> genericModelConfigs,
+            SourceType sourceType) throws IOException {
+        String src = new PathFinder(modelConfig).getModelsPath(sourceType);
+        // use a random folder to load models
+        String currUserDir = System.getProperty(Constants.USER_DIR) + File.separator + System.currentTimeMillis()
+                + new Random().nextInt();
+        HDFSUtils.getLocalFS().mkdirs(new Path(currUserDir));
+        String modelsDir = currUserDir + File.separator + Constants.MODELS;
         // check if model dir is exist
-        if(!f.exists()) {
-            hdfs.copyToLocalFile(false, new Path(src), // source
-                    new Path(System.getProperty(Constants.USER_DIR)), true);
+        if(!new File(modelsDir).exists()) {
+            HDFSUtils.getFS().copyToLocalFile(false, new Path(src), new Path(modelsDir), true);
         }
 
-        for(FileStatus fst: genericModelConfigs) {
-            GenericModelConfig gmc = CommonUtils.loadJSON( // loading as GenericModelConfig
-                    fst.getPath().toString(), sourceType, GenericModelConfig.class);
+        List<BasicML> results = new ArrayList<>();
+        for(Path fst: genericModelConfigs) {
+            // loading as GenericModelConfig
+            GenericModelConfig gmc = CommonUtils.loadJSON(fst.toString(), sourceType, GenericModelConfig.class);
             String alg = (String) gmc.getProperties().get(Constants.GENERIC_ALGORITHM);
-            String genericModelPath = System.getProperty(Constants.USER_DIR) // <usr.dir>
-                    + File.separator + Constants.MODELS; // + /models
-            // + File.separator + modelConfig.getBasic().getName(); // + /ModelName
-            gmc.getProperties().put(Constants.GENERIC_MODEL_PATH, genericModelPath);
-            log.info("Generic model path is : {}.", gmc.getProperties().get(Constants.GENERIC_MODEL_PATH));
-            if(Constants.TENSORFLOW.equals(alg)) {
+            gmc.getProperties().put(Constants.GENERIC_MODEL_PATH, modelsDir);
+            LOG.info("Generic model path is : {}.", modelsDir);
+            if(!CommonUtils.isTensorFlowModel(alg)) {
+                throw new java.lang.UnsupportedOperationException(
+                        "Algorithm: " + alg + " is not supported in generic model yet.");
+            } else {
                 try {
                     // Initiate a evaluator class instance which used for evaluation
                     Class<?> clazz = Class.forName(ComputeImplClass.Tensorflow.getClassName());
                     Computable computable = (Computable) clazz.newInstance();
                     computable.init(gmc);
-                    GenericModel genericModel = new GenericModel(computable, gmc.getProperties());
-                    models.add(genericModel);
+                    results.add(new GenericModel(computable, gmc.getProperties()));
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
-            } else {
-                throw new RuntimeException("Algorithm: " + alg + " is not supported in generic model yet.");
             }
         }
+        return results;
     }
 
     /**
@@ -268,7 +267,7 @@ public class ModelSpecLoaderUtils {
      */
     public static int getBasicModelsCnt(ModelConfig modelConfig, EvalConfig evalConfig,
             RawSourceData.SourceType sourceType) throws IOException {
-        List<FileStatus> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
+        List<Path> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         return (CollectionUtils.isEmpty(modelFileStats) ? 0 : modelFileStats.size());
     }
 
@@ -285,27 +284,28 @@ public class ModelSpecLoaderUtils {
      * @throws IOException
      *             Exception when fail to load basic models
      */
-    public static List<FileStatus> locateBasicModels(ModelConfig modelConfig, EvalConfig evalConfig,
-            SourceType sourceType) throws IOException {
+    public static List<Path> locateBasicModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
+            throws IOException {
         // we have to register PersistBasicFloatNetwork for loading such models
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
 
-        List<FileStatus> listStatus = findModels(modelConfig, evalConfig, sourceType);
+        List<Path> listStatus = findModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isEmpty(listStatus)) {
             // throw new ShifuException(ShifuErrorCode.ERROR_MODEL_FILE_NOT_FOUND);
             // disable exception, since we there maybe sub-models
             listStatus = findGenericModels(modelConfig, evalConfig, sourceType);
             // if models not found, continue which makes eval works when training is in progress.
             if(CollectionUtils.isNotEmpty(listStatus)) {
+                LOG.debug(" locateBasicModels Path of tf models {}", listStatus);
                 return listStatus;
             }
         }
 
         // to avoid the *unix and windows file list order
-        Collections.sort(listStatus, new Comparator<FileStatus>() {
+        Collections.sort(listStatus, new Comparator<Path>() {
             @Override
-            public int compare(FileStatus f1, FileStatus f2) {
-                return f1.getPath().getName().compareToIgnoreCase(f2.getPath().getName());
+            public int compare(Path f1, Path f2) {
+                return f1.getName().compareToIgnoreCase(f2.getName());
             }
         });
 
@@ -393,6 +393,14 @@ public class ModelSpecLoaderUtils {
             return null;
         }
 
+        // TF for dedicated model loader
+        if(Constants.GENERIC.equalsIgnoreCase(modelConfig.getAlgorithm()) // generic or TensorFlow algorithm
+                || Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+            // only 1 model
+            return loadGenericModels(modelConfig, Arrays.asList(modelPath), modelConfig.getDataSet().getSource())
+                    .get(0);
+        }
+
         // we have to register PersistBasicFloatNetwork for loading such models
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
         FSDataInputStream stream = null;
@@ -411,6 +419,8 @@ public class ModelSpecLoaderUtils {
             } else if(modelPath.getName().endsWith(CommonConstants.RF_ALG_NAME.toLowerCase()) // RF or GBT
                     || modelPath.getName().endsWith(CommonConstants.GBT_ALG_NAME.toLowerCase())) {
                 return TreeModel.loadFromStream(stream, gbtConvertToProb, gbtScoreConvertStrategy);
+            } else if(modelPath.getName().endsWith(Constants.WDL_ALG_NAME.toLowerCase())) {
+                return WDLModel.loadFromStream(stream);
             } else {
                 GzipStreamPair pair = GzipStreamPair.isGZipFormat(stream);
                 if(pair.isGzip()) {
@@ -444,7 +454,7 @@ public class ModelSpecLoaderUtils {
      * @throws IOException
      *             io exception to load files
      */
-    public static List<FileStatus> findModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
+    public static List<Path> findModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
             throws IOException {
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         PathFinder pathFinder = new PathFinder(modelConfig);
@@ -468,7 +478,12 @@ public class ModelSpecLoaderUtils {
             }
         }
 
-        return fileList;
+        List<Path> paths = new ArrayList<>();
+        for(FileStatus fileStatus: fileList) {
+            paths.add(fileStatus.getPath());
+        }
+
+        return paths;
     }
 
     /**
@@ -485,7 +500,7 @@ public class ModelSpecLoaderUtils {
      * @throws IOException
      *             Exception occurred when finding generic models
      */
-    public static List<FileStatus> findGenericModels(ModelConfig modelConfig, EvalConfig evalConfig,
+    public static List<Path> findGenericModels(ModelConfig modelConfig, EvalConfig evalConfig,
             RawSourceData.SourceType sourceType) throws IOException {
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         PathFinder pathFinder = new PathFinder(modelConfig);
@@ -510,7 +525,14 @@ public class ModelSpecLoaderUtils {
             }
         }
 
-        return fileList;
+        List<Path> paths = new ArrayList<>();
+        for(FileStatus fileStatus: fileList) {
+            paths.add(fileStatus.getPath());
+        }
+        
+        LOG.debug(" findGenericModels Path of tf models {}", paths);
+
+        return paths;
     }
 
     /**
@@ -580,7 +602,7 @@ public class ModelSpecLoaderUtils {
                 }
             }
         } catch (IOException e) {
-            log.error("Error occurred when loading sub-models.", e);
+            LOG.error("Error occurred when loading sub-models.", e);
         }
 
         return modelSpecs;
@@ -737,7 +759,7 @@ public class ModelSpecLoaderUtils {
                 }
             }
         } catch (IOException e) {
-            log.error("Error occurred when finnding sub-models.", e);
+            LOG.error("Error occurred when finnding sub-models.", e);
         }
 
         return subModelsCnt;
@@ -785,13 +807,19 @@ public class ModelSpecLoaderUtils {
         }
 
         File modelsPathDir = new File(modelsPath);
-
-        File[] modelFiles = modelsPathDir.listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(File dir, String name) {
-                return name.endsWith("." + alg.name().toLowerCase());
+        File[] modelFiles = null;
+        if(modelsPathDir.isDirectory()) { // user provide a directory
+            modelFiles = modelsPathDir.listFiles(new FilenameFilter() {
+                @Override
+                public boolean accept(File dir, String name) {
+                    return name.endsWith("." + alg.name().toLowerCase());
+                }
+            });
+        } else { // user provide a single model spec
+            if(modelsPath.endsWith("." + alg.name().toLowerCase())) {
+                modelFiles = new File[] { modelsPathDir };
             }
-        });
+        }
 
         if(modelFiles != null) {
             // sort file names

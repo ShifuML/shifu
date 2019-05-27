@@ -83,33 +83,31 @@ public class WideLayer
 
     @Override
     public float[] forward(Tuple<List<SparseInput>, float[]> input) {
-        LOG.error("Debug in Wide Layer: with input first " + input.getFirst().size() + " second " + input.getSecond().length);
+        LOG.debug("Debug in Wide Layer: with input first " + input.getFirst().size() + " second " + input.getSecond().length);
         AssertUtils.assertListNotNullAndSizeEqual(this.getLayers(), input.getFirst());
-
         float[] results = new float[layers.get(0).getOutDim()];
         for(int i = 0; i < getLayers().size(); i++) {
             float[] fOuts = this.getLayers().get(i).forward(input.getFirst().get(i));
-            LOG.error("wide layer  " + i);
+            LOG.debug("wide layer  " + i);
             for(int j = 0; j < results.length; j++) {
-                LOG.error("outputs " + j + " value is " + fOuts[j]);
+                LOG.debug("outputs " + j + " value is " + fOuts[j]);
                 results[j] += fOuts[j];
             }
         }
 
         float[] denseForwards = this.denseLayer.forward(input.getSecond());
-        LOG.error("Densor forward:");
+        LOG.debug("Densor forward:");
         assert denseForwards.length == results.length;
         for(int j = 0; j < results.length; j++) {
-            LOG.error("Densor forward " + j + " value is " + denseForwards[j]);
+            LOG.debug("Densor forward " + j + " value is " + denseForwards[j]);
             results[j] += denseForwards[j];
         }
 
         for(int j = 0; j < results.length; j++) {
-            LOG.error("before add bias result " + j + " is " + results[j]);
+            LOG.debug("before add bias result " + j + " is " + results[j]);
             results[j] += bias.forward(1f);
-            LOG.error("after add bias result " + j + " is " + results[j]);
+            LOG.debug("after add bias result " + j + " is " + results[j]);
         }
-
         return results;
     }
 
@@ -272,14 +270,14 @@ public class WideLayer
     }
 
     @Override
-    public void update(WideLayer gradLayer, Optimizer optimizer) {
+    public void update(WideLayer gradLayer, Optimizer optimizer, String uniqueKey) {
         List<WideFieldLayer> gradWFLs = gradLayer.getLayers();
         int wflSize = this.layers.size();
         for(int i = 0; i < wflSize; i++) {
-            this.layers.get(i).update(gradWFLs.get(i), optimizer);
+            this.layers.get(i).update(gradWFLs.get(i), optimizer, uniqueKey + "w" + i);
         }
-        this.denseLayer.update(gradLayer.getDenseLayer(), optimizer);
-        this.bias.update(gradLayer.getBias(), optimizer);
+        this.denseLayer.update(gradLayer.getDenseLayer(), optimizer, "d");
+        this.bias.update(gradLayer.getBias(), optimizer, "b");
     }
 
 }

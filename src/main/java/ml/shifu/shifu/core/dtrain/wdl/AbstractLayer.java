@@ -16,17 +16,16 @@
 package ml.shifu.shifu.core.dtrain.wdl;
 
 import ml.shifu.guagua.io.Bytable;
+import ml.shifu.guagua.io.Combinable;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 
-import ml.shifu.guagua.io.Combinable;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
-
 /**
- * @author juguo
+ * @author Guo, Junshi
  */
 public abstract class AbstractLayer<FIN, FOUT, BIN, BOUT, SELF extends Bytable>
         implements Layer<FIN, FOUT, BIN, BOUT>, Bytable, Combinable<SELF> {
@@ -84,7 +83,7 @@ public abstract class AbstractLayer<FIN, FOUT, BIN, BOUT, SELF extends Bytable>
         readFields(in);
     }
 
-    public abstract void update(SELF gradLayer, Optimizer optimizer);
+    public abstract void update(SELF gradLayer, Optimizer optimizer, String uniqueKey);
 
 }
 

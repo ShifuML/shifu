@@ -153,7 +153,10 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
         this.trainError += from.trainError;
         this.validationCount += from.validationCount;
         this.validationError += from.validationError;
-        this.wnd = this.wnd.combine(from.getWnd());
+        // In the first iteration, the worker may send a empty WDLParams without WideAndDeep Init
+        if(from.getWnd() != null) {
+            this.wnd = this.wnd.combine(from.getWnd());
+        }
         return this;
     }
 

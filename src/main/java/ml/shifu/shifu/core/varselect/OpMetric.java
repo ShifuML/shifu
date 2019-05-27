@@ -1,4 +1,4 @@
-package ml.shifu.shifu.udf.norm;
+package ml.shifu.shifu.core.varselect;
 
 /**
  * Copyright [2013-2018] PayPal Software Foundation
@@ -15,15 +15,6 @@ package ml.shifu.shifu.udf.norm;
  * limitations under the License.
  **/
 
-public enum CategoryMissingNormType {
-    MEAN, POSRATE;
-
-    public static CategoryMissingNormType of(String normType) {
-        for(CategoryMissingNormType norm: CategoryMissingNormType.values()) {
-            if(norm.toString().equalsIgnoreCase(normType)) {
-                return norm;
-            }
-        }
-        return POSRATE;
-    }
+public enum OpMetric {
+    ACTION_RATE, WEIGHTED_ACTION_RATE
 }

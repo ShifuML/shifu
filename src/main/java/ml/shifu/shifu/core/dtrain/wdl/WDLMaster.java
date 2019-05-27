@@ -82,11 +82,6 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
     private boolean isAfterVarSelect;
 
     /**
-     * Learning rate
-     */
-    private double learningRate;
-
-    /**
      * Whether to enable continuous model training based on existing models.
      */
     private boolean isContinuousEnabled = false;
@@ -134,8 +129,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         // 1, with index of 0,1,2,3 denotes different classes
         this.isAfterVarSelect = (inputOutputIndex[3] == 1);
         this.validParams = this.modelConfig.getTrain().getParams();
-        this.learningRate = Double.valueOf(validParams.get(CommonConstants.LEARNING_RATE).toString());
-        System.out.println("learning rate in master init" + this.learningRate);
+        double learningRate = Double.valueOf(validParams.get(CommonConstants.LEARNING_RATE).toString());
 
         this.isContinuousEnabled = Boolean.TRUE.toString()
                 .equalsIgnoreCase(context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
@@ -157,7 +151,12 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         this.wnd = new WideAndDeep(idBinCateSizeMap, numInputs, numericalIds, embedColumnIds, embedOutputList,
                 wideColumnIds, hiddenNodes, actFunc, l2reg);
         // TODO: make this configurable
-        this.optimizer = new GradientDescent(this.learningRate);
+        if(null == this.optimizer) {
+            this.optimizer = new GradientDescent(learningRate);
+        } else {
+            LOG.error("Try to init optimizer in master!");
+        }
+
     }
 
     @Override
@@ -173,6 +172,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
 
         // apply optimizer
         this.wnd.update(aggregation.getWnd(), optimizer);
+        LOG.info("train size: {}, error: {}", aggregation.getTrainCount(),  aggregation.getTrainError());
 
         // construct master result which contains WideAndDeep current model weights
         WDLParams params = new WDLParams();
@@ -181,6 +181,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         params.setTrainError(aggregation.getTrainError());
         params.setValidationError(aggregation.getValidationError());
         params.setSerializationType(SerializationType.WEIGHTS);
+        this.wnd.setSerializationType(SerializationType.WEIGHTS);
         params.setWnd(this.wnd);
         return params;
     }

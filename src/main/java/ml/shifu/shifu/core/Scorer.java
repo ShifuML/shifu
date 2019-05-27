@@ -44,6 +44,7 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.executor.ExecutorManager;
+import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
@@ -73,6 +74,12 @@ public class Scorer {
      * For faster query from categorical bins
      */
     private Map<Integer, Map<String, Integer>> binCategoryMap = new HashMap<Integer, Map<String, Integer>>();
+
+    /**
+     * In Zscore norm type, how to process category default missing value norm, by default use mean, another option is
+     * POSRATE.
+     */
+    private CategoryMissingNormType categoryMissingNormType = CategoryMissingNormType.POSRATE;
 
     /**
      * For neural network, if output the hidden neurons
@@ -177,15 +184,19 @@ public class Scorer {
         }
 
         selectedColumnConfigList = new ArrayList<ColumnConfig>();
-        for(ColumnConfig columnConfig : this.columnConfigList) {
-            if (columnConfig.isFinalSelect()) {
+        for(ColumnConfig columnConfig: this.columnConfigList) {
+            if(columnConfig.isFinalSelect()) {
                 selectedColumnConfigList.add(columnConfig);
             }
         }
-        if ( CollectionUtils.isEmpty(selectedColumnConfigList) ) {
+        if(CollectionUtils.isEmpty(selectedColumnConfigList)) {
             // no final-selected ColumnConfigs, add all to check
             selectedColumnConfigList.addAll(this.columnConfigList);
         }
+    }
+
+    public void setCategoryMissingNormType(CategoryMissingNormType categoryMissingNormType) {
+        this.categoryMissingNormType = categoryMissingNormType;
     }
 
     /**
@@ -218,8 +229,8 @@ public class Scorer {
 
     public ScoreObject scoreNsData(MLDataPair inputPair, Map<NSColumn, String> rawNsDataMap) {
         if(inputPair == null && !this.alg.equalsIgnoreCase(NNConstants.NN_ALG_NAME)) {
-            inputPair = NormalUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
-                    selectedColumnConfigList, rawNsDataMap, cutoff, alg);
+            inputPair = NormalUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig, selectedColumnConfigList,
+                    rawNsDataMap, cutoff, alg, categoryMissingNormType);
         }
 
         // clear cache
@@ -241,7 +252,7 @@ public class Scorer {
 
                 String cacheKey = featureSetToString(network.getFeatureSet());
                 MLDataPair dataPair = cachedNormDataPair.get(cacheKey);
-                if ( dataPair == null ) {
+                if(dataPair == null) {
                     dataPair = NormalUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
                             selectedColumnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet());
                     cachedNormDataPair.put(cacheKey, dataPair);
@@ -293,7 +304,7 @@ public class Scorer {
             } else if(model instanceof BasicNetwork) {
                 final BasicNetwork network = (BasicNetwork) model;
                 final MLDataPair networkPair = NormalUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
-                        columnConfigList, rawNsDataMap, cutoff, alg, null);
+                        columnConfigList, rawNsDataMap, cutoff, alg);
 
                 Callable<MLData> callable = new Callable<MLData>() {
                     @Override
@@ -386,7 +397,29 @@ public class Scorer {
                         return ((GenericModel) model).compute(pair.getInput());
                     }
                 };
-                if (multiThread) {
+                if(multiThread) {
+                    tasks.add(callable);
+                } else {
+                    try {
+                        modelResults.add(callable.call());
+                    } catch (Exception e) {
+                        log.error("error in model evaluation", e);
+                    }
+                }
+            } else if(model instanceof WDLModel) {
+                final WDLModel wdl = (WDLModel) model;
+                if(wdl.getInputCount() != pair.getInput().size()) {
+                    throw new RuntimeException("WDL and input size mismatch: wdl input Size = " + wdl.getInputCount()
+                            + "; data input Size = " + pair.getInput().size());
+                }
+
+                Callable<MLData> callable = new Callable<MLData>() {
+                    @Override
+                    public MLData call() {
+                        return new BasicMLData(wdl.compute(pair.getInput()));
+                    }
+                };
+                if(multiThread) {
                     tasks.add(callable);
                 } else {
                     try {
@@ -490,6 +523,8 @@ public class Scorer {
                     }
                 } else if(model instanceof GenericModel) {
                     scores.add(toScore(score.getData(0)));
+                } else if(model instanceof WDLModel) {
+                    scores.add(toScore(score.getData(0)));
                 } else {
                     throw new RuntimeException("unsupport models");
                 }
@@ -524,7 +559,7 @@ public class Scorer {
     }
 
     private String featureSetToString(Set<Integer> featureSet) {
-        if (CollectionUtils.isEmpty(featureSet)) {
+        if(CollectionUtils.isEmpty(featureSet)) {
             return "EMPTY";
         } else {
             return featureSet.toString();

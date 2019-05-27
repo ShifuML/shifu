@@ -70,6 +70,7 @@ public class PersistWideAndDeep {
      * @return the WideAndDeep model
      * @throws IOException IOException when IO operatio
      */
+    @SuppressWarnings("rawtypes")
     public static WideAndDeep load(DataInputStream dis) throws IOException {
         AssertUtils.assertEquals(dis.readUTF(), WideAndDeep.class.getName());
 
@@ -133,7 +134,8 @@ public class PersistWideAndDeep {
      * @return A list of specific object
      * @throws IOException IOException when IO operation
      */
-    @SuppressWarnings("unchecked") private static <T> List<T> readList(DataInputStream dis, Class tClass) throws IOException {
+    @SuppressWarnings("unchecked") 
+    private static <T> List<T> readList(DataInputStream dis, Class<?> tClass) throws IOException {
         int size = dis.readInt();
         List<T> list = new ArrayList<>(size);
         for(int i = 0; i < size; i++){
@@ -294,11 +296,12 @@ public class PersistWideAndDeep {
         return new BiasLayer(weight);
     }
 
+    @SuppressWarnings("rawtypes")
     private static List<DenseLayer> getAllDenseLayers(List<Layer> hiddenLayers) {
         AssertUtils.assertNotNull(hiddenLayers);
 
         List<DenseLayer> denseLayers = new ArrayList<>(hiddenLayers.size() / 2);
-        for(Layer layer: hiddenLayers) {
+        for(Layer<?, ?, ?, ?> layer: hiddenLayers) {
             if (layer instanceof DenseLayer) {
                 denseLayers.add((DenseLayer) layer);
             }
@@ -306,6 +309,7 @@ public class PersistWideAndDeep {
         return denseLayers;
     }
 
+    @SuppressWarnings("rawtypes")
     private static List<Layer> buildHiddenLayers(List<DenseLayer> denseLayers, List<String> actiFuncs){
         AssertUtils.assertListNotNullAndSizeEqual(denseLayers, actiFuncs);
         List<Layer> hiddenLayers = new ArrayList<>(actiFuncs.size() * 2);

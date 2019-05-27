@@ -16,10 +16,13 @@
 package ml.shifu.shifu.core.dtrain.wdl;
 
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 
 /**
  * {@link DenseLayer} defines normal hidden layer in neural network while activation is not included but in one
@@ -31,6 +34,7 @@ import java.io.IOException;
  */
 public class DenseLayer extends AbstractLayer<float[], float[], float[], float[], DenseLayer>
         implements WeightInitializer<DenseLayer> {
+    private static final Logger LOG = LoggerFactory.getLogger(DenseLayer.class);
 
     /**
      * [in, out] array for deep matrix weights
@@ -189,12 +193,15 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
         // gradients compute and L2 reg here
         for(int i = 0; i < this.in; i++) {
             for(int j = 0; j < this.out; j++) {
-                this.wGrads[i][j] += (this.lastInput[i] * backInputs[j]); // basic derivatives
-                this.wGrads[i][j] += (this.l2reg * this.weights[i][j]);// l2 loss derivatives
+                // basic derivatives
+                this.wGrads[i][j] += (this.lastInput[i] * backInputs[j]);
+                // l2 loss derivatives
+                this.wGrads[i][j] += (this.l2reg * backInputs[j]);
             }
         }
         for(int j = 0; j < this.out; j++) {
-            this.bGrads[j] = (backInputs[j]); // no need l2 reg here as bias no need
+            // no need l2 reg here as bias no need
+            this.bGrads[j] = (backInputs[j]);
         }
 
         // compute back inputs
@@ -208,7 +215,8 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
     }
 
     public void initGrads() {
-        if(this.wGrads == null) {// reuse same array
+        if(this.wGrads == null) {
+            // reuse same array
             this.wGrads = new float[this.in][this.out];
         }
         for(int i = 0; i < this.in; i++) {
@@ -217,7 +225,8 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
             }
         }
 
-        if(this.bGrads == null) { // reuse same array
+        if(this.bGrads == null) {
+            // reuse same array
             this.bGrads = new float[this.bias.length];
         }
         for(int j = 0; j < this.out; j++) {
@@ -262,7 +271,11 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
 
     @Override
     public void initWeight(DenseLayer updateModel) {
-        this.weights = updateModel.getWeights();
+        for(int i = 0; i < this.in; i++) {
+            for(int j = 0; j < this.out; j++) {
+                this.weights[i][j] = updateModel.getWeights()[i][j];
+            }
+        }
     }
 
     /*
@@ -333,8 +346,8 @@ public class DenseLayer extends AbstractLayer<float[], float[], float[], float[]
     }
 
     @Override
-    public void update(DenseLayer gradLayer, Optimizer optimizer) {
-        optimizer.batchUpdate(this.weights, gradLayer.getwGrads());
-        optimizer.update(this.bias, gradLayer.getbGrads());
+    public void update(DenseLayer gradLayer, Optimizer optimizer, String uniqueKey) {
+        optimizer.batchUpdate(this.weights, gradLayer.getwGrads(), uniqueKey);
+        optimizer.update(this.bias, gradLayer.getbGrads(), uniqueKey);
     }
 }

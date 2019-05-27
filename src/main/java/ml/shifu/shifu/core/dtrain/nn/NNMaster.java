@@ -236,6 +236,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         this.globalNNParams.reset();
 
         long totalCount = 0L;
+        double totalTrainSum = 0.0d;
+        double totalTestSum = 0.0d;
         int totalWorkerCount = 0;
         for(NNParams nn : context.getWorkerResults()) {
             totalTestError += nn.getTestError();
@@ -243,13 +245,17 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.globalNNParams.accumulateGradients(nn.getGradients());
             this.globalNNParams.accumulateTrainSize(nn.getTrainSize());
             totalCount += nn.getCount();
+            totalTrainSum += nn.getTrainSum();
+            totalTestSum += nn.getTestSum();
             // original worker count before combinable
             totalWorkerCount += nn.getWrCount();
             size++;
         }
 
         LOG.debug("ELM gradients debug for 0 gradient {}", this.globalNNParams.getGradients()[0]);
-        LOG.debug("Total Count is {}. totalWorkerCount is {}", totalCount, totalWorkerCount);
+        LOG.info("Total Count is {}. totalWorkerCount is {}", totalCount, totalWorkerCount);
+        LOG.info("Total Train Error is {}. totalTrainSum is {}", totalTrainError, totalTrainSum);
+        LOG.info("Total Test Error is {}. totalTestSum is {}", totalTestError, totalTestSum);
 
         // worker result size is 0. throw exception because shouldn't happen
         if(size == 0) {
@@ -286,8 +292,8 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         this.globalNNParams.setWeights(weights);
 
         // average error
-        double currentTestError = totalTestError / totalWorkerCount;
-        double currentTrainError = totalTrainError / totalWorkerCount;
+        double currentTestError = totalTestError / totalTestSum;
+        double currentTrainError = totalTrainError / totalTrainSum;
 
         if(currentTestError < this.bestValidationError) {
             this.bestValidationError = currentTestError;
@@ -301,6 +307,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         params.setTestError(currentTestError);
         // prevent null point
         params.setGradients(new double[0]);
+        params.setEvaluatedWeights(oldWeights);
         params.setWeights(weights);
         if(this.dropoutRate > 0d) {
             params.setDropoutNodes(dropoutNodes());

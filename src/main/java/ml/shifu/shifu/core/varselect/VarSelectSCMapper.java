@@ -1,29 +1,19 @@
-/*
- * Copyright [2012-2014] PayPal Software Foundation
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package ml.shifu.shifu.core.varselect;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
+import com.google.common.base.Splitter;
+import ml.shifu.guagua.util.MemoryUtils;
+import ml.shifu.guagua.util.NumberFormatUtils;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.CacheBasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.CacheFlatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
+import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.*;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -35,43 +25,29 @@ import org.encog.persist.PersistorRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Splitter;
-
-import ml.shifu.guagua.util.MemoryUtils;
-import ml.shifu.guagua.util.NumberFormatUtils;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
-import ml.shifu.shifu.core.dtrain.dataset.CacheBasicFloatNetwork;
-import ml.shifu.shifu.core.dtrain.dataset.CacheFlatNetwork;
-import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
-import ml.shifu.shifu.fs.ShifuFileUtils;
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
- * Mapper implementation to accumulate MSE value when remove one column.
- * 
+ * Copyright [2013-2018] PayPal Software Foundation
  * <p>
- * All the MSE values are accumulated in in-memory HashMap {@link #results}, which will also be write out in
- * {@link #cleanup(org.apache.hadoop.mapreduce.Mapper.Context)}.
- * 
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  * <p>
- * Output of all the mappers will be read and accumulated in VarSelectReducer to get all global MSE values. In Reducer,
- * all MSE values sorted and select valid variables.
- * 
- * @author Zhang David (pengzhang@paypal.com)
- */
-public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, ColumnInfo> {
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
 
-    private final static Logger LOG = LoggerFactory.getLogger(VarSelectMapper.class);
+public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, ColumnScore> {
 
-    /**
-     * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
-     */
-    @SuppressWarnings("unused")
-    private static final Splitter DEFAULT_SPLITTER = Splitter.on(CommonConstants.DEFAULT_COLUMN_SEPARATOR);
+    private final static Logger LOG = LoggerFactory.getLogger(VarSelectSCMapper.class);
 
     /**
      * Model Config read from HDFS, be static to shared in multiple mappers
@@ -95,11 +71,6 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     private int inputNodeCount;
 
     /**
-     * Final results map, this map is loaded in memory for sum, and will be written by context in cleanup.
-     */
-    private Map<Long, ColumnInfo> results = new HashMap<Long, ColumnInfo>();
-
-    /**
      * Inputs columns for each record. To save new objects in
      * {@link #map(LongWritable, Text, org.apache.hadoop.mapreduce.Mapper.Context)}.
      */
@@ -121,11 +92,6 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
      * Input MLData instance to save new.
      */
     private BasicMLData inputsMLData;
-
-    /**
-     * Prevent too many new objects for output key.
-     */
-    private LongWritable outputKey;
 
     /**
      * Filter by sensitivity by target(ST) or sensitivity(SE).
@@ -182,6 +148,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         long start = System.currentTimeMillis();
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
         FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.LOCAL);
+
         // load model from local d-cache model file
         if(CommonUtils.isTensorFlowModel(modelConfig.getAlgorithm())) {
             this.model = (MLRegression) (ModelSpecLoaderUtils.loadBasicModels(modelConfig, null).get(0));
@@ -196,7 +163,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
 
     /**
      * Copy existing model to {@link CacheBasicFloatNetwork} model for fast scoring in sensitivity computing.
-     * 
+     *
      * @param network
      *            the raw network model
      * @return the cache network model instance.
@@ -234,17 +201,13 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
      * loading.
      */
     @Override
-    protected void setup(Context context) throws IOException, InterruptedException {
+    protected void setup(Context context) throws IOException {
         loadConfigFiles(context);
 
         loadModel();
 
         // Copy mode to here
-        if(CommonUtils.isTensorFlowModel(modelConfig.getAlgorithm())) {
-            cacheNetwork = null;
-        } else {
-            cacheNetwork = copy((BasicFloatNetwork) model);
-        }
+        cacheNetwork = copy((BasicFloatNetwork) model);
 
         this.filterBy = context.getConfiguration().get(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE,
                 Constants.FILTER_BY_SE);
@@ -260,7 +223,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
 
         boolean isAfterVarSelect = (inputOutputIndex[0] != 0);
         // cache all feature list for sampling features
-        if(this.featureSet == null || this.featureSet.size() == 0) {
+        if(CollectionUtils.isEmpty(this.featureSet)) {
             this.featureSet = new HashSet<Integer>(NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect));
             this.inputs = new double[this.featureSet.size()];
         }
@@ -273,7 +236,6 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         this.outputs = new double[inputOutputIndex[1]];
         this.columnIndexes = new long[this.inputs.length];
         this.inputsMLData = new BasicMLData(this.inputs.length);
-        this.outputKey = new LongWritable();
         LOG.info("Filter by is {}", filterBy);
 
         // create Splitter
@@ -284,14 +246,13 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     @Override
     protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
         recordCount += 1L;
-
-        if(recordCount % 200 == 0) {
-            LOG.info("Count {} with Memory used by {}.", recordCount, MemoryUtils.getRuntimeMemoryStats());
-        }
+        double weight = 1.0d;
         int index = 0, inputsIndex = 0, outputsIndex = 0;
         for(String input: this.splitter.split(value.toString())) {
             double doubleValue = NumberFormatUtils.getDouble(input.trim(), 0.0d);
             if(index == columnConfigList.size()) {
+                // last column of the input, it's weight
+                weight = doubleValue;
                 break;
             } else {
                 ColumnConfig columnConfig = columnConfigList.get(index);
@@ -309,72 +270,32 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
 
         this.inputsMLData.setData(this.inputs);
         // compute candidate model score , cache first layer of sum values in such call method, cache flag here is true
-        double candidateModelScore;
-        if(CommonUtils.isTensorFlowModel(modelConfig.getAlgorithm())) {
-            candidateModelScore = this.model.compute(inputsMLData).getData(0);
-        } else {
-            candidateModelScore = cacheNetwork.compute(inputsMLData, true, -1).getData()[0];
-        }
+        double candidateModelScore = cacheNetwork.compute(inputsMLData, true, -1).getData()[0];
+        // output the actual score as column id -1, then user could know the actual catch rate
+        // before dropping any variables
+        ColumnScore actualScore = new ColumnScore();
+        actualScore.setColumnTag((int) this.outputs[0]);
+        actualScore.setWeight(weight);
+        actualScore.setSensitivityScore(candidateModelScore);
+        context.write(new LongWritable(-1), actualScore);
 
         for(int i = 0; i < this.inputs.length; i++) {
             // cache flag is false to reuse cache sum of first layer of values.
-            double currentModelScore;
-            if(CommonUtils.isTensorFlowModel(modelConfig.getAlgorithm())) {
-                double[] newInputs = new double[inputsMLData.getData().length];
-                for(int j = 0; j < newInputs.length; j++) {
-                    if(j != i) {
-                        newInputs[j] = inputsMLData.getData()[j];
-                    }
-                }
-                currentModelScore = this.model.compute(new BasicMLData(newInputs)).getData(0);
-                // currentModelScore = 0;
-            } else {
-                currentModelScore = cacheNetwork.compute(inputsMLData, false, i).getData()[0];
+            double currentModelScore = cacheNetwork.compute(inputsMLData, false, i).getData()[0];
+            ColumnScore columnScore = new ColumnScore();
+            columnScore.setColumnTag((int) this.outputs[0]);
+            columnScore.setWeight(weight);
+            columnScore.setSensitivityScore(currentModelScore);
+            context.write(new LongWritable(this.columnIndexes[i]), columnScore);
+            if(this.recordCount % 1000 == 0) {
+                LOG.info("The column score for {} is {}", this.columnIndexes[i], columnScore);
             }
-
-            double diff = 0d;
-            if(Constants.FILTER_BY_ST.equalsIgnoreCase(this.filterBy)) {
-                // ST
-                diff = this.outputs[0] - currentModelScore;
-            } else {
-                // SE
-                diff = candidateModelScore - currentModelScore;
-            }
-            ColumnInfo columnInfo = this.results.get(this.columnIndexes[i]);
-
-            if(columnInfo == null) {
-                columnInfo = new ColumnInfo();
-                columnInfo.setSumScoreDiff(Math.abs(diff));
-                columnInfo.setSumSquareScoreDiff(power2(diff));
-            } else {
-                columnInfo.setSumScoreDiff(columnInfo.getSumScoreDiff() + Math.abs(diff));
-                columnInfo.setSumSquareScoreDiff(columnInfo.getSumSquareScoreDiff() + power2(diff));
-            }
-            this.results.put(this.columnIndexes[i], columnInfo);
         }
 
         if(this.recordCount % 1000 == 0) {
             LOG.info("Finish to process {} records.", this.recordCount);
         }
-    }
 
-    /**
-     * Write all column-&gt;MSE pairs to output.
-     */
-    @Override
-    protected void cleanup(Context context) throws IOException, InterruptedException {
-        for(Entry<Long, ColumnInfo> entry: results.entrySet()) {
-            this.outputKey.set(entry.getKey());
-            // value is sumValue, not sumValue/(number of records)
-            ColumnInfo columnInfo = entry.getValue();
-            columnInfo.setCount(this.recordCount);
-            context.write(this.outputKey, columnInfo);
-        }
-        LOG.debug("Final results: {}", results);
-    }
-
-    private double power2(double data) {
-        return data * data;
     }
 
 }

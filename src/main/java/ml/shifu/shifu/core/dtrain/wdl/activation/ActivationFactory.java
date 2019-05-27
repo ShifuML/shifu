@@ -36,6 +36,7 @@ public class ActivationFactory {
     private static ActivationFactory activationFactory;
 
     private static Map<String, Activation> actionList = new HashMap<String, Activation>() {
+
         private static final long serialVersionUID = -7080829888400897248L;
         {
             Reflections reflections = new Reflections("ml.shifu.shifu.core.dtrain.wdl");

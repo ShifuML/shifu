@@ -82,11 +82,11 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
 
     @Override
     public float[] forward(float[] inputs) {
-        LOG.error("WideDenseLayer weights:" + Arrays.toString(this.weights));
+        LOG.debug("WideDenseLayer weights:" + Arrays.toString(this.weights));
         this.lastInput = inputs;
         float[] results = new float[1];
         for(int i = 0; i < inputs.length; i++) {
-            LOG.error("inputs[i]=" + inputs[i] + "this.weights[i]=" + this.weights[i]);
+            LOG.debug("inputs[i]=" + inputs[i] + "this.weights[i]=" + this.weights[i]);
             results[0] += inputs[i] * this.weights[i];
         }
         return results;
@@ -96,8 +96,10 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
     public float[] backward(float[] backInputs) {
         // gradients compute and L2 reg here
         for(int i = 0; i < this.in; i++) {
-            this.wGrads[i] += (this.lastInput[i] * backInputs[0]); // basic derivatives
-            this.wGrads[i] += (this.l2reg * this.weights[i]);// l2 loss derivatives
+            // basic derivatives
+            this.wGrads[i] += (this.lastInput[i] * backInputs[0]);
+            // l2 loss derivatives
+            this.wGrads[i] += (this.l2reg * backInputs[0]);
         }
         // no need compute backward outputs as it is last layer
         return null;
@@ -240,7 +242,9 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
 
     @Override
     public void initWeight(WideDenseLayer updateModel) {
-        this.weights = updateModel.getWeights();
+        for(int i = 0; i < this.in; i++) {
+            this.weights[i] = updateModel.getWeights()[i];
+        }
     }
 
     @Override
@@ -253,7 +257,7 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
     }
 
     @Override
-    public void update(WideDenseLayer gradLayer, Optimizer optimizer) {
-        optimizer.update(this.weights, gradLayer.getwGrads());
+    public void update(WideDenseLayer gradLayer, Optimizer optimizer, String uniqueKey) {
+        optimizer.update(this.weights, gradLayer.getwGrads(), uniqueKey);
     }
 }

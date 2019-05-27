@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 /**
- * @author juguo
+ * @author Guo, Junshi
  *
  */
 public class GradientDescent implements Optimizer {
@@ -30,18 +30,17 @@ public class GradientDescent implements Optimizer {
         this.learningRate = learningRate;
     }
 
-    @Override
     public double getLearningRate() {
         return learningRate;
     }
 
-    @Override
     public void setLearningRate(double learningRate) {
         this.learningRate = learningRate;
     }
 
+
     @Override
-    public void update(float[] weight, float[] grad) {
+    public void update(float[] weight, float[] grad, String uniqueKey) {
         if(weight == null || weight.length == 0 || grad == null || grad.length != weight.length) {
             return;
         }
@@ -52,7 +51,7 @@ public class GradientDescent implements Optimizer {
     }
 
     @Override
-    public void update(float[] weight, Map<Integer, Float> grad) {
+    public void update(float[] weight, Map<Integer, Float> grad, String uniqueKey) {
         if(weight == null || weight.length == 0 || grad == null || grad.size() == 0) {
             return;
         }
@@ -65,6 +64,11 @@ public class GradientDescent implements Optimizer {
                 weight[index] -= delta;
             }
         }
+    }
+
+    @Override
+    public float updateWeight(float gradient, String uniqueKey) {
+        return Double.valueOf(this.learningRate * gradient).floatValue();
     }
 
 }

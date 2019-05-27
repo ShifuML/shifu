@@ -69,6 +69,11 @@ public class BufferedFloatMLDataSet implements FloatMLDataSet, Serializable {
     private transient BufferedFloatMLDataSet owner;
 
     /**
+     * The sum of significance for all records
+     */
+    private double recordSum;
+
+    /**
      * Construct the dataset using the specified binary file.
      * 
      * @param binaryFile
@@ -107,6 +112,14 @@ public class BufferedFloatMLDataSet implements FloatMLDataSet, Serializable {
         } else {
             return this.egb.getNumberOfRecords();
         }
+    }
+
+    /**
+     * @return The sum of significance for all records
+     */
+    @Override
+    public final double getRecordSum() {
+        return this.recordSum;
     }
 
     /**
@@ -157,6 +170,7 @@ public class BufferedFloatMLDataSet implements FloatMLDataSet, Serializable {
 
         egb.write(data1.getData());
         egb.write(1.0f);
+        this.recordSum += 1.0d;
     }
 
     /**
@@ -176,6 +190,7 @@ public class BufferedFloatMLDataSet implements FloatMLDataSet, Serializable {
         this.egb.write(inputData.getData());
         this.egb.write(idealData.getData());
         this.egb.write((float) 1.0f);
+        this.recordSum += 1.0d;
     }
 
     /**
@@ -192,7 +207,7 @@ public class BufferedFloatMLDataSet implements FloatMLDataSet, Serializable {
         this.egb.write(pair.getInputArray());
         this.egb.write(pair.getIdealArray());
         this.egb.write(pair.getSignificance());
-
+        this.recordSum += pair.getSignificance();
     }
 
     /**

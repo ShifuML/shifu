@@ -246,6 +246,31 @@ public final class DTrainUtils {
         return new int[] { numericInput, categoricalInput, output, isVarSelect };
     }
 
+    public static Map<Integer, Integer> getColumnMapping(List<ColumnConfig> columnConfigList) {
+        Map<Integer, Integer> columnMapping = new HashMap<Integer, Integer>(columnConfigList.size(), 1f);
+        int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(columnConfigList);
+        boolean isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
+        int index = 0;
+        for(int i = 0; i < columnConfigList.size(); i++) {
+            ColumnConfig columnConfig = columnConfigList.get(i);
+            if(!isAfterVarSelect) {
+                if(!columnConfig.isMeta() && !columnConfig.isTarget()
+                        && CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
+                    columnMapping.put(columnConfig.getColumnNum(), index);
+                    index += 1;
+                }
+            } else {
+                if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
+                        && columnConfig.isFinalSelect()) {
+                    columnMapping.put(columnConfig.getColumnNum(), index);
+                    index += 1;
+                }
+            }
+        }
+        return columnMapping;
+    }
+
     public static List<Integer> getNumericalIds(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect){
         List<Integer> numericalIds = new ArrayList<>();
         boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);

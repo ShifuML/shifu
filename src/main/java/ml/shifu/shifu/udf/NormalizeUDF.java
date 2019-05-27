@@ -82,7 +82,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
     /**
      * In ZSCORE norm type, how to process category default missing value norm,
-     *      by default use mean, another option is POSRATE.
+     * by default use mean, another option is POSRATE.
      */
     private CategoryMissingNormType categoryMissingNormType = CategoryMissingNormType.POSRATE;
 
@@ -95,7 +95,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
      * Like schema in {@link #outputCompactColumns}, here is size of first tag and meta columns for output schema
      */
     private int cntOfTargetAndMetaColumns;
-
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         this(source, pathModelConfig, pathColumnConfig, "false");
@@ -113,7 +112,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 getUdfProperty(Constants.SHIFU_NORM_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
         log.info("Precision type is set to: " + this.precisionType);
 
-
         this.isForClean = "true".equalsIgnoreCase(isForClean);
         this.normType = modelConfig.getNormalizeType();
         log.debug("\t normType: " + normType.name());
@@ -129,7 +127,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         boolean isColumnSelected = false;
         for(ColumnConfig config: columnConfigList) {
-            if ( config.isFinalSelect() && !isColumnSelected) {
+            if(config.isFinalSelect() && !isColumnSelected) {
                 isColumnSelected = true;
             }
 
@@ -190,12 +188,12 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
     private List<String> genNormColumnNames(ColumnConfig config, NormType normType) {
         List<String> normalizedNames = new ArrayList<>();
-        if (NormType.ONEHOT.equals(normType) && config.isNumerical()) { // ONEHOT and numerical variable
+        if(NormType.ONEHOT.equals(normType) && config.isNumerical()) { // ONEHOT and numerical variable
             for(int i = 0; i < config.getBinBoundary().size(); i++) {
                 normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_" + i);
             }
             normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_missing");
-        } else if ((NormType.ONEHOT.equals(normType) || NormType.ZSCALE_ONEHOT.equals(normType))
+        } else if((NormType.ONEHOT.equals(normType) || NormType.ZSCALE_ONEHOT.equals(normType))
                 && config.isCategorical()) { // ONEHOT or ZSCALE_ONEHOT for categorical variable
             for(int i = 0; i < config.getBinCategory().size(); i++) {
                 normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_" + i);
@@ -232,7 +230,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         // data sampling only for normalization, for data cleaning, shouldn't do data sampling
-        //if(!isLinearTarget && !this.isForClean) { // do sampling for TREE model also - by huzza
+        // if(!isLinearTarget && !this.isForClean) { // do sampling for TREE model also - by huzza
         if(!isLinearTarget) {
             // do data sampling. Unselected data or data with invalid tag will be filtered out.
             boolean isNotSampled = DataSampler.isNotSampled(modelConfig.isRegression(), super.tagSet, super.posTagSet,
@@ -251,8 +249,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             compactVarMap = new HashMap<String, Object>();
         }
 
-        if (!this.isForExpressions) {
-            if (input.size() != this.columnConfigList.size()) {
+        if(!this.isForExpressions) {
+            if(input.size() != this.columnConfigList.size()) {
                 this.mismatchCnt++;
                 log.error("the input size - " + input.size() + ", while column size - " + columnConfigList.size());
                 this.mismatchCnt++;
@@ -264,7 +262,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 return null;
             }
 
-            for (int i = 0; i < input.size(); i++) {
+            for(int i = 0; i < input.size(); i++) {
                 ColumnConfig config = columnConfigList.get(i);
                 String val = (input.get(i) == null) ? "" : input.get(i).toString();
                 // load variables for weight calculating.
@@ -273,7 +271,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 }
 
                 // check tag type.
-                if (config.isTarget()) {
+                if(config.isTarget()) {
                     if(modelConfig.isRegression()) {
                         int type = 0;
                         if(super.posTagSet.contains(rawTag)) {
@@ -362,7 +360,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
                             List<String> normVarNames = this.normVarNamesMapping.get(config.getColumnName());
                             assert formatNormVals.size() != normVarNames.size();
-                            for(int k = 0; k < normVarNames.size(); k ++) {
+                            for(int k = 0; k < normVarNames.size(); k++) {
                                 compactVarMap.put(normVarNames.get(k), formatNormVals.get(k));
                             }
                         } else if(config.isMeta()) {
@@ -374,7 +372,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         }
                     } else {
                         // append normalize data. exclude data clean,
-                        //      for data cleaning, no need check good or bad candidate
+                        // for data cleaning, no need check good or bad candidate
                         // By zhanhu: fix bug - if the ForceSelect variables exists in candidates list,
                         // it will cause variable fail to normalize
                         if(CommonUtils.isToNormVariable(config, super.hasCandidates, modelConfig.isRegression())) {
@@ -457,7 +455,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
                         List<String> normVarNames = this.normVarNamesMapping.get(config.getColumnName());
                         assert formatNormVals.size() != normVarNames.size();
-                        for(int k = 0; k < normVarNames.size(); k ++) {
+                        for(int k = 0; k < normVarNames.size(); k++) {
                             compactVarMap.put(normVarNames.get(k), formatNormVals.get(k));
                         }
                     } else if(config.isMeta()) {
@@ -484,7 +482,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         // for compact norm mode, output to tuple at here
-        if (this.isCompactNorm) {
+        if(this.isCompactNorm) {
             for(int i = 0; i < this.outputCompactColumns.size(); i++) {
                 tuple.append(compactVarMap.get(this.outputCompactColumns.get(i)));
             }
@@ -573,15 +571,13 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     public static float toFloat(int hbits) {
         int mant = hbits & 0x03ff; // 10 bits mantissa
         int exp = hbits & 0x7c00; // 5 bits exponent
-        if(exp == 0x7c00) // NaN/Inf
+        if(exp == 0x7c00) {// NaN/Inf
             exp = 0x3fc00; // -> NaN/Inf
-        else if(exp != 0) // normalized value
-        {
+        } else if(exp != 0) { // normalized value
             exp += 0x1c000; // exp - 15 + 127
             if(mant == 0 && exp > 0x1c400) // smooth transition
                 return Float.intBitsToFloat((hbits & 0x8000) << 16 | exp << 13 | 0x3ff);
-        } else if(mant != 0) // && exp==0 -> subnormal
-        {
+        } else if(mant != 0) { // && exp==0 -> subnormal
             exp = 0x1c400; // make it normal
             do {
                 mant <<= 1; // mantissa * 2
@@ -678,7 +674,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         }
                     } else {
                         List<String> normColumnNames = this.genNormColumnNames(config, this.normType);
-                        for(String normalName : normColumnNames) {
+                        for(String normalName: normColumnNames) {
                             schemaStr.append(normalName + ":" + getOutputPrecisionType() + ",");
                         }
                     }

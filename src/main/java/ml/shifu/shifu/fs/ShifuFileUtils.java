@@ -15,23 +15,12 @@
  */
 package ml.shifu.shifu.fs;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Scanner;
+import java.io.*;
+import java.util.*;
 import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -797,5 +786,27 @@ public class ShifuFileUtils {
             IOUtils.closeQuietly(writer);
             hdfsPartFile.close();
         }
+    }
+
+    public static void sortFile(String fileToSort, final String delimiter, final int fieldNum, final boolean isNumber)
+            throws IOException {
+        InputStream inputStream = new FileInputStream(new File(fileToSort));
+        List<String> fileLines = IOUtils.readLines(inputStream);
+        Collections.sort(fileLines, new Comparator<String>() {
+            @Override
+            public int compare(String from, String to) {
+                String[] fromFields = CommonUtils.split(from, delimiter);
+                String[] toFields = CommonUtils.split(to, delimiter);
+                if (isNumber) {
+                    Double fromVal = Double.parseDouble(fromFields[fieldNum]);
+                    Double toVal = Double.parseDouble(toFields[fieldNum]);
+                    return Double.compare(fromVal, toVal);
+                } else {
+                    return fromFields[fieldNum].compareTo(toFields[fieldNum]);
+                }
+            }
+        });
+        IOUtils.closeQuietly(inputStream);
+        FileUtils.writeLines(new File(fileToSort), fileLines);
     }
 }

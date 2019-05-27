@@ -287,12 +287,16 @@ public class ColumnConfig {
 
     public void setBinBoundary(List<Double> binBoundary) {
         columnBinning.setBinBoundary(binBoundary);
-        columnBinning.setLength(binBoundary == null ? 0 : binBoundary.size());
+        if (binBoundary != null) {
+            setBinLength(binBoundary.size() + 1);
+        }
     }
 
     public void setBinCategory(List<String> binCategory) {
         columnBinning.setBinCategory(binCategory);
-        columnBinning.setLength(binCategory == null ? 0 : binCategory.size());
+        if (binCategory != null) {
+            setBinLength(binCategory.size() + 1);
+        }
     }
 
     public void setBinCountNeg(List<Integer> binCountNeg) {

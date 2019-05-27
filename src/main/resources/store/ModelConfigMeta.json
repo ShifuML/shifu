@@ -294,6 +294,7 @@
                     {"label": "Epsilon-nondominated sort", "value":"pareto"},
                     {"label": "Sensitivity comparing with temporarily trained model", "value":"SE"},
                     {"label": "Sensitivity comparing with training data target", "value":"ST"},
+                    {"label": "Sensitivity comparing catch rate", "value":"SC"},
                     {"label": "Voted", "value":"V"},                  
                     {"label": "Feature Importance(only valid for tree models)", "value":"FI"}                    
                 ]
@@ -371,6 +372,19 @@
                       "type" : "number",
                       "directive": "input",
                       "defval" : 30
+                    }, {
+                        "name" : "OpMetric",
+                        "type": "text",
+                        "directive": "select",
+                        "options": [
+                            {"label": "Action Rate", "value":"ACTION_RATE"},
+                            {"label": "Weighted Action Rate", "value":"WEIGHTED_ACTION_RATE"}
+                        ]
+                    }, {
+                        "name" : "OpUnit",
+                        "type" : "number",
+                        "directive": "input",
+                        "defval" : 0.01
                     }
                 ]
             }

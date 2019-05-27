@@ -36,7 +36,6 @@ import java.util.Map.Entry;
 public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[], float[], WideFieldLayer>
         implements WeightInitializer<WideFieldLayer> {
     private static final Logger LOG = LoggerFactory.getLogger(WideFieldLayer.class);
-
     /**
      * [in] float array of weights
      */
@@ -86,11 +85,16 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
 
     @Override
     public float[] forward(SparseInput si) {
-        LOG.error("WideFiledLayer weights:" + Arrays.toString(this.weights));
+        LOG.debug("WideFiledLayer weights:" + Arrays.toString(this.weights));
         this.lastInput = si;
         int valueIndex = si.getValueIndex();
-        LOG.error("si.getValue() = " + si.getValue() + "this.weights[valueIndex]=" + this.weights[valueIndex] );
-        return new float[] { si.getValue() * this.weights[valueIndex] };
+        if(valueIndex < this.weights.length && valueIndex >= 0) {
+            LOG.debug("si.getValue() = " + si.getValue() + "this.weights[valueIndex]=" + this.weights[valueIndex]);
+            return new float[] { si.getValue() * this.weights[valueIndex] };
+        }
+        LOG.error("si.getValue() = " + si.getValue() + ", valueIndex=" + valueIndex + ", columnId=" + columnId
+                + ", value index out of range, returning 0 for null categories");
+        return new float[] { 0.f };
     }
 
     @Override
@@ -100,8 +104,10 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
         int valueIndex = this.lastInput.getValueIndex();
         Float grad = this.wGrads.get(valueIndex);
         float tmpGrad = grad == null ? 0 : grad;
-        tmpGrad += (this.lastInput.getValue() * backInputs[0]); // category value here is 1f
-        tmpGrad += (this.l2reg * this.weights[valueIndex]); // l2 loss
+        // category value here is 1f
+        tmpGrad += (this.lastInput.getValue() * backInputs[0]);
+        // l2 loss
+        tmpGrad += (this.l2reg * backInputs[0]);
         this.wGrads.put(valueIndex, tmpGrad);
 
         // no need compute backward outputs as it is last layer
@@ -199,7 +205,9 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
 
     @Override
     public void initWeight(WideFieldLayer updateModel) {
-        this.weights = updateModel.getWeights();
+        for(int i = 0; i < this.in; i++) {
+            this.weights[i] = updateModel.getWeights()[i];
+        }
     }
 
     /*
@@ -281,7 +289,7 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
     }
 
     @Override
-    public void update(WideFieldLayer gradLayer, Optimizer optimizer) {
-        optimizer.update(this.weights, gradLayer.getwGrads());
+    public void update(WideFieldLayer gradLayer, Optimizer optimizer, String uniqueKey) {
+        optimizer.update(this.weights, gradLayer.getwGrads(), uniqueKey);
     }
 }

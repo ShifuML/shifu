@@ -3,7 +3,6 @@ package ml.shifu.shifu.core.pmml.builder.impl;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
-import ml.shifu.shifu.util.NormalUtils;
 import org.dmg.pmml.*;
 
 import java.util.ArrayList;
