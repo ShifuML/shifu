@@ -157,9 +157,9 @@ public class BasicUpdater {
             // meta and other columns are set to numerical if user not set it in categorical column configuration file
             columnConfig.setColumnType(ColumnType.N);
         }
-        if(this.categoricalColumnHashSeeds!=null&&this.categoricalColumnHashSeeds.containsKey(varName)) {
-        	columnConfig.setHashSeed(this.categoricalColumnHashSeeds.get(varName));
-        }
+		if (this.categoricalColumnHashSeeds != null && this.categoricalColumnHashSeeds.containsKey(varName)) {
+			columnConfig.setHashSeed(this.categoricalColumnHashSeeds.get(varName));
+		}
     }
 
     public static BasicUpdater getUpdater(ModelConfig modelConfig, ModelInspector.ModelStep step) throws IOException {
