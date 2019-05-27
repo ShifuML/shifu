@@ -31,10 +31,6 @@ public class AdaGrad implements Optimizer {
     }
 
     @Override
-    public void setTrainSize(float trainSize) {
-    }
-
-    @Override
     public void update(float[] weight, float[] grad, String uniqueKey) {
         if(weight == null || grad == null || grad.length == 0 || weight.length != grad.length) {
             return;

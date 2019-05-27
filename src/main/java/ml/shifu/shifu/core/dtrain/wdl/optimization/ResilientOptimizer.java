@@ -16,7 +16,6 @@
 package ml.shifu.shifu.core.dtrain.wdl.optimization;
 
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import static org.encog.neural.flat.train.prop.RPROPConst.DEFAULT_MAX_STEP;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,46 +24,40 @@ import java.util.Map;
 import java.util.Random;
 
 /**
- * Resilient Optimizer.
+ * Resilient Optimizer(Rprop)
+ * For the first iteration, it should fall back to gradient descent optimizer.
+ * For the second iteration and following iteration, it update the gradient fast speed according to the logical:
+ * (1) If current gradient and the before gradient are the same direction, then large the speed, usually 1.2X.
+ * (2) If current gradient and the before gradient are the opposite direction, the speed rate should plus 0.5.
+ * (3) Else stay the same level as gradient descent optimizer.
+ * See RProp method in wiki: https://en.wikipedia.org/wiki/Rprop
  *
  * @author Wu Devin (haifwu@paypal.com)
  */
 public class ResilientOptimizer implements Optimizer{
     private static final Logger LOG = LoggerFactory.getLogger(ResilientOptimizer.class);
+    private static final float INCREASE = 1.2f;
+    private static final float DECREASE = 0.5f;
 
-    private static Map<String, Float> lastOptimizerMap = new HashMap<>();
+
+    private static Map<String, Float> lastGradientMap = new HashMap<>();
     private Random random = new Random(System.currentTimeMillis());
-    private float reg;
-    private float trainSize;
+    private float learningRate;
 
-    public ResilientOptimizer(float reg) {
-        this.reg = reg;
+    public ResilientOptimizer(double learningRate) {
+        this.learningRate = (float) learningRate;
     }
 
-    private float getLastValue(String uniqueKey) {
-        if(lastOptimizerMap.containsKey(uniqueKey)) {
-            if(random.nextInt(10000) < 10) {
-                LOG.error("cache hit: " + uniqueKey + "->" + lastOptimizerMap.get(uniqueKey));
-            }
-            return lastOptimizerMap.get(uniqueKey);
-        }
-        if(random.nextInt(10000) < 10) {
-            LOG.error("Can not find " + uniqueKey + " in lastOptimizerMap");
-            LOG.error("current train size:" + this.trainSize);
-        }
-        return random.nextFloat() * 2 - 1;
+    private float getLastGradient(String uniqueKey) {
+        return lastGradientMap.get(uniqueKey);
     }
 
-    private String getLastGradientKey(String uniqueKey) {
-        return uniqueKey + "g";
+    private boolean hasGradientValue(String uniqueKey) {
+        return lastGradientMap.containsKey(uniqueKey);
     }
 
-    private String getLastDeltaKey(String uniqueKey) {
-        return uniqueKey + "d";
-    }
-
-    private String getUpdateValueKey(String uniqueKey) {
-        return uniqueKey + "u";
+    private void saveCurrentGradient(String uniqueKey, float gradient) {
+        lastGradientMap.put(uniqueKey, gradient);
     }
 
     @Override
@@ -72,9 +65,8 @@ public class ResilientOptimizer implements Optimizer{
         if(weight == null || weight.length == 0 || grad == null || grad.length != weight.length) {
             return;
         }
-        int len = weight.length;
-        for(int i = 0; i < len; i++) {
-            weight[i] += (updateWeight(grad[i], uniqueKey + i) - this.reg * weight[i] / this.trainSize);
+        for(int i = 0; i < weight.length; i++) {
+            weight[i] -= updateWeight(grad[i], uniqueKey + i);
         }
     }
 
@@ -87,75 +79,27 @@ public class ResilientOptimizer implements Optimizer{
         for(Map.Entry<Integer, Float> entry: grad.entrySet()) {
             int i = entry.getKey();
             if(i < weight.length) {
-                weight[i] += (updateWeight(entry.getValue(), uniqueKey + i) - this.reg * weight[i] / this.trainSize);
+                weight[i] -= updateWeight(entry.getValue(), uniqueKey + i);
             }
         }
     }
 
     @Override
     public float updateWeight(float gradient, String uniqueKey) {
-        String updateValueKey = getUpdateValueKey(uniqueKey);
-        String lastDeltaKey = getLastDeltaKey(uniqueKey);
-        String lastGradientKey = getLastGradientKey(uniqueKey);
+        final int change = DTrainUtils.sign(gradient * getLastGradient(uniqueKey));
+        float gradientWeightUpdate = this.learningRate * gradient;
 
-        final int change = DTrainUtils.sign(gradient * getLastValue(lastGradientKey));
-        float weightChange = 0;
-
-        // if the gradient has retained its sign, then we increase the delta so that it will converge faster
-        if(change > 0) {
-            float delta = Double.valueOf(getLastValue(updateValueKey) * 1.1).floatValue();
-            delta = Double.valueOf(Math.min(delta, DEFAULT_MAX_STEP)).floatValue();
-            weightChange = Double.valueOf(DTrainUtils.sign(gradient) * delta).floatValue();
-            lastOptimizerMap.put(updateValueKey, delta);
-            lastOptimizerMap.put(lastGradientKey, gradient);
+        if(! hasGradientValue(uniqueKey) || change == 0) {
+            // Fall back to gradient method
+            return gradientWeightUpdate;
+        } else if(change > 0) {
+            return gradientWeightUpdate * INCREASE;
         } else if(change < 0) {
-            // if change<0, then the sign has changed, and the last delta was too big
-            float delta = Double.valueOf(getLastValue(updateValueKey) * 0.9).floatValue();
-            delta = Double.valueOf(Math.max(delta, DTrainUtils.DELTA_MIN)).floatValue();
-            lastOptimizerMap.put(updateValueKey, delta);
-            weightChange = -getLastValue(lastDeltaKey);
-            // set the previous gradient to zero so that there will be no adjustment the next iteration
-            lastOptimizerMap.put(lastGradientKey, 0f);
-        } else {
-            // if change==0 then there is no change to the delta
-            final double delta = getLastValue(updateValueKey);
-            weightChange = Double.valueOf(DTrainUtils.sign(gradient) * delta).floatValue();
-            lastOptimizerMap.put(lastGradientKey, gradient);
+            return gradientWeightUpdate * DECREASE;
         }
-
-        lastOptimizerMap.put(lastDeltaKey, weightChange);
-        // apply the weight change, if any
-        return weightChange;
+        // Save current gradient value
+        saveCurrentGradient(uniqueKey, gradient);
+        return gradientWeightUpdate;
     }
 
-    /**
-     * @return the reg
-     */
-    public float getReg() {
-        return reg;
-    }
-
-    /**
-     * @param reg
-     *      the reg to set
-     */
-    public void setReg(float reg) {
-        this.reg = reg;
-    }
-
-    /**
-     * @return the trainSize
-     */
-    public float getTrainSize() {
-        return trainSize;
-    }
-
-    /**
-     * @param trainSize
-     *          the trainSize to set
-     */
-    @Override
-    public void setTrainSize(float trainSize) {
-        this.trainSize = trainSize;
-    }
 }

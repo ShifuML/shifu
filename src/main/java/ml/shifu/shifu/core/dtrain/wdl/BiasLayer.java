@@ -51,7 +51,8 @@ public class BiasLayer extends AbstractLayer<Float, Float, Float, Float, BiasLay
 
     @Override
     public Float backward(Float backInput) {
-        this.wGrad = backInput; // no need l2 reg in bias layer
+        // no need l2 reg in bias layer
+        this.wGrad = backInput;
         // no need backward output computation as it is last layer.
         return backInput * weight;
     }

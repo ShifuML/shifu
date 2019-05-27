@@ -45,6 +45,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * {@link WDLWorker} is responsible for loading part of data into memory, do iteration gradients computation and send
@@ -694,7 +695,7 @@ public class WDLWorker extends
             float predict = sigmoid(logits[0]);
             float error = predict - data.label;
             // TODO, logloss, squredloss, weighted error or not
-            trainSumError += data.weight * error * error;
+            trainSumError +=  data.getWeight() * error * error;
             this.wnd.backward(new float[] { predict }, new float[] { data.label }, data.getWeight());
         }
 
@@ -713,6 +714,7 @@ public class WDLWorker extends
         params.setTrainError(trainSumError);
         params.setValidationError(validSumError);
         params.setSerializationType(SerializationType.GRADIENTS);
+        this.wnd.setSerializationType(SerializationType.GRADIENTS);
         params.setWnd(this.wnd);
         return params;
     }
@@ -722,19 +724,13 @@ public class WDLWorker extends
     }
 
     private List<SparseInput> getWideInputs(Data data) {
-        List<SparseInput> wideInputs = new ArrayList<SparseInput>();
-        for(Integer columnId: this.wnd.getWideColumnIds()) {
-            wideInputs.add(data.getCategoricalValues()[this.inputIndexMap.get(columnId)]);
-        }
-        return wideInputs;
+        return this.wnd.getWideColumnIds().stream().map(id -> data.getCategoricalValues()[this.inputIndexMap.get(id)])
+                .collect(Collectors.toList());
     }
 
     private List<SparseInput> getEmbedInputs(Data data) {
-        List<SparseInput> embedInputs = new ArrayList<>();
-        for(Integer columnId: this.wnd.getEmbedColumnIds()) {
-            embedInputs.add(data.getCategoricalValues()[this.inputIndexMap.get(columnId)]);
-        }
-        return embedInputs;
+        return this.wnd.getEmbedColumnIds().stream().map(id -> data.getCategoricalValues()[this.inputIndexMap.get(id)])
+                .collect(Collectors.toList());
     }
 
     @Override

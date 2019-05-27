@@ -38,9 +38,6 @@ public class GradientDescent implements Optimizer {
         this.learningRate = learningRate;
     }
 
-    @Override
-    public void setTrainSize(float trainSize) {
-    }
 
     @Override
     public void update(float[] weight, float[] grad, String uniqueKey) {

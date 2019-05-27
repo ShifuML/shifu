@@ -129,7 +129,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         // 1, with index of 0,1,2,3 denotes different classes
         this.isAfterVarSelect = (inputOutputIndex[3] == 1);
         this.validParams = this.modelConfig.getTrain().getParams();
-        Double.valueOf(validParams.get(CommonConstants.LEARNING_RATE).toString());
+        double learningRate = Double.valueOf(validParams.get(CommonConstants.LEARNING_RATE).toString());
 
         this.isContinuousEnabled = Boolean.TRUE.toString()
                 .equalsIgnoreCase(context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
@@ -152,7 +152,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
                 wideColumnIds, hiddenNodes, actFunc, l2reg);
         // TODO: make this configurable
         if(null == this.optimizer) {
-            this.optimizer = new GradientDescent(l2reg);
+            this.optimizer = new GradientDescent(learningRate);
         } else {
             LOG.error("Try to init optimizer in master!");
         }
@@ -171,7 +171,6 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         WDLParams aggregation = aggregateWorkerGradients(context);
 
         // apply optimizer
-        this.optimizer.setTrainSize(Double.valueOf(aggregation.getTrainCount()).floatValue());
         this.wnd.update(aggregation.getWnd(), optimizer);
         LOG.info("train size: {}, error: {}", aggregation.getTrainCount(),  aggregation.getTrainError());
 
@@ -182,6 +181,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         params.setTrainError(aggregation.getTrainError());
         params.setValidationError(aggregation.getValidationError());
         params.setSerializationType(SerializationType.WEIGHTS);
+        this.wnd.setSerializationType(SerializationType.WEIGHTS);
         params.setWnd(this.wnd);
         return params;
     }
