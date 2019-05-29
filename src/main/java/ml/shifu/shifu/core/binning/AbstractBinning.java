@@ -262,11 +262,11 @@ public abstract class AbstractBinning<T> {
      * @return the Binning object for the ColumnConfig
      */
     public static AbstractBinning<?> constructBinningFromStr(ModelConfig modelConfig, ColumnConfig columnConfig,
-            String objValStr) {
+            String objValStr, int maxCateSize) {
         AbstractBinning<?> binning;
 
         if(columnConfig.isCategorical()) {
-            binning = new CategoricalBinning();
+            binning = new CategoricalBinning(-1, maxCateSize);
         } else {
             if(modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)) {
                 binning = new EqualIntervalBinning();

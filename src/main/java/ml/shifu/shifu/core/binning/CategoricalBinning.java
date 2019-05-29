@@ -22,10 +22,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import ml.shifu.shifu.util.CommonUtils;
 
 /**
  * CategoricalBinning class
@@ -109,7 +110,15 @@ public class CategoricalBinning extends AbstractBinning<String> {
 
         this.isValid = (this.isValid && binning.isValid);
         if(this.isValid) {
-            this.categoricalVals.addAll(binning.categoricalVals);
+            for(String cate: binning.categoricalVals) {
+                // check if over max category size, skip to copy to avoid OOM
+                if(this.categoricalVals.size() <= this.maxCategorySize) {
+                    this.categoricalVals.add(cate);
+                } else {
+                    log.warn("Categorical variables binning merge over max category size ({}).", this.maxCategorySize);
+                    break;
+                }
+            }
         } else {
             this.categoricalVals.clear();
         }

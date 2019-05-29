@@ -64,7 +64,6 @@ public final class CommonUtils {
 
     private static final Logger log = LoggerFactory.getLogger(CommonUtils.class);
 
-    
     /**
      * Sync up all local configuration files to HDFS.
      *
@@ -84,21 +83,20 @@ public final class CommonUtils {
         FileSystem hdfs = HDFSUtils.getFS();
         FileSystem localFs = HDFSUtils.getLocalFS();
 
-        Path pathModelSet = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
+        Path hdfsMSPath = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
+        Path pathModelSet = hdfsMSPath;
         // don't check whether pathModelSet is exists, should be remove by user.
         hdfs.mkdirs(pathModelSet);
 
         // Copy ModelConfig
         Path srcModelConfig = new Path(pathFinder.getModelConfigPath(SourceType.LOCAL));
-        Path dstModelConfig = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
-        hdfs.copyFromLocalFile(srcModelConfig, dstModelConfig);
+        hdfs.copyFromLocalFile(srcModelConfig, hdfsMSPath);
 
         // Copy GridSearch config file if exists
         String gridConfigFile = modelConfig.getTrain().getGridConfigFile();
         if(gridConfigFile != null && !gridConfigFile.trim().equals("")) {
             Path srcGridConfig = new Path(modelConfig.getTrain().getGridConfigFile());
-            Path dstGridConfig = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
-            hdfs.copyFromLocalFile(srcGridConfig, dstGridConfig);
+            hdfs.copyFromLocalFile(srcGridConfig, hdfsMSPath);
         }
 
         // Copy ColumnConfig
@@ -108,7 +106,10 @@ public final class CommonUtils {
             hdfs.copyFromLocalFile(srcColumnConfig, dstColumnConfig);
         }
 
-        // copy others
+        // Copy column related config files
+        copyColumnConfigFiles(modelConfig, hdfs, hdfsMSPath);
+
+        // Copy others
         Path srcVersion = new Path(pathFinder.getModelVersion(SourceType.LOCAL));
         if(localFs.exists(srcVersion)) {
             Path dstVersion = new Path(pathFinder.getModelVersion(SourceType.HDFS));
@@ -136,6 +137,33 @@ public final class CommonUtils {
         }
 
         return true;
+    }
+
+    private static void copyColumnConfigFiles(ModelConfig modelConfig, FileSystem hdfs, Path hdfsMSPath)
+            throws IOException {
+        Path colFilePath = new Path(hdfsMSPath, "columns");
+        hdfs.mkdirs(colFilePath);
+        if(StringUtils.isNotBlank(modelConfig.getDataSet().getCategoricalColumnNameFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getDataSet().getCategoricalColumnNameFile()), colFilePath);
+        }
+        if(StringUtils.isNotBlank(modelConfig.getDataSet().getMetaColumnNameFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getDataSet().getMetaColumnNameFile()), colFilePath);
+        }
+        if(StringUtils.isNotBlank(modelConfig.getVarSelect().getForceSelectColumnNameFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getVarSelect().getForceSelectColumnNameFile()), colFilePath);
+        }
+        if(StringUtils.isNotBlank(modelConfig.getVarSelect().getCandidateColumnNameFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getVarSelect().getCandidateColumnNameFile()), colFilePath);
+        }
+        if(StringUtils.isNotBlank(modelConfig.getVarSelect().getForceRemoveColumnNameFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getVarSelect().getForceRemoveColumnNameFile()), colFilePath);
+        }
+        if(StringUtils.isNotBlank(modelConfig.getDataSet().getHybridColumnNameFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getDataSet().getHybridColumnNameFile()), colFilePath);
+        }
+        if(StringUtils.isNotBlank(modelConfig.getDataSet().getSegExpressionFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getDataSet().getSegExpressionFile()), colFilePath);
+        }
     }
 
     /**
@@ -416,10 +444,7 @@ public final class CommonUtils {
             // NPE protection
             return columnName;
         }
-        return columnName.replaceAll("\\.", "_").
-                          replaceAll(" ", "_").
-                          replaceAll("/", "_").
-                          replaceAll("-", "_");
+        return columnName.replaceAll("\\.", "_").replaceAll(" ", "_").replaceAll("/", "_").replaceAll("-", "_");
     }
 
     /**
@@ -1010,7 +1035,7 @@ public final class CommonUtils {
     public static boolean isTreeModel(String alg) {
         return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
     }
-    
+
     public static boolean isTensorFlowModel(String alg) {
         return Constants.TF_ALG_NAME.equalsIgnoreCase(alg);
     }
@@ -1034,7 +1059,6 @@ public final class CommonUtils {
     public static boolean isGBDTAlgorithm(String alg) {
         return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
     }
-
 
     /*
      * Expanding score by expandingFactor
@@ -1612,7 +1636,7 @@ public final class CommonUtils {
         }
         return columnName;
     }
-    
+
     /**
      * Return first two lines split string array. This is used to detect data schema and check if data
      * schema is the
@@ -1787,7 +1811,6 @@ public final class CommonUtils {
         }
     }
 
-
     /**
      * Check whether candidates are set or not
      *
@@ -1806,7 +1829,6 @@ public final class CommonUtils {
 
         return (candidateCnt > 0);
     }
-
 
     /**
      * flatten categorical value group into values list
