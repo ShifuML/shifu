@@ -53,8 +53,18 @@ public class ModelSourceDataConf extends RawSourceData {
     private String hybridColumnNameFile;
 
     private String segExpressionFile;
+    
+    private String categoricalHashSeedConfFile;
 
-    public String getCategoricalColumnNameFile() {
+    public String getCategoricalHashSeedConfFile() {
+		return categoricalHashSeedConfFile;
+	}
+
+	public void setCategoricalHashSeedConfFile(String categoricalHashSeedConfFile) {
+		this.categoricalHashSeedConfFile = categoricalHashSeedConfFile;
+	}
+
+	public String getCategoricalColumnNameFile() {
         return categoricalColumnNameFile;
     }
 

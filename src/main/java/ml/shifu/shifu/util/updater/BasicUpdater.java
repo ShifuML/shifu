@@ -17,6 +17,8 @@ import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by zhanhu on 2/22/17.
@@ -36,6 +38,10 @@ public class BasicUpdater {
 
     protected Set<NSColumn> setHybridColumns;
     protected Map<String, Double> hybridColumnNames;
+    protected Map<String, Integer> categoricalColumnHashSeeds;
+    
+    private final static Logger LOG = LoggerFactory.getLogger(BasicUpdater.class);
+
 
     protected boolean isForSegs;
     protected List<String> segs;
@@ -50,6 +56,7 @@ public class BasicUpdater {
 
         this.setMeta = loadNSColumns(modelConfig.getMetaColumnNames());
         this.setCategorialColumns = loadNSColumns(modelConfig.getCategoricalColumnNames());
+        this.categoricalColumnHashSeeds = modelConfig.getCategoricalColumnHashSeedConf();  
         this.setHybridColumns = new HashSet<NSColumn>();
         this.hybridColumnNames = modelConfig.getHybridColumnNames();
         if(this.hybridColumnNames != null && this.hybridColumnNames.size() > 0) {
@@ -150,6 +157,9 @@ public class BasicUpdater {
             // meta and other columns are set to numerical if user not set it in categorical column configuration file
             columnConfig.setColumnType(ColumnType.N);
         }
+		if (this.categoricalColumnHashSeeds != null && this.categoricalColumnHashSeeds.containsKey(varName)) {
+			columnConfig.setHashSeed(this.categoricalColumnHashSeeds.get(varName));
+		}
     }
 
     public static BasicUpdater getUpdater(ModelConfig modelConfig, ModelInspector.ModelStep step) throws IOException {

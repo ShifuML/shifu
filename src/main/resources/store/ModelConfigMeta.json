@@ -158,6 +158,10 @@
                 "type" : "text",
                 "directive": "input"
             }, {
+                "name": "categoricalHashSeedConfFile",
+                "type" : "text",
+                "directive": "input"
+            }, {
                 "name": "categoricalColumnNameFile",
                 "type" : "text",
                 "directive": "input"
