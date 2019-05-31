@@ -241,6 +241,11 @@
                 "type": "text",
                 "directive": "input",
                 "defval" : ""
+            }, {
+                "name": "dateStatsOutputFileName",
+                "type": "text",
+                "directive": "input",
+                "defval" : ""
             }
         ]
     },

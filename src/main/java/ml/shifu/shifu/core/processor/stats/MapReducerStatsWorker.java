@@ -15,11 +15,9 @@
  */
 package ml.shifu.shifu.core.processor.stats;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.zip.GZIPInputStream;
 
 import com.google.common.collect.Lists;
 import ml.shifu.shifu.fs.SourceFile;
@@ -40,7 +39,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.jexl2.JexlException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -89,6 +88,8 @@ import ml.shifu.shifu.util.ValueVisitor;
 import ml.shifu.shifu.core.dailystat.DateStatComputeMapper;
 import ml.shifu.shifu.core.dailystat.DateStatComputeReducer;
 import ml.shifu.shifu.core.dailystat.DateStatInfoWritable;
+
+import static ml.shifu.shifu.util.Constants.LOCAL_DATE_STATS_CSV_FILE_NAME;
 
 /**
  * Created by zhanhu on 6/30/16.
@@ -297,7 +298,9 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         job.setOutputFormatClass(TextOutputFormat.class);
 
         String preTrainingInfo = this.pathFinder.getPreTrainingStatsPath(source);
-        FileOutputFormat.setOutputPath(job, new Path(preTrainingInfo));
+        Path path = new Path(preTrainingInfo);
+        log.info("Output path:" + path);
+        FileOutputFormat.setOutputPath(job, path);
 
         // clean output firstly
         ShifuFileUtils.deleteFile(preTrainingInfo, source);
@@ -321,7 +324,47 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             if(totalValidCount > 0L && invalidTagCount * 1d / totalValidCount >= 0.8d) {
                 log.warn("Too many invalid tags, please check you configuration on positive tags and negative tags.");
             }
+            copyFileToLocal(conf, path);
         }
+    }
+
+    private void copyFileToLocal(Configuration conf, Path path) throws IOException {
+        FileSystem hdfs = FileSystem.get(conf);
+        RemoteIterator<LocatedFileStatus> locatedFileStatusRemoteIterator = hdfs.listFiles(path, false);
+        List<Path> list = new ArrayList<>();
+        while(locatedFileStatusRemoteIterator.hasNext()) {
+            LocatedFileStatus next = locatedFileStatusRemoteIterator.next();
+            Path p = next.getPath();
+            if(p.getName().endsWith("gz")) {
+                list.add(p);
+            }
+        }
+        Collections.sort(list, new Comparator<Path>() {
+
+            private Integer getDigitInPath(String path){
+                String resultStr = StringUtils.substringBefore(StringUtils.substringAfterLast(path, "-"), ".");
+                if(StringUtils.isEmpty(resultStr)) {
+                    return 0;
+                }
+                return Integer.parseInt(resultStr);
+            }
+
+            @Override
+            public int compare(Path o1, Path o2) {
+                return getDigitInPath(o1.getName()) - getDigitInPath(o2.getName());
+            }
+        });
+        String dateStatsOutputFileName = this.modelConfig.getStats().getDateStatsOutputFileName();
+        File file = new File(StringUtils.isEmpty(dateStatsOutputFileName)? LOCAL_DATE_STATS_CSV_FILE_NAME : dateStatsOutputFileName);
+        OutputStream out = org.apache.commons.io.FileUtils.openOutputStream(file);
+        for(Path p : list){
+            FSDataInputStream in = hdfs.open(p);
+            GZIPInputStream gzin = new GZIPInputStream(in);
+            IOUtils.copy(gzin, out);
+            IOUtils.closeQuietly(gzin);
+        }
+        IOUtils.closeQuietly(out);
+        log.info("Copy file to local:" + file.getAbsolutePath());
     }
 
 
@@ -416,7 +459,11 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
     private void prepareJobConf(RawSourceData.SourceType source, final Configuration conf, String filePath)
             throws IOException {
         // add jars to hadoop mapper and reducer
-        new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars(), "-files", filePath });
+        if(StringUtils.isNotEmpty(filePath)){
+            new GenericOptionsParser(conf, new String[]{"-libjars", addRuntimeJars(), "-files", filePath});
+        }else{
+            new GenericOptionsParser(conf, new String[]{"-libjars", addRuntimeJars()});
+        }
 
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
         conf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", true);

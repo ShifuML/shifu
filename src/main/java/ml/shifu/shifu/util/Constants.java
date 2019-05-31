@@ -34,6 +34,8 @@ public interface Constants {
 
     public static final String COLUMN_STATS_CSV_FILE_NAME = "ColumnStats.csv";
 
+    public static final String LOCAL_DATE_STATS_CSV_FILE_NAME = "DateStats.csv";
+
     public static final String MODEL_SETS = "ModelSets";
 
     public static final String TMP = "tmp";
@@ -137,7 +139,6 @@ public interface Constants {
     public static final String DEFAULT_DELIMITER = "|";
 
     public static final String BINNING_INFO_FILE_NAME = "binning_info.txt";
-    public static final String DAILY_STAT_INFO_FILE_NAME = "daily_stat.txt";
 
     public static final String AUTO_TYPE_PATH = "AutoTypePath";
     public static final String PRE_TRAINING_STATS = "PreTrainingStats";

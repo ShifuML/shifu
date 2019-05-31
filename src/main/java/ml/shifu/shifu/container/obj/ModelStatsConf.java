@@ -94,6 +94,16 @@ public class ModelStatsConf {
      */
     private String psiColumnName = "";
 
+    private String dateStatsOutputFileName = "";
+
+    public String getDateStatsOutputFileName() {
+        return dateStatsOutputFileName;
+    }
+
+    public void setDateStatsOutputFileName(String dateStatsOutputFileName) {
+        this.dateStatsOutputFileName = dateStatsOutputFileName;
+    }
+
     public Integer getMaxNumBin() {
         return maxNumBin;
     }

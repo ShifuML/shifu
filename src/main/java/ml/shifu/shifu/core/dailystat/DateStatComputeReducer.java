@@ -115,7 +115,12 @@ public class DateStatComputeReducer extends Reducer<Text, DateStatInfoWritable, 
             throws IOException, InterruptedException {
         long start = System.currentTimeMillis();
 
-        Map<String, DateStatInfoWritable.VariableStatInfo> result = new HashMap<>();
+        Map<String, DateStatInfoWritable.VariableStatInfo> result = new TreeMap<String, DateStatInfoWritable.VariableStatInfo>(new Comparator<String>() {
+            public int compare(String obj1, String obj2) {
+                return obj1.compareTo(obj2);
+            }
+        });
+
 
         //Merge into result
         for(DateStatInfoWritable info: values) {
@@ -147,14 +152,14 @@ public class DateStatComputeReducer extends Reducer<Text, DateStatInfoWritable, 
                 }
 
                 int binSize = 0;
-                if(columnConfig.isNumerical() && CollectionUtils.isNotEmpty(columnConfig.getBinBoundary())) {
+                if(columnConfig.isNumerical() && columnConfig.getBinBoundary() != null) {
                     binSize = columnConfig.getBinBoundary().size();
                     variableStatInfo.setBinCountPos(new long[binSize + 1]);
                     variableStatInfo.setBinCountNeg(new long[binSize + 1]);
                     variableStatInfo.setBinWeightPos(new double[binSize + 1]);
                     variableStatInfo.setBinWeightNeg(new double[binSize + 1]);
                     variableStatInfo.setBinCountTotal(new long[binSize + 1]);
-                } else if(columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinCategory())) {
+                } else if(columnConfig.isCategorical() && columnConfig.getBinCategory() != null) {
                     binSize = columnConfig.getBinCategory().size();
                     variableStatInfo.setBinCountPos(new long[binSize + 1]);
                     variableStatInfo.setBinCountNeg(new long[binSize + 1]);
@@ -264,6 +269,10 @@ public class DateStatComputeReducer extends Reducer<Text, DateStatInfoWritable, 
                 variableStatInfo.setColumnCountMetrics(ColumnStatsCalculator.calculateColumnMetrics(variableStatInfo.getBinCountNeg(), variableStatInfo.getBinCountPos()));
                 variableStatInfo.setColumnWeightMetrics(ColumnStatsCalculator.calculateColumnMetrics(variableStatInfo.getBinWeightNeg(), variableStatInfo.getBinWeightPos()));
             }
+            if(variableStatInfo.getMin() == Double.MAX_VALUE){
+                variableStatInfo.setMin(0);
+            }
+            //variable name|date|column type|max|min|mean|mean|median value|count|missing count|standard deviation|missing ratio|WOE|KS|IV|weighted WOE|weighted KS|weighted IV|skewness|kurtosis|P25th|P75th
             sb.append(key)
                     // variable name
                     .append(Constants.DEFAULT_DELIMITER).append(entry.getKey())
@@ -274,7 +283,7 @@ public class DateStatComputeReducer extends Reducer<Text, DateStatInfoWritable, 
                     // max
                     .append(Constants.DEFAULT_DELIMITER).append(df.format(variableStatInfo.getMin()))
                     // min
-                    .append(Constants.DEFAULT_DELIMITER).append(df.format(variableStatInfo.getMean()))
+                    .append(Constants.DEFAULT_DELIMITER).append(Double.isNaN(variableStatInfo.getMean()) ? "NaN" : df.format(variableStatInfo.getMean()))
                     // mean
                     .append(Constants.DEFAULT_DELIMITER).append(variableStatInfo.getMedian())
                     // median value ?
@@ -282,7 +291,7 @@ public class DateStatComputeReducer extends Reducer<Text, DateStatInfoWritable, 
                     // count
                     .append(Constants.DEFAULT_DELIMITER).append(variableStatInfo.getMissingCount())
                     // missing count
-                    .append(Constants.DEFAULT_DELIMITER).append(df.format(variableStatInfo.getStdDev()))
+                    .append(Constants.DEFAULT_DELIMITER).append(Double.isNaN(variableStatInfo.getStdDev()) ? "NaN" : df.format(variableStatInfo.getStdDev()))
                     // standard deviation
                     .append(Constants.DEFAULT_DELIMITER).append(variableStatInfo.getMissingCount() * 1.0d / variableStatInfo.getTotalCount())
                     // missing ratio
