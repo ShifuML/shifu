@@ -82,12 +82,12 @@ public class CategoricalBinning extends AbstractBinning<String> {
     @Override
 	public void addData(String val) {
 		String fval = (val == null ? "" : val);
-		log.info("hashfeature test");
+		log.debug("hash feature test");
 		if (!isMissingVal(fval)) {
 			if (isValid && this.hashSeed <= 0) {
 				categoricalVals.add(fval);
 			} else if (isValid && this.hashSeed > 0) {
-				categoricalVals.add(fval.hashCode() % this.hashSeed + "");
+				categoricalVals.add(Integer.toString(fval.hashCode() % this.hashSeed));
 			}
 
 			if (categoricalVals.size() > maxCategorySize) {
