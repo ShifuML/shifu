@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dailystat;
+package ml.shifu.shifu.core.datestat;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -21,7 +21,6 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ColumnStatsCalculator;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -35,7 +34,10 @@ import java.util.*;
 
 /**
  * Collect all statistics together in reducer.
- * 
+ *
+ * The DateStatComputeReducer will first calculate accumulate values, then for each accumulated value, do aggregated
+ * The result will wrote to HDFS with format: variable name|date|column type|max|min|mean|mean|median value|count|missing count|standard deviation|missing ratio|WOE|KS|IV|weighted WOE|weighted KS|weighted IV|skewness|kurtosis|P25th|P75th
+ *
  * <p>
  * Reducer first calculate sum value, then do the aggregate
  * 

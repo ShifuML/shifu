@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dailystat;
+package ml.shifu.shifu.core.datestat;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -37,8 +37,12 @@ import java.util.*;
  * {@link DateStatComputeMapper} is a mapper to generate sum and count data group by variable and date
  * 
  * <p>
- * Daily stat compute is used to calculate all the statistic values like min, max, mean, woe, ks, skewness, kurtosis
- * by date and variable
+ * Date stat compute is used to calculate all the statistic values like min, max, mean, woe, ks, skewness, kurtosis
+ * by variable and date
+ *
+ * The DateStatComputeMapper job is used to calculate sum, count and accumulate value group by date in dailyStatInfo, while this
+ * dailyStatInfo passed to DateStatComputeReducer, it use variable name as key so the same variable name will always
+ * passed to the same reducer
  *
  * <p>
  * This map-reduce job is to solve issue in group by all data together per each column in pig version. It is job with

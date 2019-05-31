@@ -63,7 +63,7 @@ public interface CommonConstants {
 
     public static final String SHIFU_UPDATEBINNING_REDUCER = "shifu.updatebinning.reducer";
 
-    public static final String SHIFU_DAILYSTAT_REDUCER = "shifu.dailystat.reducer";
+    public static final String SHIFU_DAILYSTAT_REDUCER = "shifu.datestat.reducer";
 
     public static final String SHIFU_NN_FEATURE_SUBSET = "shifu.nn.feature.subset";
 

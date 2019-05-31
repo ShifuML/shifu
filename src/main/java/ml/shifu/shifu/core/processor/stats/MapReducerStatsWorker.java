@@ -16,8 +16,6 @@
 package ml.shifu.shifu.core.processor.stats;
 
 import java.io.*;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -85,9 +83,9 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.ValueVisitor;
-import ml.shifu.shifu.core.dailystat.DateStatComputeMapper;
-import ml.shifu.shifu.core.dailystat.DateStatComputeReducer;
-import ml.shifu.shifu.core.dailystat.DateStatInfoWritable;
+import ml.shifu.shifu.core.datestat.DateStatComputeMapper;
+import ml.shifu.shifu.core.datestat.DateStatComputeReducer;
+import ml.shifu.shifu.core.datestat.DateStatInfoWritable;
 
 import static ml.shifu.shifu.util.Constants.LOCAL_DATE_STATS_CSV_FILE_NAME;
 
