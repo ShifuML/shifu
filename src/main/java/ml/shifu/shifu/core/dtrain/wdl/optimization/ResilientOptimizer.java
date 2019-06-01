@@ -34,21 +34,22 @@ import java.util.Random;
  *
  * @author Wu Devin (haifwu@paypal.com)
  */
-public class ResilientOptimizer implements Optimizer{
+public class ResilientOptimizer implements Optimizer {
+    @SuppressWarnings("unused")
     private static final Logger LOG = LoggerFactory.getLogger(ResilientOptimizer.class);
-    private static final float INCREASE = 1.2f;
-    private static final float DECREASE = 0.5f;
+    private static final double INCREASE = 1.2f;
+    private static final double DECREASE = 0.5f;
 
-
-    private static Map<String, Float> lastGradientMap = new HashMap<>();
+    private static Map<String, Double> lastGradientMap = new HashMap<>();
+    @SuppressWarnings("unused")
     private Random random = new Random(System.currentTimeMillis());
-    private float learningRate;
+    private double learningRate;
 
     public ResilientOptimizer(double learningRate) {
-        this.learningRate = (float) learningRate;
+        this.learningRate = (double) learningRate;
     }
 
-    private float getLastGradient(String uniqueKey) {
+    private double getLastGradient(String uniqueKey) {
         return lastGradientMap.get(uniqueKey);
     }
 
@@ -56,40 +57,40 @@ public class ResilientOptimizer implements Optimizer{
         return lastGradientMap.containsKey(uniqueKey);
     }
 
-    private void saveCurrentGradient(String uniqueKey, float gradient) {
+    private void saveCurrentGradient(String uniqueKey, double gradient) {
         lastGradientMap.put(uniqueKey, gradient);
     }
 
     @Override
-    public void update(float[] weight, float[] grad, String uniqueKey) {
+    public void update(double[] weight, double[] grad, String uniqueKey, double trainCount) {
         if(weight == null || weight.length == 0 || grad == null || grad.length != weight.length) {
             return;
         }
         for(int i = 0; i < weight.length; i++) {
-            weight[i] -= updateWeight(grad[i], uniqueKey + i);
+            weight[i] -= updateWeight(grad[i], uniqueKey + i, trainCount);
         }
     }
 
     @Override
-    public void update(float[] weight, Map<Integer, Float> grad, String uniqueKey) {
+    public void update(double[] weight, Map<Integer, Double> grad, String uniqueKey, double trainCount) {
         if(weight == null || weight.length == 0 || grad == null || grad.size() == 0) {
             return;
         }
 
-        for(Map.Entry<Integer, Float> entry: grad.entrySet()) {
+        for(Map.Entry<Integer, Double> entry: grad.entrySet()) {
             int i = entry.getKey();
             if(i < weight.length) {
-                weight[i] -= updateWeight(entry.getValue(), uniqueKey + i);
+                weight[i] -= updateWeight(entry.getValue(), uniqueKey + i, trainCount);
             }
         }
     }
 
     @Override
-    public float updateWeight(float gradient, String uniqueKey) {
+    public double updateWeight(double gradient, String uniqueKey, double trainCount) {
         final int change = DTrainUtils.sign(gradient * getLastGradient(uniqueKey));
-        float gradientWeightUpdate = this.learningRate * gradient;
+        double gradientWeightUpdate = this.learningRate * gradient;
 
-        if(! hasGradientValue(uniqueKey) || change == 0) {
+        if(!hasGradientValue(uniqueKey) || change == 0) {
             // Fall back to gradient method
             return gradientWeightUpdate;
         } else if(change > 0) {

@@ -15,33 +15,34 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 
 /**
  * TODO
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideDenseLayer extends AbstractLayer<float[], float[], float[], float[], WideDenseLayer>
+public class WideDenseLayer extends AbstractLayer<double[], double[], double[], double[], WideDenseLayer>
         implements WeightInitializer<WideDenseLayer> {
+    @SuppressWarnings("unused")
     private static final Logger LOG = LoggerFactory.getLogger(WideDenseLayer.class);
     /**
-     * [in] float array of weights
+     * [in] double array of weights
      */
-    private float[] weights;
+    private double[] weights;
 
     /**
      * Gradients, using map for sparse updates
      */
-    private float[] wGrads;
+    private double[] wGrads;
 
     /**
      * # of inputs
@@ -51,62 +52,78 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
     /**
      * L2 level regularization parameter.
      */
-    private float l2reg;
+    private double l2reg;
 
     /**
      * Last input used in backward computation
      */
-    private float[] lastInput;
+    private double[] lastInput;
 
     /**
      * Columns of IDs
      */
     private List<Integer> columnIds;
 
+    private boolean isDebug = false;
+
     public WideDenseLayer() {
     }
 
-    public WideDenseLayer(List<Integer> columnIds, float[] weights, int in, float l2reg) {
+    public WideDenseLayer(List<Integer> columnIds, double[] weights, int in, double l2reg) {
         this.weights = weights;
         this.in = in;
         this.columnIds = columnIds;
         this.l2reg = l2reg;
     }
 
-    public WideDenseLayer(List<Integer> columnIds, int in, float l2reg) {
+    public WideDenseLayer(List<Integer> columnIds, int in, double l2reg) {
         this.in = in;
         this.setColumnIds(columnIds);
-        this.weights = new float[in];
+        this.weights = new double[in];
         this.l2reg = l2reg;
     }
 
     @Override
-    public float[] forward(float[] inputs) {
-        LOG.debug("WideDenseLayer weights:" + Arrays.toString(this.weights));
+    public double[] forward(double[] inputs) {
+//        if(this.isDebug) {
+//            LOG.info("WideDenseLayer weights:" + Arrays.toString(this.weights));
+//            LOG.info("WideDenseLayer inputs:" + Arrays.toString(inputs));
+//        }
         this.lastInput = inputs;
-        float[] results = new float[1];
+        double[] results = new double[1];
         for(int i = 0; i < inputs.length; i++) {
-            LOG.debug("inputs[i]=" + inputs[i] + "this.weights[i]=" + this.weights[i]);
+//            LOG.debug("inputs[i]=" + inputs[i] + "this.weights[i]=" + this.weights[i]);
             results[0] += inputs[i] * this.weights[i];
         }
+
+//        if(this.isDebug) {
+//            LOG.info("WideDenseLayer results:" + Arrays.toString(results));
+//        }
         return results;
     }
 
     @Override
-    public float[] backward(float[] backInputs) {
+    public double[] backward(double[] backInputs) {
         // gradients compute and L2 reg here
         for(int i = 0; i < this.in; i++) {
             // basic derivatives
             this.wGrads[i] += (this.lastInput[i] * backInputs[0]);
             // l2 loss derivatives
-            this.wGrads[i] += (this.l2reg * backInputs[0]);
+            //            this.wGrads[i] += (this.l2reg * backInputs[0]);
         }
+
+//        if(this.isDebug()) {
+//            LOG.info(" Training l2reg {}, backInputs {}, last input {}.", l2reg, backInputs[0],
+//                    Arrays.toString(lastInput));
+//            LOG.info(" Training dense wGradients: {}.", Arrays.toString(wGrads));
+//        }
+
         // no need compute backward outputs as it is last layer
         return null;
     }
 
     public void initGrads() {
-        this.wGrads = new float[this.in];
+        this.wGrads = new double[this.in];
     }
 
     @Override
@@ -117,7 +134,7 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
     /**
      * @return the weights
      */
-    public float[] getWeights() {
+    public double[] getWeights() {
         return weights;
     }
 
@@ -125,14 +142,14 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
      * @param weights
      *            the weights to set
      */
-    public void setWeights(float[] weights) {
+    public void setWeights(double[] weights) {
         this.weights = weights;
     }
 
     /**
      * @return the wGrads
      */
-    public float[] getwGrads() {
+    public double[] getwGrads() {
         return wGrads;
     }
 
@@ -140,7 +157,7 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
      * @param wGrads
      *            the wGrads to set
      */
-    public void setwGrads(float[] wGrads) {
+    public void setwGrads(double[] wGrads) {
         this.wGrads = wGrads;
     }
 
@@ -162,7 +179,7 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
     /**
      * @return the l2reg
      */
-    public float getL2reg() {
+    public double getL2reg() {
         return l2reg;
     }
 
@@ -170,7 +187,7 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
      * @param l2reg
      *            the l2reg to set
      */
-    public void setL2reg(float l2reg) {
+    public void setL2reg(double l2reg) {
         this.l2reg = l2reg;
     }
 
@@ -196,16 +213,16 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
      */
     @Override
     public void write(DataOutput out) throws IOException {
-        out.writeFloat(this.l2reg);
+        out.writeDouble(this.l2reg);
         out.writeInt(this.in);
 
         switch(this.serializationType) {
             case WEIGHTS:
             case MODEL_SPEC:
-                SerializationUtil.writeFloatArray(out, this.weights, this.in);
+                SerializationUtil.writeDoubleArray(out, this.weights, this.in);
                 break;
             case GRADIENTS:
-                SerializationUtil.writeFloatArray(out, this.wGrads, this.in);
+                SerializationUtil.writeDoubleArray(out, this.wGrads, this.in);
                 break;
             default:
                 break;
@@ -219,16 +236,16 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
      */
     @Override
     public void readFields(DataInput in) throws IOException {
-        this.l2reg = in.readFloat();
+        this.l2reg = in.readDouble();
         this.in = in.readInt();
 
         switch(this.serializationType) {
             case WEIGHTS:
             case MODEL_SPEC:
-                this.weights = SerializationUtil.readFloatArray(in, this.weights, this.in);
+                this.weights = SerializationUtil.readDoubleArray(in, this.weights, this.in);
                 break;
             case GRADIENTS:
-                this.wGrads = SerializationUtil.readFloatArray(in, this.wGrads, this.in);
+                this.wGrads = SerializationUtil.readDoubleArray(in, this.wGrads, this.in);
                 break;
             default:
                 break;
@@ -249,7 +266,7 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
 
     @Override
     public WideDenseLayer combine(WideDenseLayer from) {
-        float[] fromGrads = from.getwGrads();
+        double[] fromGrads = from.getwGrads();
         for(int i = 0; i < this.in; i++) {
             wGrads[i] += fromGrads[i];
         }
@@ -257,7 +274,22 @@ public class WideDenseLayer extends AbstractLayer<float[], float[], float[], flo
     }
 
     @Override
-    public void update(WideDenseLayer gradLayer, Optimizer optimizer, String uniqueKey) {
-        optimizer.update(this.weights, gradLayer.getwGrads(), uniqueKey);
+    public void update(WideDenseLayer gradLayer, Optimizer optimizer, String uniqueKey, double trainCount) {
+        optimizer.update(this.weights, gradLayer.getwGrads(), uniqueKey, trainCount);
+    }
+
+    /**
+     * @return the isDebug
+     */
+    public boolean isDebug() {
+        return isDebug;
+    }
+
+    /**
+     * @param isDebug
+     *            the isDebug to set
+     */
+    public void setDebug(boolean isDebug) {
+        this.isDebug = isDebug;
     }
 }

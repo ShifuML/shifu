@@ -38,28 +38,27 @@ public class GradientDescent implements Optimizer {
         this.learningRate = learningRate;
     }
 
-
     @Override
-    public void update(float[] weight, float[] grad, String uniqueKey) {
+    public void update(double[] weight, double[] grad, String uniqueKey, double trainCount) {
         if(weight == null || weight.length == 0 || grad == null || grad.length != weight.length) {
             return;
         }
         int len = weight.length;
         for(int i = 0; i < len; i++) {
-            weight[i] -= learningRate * grad[i];
+            weight[i] -= learningRate * (grad[i] / trainCount);
         }
     }
 
     @Override
-    public void update(float[] weight, Map<Integer, Float> grad, String uniqueKey) {
+    public void update(double[] weight, Map<Integer, Double> grad, String uniqueKey, double trainCount) {
         if(weight == null || weight.length == 0 || grad == null || grad.size() == 0) {
             return;
         }
 
         int len = weight.length;
-        for(Entry<Integer, Float> entry: grad.entrySet()) {
+        for(Entry<Integer, Double> entry: grad.entrySet()) {
             int index = entry.getKey();
-            double delta = learningRate * entry.getValue();
+            double delta = learningRate * (entry.getValue() / trainCount);
             if(index < len) {
                 weight[index] -= delta;
             }
@@ -67,8 +66,8 @@ public class GradientDescent implements Optimizer {
     }
 
     @Override
-    public float updateWeight(float gradient, String uniqueKey) {
-        return Double.valueOf(this.learningRate * gradient).floatValue();
+    public double updateWeight(double gradient, String uniqueKey, double trainCount) {
+        return this.learningRate * (gradient / trainCount);
     }
 
 }

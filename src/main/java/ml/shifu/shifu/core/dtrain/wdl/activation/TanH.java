@@ -22,17 +22,17 @@ package ml.shifu.shifu.core.dtrain.wdl.activation;
  */
 public class TanH extends Activation {
     @Override
-    public float[] forward(float[] input) {
-        float[] outputs = new float[input.length];
+    public double[] forward(double[] input) {
+        double[] outputs = new double[input.length];
         for(int i = 0; i < input.length; i++) {
-            outputs[i] = (float) Math.tanh(input[i]);
+            outputs[i] = (double) Math.tanh(input[i]);
         }
         return outputs;
     }
 
     @Override
-    public float[] backward(float[] backInput) {
-        float[] results = new float[backInput.length];
+    public double[] backward(double[] backInput) {
+        double[] results = new double[backInput.length];
         for(int i = 0; i < results.length; i++) {
             results[i] = 1 - backInput[i] * backInput[i];
         }

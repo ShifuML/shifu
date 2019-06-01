@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -147,7 +148,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         int numLayers = (Integer) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
-        Float l2reg = ((Double) this.validParams.get(CommonConstants.WDL_L2_REG)).floatValue();
+        Double l2reg = ((Double) this.validParams.get(CommonConstants.WDL_L2_REG)).doubleValue();
         this.wnd = new WideAndDeep(idBinCateSizeMap, numInputs, numericalIds, embedColumnIds, embedOutputList,
                 wideColumnIds, hiddenNodes, actFunc, l2reg);
         // TODO: make this configurable
@@ -169,10 +170,12 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
 
         // aggregate all worker gradients to one gradient object.
         WDLParams aggregation = aggregateWorkerGradients(context);
+        
+        LOG.info("Master gradients in dense layer {}", Arrays.toString(aggregation.getWnd().getWl().getDenseLayer().getwGrads()));
 
         // apply optimizer
-        this.wnd.update(aggregation.getWnd(), optimizer);
-        LOG.info("train size: {}, error: {}", aggregation.getTrainCount(),  aggregation.getTrainError());
+        this.wnd.update(aggregation.getWnd(), optimizer, aggregation.getTrainCount());
+        LOG.info("train size: {}, error: {}", aggregation.getTrainCount(), aggregation.getTrainError());
 
         // construct master result which contains WideAndDeep current model weights
         WDLParams params = new WDLParams();
@@ -194,6 +197,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
             } else {
                 aggregation.combine(params);
             }
+//            LOG.info("Worker gradients in dense layer {}", Arrays.toString(params.getWnd().getWl().getDenseLayer().getwGrads()));
         }
         return aggregation;
     }
@@ -214,6 +218,12 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         }
         // weights from this.wnd
         params.setWnd(this.wnd);
+        
+        LOG.info("Init dense weights: " + Arrays.toString(this.wnd.getWl().getDenseLayer().getWeights()));
+        for(WideFieldLayer wfl: this.wnd.getWl().getLayers()) {
+            LOG.info("Init wide weights: " + Arrays.toString(wfl.getWeights()));
+        }
+        
         return params;
     }
 

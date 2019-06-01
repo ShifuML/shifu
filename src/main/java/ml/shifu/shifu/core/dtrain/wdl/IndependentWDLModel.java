@@ -152,7 +152,7 @@ public class IndependentWDLModel {
      *            the wide model inputs, category values
      * @return model score of the inputs.
      */
-    public float[] compute(float[] denseInputs, List<SparseInput> embedInputs, List<SparseInput> wideInputs) {
+    public double[] compute(double[] denseInputs, List<SparseInput> embedInputs, List<SparseInput> wideInputs) {
         return this.wnd.forward(denseInputs, embedInputs, wideInputs);
     }
 
@@ -165,8 +165,8 @@ public class IndependentWDLModel {
      * names in model.
      *
      * <p>
-     * In {@code dataMap}, numberical value can be (String, Float) format or (String, String) format, they will all be
-     * parsed to Float; categorical value are all converted to (String, String). If value not in our categorical list,
+     * In {@code dataMap}, numberical value can be (String, Double) format or (String, String) format, they will all be
+     * parsed to Double; categorical value are all converted to (String, String). If value not in our categorical list,
      * it will also be treated as missing value.
      *
      * <p>
@@ -174,27 +174,27 @@ public class IndependentWDLModel {
      * and stats information in such model.
      *
      * @param dataMap
-     *            {@code dataMap} for (columnName, value), numberic value can be float/String, categorical feature can
+     *            {@code dataMap} for (columnName, value), numberic value can be double/String, categorical feature can
      *            be int(index) or category value. if not set or set to null, such feature will be treated as missing
      *            value. For numberical value, if it cannot be parsed successfully, it will also be treated as missing.
      * @return score output for wide and deep model
      */
-    public float[] compute(Map<String, Object> dataMap) {
+    public double[] compute(Map<String, Object> dataMap) {
         return compute(getDenseInputs(dataMap), getEmbedInputs(dataMap), getWideInputs(dataMap));
     }
 
-    public float[] compute(double[] data) {
-        if(data == null) {
-            return null;
-        }
-        float[] fData = new float[data.length];
-        for(int i = 0; i < data.length; i++) {
-            fData[i] = (float) data[i];
-        }
-        return compute(fData);
-    }
+    // public double[] compute(double[] data) {
+    // if(data == null) {
+    // return null;
+    // }
+    // double[] fData = new double[data.length];
+    // for(int i = 0; i < data.length; i++) {
+    // fData[i] = (double) data[i];
+    // }
+    // return compute(fData);
+    // }
 
-    public float[] compute(float[] data) {
+    public double[] compute(double[] data) {
         if(data == null) {
             return null;
         }
@@ -247,9 +247,9 @@ public class IndependentWDLModel {
 
         int version = dis.readInt();
         IndependentWDLModel.setVersion(version);
-        // Reserved two float field, one double field and one string field
-        dis.readFloat();
-        dis.readFloat();
+        // Reserved two double field, one double field and one string field
+        dis.readDouble();
+        dis.readDouble();
         dis.readDouble();
         dis.readUTF();
 
@@ -368,7 +368,8 @@ public class IndependentWDLModel {
         return embedInputs;
     }
 
-    private List<SparseInput> getEmbedInputs(float[] data) {
+    @SuppressWarnings("unused")
+    private List<SparseInput> getEmbedInputs(double[] data) {
         List<SparseInput> embedInputs = new ArrayList<>();
         for(int columnId: this.wnd.getEmbedColumnIds()) {
             if(this.columnNumIndexMapping.containsKey(columnId)) {
@@ -385,9 +386,9 @@ public class IndependentWDLModel {
         return this.cateIndexMap.get(columnId).values().size();
     }
 
-    private float[] getDenseInputs(Map<String, Object> dataMap) {
+    private double[] getDenseInputs(Map<String, Object> dataMap) {
         // Get dense inputs
-        float[] numericalValues = new float[this.wnd.getDenseColumnIds().size()];
+        double[] numericalValues = new double[this.wnd.getDenseColumnIds().size()];
         Object value;
         for(int i = 0; i < this.wnd.getDenseColumnIds().size(); i++) {
             value = getValueByColumnId(this.wnd.getDenseColumnIds().get(i), dataMap);
@@ -400,9 +401,10 @@ public class IndependentWDLModel {
         return numericalValues;
     }
 
-    private float[] getDenseInputs(float[] data) {
+    @SuppressWarnings("unused")
+    private double[] getDenseInputs(double[] data) {
         List<Integer> denseColumnIds = this.wnd.getDenseColumnIds();
-        float[] numericalValues = new float[denseColumnIds.size()];
+        double[] numericalValues = new double[denseColumnIds.size()];
         for(int i = 0; i < numericalValues.length; i++) {
             int columnNum = denseColumnIds.get(i);
             if(this.columnNumIndexMapping.containsKey(columnNum)) {
@@ -433,7 +435,8 @@ public class IndependentWDLModel {
         return wideInputs;
     }
 
-    private List<SparseInput> getWideInputs(float[] data) {
+    @SuppressWarnings("unused")
+    private List<SparseInput> getWideInputs(double[] data) {
         List<SparseInput> wideInputs = new ArrayList<>();
         for(int columnId: this.wnd.getWideColumnIds()) {
             if(this.columnNumIndexMapping.containsKey(columnId)) {
@@ -445,8 +448,8 @@ public class IndependentWDLModel {
         return wideInputs;
     }
 
-    private float normalize(int columnNum, Object obj, NormType normType) {
-        float value;
+    private double normalize(int columnNum, Object obj, NormType normType) {
+        double value;
         // numberical column
         switch(this.normType) {
             case WOE:
@@ -480,16 +483,16 @@ public class IndependentWDLModel {
         return dataMap.get(this.numNameMap.get(columnId));
     }
 
-    private float getMissingNumericalValue(int columnId) {
+    private double getMissingNumericalValue(int columnId) {
         return defaultMissingValue(this.numerMeanMap.get(columnId));
     }
 
-    private float defaultMissingValue(Double mean) {
+    private double defaultMissingValue(Double mean) {
         Double defaultValue = mean == null ? 0 : mean;
-        return defaultValue.floatValue();
+        return defaultValue.doubleValue();
     }
 
-    private float getNumericalWoeValue(Integer columnNum, Object obj, boolean isWeighted) {
+    private double getNumericalWoeValue(Integer columnNum, Object obj, boolean isWeighted) {
         int binIndex = -1;
         if(obj != null) {
             binIndex = BinUtils.getNumericalBinIndex(this.numerBinBoundaries.get(columnNum), obj.toString());
@@ -503,33 +506,33 @@ public class IndependentWDLModel {
         } else {
             value = binWoes.get(binIndex);
         }
-        return value.floatValue();
+        return value.doubleValue();
     }
 
-    private float getNumericalWoeZScoreValue(Integer columnNum, Object obj, boolean isWeighted) {
-        float woe = getNumericalWoeValue(columnNum, obj, isWeighted);
+    private double getNumericalWoeZScoreValue(Integer columnNum, Object obj, boolean isWeighted) {
+        double woe = getNumericalWoeValue(columnNum, obj, isWeighted);
         Map<Integer, Double> woeMeans = isWeighted ? this.wgtWoeMeanMap : this.woeMeanMap;
         Map<Integer, Double> woeStddevs = isWeighted ? this.wgtWoeStddevMap : this.woeStddevMap;
         double mean = woeMeans.get(columnNum), stddev = woeStddevs.get(columnNum);
         double realCutoff = Normalizer.checkCutOff(this.cutOffMap.get(columnNum));
-        return Normalizer.computeZScore(woe, mean, stddev, realCutoff)[0].floatValue();
+        return Normalizer.computeZScore(woe, mean, stddev, realCutoff)[0].doubleValue();
     }
 
-    private float getNumericalZScoreValue(Integer columnNum, Object obj) {
+    private double getNumericalZScoreValue(Integer columnNum, Object obj) {
         double mean = this.numerMeanMap.get(columnNum);
         double stddev = this.numerStddevMap.get(columnNum);
-        float rawValue;
+        double rawValue;
         if(obj == null || obj.toString().length() == 0) {
             rawValue = defaultMissingValue(mean);
         } else {
             try {
-                rawValue = Float.parseFloat(obj.toString());
+                rawValue = Double.parseDouble(obj.toString());
             } catch (Exception e) {
                 rawValue = defaultMissingValue(mean);
             }
         }
         double realCutoff = Normalizer.checkCutOff(this.cutOffMap.get(columnNum));
-        return Normalizer.computeZScore(rawValue, mean, stddev, realCutoff)[0].floatValue();
+        return Normalizer.computeZScore(rawValue, mean, stddev, realCutoff)[0].doubleValue();
     }
 
     /**

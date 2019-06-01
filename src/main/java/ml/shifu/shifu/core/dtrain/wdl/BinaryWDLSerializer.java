@@ -50,9 +50,9 @@ public class BinaryWDLSerializer {
             // version
             dos.writeInt(CommonConstants.WDL_FORMAT_VERSION);
             dos.writeUTF(modelConfig.getAlgorithm());
-            // Reserved two float field, one double field and one string field
-            dos.writeFloat(0.0f);
-            dos.writeFloat(0.0f);
+            // Reserved two double field, one double field and one string field
+            dos.writeDouble(0.0f);
+            dos.writeDouble(0.0f);
             dos.writeDouble(0.0d);
             dos.writeUTF("Reserved field");
 
@@ -72,9 +72,9 @@ public class BinaryWDLSerializer {
 
             // version
             fos.writeInt(CommonConstants.WDL_FORMAT_VERSION);
-            // Reserved two float field, one double field and one string field
-            fos.writeFloat(0.0f);
-            fos.writeFloat(0.0f);
+            // Reserved two double field, one double field and one string field
+            fos.writeDouble(0.0f);
+            fos.writeDouble(0.0f);
             fos.writeDouble(0.0d);
             fos.writeUTF("Reserved field");
 

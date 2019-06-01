@@ -38,8 +38,9 @@ import java.util.List;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class WideLayer
-        extends AbstractLayer<Tuple<List<SparseInput>, float[]>, float[], float[], List<float[]>, WideLayer>
+        extends AbstractLayer<Tuple<List<SparseInput>, double[]>, double[], double[], List<double[]>, WideLayer>
         implements WeightInitializer<WideLayer> {
+    @SuppressWarnings("unused")
     private static final Logger LOG = LoggerFactory.getLogger(WideLayer.class);
     /**
      * Layers for all wide columns.
@@ -81,46 +82,57 @@ public class WideLayer
         return len;
     }
 
+    private boolean isDebug = false;
+
     @Override
-    public float[] forward(Tuple<List<SparseInput>, float[]> input) {
-        LOG.debug("Debug in Wide Layer: with input first " + input.getFirst().size() + " second " + input.getSecond().length);
+    public double[] forward(Tuple<List<SparseInput>, double[]> input) {
+//        LOG.debug("Debug in Wide Layer: with input first " + input.getFirst().size() + " second "
+//                + input.getSecond().length);
         AssertUtils.assertListNotNullAndSizeEqual(this.getLayers(), input.getFirst());
-        float[] results = new float[layers.get(0).getOutDim()];
+        double[] results = new double[layers.get(0).getOutDim()];
         for(int i = 0; i < getLayers().size(); i++) {
-            float[] fOuts = this.getLayers().get(i).forward(input.getFirst().get(i));
-            LOG.debug("wide layer  " + i);
+            double[] fOuts = this.getLayers().get(i).forward(input.getFirst().get(i));
             for(int j = 0; j < results.length; j++) {
-                LOG.debug("outputs " + j + " value is " + fOuts[j]);
+//                if(this.isDebug) {
+//                    LOG.debug("outputs " + j + " value is " + fOuts[j]);
+//                }
                 results[j] += fOuts[j];
             }
         }
 
-        float[] denseForwards = this.denseLayer.forward(input.getSecond());
-        LOG.debug("Densor forward:");
+//        this.denseLayer.setDebug(isDebug);
+        double[] denseForwards = this.denseLayer.forward(input.getSecond());
+//        LOG.debug("Densor forward:");
         assert denseForwards.length == results.length;
         for(int j = 0; j < results.length; j++) {
-            LOG.debug("Densor forward " + j + " value is " + denseForwards[j]);
+//            if(this.isDebug) {
+//                LOG.info("Densor forward " + j + " value is " + denseForwards[j]);
+//            }
             results[j] += denseForwards[j];
         }
 
         for(int j = 0; j < results.length; j++) {
-            LOG.debug("before add bias result " + j + " is " + results[j]);
-            results[j] += bias.forward(1f);
-            LOG.debug("after add bias result " + j + " is " + results[j]);
+//            if(this.isDebug) {
+//                LOG.debug("before add bias result " + j + " is " + results[j]);
+//            }
+            results[j] += bias.forward(1d);
+            // if(this.isDebug) {
+            // LOG.debug("after add bias result " + j + " is " + results[j]);
+            // }
         }
         return results;
     }
 
     @Override
-    public List<float[]> backward(float[] backInputs) {
+    public List<double[]> backward(double[] backInputs) {
         // below backward call is for gradients computation in WideFieldLayer and BiasLayer
-        List<float[]> list = new ArrayList<>();
+        List<double[]> list = new ArrayList<>();
         for(int i = 0; i < getLayers().size(); i++) {
             list.add(this.getLayers().get(i).backward(backInputs));
         }
 
         list.add(this.denseLayer.backward(backInputs));
-        list.add(new float[] { bias.backward(backInputs[0]) });
+        list.add(new double[] { bias.backward(backInputs[0]) });
         return list;
     }
 
@@ -270,14 +282,29 @@ public class WideLayer
     }
 
     @Override
-    public void update(WideLayer gradLayer, Optimizer optimizer, String uniqueKey) {
+    public void update(WideLayer gradLayer, Optimizer optimizer, String uniqueKey, double trainCount) {
         List<WideFieldLayer> gradWFLs = gradLayer.getLayers();
         int wflSize = this.layers.size();
         for(int i = 0; i < wflSize; i++) {
-            this.layers.get(i).update(gradWFLs.get(i), optimizer, uniqueKey + "w" + i);
+            this.layers.get(i).update(gradWFLs.get(i), optimizer, uniqueKey + "w" + i, trainCount);
         }
-        this.denseLayer.update(gradLayer.getDenseLayer(), optimizer, "d");
-        this.bias.update(gradLayer.getBias(), optimizer, "b");
+        this.denseLayer.update(gradLayer.getDenseLayer(), optimizer, "d", trainCount);
+        this.bias.update(gradLayer.getBias(), optimizer, "b", trainCount);
+    }
+
+    /**
+     * @return the isDebug
+     */
+    public boolean isDebug() {
+        return isDebug;
+    }
+
+    /**
+     * @param isDebug
+     *            the isDebug to set
+     */
+    public void setDebug(boolean isDebug) {
+        this.isDebug = isDebug;
     }
 
 }

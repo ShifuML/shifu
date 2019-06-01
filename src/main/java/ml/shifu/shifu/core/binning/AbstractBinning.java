@@ -73,9 +73,9 @@ public abstract class AbstractBinning<T> {
      * Constructor with expected bin number
      *
      * @param binningNum
-     *      - the binningNum
+     *            - the binningNum
      * @param missingValList
-     *      - the missing value list
+     *            - the missing value list
      */
     public AbstractBinning(int binningNum, List<String> missingValList) {
         this(binningNum, missingValList, Constants.MAX_CATEGORICAL_BINC_COUNT);
@@ -259,6 +259,8 @@ public abstract class AbstractBinning<T> {
      *            - the @ColumnConfig to create bin
      * @param objValStr
      *            - the string present of object
+     * @param maxCateSize
+     *            - maximal category size limitation
      * @return the Binning object for the ColumnConfig
      */
     public static AbstractBinning<?> constructBinningFromStr(ModelConfig modelConfig, ColumnConfig columnConfig,

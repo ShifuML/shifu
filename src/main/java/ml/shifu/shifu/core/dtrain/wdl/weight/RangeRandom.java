@@ -34,12 +34,12 @@ public class RangeRandom implements Initialisable {
     /**
      * The minimum value for the random range.
      */
-    private final float min;
+    private final double min;
 
     /**
      * The maximum value for the random range.
      */
-    private final float max;
+    private final double max;
 
     /**
      * Construct a range randomizer.
@@ -49,7 +49,7 @@ public class RangeRandom implements Initialisable {
      * @param max
      *            The maximum random value.
      */
-    public RangeRandom(final float min, final float max) {
+    public RangeRandom(final double min, final double max) {
         this.max = max;
         this.min = min;
         this.random = new Random(System.nanoTime());
@@ -60,8 +60,8 @@ public class RangeRandom implements Initialisable {
      *
      * @return The random number.
      */
-    public float randomize() {
-        return nextFloat(this.min, this.max);
+    public double randomize() {
+        return nextdouble(this.min, this.max);
     }
 
     /**
@@ -73,26 +73,26 @@ public class RangeRandom implements Initialisable {
      *            The maximum value.
      * @return A random number.
      */
-    public final float nextFloat(final float min, final float max) {
-        final float range = max - min;
-        return (range * this.random.nextFloat()) + min;
+    public final double nextdouble(final double min, final double max) {
+        final double range = max - min;
+        return (range * this.random.nextDouble()) + min;
     }
 
     @Override
-    public float initWeight() {
+    public double initWeight() {
         return randomize();
     }
 
     @Override
-    public float[] initWeight(int length) {
-        float[] weight = new float[length];
+    public double[] initWeight(int length) {
+        double[] weight = new double[length];
         randomize(weight);
         return weight;
     }
 
     @Override
-    public float[][] initWeight(int row, int col) {
-        float[][] weight = new float[row][col];
+    public double[][] initWeight(int row, int col) {
+        double[][] weight = new double[row][col];
         randomize(weight);
         return weight;
     }
@@ -104,7 +104,7 @@ public class RangeRandom implements Initialisable {
      * @param f
      *            An array to randomize.
      */
-    public void randomize(final float[] f) {
+    public void randomize(final double[] f) {
         randomize(f, 0, f.length);
     }
 
@@ -119,7 +119,7 @@ public class RangeRandom implements Initialisable {
      * @param size
      *            The size of the array to copy.
      */
-    public void randomize(final float[] f, final int begin,
+    public void randomize(final double[] f, final int begin,
                           final int size) {
         for (int i = 0; i < size; i++) {
             f[begin + i] = randomize();
@@ -134,7 +134,7 @@ public class RangeRandom implements Initialisable {
      * @param f
      *            An array to randomize.
      */
-    public void randomize(final float[][] f) {
+    public void randomize(final double[][] f) {
         for (int r = 0; r < f.length; r++) {
             for (int c = 0; c < f[0].length; c++) {
                 f[r][c] = randomize();
@@ -145,14 +145,14 @@ public class RangeRandom implements Initialisable {
     /**
      * @return the min
      */
-    public float getMin() {
+    public double getMin() {
         return min;
     }
 
     /**
      * @return the max
      */
-    public float getMax() {
+    public double getMax() {
         return max;
     }
 }

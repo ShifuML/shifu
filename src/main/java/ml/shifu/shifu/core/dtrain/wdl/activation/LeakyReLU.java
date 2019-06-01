@@ -25,30 +25,30 @@ public class LeakyReLU extends Activation {
     /**
      * The thresholdLow
      */
-    private float thresholdLow;
+    private double thresholdLow;
 
     /**
      * The alpha
      */
-    private float alpha;
+    private double alpha;
 
     /**
      * Tmp save last inputs in forward and then can be used in backward computation.
      */
-    private float[] lastInput;
+    private double[] lastInput;
 
     public LeakyReLU() {
     }
 
-    public LeakyReLU(final float thresholdLow, final float alpha) {
+    public LeakyReLU(final double thresholdLow, final double alpha) {
         this.thresholdLow = thresholdLow;
         this.alpha = alpha;
     }
 
     @Override
-    public float[] forward(float[] inputs) {
+    public double[] forward(double[] inputs) {
         this.lastInput = inputs;
-        float[] outputs = new float[inputs.length];
+        double[] outputs = new double[inputs.length];
         for(int i = 0; i < inputs.length; i++) {
             if(inputs[i] <= this.thresholdLow) {
                 outputs[i] = inputs[i] * this.alpha;
@@ -58,8 +58,8 @@ public class LeakyReLU extends Activation {
     }
 
     @Override
-    public float[] backward(float[] backInput) {
-        float[] results = new float[backInput.length];
+    public double[] backward(double[] backInput) {
+        double[] results = new double[backInput.length];
         for(int i = 0; i < results.length; i++) {
             results[i] = this.lastInput[i] <= this.thresholdLow ? this.alpha : 1.0f;
         }
@@ -69,7 +69,7 @@ public class LeakyReLU extends Activation {
     /**
      * @return the thresholdLow
      */
-    public float getThresholdLow() {
+    public double getThresholdLow() {
         return thresholdLow;
     }
 
@@ -77,14 +77,14 @@ public class LeakyReLU extends Activation {
      * @param thresholdLow
      *          the thresholdLow to set
      */
-    public void setThresholdLow(float thresholdLow) {
+    public void setThresholdLow(double thresholdLow) {
         this.thresholdLow = thresholdLow;
     }
 
     /**
      * @return the alpha
      */
-    public float getAlpha() {
+    public double getAlpha() {
         return alpha;
     }
 
@@ -93,7 +93,7 @@ public class LeakyReLU extends Activation {
      *          #the alpha to set
      */
 
-    public void setAlpha(float alpha) {
+    public void setAlpha(double alpha) {
         this.alpha = alpha;
     }
 }

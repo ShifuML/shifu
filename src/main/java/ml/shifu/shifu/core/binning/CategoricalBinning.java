@@ -61,14 +61,14 @@ public class CategoricalBinning extends AbstractBinning<String> {
         super(binningNum, missingValList, maxCategorySize);
         this.categoricalVals = new HashSet<String>();
     }
-    
+
     /*
      * Constructor with expected bin number and missing value list
      * For categorical variable, the binningNum won't be used
      */
     public CategoricalBinning(int binningNum, List<String> missingValList, int maxCategorySize, int hashSeed) {
         this(binningNum, missingValList, maxCategorySize);
-        this.hashSeed =  hashSeed;
+        this.hashSeed = hashSeed;
     }
 
     /*
@@ -80,24 +80,26 @@ public class CategoricalBinning extends AbstractBinning<String> {
      * @see ml.shifu.shifu.core.binning.AbstractBinning#addData(java.lang.Object)
      */
     @Override
-	public void addData(String val) {
-		String fval = (val == null ? "" : val);
-		log.info("hashfeature test");
-		if (!isMissingVal(fval)) {
-			if (isValid && this.hashSeed <= 0) {
-				categoricalVals.add(fval);
-			} else if (isValid && this.hashSeed > 0) {
-				categoricalVals.add(fval.hashCode() % this.hashSeed + "");
-			}
+    public void addData(String val) {
+        String fval = (val == null ? "" : val);
+        log.info("hashfeature test");
+        if(!isMissingVal(fval)) {
+            if(isValid && this.hashSeed <= 0) {
+                categoricalVals.add(fval);
+            } else if(isValid && this.hashSeed > 0) {
+                categoricalVals.add(fval.hashCode() % this.hashSeed + "");
+            }
 
-			if (categoricalVals.size() > maxCategorySize) {
-				isValid = false;
-				categoricalVals.clear();
-			}
-		} else {
-			super.incMissingValCnt();
-		}
-	}
+            if(categoricalVals.size() > maxCategorySize) {
+                // large than max category size 
+                if(System.currentTimeMillis() % 500 ==0) {
+                    log.warn("Category column over max cate size {}.", maxCategorySize);
+                }
+            }
+        } else {
+            super.incMissingValCnt();
+        }
+    }
 
     /*
      * (non-Javadoc)

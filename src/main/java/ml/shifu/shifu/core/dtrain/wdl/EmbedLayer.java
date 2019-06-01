@@ -31,7 +31,7 @@ import java.util.List;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class EmbedLayer
-        extends AbstractLayer<List<SparseInput>, List<float[]>, List<float[]>, List<float[]>, EmbedLayer>
+        extends AbstractLayer<List<SparseInput>, List<double[]>, List<double[]>, List<double[]>, EmbedLayer>
         implements WeightInitializer<EmbedLayer> {
 
     /**
@@ -56,9 +56,9 @@ public class EmbedLayer
     }
 
     @Override
-    public List<float[]> forward(List<SparseInput> inputList) {
+    public List<double[]> forward(List<SparseInput> inputList) {
         AssertUtils.assertListNotNullAndSizeEqual(this.getEmbedLayers(), inputList);
-        List<float[]> list = new ArrayList<>();
+        List<double[]> list = new ArrayList<>();
         for(int i = 0; i < this.getEmbedLayers().size(); i++) {
             list.add(this.getEmbedLayers().get(i).forward(inputList.get(i)));
         }
@@ -66,9 +66,9 @@ public class EmbedLayer
     }
 
     @Override
-    public List<float[]> backward(List<float[]> backInputList) {
+    public List<double[]> backward(List<double[]> backInputList) {
         AssertUtils.assertListNotNullAndSizeEqual(this.getEmbedLayers(), backInputList);
-        List<float[]> list = new ArrayList<>();
+        List<double[]> list = new ArrayList<>();
         for(int i = 0; i < this.getEmbedLayers().size(); i++) {
             list.add(this.getEmbedLayers().get(i).backward(backInputList.get(i)));
         }
@@ -161,11 +161,11 @@ public class EmbedLayer
     }
 
     @Override
-    public void update(EmbedLayer gradLayer, Optimizer optimizer, String uniqueKey) {
+    public void update(EmbedLayer gradLayer, Optimizer optimizer, String uniqueKey, double trainCount) {
         List<EmbedFieldLayer> gradEFLs = gradLayer.getEmbedLayers();
         int size = this.embedLayers.size();
         for(int i = 0; i < size; i++) {
-            this.embedLayers.get(i).update(gradEFLs.get(i), optimizer, uniqueKey + i);
+            this.embedLayers.get(i).update(gradEFLs.get(i), optimizer, uniqueKey + i, trainCount);
         }
     }
 }

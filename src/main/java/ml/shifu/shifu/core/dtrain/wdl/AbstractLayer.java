@@ -83,7 +83,7 @@ public abstract class AbstractLayer<FIN, FOUT, BIN, BOUT, SELF extends Bytable>
         readFields(in);
     }
 
-    public abstract void update(SELF gradLayer, Optimizer optimizer, String uniqueKey);
+    public abstract void update(SELF gradLayer, Optimizer optimizer, String uniqueKey, double trainCount);
 
 }
 

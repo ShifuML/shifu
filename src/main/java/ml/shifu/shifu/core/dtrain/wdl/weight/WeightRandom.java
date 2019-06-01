@@ -24,38 +24,38 @@ import ml.shifu.shifu.core.dtrain.random.AbstractWeightRandomizer;
  */
 public class WeightRandom implements Initialisable {
     private AbstractWeightRandomizer randomize;
-    private static final float NO_USE = 666f;
+    private static final double NO_USE = 666f;
 
     public WeightRandom(AbstractWeightRandomizer randomize) {
         this.randomize = randomize;
     }
 
     /**
-     * Init with one float number.
+     * Init with one double number.
      *
      * @return the init number.
      */
     @Override
-    public float initWeight() {
+    public double initWeight() {
         return this.randomize.randomize(NO_USE);
     }
 
     /**
-     * Init a one dimensional float array with specific length
+     * Init a one dimensional double array with specific length
      *
      * @param length
      *          the length of the array
      * @return the init array
      */
     @Override
-    public float[] initWeight(int length) {
-        float[] weight = new float[length];
+    public double[] initWeight(int length) {
+        double[] weight = new double[length];
         this.randomize.randomize(weight);
         return weight;
     }
 
     /**
-     * Init a two dimensional float array with specific row and column
+     * Init a two dimensional double array with specific row and column
      *
      * @param row
      *          the row number
@@ -64,8 +64,8 @@ public class WeightRandom implements Initialisable {
      * @return the init array
      */
     @Override
-    public float[][] initWeight(int row, int col) {
-        float[][] weight = new float[row][col];
+    public double[][] initWeight(int row, int col) {
+        double[][] weight = new double[row][col];
         this.randomize.randomize(weight);
         return weight;
     }

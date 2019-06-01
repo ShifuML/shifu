@@ -61,7 +61,7 @@ public class PersistWideAndDeep {
         writeList(wnd.getHiddenNodes(), dos);
         writeList(wnd.getActiFuncs(), dos);
 
-        dos.writeFloat(wnd.getL2reg());
+        dos.writeDouble(wnd.getL2reg());
     }
 
     /**
@@ -87,7 +87,7 @@ public class PersistWideAndDeep {
         List<Integer> wideColumnIds = readList(dis, Integer.class);
         List<Integer> hiddenNodes = readList(dis, Integer.class);
         List<String> actiFuncs = readList(dis, String.class);
-        float l2reg = dis.readFloat();
+        double l2reg = dis.readDouble();
 
         List<Layer> hiddenLayers = buildHiddenLayers(denseLayers, actiFuncs);
         return new WideAndDeep(hiddenLayers, finalLayer, ecl, wl, idBinCateSizeMap, numericalSize, denseColumnIds,
@@ -188,33 +188,33 @@ public class PersistWideAndDeep {
         dos.writeInt(denseLayer.getOut());
         // write bias
         for(int i = 0; i < denseLayer.getOut(); i++) {
-            dos.writeFloat(denseLayer.getBias()[i]);
+            dos.writeDouble(denseLayer.getBias()[i]);
         }
         // write weight
         for(int i = 0; i < denseLayer.getIn(); i++) {
             for(int j = 0; j < denseLayer.getOut(); j++) {
-                dos.writeFloat(denseLayer.getWeights()[i][j]);
+                dos.writeDouble(denseLayer.getWeights()[i][j]);
             }
         }
-        dos.writeFloat(denseLayer.getL2reg());
+        dos.writeDouble(denseLayer.getL2reg());
     }
 
     private static DenseLayer readDenseLayer(DataInputStream dis) throws IOException {
         int in = dis.readInt();
         int out = dis.readInt();
         // read bias
-        float[] bias = new float[out];
+        double[] bias = new double[out];
         for(int i = 0; i < out; i++){
-            bias[i] = dis.readFloat();
+            bias[i] = dis.readDouble();
         }
         // read weight
-        float[][] weights = new float[in][out];
+        double[][] weights = new double[in][out];
         for(int i = 0; i < in; i++) {
             for(int j = 0; j < out; j++) {
-                weights[i][j] = dis.readFloat();
+                weights[i][j] = dis.readDouble();
             }
         }
-        float l2reg = dis.readFloat();
+        double l2reg = dis.readDouble();
         return new DenseLayer(weights, bias, out, in, l2reg);
     }
 
@@ -234,7 +234,7 @@ public class PersistWideAndDeep {
         // write weight
         for (int i = 0; i < embedFieldLayer.getIn(); i++){
             for (int j = 0; j < embedFieldLayer.getOut(); j++) {
-                dos.writeFloat(embedFieldLayer.getWeights()[i][j]);
+                dos.writeDouble(embedFieldLayer.getWeights()[i][j]);
             }
         }
     }
@@ -244,10 +244,10 @@ public class PersistWideAndDeep {
         int in = dis.readInt();
         int out = dis.readInt();
         // read weight
-        float[][] weights = new float[in][out];
+        double[][] weights = new double[in][out];
         for(int i = 0; i < in; i++) {
             for(int j = 0; j < out; j++) {
-                weights[i][j] = dis.readFloat();
+                weights[i][j] = dis.readDouble();
             }
         }
         return new EmbedFieldLayer(columnId, weights, out, in);
@@ -271,7 +271,7 @@ public class PersistWideAndDeep {
         dos.writeInt(wideFieldLayer.getIn());
         // write weight
         for(int i = 0; i < wideFieldLayer.getIn(); i++){
-            dos.writeFloat(wideFieldLayer.getWeights()[i]);
+            dos.writeDouble(wideFieldLayer.getWeights()[i]);
         }
     }
 
@@ -279,20 +279,20 @@ public class PersistWideAndDeep {
         int columnId = dis.readInt();
         int in = dis.readInt();
         // read weight
-        float[] weights = new float[in];
+        double[] weights = new double[in];
         for(int i = 0; i < in; i++) {
-            weights[i] = dis.readFloat();
+            weights[i] = dis.readDouble();
         }
-        float l2reg = dis.readFloat();
+        double l2reg = dis.readDouble();
         return new WideFieldLayer(columnId, weights, in, l2reg);
     }
 
     private static void writeBiasLayer(BiasLayer bias, DataOutputStream dos) throws IOException {
-        dos.writeFloat(bias.getWeight());
+        dos.writeDouble(bias.getWeight());
     }
 
     private static BiasLayer readBiasLayer(DataInputStream dis) throws IOException {
-        float weight = dis.readFloat();
+        double weight = dis.readDouble();
         return new BiasLayer(weight);
     }
 

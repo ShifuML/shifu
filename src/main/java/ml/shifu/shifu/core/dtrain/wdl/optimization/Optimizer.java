@@ -28,59 +28,58 @@ public interface Optimizer {
      * Update gradient in @param weight
      * 
      * @param weight
-     *          weight to be updated
+     *            weight to be updated
      * @param grad
-     *          the gradients
+     *            the gradients
      * @param uniqueKey
-     *          unique key identify the call upstream
+     *            unique key identify the call upstream
      */
-    void update(float[] weight, float[] grad, String uniqueKey);
-
+    void update(double[] weight, double[] grad, String uniqueKey, double trainCount);
 
     /**
      * Update gradient in @param weight
      *
      * @param weight
-     *          weight to be updated
+     *            weight to be updated
      * @param grad
-     *          sparse representation of gradients
+     *            sparse representation of gradients
      * @param uniqueKey
-     *          unique key identify the call upstream, usually the class name
+     *            unique key identify the call upstream, usually the class name
      */
-    void update(float[] weight, Map<Integer, Float> grad, String uniqueKey);
+    void update(double[] weight, Map<Integer, Double> grad, String uniqueKey, double trainCount);
 
     /**
      * Update gradient in @param weight
      *
      * @param gradient
-     *          gradient value
+     *            gradient value
      * @param uniqueKey
-     *          unique key identify the call upstream, usually the class name
+     *            unique key identify the call upstream, usually the class name
      * @return
-     *          weight update
+     *         weight update
      */
-    float updateWeight(float gradient, String uniqueKey);
+    double updateWeight(double gradient, String uniqueKey, double trainCount);
 
-    default void batchUpdate(float[][] weights, float[][] grads, String uniqueKey) {
+    default void batchUpdate(double[][] weights, double[][] grads, String uniqueKey, double trainCount) {
         if(weights == null || weights.length == 0 || grads == null || weights.length != grads.length) {
             System.out.println("Error when batch update, return");
             return;
         }
         int in = weights.length;
         for(int i = 0; i < in; i++) {
-            update(weights[i], grads[i], "bl" + uniqueKey + i);
+            update(weights[i], grads[i], "bl" + uniqueKey + i, trainCount);
         }
     }
 
-    default void batchUpdate(float[][] weights, Map<Integer, float[]> grads, String uniqueKey) {
+    default void batchUpdate(double[][] weights, Map<Integer, double[]> grads, String uniqueKey, double trainCount) {
         if(weights == null || weights.length == 0 || grads == null || grads.size() == 0) {
             return;
         }
         int in = weights.length;
-        for(Entry<Integer, float[]> entry: grads.entrySet()) {
+        for(Entry<Integer, double[]> entry: grads.entrySet()) {
             int index = entry.getKey();
             if(index < in) {
-                update(weights[index], entry.getValue(), "bm" + uniqueKey + index);
+                update(weights[index], entry.getValue(), "bm" + uniqueKey + index, trainCount);
             }
         }
     }
