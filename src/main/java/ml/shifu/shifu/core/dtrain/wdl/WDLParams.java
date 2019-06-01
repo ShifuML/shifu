@@ -42,10 +42,20 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
     /**
      * # of weighted training records per such worker.
      */
+    private double trainSize;
+
+    /**
+     * # of weighted validation records per such worker.
+     */
+    private double validationSize;
+
+    /**
+     * # of training records per such worker.
+     */
     private double trainCount;
 
     /**
-     * # of weighted training records per such worker.
+     * # of weighted validation records per such worker.
      */
     private double validationCount;
 
@@ -153,6 +163,8 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
         this.trainError += from.trainError;
         this.validationCount += from.validationCount;
         this.validationError += from.validationError;
+        this.trainSize += from.trainSize;
+        this.validationSize += from.validationSize;
         // In the first iteration, the worker may send a empty WDLParams without WideAndDeep Init
         if(from.getWnd() != null) {
             this.wnd = this.wnd.combine(from.getWnd());
@@ -174,13 +186,15 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
         out.writeDouble(this.validationCount);
         out.writeDouble(this.trainError);
         out.writeDouble(this.validationError);
+        out.writeDouble(this.trainSize);
+        out.writeDouble(this.validationSize);
         out.writeInt(this.serializationType.getValue());
     }
 
     @Override
     public void doReadFields(DataInput in) throws IOException {
         boolean wdlIsNull = in.readBoolean();
-        if (!wdlIsNull) {
+        if(!wdlIsNull) {
             if(this.wnd == null) {
                 this.wnd = new WideAndDeep();
             }
@@ -190,6 +204,8 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
         this.validationCount = in.readDouble();
         this.trainError = in.readDouble();
         this.validationError = in.readDouble();
+        this.trainSize = in.readDouble();
+        this.validationSize = in.readDouble();
         this.serializationType = SerializationType.getSerializationType(in.readInt());
     }
 
@@ -206,6 +222,36 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
      */
     public void setWnd(WideAndDeep wnd) {
         this.wnd = wnd;
+    }
+
+    /**
+     * @return the trainSize
+     */
+    public double getTrainSize() {
+        return trainSize;
+    }
+
+    /**
+     * @param trainSize
+     *            the trainSize to set
+     */
+    public void setTrainSize(double trainSize) {
+        this.trainSize = trainSize;
+    }
+
+    /**
+     * @return the validationSize
+     */
+    public double getValidationSize() {
+        return validationSize;
+    }
+
+    /**
+     * @param validationSize
+     *            the validationSize to set
+     */
+    public void setValidationSize(double validationSize) {
+        this.validationSize = validationSize;
     }
 
 }

@@ -35,6 +35,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
+import org.encog.mathutil.BoundMath;
+
 /**
  * {@link IndependentWDLModel} is a light WDL engine to predict WDL model, the only dependency is shifu, guagua.
  *
@@ -153,7 +155,17 @@ public class IndependentWDLModel {
      * @return model score of the inputs.
      */
     public double[] compute(double[] denseInputs, List<SparseInput> embedInputs, List<SparseInput> wideInputs) {
-        return this.wnd.forward(denseInputs, embedInputs, wideInputs);
+        double[] logits = this.wnd.forward(denseInputs, embedInputs, wideInputs);
+        double[] score = new double[logits.length];
+        for(int i = 0; i < score.length; i++) {
+            score[i] = sigmoid(logits[i]);
+        }
+        return score;
+    }
+
+    public double sigmoid(double logit) {
+        // return (double) (1 / (1 + Math.min(1.0E20, Math.exp(-logit))));
+        return 1.0d / (1.0d + BoundMath.exp(-1 * logit));
     }
 
     /**

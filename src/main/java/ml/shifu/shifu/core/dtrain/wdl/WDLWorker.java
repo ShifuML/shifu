@@ -54,7 +54,8 @@ import java.util.stream.Collectors;
  * iteration.
  * 
  * <p>
- * Data loading into memory as memory list includes two parts: numerical double array and sparse input object array which
+ * Data loading into memory as memory list includes two parts: numerical double array and sparse input object array
+ * which
  * is for categorical variables. To leverage sparse feature of categorical variables, sparse object is leveraged to
  * save memory and matrix computation.
  * 
@@ -239,7 +240,8 @@ public class WDLWorker extends
     private WideAndDeep wnd;
 
     /**
-     * Logic to load data into memory list which includes double array for numerical features and sparse object array for
+     * Logic to load data into memory list which includes double array for numerical features and sparse object array
+     * for
      * categorical features.
      */
     @Override
@@ -273,7 +275,7 @@ public class WDLWorker extends
                             inputs[numIndex] = getDoubleValue(input);
                             this.inputIndexMap.putIfAbsent(config.getColumnNum(), numIndex++);
                         } else if(config.isCategorical()) {
-                            cateInputs[cateIndex] = new SparseInput(config.getColumnNum(), (int)getDoubleValue(input));
+                            cateInputs[cateIndex] = new SparseInput(config.getColumnNum(), (int) getDoubleValue(input));
                             this.inputIndexMap.putIfAbsent(config.getColumnNum(), cateIndex++);
                         }
                         hashcode = hashcode * 31 + input.hashCode();
@@ -689,35 +691,37 @@ public class WDLWorker extends
         // update master global model into worker WideAndDeep graph
         this.wnd.updateWeights(context.getLastMasterResult());
 
-//        LOG.info("Init dense weights: {}.", Arrays.toString(this.wnd.getWl().getDenseLayer().getWeights()));
-//        for(WideFieldLayer wfl: this.wnd.getWl().getLayers()) {
-//            LOG.info("Init wide weights: {}.", Arrays.toString(wfl.getWeights()));
-//        }
+        // LOG.info("Init dense weights: {}.", Arrays.toString(this.wnd.getWl().getDenseLayer().getWeights()));
+        // for(WideFieldLayer wfl: this.wnd.getWl().getLayers()) {
+        // LOG.info("Init wide weights: {}.", Arrays.toString(wfl.getWeights()));
+        // }
 
         long start = System.currentTimeMillis();
         // forward and backward compute gradients for each iteration
-        int trainCnt = trainingData.size(), validCnt = validationData.size();
+        double trainCnt = trainingData.size(), validCnt = validationData.size();
+        double trainSize = 0, validationSize = 0;
         double trainSumError = 0d, validSumError = 0d;
-        LOG.info("Before training dense wGradients: {}.", Arrays.toString(wnd.getWl().getDenseLayer().getwGrads()));
-        
+        // LOG.info("Before training dense wGradients: {}.", Arrays.toString(wnd.getWl().getDenseLayer().getwGrads()));
+
         int index = 0;
         for(Data data: trainingData) {
             if(index <= 30) {
                 this.wnd.setDebug(false);
                 this.wnd.getWl().getDenseLayer().setDebug(false);
-            } else  {
+            } else {
                 this.wnd.getWl().getDenseLayer().setDebug(false);
                 this.wnd.setDebug(false);
             }
+            trainSize += data.getWeight();
             double[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data), getWideInputs(data));
             double predict = sigmoid(logits[0]);
             double error = predict - data.label;
-            trainSumError += error * error;
-            this.wnd.backward(new double[] {  predict }, new double[] { data.label }, data.getWeight());
+            trainSumError += (error * error * data.getWeight());
+            this.wnd.backward(new double[] { predict }, new double[] { data.label }, data.getWeight());
             index += 1;
         }
-        
-//        LOG.info("After training dense wGradients: {}.", Arrays.toString(wnd.getWl().getDenseLayer().getwGrads()));
+
+        // LOG.info("After training dense wGradients: {}.", Arrays.toString(wnd.getWl().getDenseLayer().getwGrads()));
 
         LOG.info("Worker with training time {} ms.", (System.currentTimeMillis() - start));
 
@@ -735,8 +739,9 @@ public class WDLWorker extends
             if(index++ <= 0) {
                 LOG.info("Index {}, logit {}, sigmoid {}, label {}.", index, logits[0], sigmoid, data.label);
             }
+            validationSize += data.getWeight();
             double error = sigmoid - data.label;
-            validSumError += error * error;
+            validSumError += (error * error * data.getWeight());
         }
 
         LOG.info("training error is {} {}", trainSumError, validSumError);
@@ -745,6 +750,8 @@ public class WDLWorker extends
         WDLParams params = new WDLParams();
         params.setTrainCount(trainCnt);
         params.setValidationCount(validCnt);
+        params.setTrainSize(trainSize);
+        params.setValidationSize(validationSize);
         params.setTrainError(trainSumError);
         params.setValidationError(validSumError);
         params.setSerializationType(SerializationType.GRADIENTS);

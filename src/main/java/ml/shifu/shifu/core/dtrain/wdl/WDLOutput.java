@@ -160,9 +160,9 @@ public class WDLOutput extends BasicMasterInterceptor<WDLParams, WDLParams> {
             // first iteration is used for training preparation
             return;
         }
-        double trainError = context.getMasterResult().getTrainError() / context.getMasterResult().getTrainCount();
-        double validationError = context.getMasterResult().getValidationCount() == 0d ? 0d
-                : context.getMasterResult().getValidationError() / context.getMasterResult().getValidationCount();
+        double trainError = context.getMasterResult().getTrainError() / context.getMasterResult().getTrainSize();
+        double validationError = context.getMasterResult().getValidationSize() == 0d ? 0d
+                : context.getMasterResult().getValidationError() / context.getMasterResult().getValidationSize();
         String info = "";
         if(trainError != 0d) {
             info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
@@ -191,7 +191,7 @@ public class WDLOutput extends BasicMasterInterceptor<WDLParams, WDLParams> {
         if(this.isGsMode || this.isKFoldCV) {
             Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
             double valErr = context.getMasterResult().getValidationError()
-                    / context.getMasterResult().getValidationCount();
+                    / context.getMasterResult().getValidationSize();
             writeValErrorToFileSystem(valErr, valErrOutput);
         }
         IOUtils.closeStream(this.progressOutput);

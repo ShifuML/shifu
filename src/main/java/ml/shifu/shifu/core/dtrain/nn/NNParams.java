@@ -55,7 +55,7 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
     /**
      * Current test error which can be sent to master
      */
-    private double testError = 0;
+    private double validationError = 0;
 
     /**
      * Current train error which can be sent to master
@@ -77,7 +77,7 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
      * Validation sum of significance on each worker and master
      * if no weight specified, it should equal validationSize
      */
-    private double testSum = 0.0d;
+    private double validationSum = 0.0d;
 
     /**
      * Total size of record
@@ -110,12 +110,12 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
         this.weights = weights;
     }
 
-    public double getTestError() {
-        return testError;
+    public double getValidationError() {
+        return validationError;
     }
 
-    public void setTestError(double testError) {
-        this.testError = testError;
+    public void setValidationError(double testError) {
+        this.validationError = testError;
     }
 
     public double getTrainError() {
@@ -173,12 +173,12 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
         this.trainSum = trainSum;
     }
 
-    public double getTestSum() {
-        return testSum;
+    public double getValidationSum() {
+        return validationSum;
     }
 
-    public void setTestSum(double testSum) {
-        this.testSum = testSum;
+    public void setValidationSum(double testSum) {
+        this.validationSum = testSum;
     }
 
     public void accumulateTrainSize(long size) {
@@ -195,11 +195,11 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
     @Override
     public void doWrite(DataOutput out) throws IOException {
         out.writeDouble(getTrainError());
-        out.writeDouble(getTestError());
+        out.writeDouble(getValidationError());
 
         out.writeLong(getTrainSize());
         out.writeDouble(getTrainSum());
-        out.writeDouble(getTestSum());
+        out.writeDouble(getValidationSum());
 
         out.writeInt(getWeights().length);
         for(double weight: getWeights()) {
@@ -218,10 +218,10 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
     @Override
     public void doReadFields(DataInput in) throws IOException {
         this.trainError = in.readDouble();
-        this.testError = in.readDouble();
+        this.validationError = in.readDouble();
         this.trainSize = in.readLong();
         this.trainSum = in.readDouble();
-        this.testSum = in.readDouble();
+        this.validationSum = in.readDouble();
 
         int len = in.readInt();
         double[] weights = new double[len];
@@ -267,9 +267,9 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
         this.count += from.count;
         this.trainSize += from.trainSize;
         this.trainSum += from.trainSum;
-        this.testSum += from.testSum;
+        this.validationSum += from.validationSum;
         this.trainError += from.trainError;
-        this.testError += from.testError;
+        this.validationError += from.validationError;
         assert this.gradients != null && from.gradients != null;
         for(int i = 0; i < this.gradients.length; i++) {
             this.gradients[i] += from.gradients[i];
@@ -304,7 +304,7 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
     @Override
     public String toString() {
         return String.format("NNParams [testError=%s, trainError=%s, trainSize=%s, wrCount=%s, gSize=%s]",
-                this.testError, this.trainError, this.trainSize, this.getWrCount(),
+                this.validationError, this.trainError, this.trainSize, this.getWrCount(),
                 this.gradients != null ? this.gradients.length : 0);
     }
 

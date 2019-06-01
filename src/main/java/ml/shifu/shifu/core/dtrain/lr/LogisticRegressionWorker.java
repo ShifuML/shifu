@@ -307,65 +307,54 @@ public class LogisticRegressionWorker extends
         } else {
             this.weights = context.getLastMasterResult().getParameters();
             LOG.info("Weights {}.", Arrays.toString(this.weights));
-            
+
             double[] gradients = new double[this.inputNum + 1];
             double trainingFinalError = 0.0d;
-            double testingFinalError = 0.0d;
-            long trainingSize = this.trainingData.size();
-            long testingSize = this.validationData.size();
+            double validationFinalError = 0.0d;
+            double wgtTrainSize = 0d;
+            double wgtValidationError = 0d;
             this.trainingData.reOpen();
-            int index = 0;
             for(Data data: trainingData) {
+                wgtTrainSize += data.getSignificance();
                 double logits = logits(data.inputs, this.weights);
                 double result = sigmoid(logits);
                 double error = data.outputs[0] - result;
-                trainingFinalError += caculateMSEError(error);
-                double [] tmpGradients = new double [gradients.length];
+                trainingFinalError += caculateMSEError(error) * data.getSignificance();
+                double[] tmpGradients = new double[gradients.length];
                 for(int i = 0; i < gradients.length; i++) {
                     if(i < gradients.length - 1) {
                         // compute gradient for each weight, this is not like traditional LR (no derived function), with
                         // derived function, we see good convergence speed in our models.
                         // TODO extract function to provide traditional lr gradients and derived version for user to
                         // configure
-                        tmpGradients[i]= error * data.inputs[i] * (derivedFunction(result) + FLAT_SPOT_VALUE)
+                        tmpGradients[i] = error * data.inputs[i] * (derivedFunction(result) + FLAT_SPOT_VALUE)
                                 * data.getSignificance();
                     } else {
                         // for bias parameter, input is a constant 1d
-                        tmpGradients[i]= error * 1d * (derivedFunction(result) + FLAT_SPOT_VALUE)
+                        tmpGradients[i] = error * 1d * (derivedFunction(result) + FLAT_SPOT_VALUE)
                                 * data.getSignificance();
                     }
                     gradients[i] += tmpGradients[i];
                 }
-                if(index  ++ < 100) {
-                    LOG.info("Graidents {}.", Arrays.toString(tmpGradients));
-                }
             }
-            
-            LOG.info("Graidents {}.", Arrays.toString(gradients));
 
             this.validationData.reOpen();
             // TODO here we should use current weights+gradients to compute testing error, so far it is for last error
             // computing.
-            index = 0;
             for(Data data: validationData) {
+                wgtValidationError += data.getSignificance();
                 double logits = logits(data.inputs, this.weights);
                 double result = sigmoid(logits);
                 double error = result - data.outputs[0];
-                if(index++ < 100) {
-                    // LOG.info("Index {}, inputs {}, weights {}, logits {}, label {}.", index,
-                    // Arrays.toString(data.inputs), Arrays.toString(this.weights), logits, data.outputs[0]);
-                    LOG.info("Index {}, logits {}, result {}, label {}.", index, logits, result, data.outputs[0]);
-                }
-                testingFinalError += caculateMSEError(error);
+                validationFinalError += caculateMSEError(error) * data.getSignificance();
             }
-            
 
             LOG.info("Iteration {} training data with error {}", context.getCurrentIteration(),
-                    trainingFinalError / trainingSize);
+                    trainingFinalError / wgtTrainSize);
             LOG.info("Iteration {} testing data with error {}", context.getCurrentIteration(),
-                    testingFinalError / testingSize);
-            return new LogisticRegressionParams(gradients, trainingFinalError, testingFinalError, trainingSize,
-                    testingSize);
+                    validationFinalError / wgtValidationError);
+            return new LogisticRegressionParams(gradients, trainingFinalError, validationFinalError, wgtTrainSize,
+                    wgtValidationError, this.trainingData.size(), this.validationData.size());
         }
     }
 

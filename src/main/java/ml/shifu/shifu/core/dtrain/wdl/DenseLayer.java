@@ -197,7 +197,7 @@ public class DenseLayer extends AbstractLayer<double[], double[], double[], doub
                 // basic derivatives
                 this.wGrads[i][j] += (this.lastInput[i] * backInputs[j]);
                 // l2 loss derivatives
-                this.wGrads[i][j] += (this.l2reg * backInputs[j]);
+//                this.wGrads[i][j] += (this.l2reg * backInputs[j]);
             }
         }
         for(int j = 0; j < this.out; j++) {

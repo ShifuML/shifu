@@ -194,7 +194,7 @@ public class LogisticRegressionMaster extends
     private LogisticRegressionParams initModelParams(LR loadModel) {
         LogisticRegressionParams params = new LogisticRegressionParams();
         params.setTrainError(0);
-        params.setTestError(0);
+        params.setValidationError(0);
         // prevent null point
         this.weights = loadModel.getWeights();
         params.setParameters(this.weights);
@@ -250,37 +250,40 @@ public class LogisticRegressionMaster extends
         } else {
             // append bias
             double[] gradients = new double[this.inputNum + 1];
-            double trainError = 0.0d, testError = 0d;
-            long trainSize = 0, testSize = 0;
+            double trainError = 0.0d, validationError = 0d;
+            double trainSize = 0, validationSize = 0;
+            double trainCount = 0, validationCount = 0;
             for(LogisticRegressionParams param: context.getWorkerResults()) {
                 if(param != null) {
                     for(int i = 0; i < gradients.length; i++) {
                         gradients[i] += param.getParameters()[i];
                     }
                     trainError += param.getTrainError();
-                    testError += param.getTestError();
+                    validationError += param.getValidationError();
                     trainSize += param.getTrainSize();
-                    testSize += param.getTestSize();
+                    validationSize += param.getValidationSize();
+                    trainCount += param.getTrainCount();
+                    validationCount += param.getValidationCount();
                 }
             }
 
             if(this.weightCalculator == null) {
-                this.weightCalculator = new Weight(weights.length, trainSize, learningRate, this.propagation,
+                this.weightCalculator = new Weight(weights.length, trainCount, learningRate, this.propagation,
                         this.regularizedConstant, RegulationLevel.to(this.validParams
                                 .get(CommonConstants.REG_LEVEL_KEY)));
             } else {
-                this.weightCalculator.setNumTrainSize(trainSize);
+                this.weightCalculator.setNumTrainSize(trainCount);
             }
 
             this.weights = this.weightCalculator.calculateWeights(this.weights, gradients,
                     (context.getCurrentIteration() - 1));
 
             double finalTrainError = trainError / trainSize;
-            double finalTestError = testError / testSize;
+            double finalTestError = validationError / validationSize;
             LOG.info("Iteration {} with train error {}, test error {}", context.getCurrentIteration(), finalTrainError,
                     finalTestError);
             LogisticRegressionParams lrParams = new LogisticRegressionParams(weights, finalTrainError, finalTestError,
-                    trainSize, testSize);
+                    trainSize, validationSize, trainCount, validationCount);
 
             if(finalTestError < this.bestValidationError) {
                 this.bestValidationError = finalTestError;

@@ -170,11 +170,12 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
 
         // aggregate all worker gradients to one gradient object.
         WDLParams aggregation = aggregateWorkerGradients(context);
-        
-        LOG.info("Master gradients in dense layer {}", Arrays.toString(aggregation.getWnd().getWl().getDenseLayer().getwGrads()));
+
+        LOG.info("Master gradients in dense layer {}",
+                Arrays.toString(aggregation.getWnd().getWl().getDenseLayer().getwGrads()));
 
         // apply optimizer
-        this.wnd.update(aggregation.getWnd(), optimizer, aggregation.getTrainCount());
+        this.wnd.update(aggregation.getWnd(), optimizer, aggregation.getTrainSize());
         LOG.info("train size: {}, error: {}", aggregation.getTrainCount(), aggregation.getTrainError());
 
         // construct master result which contains WideAndDeep current model weights
@@ -183,6 +184,8 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         params.setValidationCount(aggregation.getValidationCount());
         params.setTrainError(aggregation.getTrainError());
         params.setValidationError(aggregation.getValidationError());
+        params.setTrainSize(aggregation.getTrainSize());
+        params.setValidationSize(aggregation.getValidationSize());
         params.setSerializationType(SerializationType.WEIGHTS);
         this.wnd.setSerializationType(SerializationType.WEIGHTS);
         params.setWnd(this.wnd);
@@ -197,7 +200,6 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
             } else {
                 aggregation.combine(params);
             }
-//            LOG.info("Worker gradients in dense layer {}", Arrays.toString(params.getWnd().getWl().getDenseLayer().getwGrads()));
         }
         return aggregation;
     }
@@ -218,12 +220,12 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         }
         // weights from this.wnd
         params.setWnd(this.wnd);
-        
-        LOG.info("Init dense weights: " + Arrays.toString(this.wnd.getWl().getDenseLayer().getWeights()));
-        for(WideFieldLayer wfl: this.wnd.getWl().getLayers()) {
-            LOG.info("Init wide weights: " + Arrays.toString(wfl.getWeights()));
-        }
-        
+
+        // LOG.info("Init dense weights: " + Arrays.toString(this.wnd.getWl().getDenseLayer().getWeights()));
+        // for(WideFieldLayer wfl: this.wnd.getWl().getLayers()) {
+        // LOG.info("Init wide weights: " + Arrays.toString(wfl.getWeights()));
+        // }
+
         return params;
     }
 

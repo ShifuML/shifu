@@ -245,7 +245,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      */
     private void runScore(List<EvalConfig> evalSetList) throws IOException {
         // do the validation before scoring the data set
-        for (EvalConfig evalConfig : evalSetList) {
+        for(EvalConfig evalConfig: evalSetList) {
             validateEvalColumnConfig(evalConfig);
         }
 
@@ -639,7 +639,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         // validation for score column
         for(EvalConfig evalConfig: evalSetList) {
             List<String> scoreMetaColumns = evalConfig.getScoreMetaColumns(modelConfig);
-            if (scoreMetaColumns.size() > 5) {
+            if(scoreMetaColumns.size() > 5) {
                 LOG.error(
                         "Starting from 0.10.x, 'scoreMetaColumns' is used for benchmark score columns and limited to at most 5.");
                 LOG.error(
@@ -785,17 +785,16 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 }
             }
         }
-        if(Constants.GENERIC.equalsIgnoreCase(modelConfig.getAlgorithm()) 
-                || Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
+        if(Constants.GENERIC.equalsIgnoreCase(modelConfig.getAlgorithm())
+                || Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())
+                || CommonUtils.isWDLModel(modelConfig.getAlgorithm())) {
             // TODO correct this logic
             return;
         }
-        List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(modelConfig, evalConfig,
-                SourceType.LOCAL, evalConfig.getGbtConvertToProb(),
-                evalConfig.getGbtScoreConvertStrategy());
-        if (CollectionUtils.isNotEmpty(models)) {
-            validateFinalColumns(evalConfig, this.modelConfig.getModelSetName(), false,
-                    this.columnConfigList, names);
+        List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(modelConfig, evalConfig, SourceType.LOCAL,
+                evalConfig.getGbtConvertToProb(), evalConfig.getGbtScoreConvertStrategy());
+        if(CollectionUtils.isNotEmpty(models)) {
+            validateFinalColumns(evalConfig, this.modelConfig.getModelSetName(), false, this.columnConfigList, names);
         }
 
         NSColumn targetColumn = new NSColumn(evalConfig.getDataSet().getTargetColumnName());
@@ -813,25 +812,24 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
 
         List<ModelSpec> subModels = ModelSpecLoaderUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
-                SourceType.LOCAL, evalConfig.getGbtConvertToProb(),
-                evalConfig.getGbtScoreConvertStrategy());
-        if (CollectionUtils.isNotEmpty(subModels)) {
-            for (ModelSpec modelSpec : subModels) {
-                validateFinalColumns(evalConfig, modelSpec.getModelName(), true,
-                        modelSpec.getColumnConfigList(), names);
+                SourceType.LOCAL, evalConfig.getGbtConvertToProb(), evalConfig.getGbtScoreConvertStrategy());
+        if(CollectionUtils.isNotEmpty(subModels)) {
+            for(ModelSpec modelSpec: subModels) {
+                validateFinalColumns(evalConfig, modelSpec.getModelName(), true, modelSpec.getColumnConfigList(),
+                        names);
             }
         }
     }
 
     private void validateFinalColumns(EvalConfig evalConfig, String modelName, boolean isSubModel,
-                                      List<ColumnConfig> columnConfigs, Set<NSColumn> names) {
-        for (ColumnConfig config : columnConfigs) {
+            List<ColumnConfig> columnConfigs, Set<NSColumn> names) {
+        for(ColumnConfig config: columnConfigs) {
             NSColumn nsColumn = new NSColumn(config.getColumnName());
-            if (config.isFinalSelect() && !names.contains(nsColumn)
+            if(config.isFinalSelect() && !names.contains(nsColumn)
                     && !names.contains(new NSColumn(nsColumn.getSimpleName()))) {
-                throw new IllegalArgumentException("Final selected column " + config.getColumnName()
-                        + " in " + (isSubModel ? "sub[" : "current[") + modelName + "]"
-                        + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
+                throw new IllegalArgumentException(
+                        "Final selected column " + config.getColumnName() + " in " + (isSubModel ? "sub[" : "current[")
+                                + modelName + "]" + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
             }
         }
     }
@@ -1222,6 +1220,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     /**
      * Check "-nosort" is specified or not
+     * 
      * @return true if nosort is specified, or false
      */
     private boolean isNoSort() {
@@ -1231,6 +1230,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     /**
      * Check "-strict" is specified or not. This is used when normalize the evaluation data set.
      * The Strict model - means output the data just as input, and append weight column only.
+     * 
      * @return true if strict is specified, or false
      */
     private boolean isStrict() {

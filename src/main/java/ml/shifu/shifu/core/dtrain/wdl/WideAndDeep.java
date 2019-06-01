@@ -162,11 +162,12 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public double[] forward(double[] denseInputs, List<SparseInput> embedInputs, List<SparseInput> wideInputs) {
         // wide layer forward
-//        LOG.debug("Forward in WideAndDeep: denseInputs: " + denseInputs.length + " embedInputs: " + embedInputs.size()
-//                + " wideInputs:" + wideInputs.size());
+        // LOG.debug("Forward in WideAndDeep: denseInputs: " + denseInputs.length + " embedInputs: " +
+        // embedInputs.size()
+        // + " wideInputs:" + wideInputs.size());
 
         double[] wlLogits = this.wl.forward(new Tuple(wideInputs, denseInputs));
-
+        // return wlLogits;
         // this.wl.setDebug( this.index <= 200);
         // if(LOG.isInfoEnabled() && this.index++ <= 100) {
         // if(wlLogits != null && wlLogits.length > 0) {
@@ -175,22 +176,21 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
         // LOG.info("wlLogits size is 0");
         // }
         // }
-        return wlLogits;
 
-        // // deep layer forward
-        // double[] dilOuts = this.dil.forward(denseInputs);
-        // List<double[]> eclOutList = this.ecl.forward(embedInputs);
-        // double[] inputs = mergeToDenseInputs(dilOuts, eclOutList);
-        // for(Layer layer: this.hiddenLayers) {
-        // if(layer instanceof DenseLayer) {
-        // DenseLayer dl = (DenseLayer) layer;
-        // inputs = dl.forward(inputs);
-        // } else if(layer instanceof Activation) {
-        // Activation acti = (Activation) layer;
-        // inputs = acti.forward(inputs);
-        // }
-        // }
-        // double[] dnnLogits = this.finalLayer.forward(inputs);
+        // deep layer forward
+        double[] dilOuts = this.dil.forward(denseInputs);
+        List<double[]> eclOutList = this.ecl.forward(embedInputs);
+        double[] inputs = mergeToDenseInputs(dilOuts, eclOutList);
+        for(Layer layer: this.hiddenLayers) {
+            if(layer instanceof DenseLayer) {
+                DenseLayer dl = (DenseLayer) layer;
+                inputs = dl.forward(inputs);
+            } else if(layer instanceof Activation) {
+                Activation acti = (Activation) layer;
+                inputs = acti.forward(inputs);
+            }
+        }
+        double[] dnnLogits = this.finalLayer.forward(inputs);
         // if(LOG.isInfoEnabled() && this.index <= 200) {
         // if(dnnLogits != null && dnnLogits.length > 0) {
         // LOG.info("dnnLogits length: " + dnnLogits.length + " first value is " + dnnLogits[0]);
@@ -198,16 +198,15 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
         // LOG.info("dnnLogits length is 0");
         // }
         // }
-        //
+
         // this.index += 1;
-        //
-        // // merge wide and deep together
-        // AssertUtils.assertDoubleArrayNotNullAndLengthEqual(wlLogits, dnnLogits);
-        // double[] logits = new double[dnnLogits.length];
-        // for(int i = 0; i < logits.length; i++) {
-        // logits[i] += wlLogits[i] + dnnLogits[i];
-        // }
-        // return logits;
+        // merge wide and deep together
+        AssertUtils.assertDoubleArrayNotNullAndLengthEqual(wlLogits, dnnLogits);
+        double[] logits = new double[dnnLogits.length];
+        for(int i = 0; i < logits.length; i++) {
+            logits[i] += wlLogits[i] + dnnLogits[i];
+        }
+        return logits;
     }
 
     /**
@@ -218,7 +217,7 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
     }
 
     private boolean isDebug = false;
-    
+
     /**
      * @return the isDebug
      */
@@ -227,44 +226,37 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
     }
 
     /**
-     * @param isDebug the isDebug to set
+     * @param isDebug
+     *            the isDebug to set
      */
     public void setDebug(boolean isDebug) {
         this.isDebug = isDebug;
     }
 
+    @SuppressWarnings("rawtypes")
     public double[] backward(double[] predicts, double[] actuals, double sig) {
         double[] grad2Logits = new double[predicts.length];
         for(int i = 0; i < grad2Logits.length; i++) {
             double error = (predicts[i] - actuals[i]);
-            grad2Logits[i] = error * (derivedFunction(predicts[i]) + 0.1f);
+            grad2Logits[i] = error * (derivedFunction(predicts[i]) + 0.1f) * sig;
         }
-        
-//        if(this.isDebug) {
-//            LOG.info("predicts {}, actual {}, sig {}, grad2logits {}.", Arrays.toString(predicts),
-//                    Arrays.toString(actuals),
-//                    sig,
-//                    Arrays.toString(grad2Logits)
-//                    );
-//        }
-
         // wide layer backward, as wide layer in LR actually in backward, only gradients computation is needed.
         this.wl.backward(grad2Logits);
 
         // deep layer backward, for gradients computation inside of each layer
-        // double[] backInputs = this.finalLayer.backward(grad2Logits);
-        // for(int i = 0; i < this.hiddenLayers.size(); i++) {
-        // Layer layer = this.hiddenLayers.get(this.hiddenLayers.size() - 1 - i);
-        // if(layer instanceof DenseLayer) {
-        // backInputs = ((DenseLayer) layer).backward(backInputs);
-        // } else if(layer instanceof Activation) {
-        // backInputs = ((Activation) layer).backward(backInputs);
-        // }
-        // }
-        //
-        // // embedding layer backward, gradients computation
-        // List<double[]> backInputList = splitArray(this.dil.getOutDim(), this.ecl.getEmbedLayers(), backInputs);
-        // this.ecl.backward(backInputList);
+        double[] backInputs = this.finalLayer.backward(grad2Logits);
+        for(int i = 0; i < this.hiddenLayers.size(); i++) {
+            Layer layer = this.hiddenLayers.get(this.hiddenLayers.size() - 1 - i);
+            if(layer instanceof DenseLayer) {
+                backInputs = ((DenseLayer) layer).backward(backInputs);
+            } else if(layer instanceof Activation) {
+                backInputs = ((Activation) layer).backward(backInputs);
+            }
+        }
+
+        // embedding layer backward, gradients computation
+        List<double[]> backInputList = splitArray(this.dil.getOutDim(), this.ecl.getEmbedLayers(), backInputs);
+        this.ecl.backward(backInputList);
 
         // no need return final backward outputs as gradients are computed well
         return null;
@@ -285,7 +277,6 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
         this.wl.initGrads();
     }
 
-    @SuppressWarnings("unused")
     private List<double[]> splitArray(int outDim, List<EmbedFieldLayer> embedLayers, double[] backInputs) {
         List<double[]> results = new ArrayList<>();
         int srcPos = outDim;
