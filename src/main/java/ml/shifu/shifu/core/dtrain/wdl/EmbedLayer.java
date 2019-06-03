@@ -16,6 +16,8 @@
 package ml.shifu.shifu.core.dtrain.wdl;
 
 import ml.shifu.shifu.core.dtrain.AssertUtils;
+import ml.shifu.shifu.core.dtrain.RegulationLevel;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimize;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 
 import java.io.DataInput;
@@ -32,7 +34,7 @@ import java.util.List;
  */
 public class EmbedLayer
         extends AbstractLayer<List<SparseInput>, List<double[]>, List<double[]>, List<double[]>, EmbedLayer>
-        implements WeightInitializer<EmbedLayer> {
+        implements WeightInitializer<EmbedLayer>, Optimize<EmbedLayer> {
 
     /**
      * List of embed layer which is for each embed column.
@@ -166,6 +168,20 @@ public class EmbedLayer
         int size = this.embedLayers.size();
         for(int i = 0; i < size; i++) {
             this.embedLayers.get(i).update(gradEFLs.get(i), optimizer, uniqueKey + i, trainCount);
+        }
+    }
+
+    @Override
+    public void initOptimizer(double learningRate, String algorithm, double reg, RegulationLevel rl) {
+        for(EmbedFieldLayer embedFieldLayer: this.embedLayers) {
+            embedFieldLayer.initOptimizer(learningRate, algorithm, reg, rl);
+        }
+    }
+
+    @Override
+    public void optimizeWeight(double numTrainSize, int iteration, EmbedLayer model) {
+        for(int i = 0; i < this.embedLayers.size(); i++) {
+            this.embedLayers.get(i).optimizeWeight(numTrainSize, iteration, model.getEmbedLayers().get(i));
         }
     }
 }

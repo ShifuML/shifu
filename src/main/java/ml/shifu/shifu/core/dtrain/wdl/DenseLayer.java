@@ -15,14 +15,16 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
+import ml.shifu.shifu.core.dtrain.RegulationLevel;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimize;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.WeightOptimizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 /**
  * {@link DenseLayer} defines normal hidden layer in neural network while activation is not included but in one
@@ -33,7 +35,7 @@ import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class DenseLayer extends AbstractLayer<double[], double[], double[], double[], DenseLayer>
-        implements WeightInitializer<DenseLayer> {
+        implements WeightInitializer<DenseLayer>, Optimize<DenseLayer> {
     @SuppressWarnings("unused")
     private static final Logger LOG = LoggerFactory.getLogger(DenseLayer.class);
 
@@ -41,6 +43,11 @@ public class DenseLayer extends AbstractLayer<double[], double[], double[], doub
      * [in, out] array for deep matrix weights
      */
     private double[][] weights;
+
+    /**
+     * [in] array for weight optimizer
+     */
+    private WeightOptimizer[] optimizers;
 
     /**
      * Weight gradients in back computation
@@ -56,6 +63,11 @@ public class DenseLayer extends AbstractLayer<double[], double[], double[], doub
      * Bias gradients in back computation
      */
     private double[] bGrads;
+
+    /**
+     * Bias weight optimizer
+     */
+    private WeightOptimizer biasOptimizer;
 
     /**
      * The output dimension
@@ -351,4 +363,22 @@ public class DenseLayer extends AbstractLayer<double[], double[], double[], doub
         optimizer.batchUpdate(this.weights, gradLayer.getwGrads(), uniqueKey, trainCount);
         optimizer.update(this.bias, gradLayer.getbGrads(), uniqueKey, trainCount);
     }
+
+    @Override
+    public void initOptimizer(double learningRate, String algorithm, double reg, RegulationLevel rl) {
+        this.optimizers = new WeightOptimizer[this.in];
+        for(int i = 0; i < this.in; i++) {
+            this.optimizers[i] = new WeightOptimizer(this.out, learningRate, algorithm, reg, rl);
+        }
+        this.biasOptimizer = new WeightOptimizer(this.bias.length, learningRate, algorithm, reg, rl);
+    }
+
+    @Override
+    public void optimizeWeight(double numTrainSize, int iteration, DenseLayer model) {
+        for(int i = 0; i < this.in; i++) {
+            this.optimizers[i].calculateWeights(this.weights[i], model.getwGrads()[i], iteration, numTrainSize);
+        }
+        this.biasOptimizer.calculateWeights(this.bias, model.getbGrads(), iteration, numTrainSize);
+    }
+
 }
