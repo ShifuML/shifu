@@ -241,7 +241,7 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
         double[] grad2Logits = new double[predicts.length];
         for(int i = 0; i < grad2Logits.length; i++) {
             double error = (predicts[i] - actuals[i]);
-            grad2Logits[i] = error * (derivedFunction(predicts[i]) + 0.1f) * sig;
+            grad2Logits[i] = error * (derivedFunction(predicts[i]) + 0.1f) * sig * -1;
         }
         // wide layer backward, as wide layer in LR actually in backward, only gradients computation is needed.
         this.wl.backward(grad2Logits);
@@ -813,8 +813,7 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
     @Override
     public void optimizeWeight(double numTrainSize, int iteration, WideAndDeep gradWnd) {
         List<Layer> gradHLs = gradWnd.getHiddenLayers();
-        int hlSize = hiddenLayers.size();
-        for(int i = 0; i < hlSize; i++) {
+        for(int i = 0; i < this.hiddenLayers.size(); i++) {
             Layer tmpLayer = this.hiddenLayers.get(i);
             if(tmpLayer instanceof DenseLayer) {
                 ((DenseLayer) tmpLayer).optimizeWeight(numTrainSize, iteration, (DenseLayer) gradHLs.get(i));

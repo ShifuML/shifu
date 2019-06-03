@@ -113,7 +113,7 @@ public class WeightOptimizer implements Update {
     /**
      * Layer IDs which are not updated at all (used for fine tuning)
      */
-    private Set<Integer> fixedWeights = new HashSet<Integer>();
+    private Set<Integer> fixedWeights = new HashSet<>();
 
     public WeightOptimizer(int numWeight, double rate, String algorithm, double reg, RegulationLevel rl) {
         this(numWeight, rate, algorithm, reg, rl, null);
@@ -331,39 +331,6 @@ public class WeightOptimizer implements Update {
 
     private double updateWeightSCG(int index, double[] weights, double[] gradients) {
         throw new RuntimeException("SCG propagation is not supported in distributed NN computing.");
-    }
-
-    private double updateWeightRLP(int index, double[] weights, double[] gradients, int iteration, double numTrainSize) {
-        // multiply the current and previous gradient, and take the sign. We want to see if the gradient has changed its
-        // sign.
-        final int change = DTrainUtils.sign(gradients[index] * lastGradient[index]);
-        double weightChange = 0;
-
-        // if the gradient has retained its sign, then we increase the delta so that it will converge faster
-        if(change > 0) {
-            double delta = this.updateValues[index] * DTrainUtils.POSITIVE_ETA;
-            delta = Math.min(delta, DEFAULT_MAX_STEP);
-            weightChange = DTrainUtils.sign(gradients[index]) * delta;
-            this.updateValues[index] = delta;
-            lastGradient[index] = gradients[index];
-        } else if(change < 0) {
-            // if change<0, then the sign has changed, and the last delta was too big
-            double delta = this.updateValues[index] * DTrainUtils.NEGATIVE_ETA;
-            delta = Math.max(delta, DTrainUtils.DELTA_MIN);
-            this.updateValues[index] = delta;
-            weightChange = -this.lastDelta[index];
-            // set the previous gradient to zero so that there will be no adjustment the next iteration
-            lastGradient[index] = 0;
-        } else {
-            // if change==0 then there is no change to the delta
-            final double delta = this.updateValues[index];
-            weightChange = DTrainUtils.sign(gradients[index]) * delta;
-            lastGradient[index] = gradients[index];
-        }
-
-        this.lastDelta[index] = weightChange;
-        // apply the weight change, if any
-        return weightChange;
     }
 
     private double updateWeightRLP(int index, double[] weights, double[] gradients) {

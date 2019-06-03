@@ -163,8 +163,8 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         // aggregate all worker gradients to one gradient object.
         WDLParams aggregation = aggregateWorkerGradients(context);
 
-        LOG.info("Master gradients in dense layer {}",
-                Arrays.toString(aggregation.getWnd().getWl().getDenseLayer().getwGrads()));
+//        LOG.info("Master gradients in dense layer {}",
+//                Arrays.toString(aggregation.getWnd().getWl().getDenseLayer().getwGrads()));
 
         // apply optimizer
         this.wnd.optimizeWeight(aggregation.getTrainSize(), context.getCurrentIteration() - 1, aggregation.getWnd());
