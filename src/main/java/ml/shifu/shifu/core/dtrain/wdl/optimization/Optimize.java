@@ -22,7 +22,7 @@ import ml.shifu.shifu.core.dtrain.RegulationLevel;
  *
  * @author Wu Devin (haifwu@paypal.com)
  */
-public interface Optimize<SELF extends Optimize> {
+public interface Optimize<SELF extends Optimize<?>> {
     /**
      * Init weight optimizer according to learning rate, algorithm, reg and rl
      * @param learningRate

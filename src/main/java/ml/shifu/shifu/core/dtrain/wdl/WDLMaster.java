@@ -15,6 +15,20 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.math.NumberUtils;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -26,16 +40,6 @@ import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.math.NumberUtils;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
 
 /**
  * {@link WDLMaster} is master logic in wide and deep implementation based on Guagua.
@@ -102,6 +106,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
     /**
      * The optimizer to update weights.
      */
+    @SuppressWarnings("unused")
     private Optimizer optimizer;
 
     @SuppressWarnings({ "unchecked", "unused" })
@@ -147,11 +152,13 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
         double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0d);
         boolean wideEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.WIDE_ENABLE), true);
-        boolean deepEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.WIDE_ENABLE), true);
-        boolean embedEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.WIDE_ENABLE), true);
+        boolean deepEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.DEEP_ENABLE), true);
+        boolean embedEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.EMBED_ENABLE), true);
         this.wnd = new WideAndDeep(wideEnable, deepEnable, embedEnable, idBinCateSizeMap, numInputs, numericalIds,
                 embedColumnIds, embedOutputList, wideColumnIds, hiddenNodes, actFunc, l2reg);
         // TODO: make this configurable
+        
+//        this.optimizer = new GradientDescent(learningRate);
         this.wnd.initOptimizer(learningRate, DTrainUtils.RESILIENTPROPAGATION, l2reg, RegulationLevel.L2);
 
     }
@@ -167,11 +174,9 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         // aggregate all worker gradients to one gradient object.
         WDLParams aggregation = aggregateWorkerGradients(context);
 
-//        LOG.info("Master gradients in dense layer {}",
-//                Arrays.toString(aggregation.getWnd().getWl().getDenseLayer().getwGrads()));
-
         // apply optimizer
         this.wnd.optimizeWeight(aggregation.getTrainSize(), context.getCurrentIteration() - 1, aggregation.getWnd());
+//        this.wnd.update(aggregation.getWnd(), optimizer, aggregation.getTrainSize());
         LOG.info("train size: {}, error: {}", aggregation.getTrainCount(), aggregation.getTrainError());
 
         // construct master result which contains WideAndDeep current model weights

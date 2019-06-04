@@ -47,8 +47,8 @@ import java.util.stream.Collectors;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Combinable<WideAndDeep>,
-        Optimize<WideAndDeep> {
+public class WideAndDeep
+        implements WeightInitializer<WideAndDeep>, Bytable, Combinable<WideAndDeep>, Optimize<WideAndDeep> {
 
     private static final Logger LOG = LoggerFactory.getLogger(WideAndDeep.class);
 
@@ -626,6 +626,9 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeInt(this.serializationType.getValue());
+        out.writeBoolean(this.isWideEnable());
+        out.writeBoolean(this.isDeepEnable());
+        out.writeBoolean(this.isEmbedEnable());
 
         writeLayerWithNuLLCheck(out, this.dil);
 
@@ -690,6 +693,9 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
     @Override
     public void readFields(DataInput in) throws IOException {
         this.serializationType = SerializationType.getSerializationType(in.readInt());
+        this.wideEnable = in.readBoolean();
+        this.deepEnable = in.readBoolean();
+        this.embedEnable = in.readBoolean();
 
         this.dil = (DenseInputLayer) readLayerWithNullCheck(in, new DenseInputLayer());
 
@@ -821,6 +827,7 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
         this.index = index;
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public void initOptimizer(double learningRate, String algorithm, double reg, RegulationLevel rl) {
         for(Layer layer: this.hiddenLayers) {
@@ -834,6 +841,7 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
         this.wl.initOptimizer(learningRate, algorithm, reg, rl);
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public void optimizeWeight(double numTrainSize, int iteration, WideAndDeep gradWnd) {
         List<Layer> gradHLs = gradWnd.getHiddenLayers();
