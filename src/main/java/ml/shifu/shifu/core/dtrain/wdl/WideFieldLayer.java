@@ -15,17 +15,19 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
+import ml.shifu.shifu.core.dtrain.RegulationLevel;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimize;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.WeightOptimizer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 
 /**
  * {@link WideFieldLayer} is wide part input of WideAndDeep architecture. Per each column a {@link WideFieldLayer}
@@ -34,12 +36,17 @@ import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class WideFieldLayer extends AbstractLayer<SparseInput, double[], double[], double[], WideFieldLayer>
-        implements WeightInitializer<WideFieldLayer> {
+        implements WeightInitializer<WideFieldLayer>, Optimize<WideFieldLayer> {
     private static final Logger LOG = LoggerFactory.getLogger(WideFieldLayer.class);
     /**
      * [in] double array of weights
      */
     private double[] weights;
+
+    /**
+     * Weight optimizer
+     */
+    private WeightOptimizer optimizer;
 
     /**
      * Gradients, using map for sparse updates
@@ -292,5 +299,22 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, double[], double[
     public void update(WideFieldLayer gradLayer, Optimizer optimizer, String uniqueKey, double trainCount) {
         LOG.info("Column {}, length {}, gradients {}.", this.columnId, this.weights.length, gradLayer.getwGrads());
         optimizer.update(this.weights, gradLayer.getwGrads(), uniqueKey, trainCount);
+    }
+
+    @Override
+    public void initOptimizer(double learningRate, String algorithm, double reg, RegulationLevel rl) {
+        this.optimizer = new WeightOptimizer(this.in, learningRate, algorithm, reg, rl);
+    }
+
+    @Override
+    public void optimizeWeight(double numTrainSize, int iteration, WideFieldLayer model) {
+        for(Map.Entry<Integer, Double> entry: model.getwGrads().entrySet()) {
+            int index = entry.getKey();
+            if(index < this.in) {
+                this.optimizer.calculateWeights(this.weights, index, entry.getValue(), numTrainSize);
+            } else {
+                LOG.error("index {} in EmbedFieldLayer gradient great than in {}", index, this.in);
+            }
+        }
     }
 }

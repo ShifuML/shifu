@@ -15,7 +15,12 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
+import ml.shifu.shifu.core.dtrain.RegulationLevel;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimize;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.WeightOptimizer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -23,9 +28,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * {@link EmbedFieldLayer} is for each column like sparse categorical feature. The input of this layer is one-hot
@@ -41,13 +43,18 @@ import org.slf4j.LoggerFactory;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class EmbedFieldLayer extends AbstractLayer<SparseInput, double[], double[], double[], EmbedFieldLayer>
-        implements WeightInitializer<EmbedFieldLayer> {
+        implements WeightInitializer<EmbedFieldLayer>, Optimize<EmbedFieldLayer> {
     private static final Logger LOG = LoggerFactory.getLogger(EmbedFieldLayer.class);
 
     /**
      * [in, out] array for deep matrix weights
      */
     private double[][] weights;
+
+    /**
+     * [in] array weight optimizers
+     */
+    private WeightOptimizer[] optimizers;
 
     /**
      * Weight gradients in back computation
@@ -306,5 +313,25 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, double[], double
     @Override
     public void update(EmbedFieldLayer gradLayer, Optimizer optimizer, String uniqueKey, double trainCount) {
         optimizer.batchUpdate(this.weights, gradLayer.getwGrads(), uniqueKey, trainCount);
+    }
+
+    @Override
+    public void initOptimizer(double learningRate, String algorithm, double reg, RegulationLevel rl) {
+        this.optimizers = new WeightOptimizer[this.in];
+        for(int i = 0; i < this.in; i++) {
+            this.optimizers[i] = new WeightOptimizer(this.out, learningRate, algorithm, reg, rl);
+        }
+    }
+
+    @Override
+    public void optimizeWeight(double numTrainSize, int iteration, EmbedFieldLayer model) {
+        for(Map.Entry<Integer, double[]> entry: model.getwGrads().entrySet()) {
+            int index = entry.getKey();
+            if(index < this.in) {
+                this.optimizers[index].calculateWeights(this.weights[index], entry.getValue(), iteration, numTrainSize);
+            } else {
+                LOG.error("index {} in EmbedFieldLayer gradient great than in {}", index, this.in);
+            }
+        }
     }
 }

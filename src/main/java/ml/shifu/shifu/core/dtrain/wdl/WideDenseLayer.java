@@ -15,15 +15,17 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
+import ml.shifu.shifu.core.dtrain.RegulationLevel;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimize;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.WeightOptimizer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 
 /**
  * TODO
@@ -31,7 +33,7 @@ import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class WideDenseLayer extends AbstractLayer<double[], double[], double[], double[], WideDenseLayer>
-        implements WeightInitializer<WideDenseLayer> {
+        implements WeightInitializer<WideDenseLayer>, Optimize<WideDenseLayer> {
     @SuppressWarnings("unused")
     private static final Logger LOG = LoggerFactory.getLogger(WideDenseLayer.class);
     /**
@@ -43,6 +45,8 @@ public class WideDenseLayer extends AbstractLayer<double[], double[], double[], 
      * Gradients, using map for sparse updates
      */
     private double[] wGrads;
+
+    private WeightOptimizer optimizer;
 
     /**
      * # of inputs
@@ -291,5 +295,15 @@ public class WideDenseLayer extends AbstractLayer<double[], double[], double[], 
      */
     public void setDebug(boolean isDebug) {
         this.isDebug = isDebug;
+    }
+
+    @Override
+    public void initOptimizer(double learningRate, String algorithm, double reg, RegulationLevel rl) {
+        this.optimizer = new WeightOptimizer(this.in, learningRate, algorithm, reg, rl);
+    }
+
+    @Override
+    public void optimizeWeight(double numTrainSize, int iteration, WideDenseLayer model) {
+        this.optimizer.calculateWeights(this.weights, model.getwGrads(), iteration, numTrainSize);
     }
 }
