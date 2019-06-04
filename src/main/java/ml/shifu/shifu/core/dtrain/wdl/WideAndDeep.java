@@ -18,8 +18,10 @@ package ml.shifu.shifu.core.dtrain.wdl;
 import ml.shifu.guagua.io.Bytable;
 import ml.shifu.guagua.io.Combinable;
 import ml.shifu.shifu.core.dtrain.AssertUtils;
+import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import static ml.shifu.shifu.core.dtrain.wdl.SerializationUtil.NULL;
 import ml.shifu.shifu.core.dtrain.wdl.activation.*;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimize;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.util.Tuple;
 import org.apache.commons.lang.StringUtils;
@@ -45,7 +47,8 @@ import java.util.stream.Collectors;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Combinable<WideAndDeep> {
+public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Combinable<WideAndDeep>,
+        Optimize<WideAndDeep> {
 
     private static final Logger LOG = LoggerFactory.getLogger(WideAndDeep.class);
 
@@ -242,7 +245,7 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
         double[] grad2Logits = new double[predicts.length];
         for(int i = 0; i < grad2Logits.length; i++) {
             double error = (predicts[i] - actuals[i]);
-            grad2Logits[i] = error * (derivedFunction(predicts[i]) + 0.1f) * sig;
+            grad2Logits[i] = error * (derivedFunction(predicts[i]) + 0.1f) * sig * -1;
             // grad2Logits[i] = error * (derivedFunction(predicts[i]) + 0.1f);
         }
 
@@ -816,6 +819,34 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
      */
     public void setIndex(int index) {
         this.index = index;
+    }
+
+    @Override
+    public void initOptimizer(double learningRate, String algorithm, double reg, RegulationLevel rl) {
+        for(Layer layer: this.hiddenLayers) {
+            // There are two type of layer: DenseLayer, Activation. We only need to init DenseLayer
+            if(layer instanceof DenseLayer) {
+                ((DenseLayer) layer).initOptimizer(learningRate, algorithm, reg, rl);
+            }
+        }
+        this.finalLayer.initOptimizer(learningRate, algorithm, reg, rl);
+        this.ecl.initOptimizer(learningRate, algorithm, reg, rl);
+        this.wl.initOptimizer(learningRate, algorithm, reg, rl);
+    }
+
+    @Override
+    public void optimizeWeight(double numTrainSize, int iteration, WideAndDeep gradWnd) {
+        List<Layer> gradHLs = gradWnd.getHiddenLayers();
+        for(int i = 0; i < this.hiddenLayers.size(); i++) {
+            Layer tmpLayer = this.hiddenLayers.get(i);
+            if(tmpLayer instanceof DenseLayer) {
+                ((DenseLayer) tmpLayer).optimizeWeight(numTrainSize, iteration, (DenseLayer) gradHLs.get(i));
+            }
+        }
+
+        this.finalLayer.optimizeWeight(numTrainSize, iteration, gradWnd.getFinalLayer());
+        this.ecl.optimizeWeight(numTrainSize, iteration, gradWnd.getEcl());
+        this.wl.optimizeWeight(numTrainSize, iteration, gradWnd.getWl());
     }
 
     /**

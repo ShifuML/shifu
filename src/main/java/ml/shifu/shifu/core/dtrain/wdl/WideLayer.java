@@ -16,7 +16,9 @@
 package ml.shifu.shifu.core.dtrain.wdl;
 
 import ml.shifu.shifu.core.dtrain.AssertUtils;
+import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import static ml.shifu.shifu.core.dtrain.wdl.SerializationUtil.NULL;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimize;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.util.Tuple;
 import org.slf4j.Logger;
@@ -39,7 +41,7 @@ import java.util.List;
  */
 public class WideLayer
         extends AbstractLayer<Tuple<List<SparseInput>, double[]>, double[], double[], List<double[]>, WideLayer>
-        implements WeightInitializer<WideLayer> {
+        implements WeightInitializer<WideLayer>, Optimize<WideLayer> {
     @SuppressWarnings("unused")
     private static final Logger LOG = LoggerFactory.getLogger(WideLayer.class);
     /**
@@ -307,4 +309,19 @@ public class WideLayer
         this.isDebug = isDebug;
     }
 
+    @Override
+    public void initOptimizer(double learningRate, String algorithm, double reg, RegulationLevel rl) {
+        for(WideFieldLayer wideFieldLayer: this.layers) {
+            wideFieldLayer.initOptimizer(learningRate, algorithm, reg, rl);
+        }
+        this.denseLayer.initOptimizer(learningRate, algorithm, reg, rl);
+    }
+
+    @Override
+    public void optimizeWeight(double numTrainSize, int iteration, WideLayer model) {
+        for(int i = 0; i < this.layers.size(); i++) {
+            this.layers.get(i).optimizeWeight(numTrainSize, iteration, model.getLayers().get(i));
+        }
+        this.denseLayer.optimizeWeight(numTrainSize, iteration, model.getDenseLayer());
+    }
 }

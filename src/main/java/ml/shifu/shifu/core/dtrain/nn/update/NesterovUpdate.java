@@ -25,8 +25,6 @@ package ml.shifu.shifu.core.dtrain.nn.update;
 
 import java.util.Set;
 
-import ml.shifu.shifu.core.dtrain.Weight;
-
 /**
  * Created by jeffh on 7/15/2016.
  * 
@@ -42,10 +40,10 @@ public class NesterovUpdate implements UpdateRule {
     private double momentum;
 
     @Override
-    public void init(Weight weight) {
-        this.learningRate = weight.getLearningRate();
-        this.lastDelta = new double[weight.getNumWeight()];
-        this.momentum = weight.getMomentum();
+    public void init(Update update) {
+        this.learningRate = update.getLearningRate();
+        this.lastDelta = new double[update.getNumWeight()];
+        this.momentum = update.getMomentum();
     }
 
     @Override

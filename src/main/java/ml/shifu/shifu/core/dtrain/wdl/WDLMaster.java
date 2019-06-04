@@ -22,7 +22,7 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.GradientDescent;
+import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -35,11 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * {@link WDLMaster} is master logic in wide and deep implementation based on Guagua.
@@ -156,11 +152,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         this.wnd = new WideAndDeep(wideEnable, deepEnable, embedEnable, idBinCateSizeMap, numInputs, numericalIds,
                 embedColumnIds, embedOutputList, wideColumnIds, hiddenNodes, actFunc, l2reg);
         // TODO: make this configurable
-        if(null == this.optimizer) {
-            this.optimizer = new GradientDescent(learningRate);
-        } else {
-            LOG.error("Try to init optimizer in master!");
-        }
+        this.wnd.initOptimizer(learningRate, DTrainUtils.RESILIENTPROPAGATION, l2reg, RegulationLevel.L2);
 
     }
 
@@ -175,11 +167,11 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         // aggregate all worker gradients to one gradient object.
         WDLParams aggregation = aggregateWorkerGradients(context);
 
-        LOG.info("Master gradients in dense layer {}",
-                Arrays.toString(aggregation.getWnd().getWl().getDenseLayer().getwGrads()));
+//        LOG.info("Master gradients in dense layer {}",
+//                Arrays.toString(aggregation.getWnd().getWl().getDenseLayer().getwGrads()));
 
         // apply optimizer
-        this.wnd.update(aggregation.getWnd(), optimizer, aggregation.getTrainSize());
+        this.wnd.optimizeWeight(aggregation.getTrainSize(), context.getCurrentIteration() - 1, aggregation.getWnd());
         LOG.info("train size: {}, error: {}", aggregation.getTrainCount(), aggregation.getTrainError());
 
         // construct master result which contains WideAndDeep current model weights
@@ -224,11 +216,6 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         }
         // weights from this.wnd
         params.setWnd(this.wnd);
-
-        // LOG.info("Init dense weights: " + Arrays.toString(this.wnd.getWl().getDenseLayer().getWeights()));
-        // for(WideFieldLayer wfl: this.wnd.getWl().getLayers()) {
-        // LOG.info("Init wide weights: " + Arrays.toString(wfl.getWeights()));
-        // }
 
         return params;
     }
