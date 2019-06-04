@@ -85,20 +85,20 @@ public class WideDenseLayer extends AbstractLayer<double[], double[], double[], 
 
     @Override
     public double[] forward(double[] inputs) {
-//        if(this.isDebug) {
-//            LOG.info("WideDenseLayer weights:" + Arrays.toString(this.weights));
-//            LOG.info("WideDenseLayer inputs:" + Arrays.toString(inputs));
-//        }
+        // if(this.isDebug) {
+        // LOG.info("WideDenseLayer weights:" + Arrays.toString(this.weights));
+        // LOG.info("WideDenseLayer inputs:" + Arrays.toString(inputs));
+        // }
         this.lastInput = inputs;
         double[] results = new double[1];
         for(int i = 0; i < inputs.length; i++) {
-//            LOG.debug("inputs[i]=" + inputs[i] + "this.weights[i]=" + this.weights[i]);
+            // LOG.debug("inputs[i]=" + inputs[i] + "this.weights[i]=" + this.weights[i]);
             results[0] += inputs[i] * this.weights[i];
         }
 
-//        if(this.isDebug) {
-//            LOG.info("WideDenseLayer results:" + Arrays.toString(results));
-//        }
+        // if(this.isDebug) {
+        // LOG.info("WideDenseLayer results:" + Arrays.toString(results));
+        // }
         return results;
     }
 
@@ -109,14 +109,14 @@ public class WideDenseLayer extends AbstractLayer<double[], double[], double[], 
             // basic derivatives
             this.wGrads[i] += (this.lastInput[i] * backInputs[0]);
             // l2 loss derivatives
-            //            this.wGrads[i] += (this.l2reg * backInputs[0]);
+            this.wGrads[i] += (this.l2reg * backInputs[0]);
         }
 
-//        if(this.isDebug()) {
-//            LOG.info(" Training l2reg {}, backInputs {}, last input {}.", l2reg, backInputs[0],
-//                    Arrays.toString(lastInput));
-//            LOG.info(" Training dense wGradients: {}.", Arrays.toString(wGrads));
-//        }
+        // if(this.isDebug()) {
+        // LOG.info(" Training l2reg {}, backInputs {}, last input {}.", l2reg, backInputs[0],
+        // Arrays.toString(lastInput));
+        // LOG.info(" Training dense wGradients: {}.", Arrays.toString(wGrads));
+        // }
 
         // no need compute backward outputs as it is last layer
         return null;

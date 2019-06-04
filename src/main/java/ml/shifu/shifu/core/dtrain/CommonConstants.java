@@ -20,8 +20,7 @@ public interface CommonConstants {
     public static final double DEFAULT_SIGNIFICANCE_VALUE = 1.0d;
     public static final String MAPREDUCE_PARAM_FORMAT = "-D%s=%s";
 
-
-    /* --------------   Other Constants  ---------------------- */
+    /* -------------- Other Constants ---------------------- */
     public static final String DEFAULT_COLUMN_SEPARATOR = "|";
 
     public static final String NAMESPACE_DELIMITER = "::";
@@ -32,8 +31,7 @@ public interface CommonConstants {
 
     public static final int PART_FILE_COUNT_THRESHOLD = 20;
 
-
-    /* --------------   Shifu setting Constants  ---------------------- */
+    /* -------------- Shifu setting Constants ---------------------- */
     public static final String MODELSET_SOURCE_TYPE = "shifu.source.type";
 
     public static final String SHIFU_COLUMN_CONFIG = "shifu.column.config";
@@ -71,15 +69,14 @@ public interface CommonConstants {
 
     public static final String SHIFU_TRAIN_EARLYSTOP_WINDOW_SIZE = "shifu.train.earlystop.window.size";
 
-    /* --------------   Other setting Constants  ---------------------- */
+    /* -------------- Other setting Constants ---------------------- */
     public static final String MAPREDUCE_MAP_CPU_VCORES = "mapreduce.map.cpu.vcores";
 
     public static final String GS_VALIDATION_ERROR = "gridsearch.validation.error";
 
     public static final String GUAGUA_OUTPUT = "guagua.output";
 
-
-    /* --------------   Train Configuration Constants  ---------------------- */
+    /* -------------- Train Configuration Constants ---------------------- */
     public static final String RF_ALG_NAME = "RF";
 
     public static final String GBT_ALG_NAME = "GBT";
@@ -101,12 +98,12 @@ public interface CommonConstants {
     public static final String PROPAGATION = "Propagation";
 
     public static final String OUTPUT_ACTIVATION_FUNC = "OutputActivationFunc";
-    
+
     public static final String NUM_EMBED_COLUMN_IDS = "NumEmbedColumnIds";
-    
+
     public static final String NUM_EMBED_OUTPUTS = "NumEmbedOuputs";
 
-    /* --------------   Train Param Constants  ---------------------- */
+    /* -------------- Train Param Constants ---------------------- */
     public static final String REGULARIZED_CONSTANT = "RegularizedConstant";
 
     public static final String FIXED_LAYERS = "FixedLayers";
@@ -122,21 +119,19 @@ public interface CommonConstants {
     public static final String LEARNING_DECAY = "LearningDecay";
 
     public static final String WEIGHT_INITIALIZER = "WeightInitializer";
-    
+
     public static final String MINI_BATCH = "MiniBatchs";
-    
-    /* --------------   TF Constants  ---------------------- */
+
+    /* -------------- TF Constants ---------------------- */
     public static final String TF_OPTIMIZER = "TF.optimizer";
 
     public static final String TF_LOSS = "TF.loss";
 
     public static final String TF_ALG = "TF.alg";
 
-
-    /* --------------   varsel Constants  ---------------------- */
+    /* -------------- varsel Constants ---------------------- */
     public static final String OP_METRIC = "OpMetric";
     public static final String OP_UNIT = "OpUnit";
-
 
     /**
      * Version 2: support final selected columns
@@ -150,5 +145,11 @@ public interface CommonConstants {
     public static final int WDL_FORMAT_VERSION = 1;
 
     public static final int DEFAULT_EMBEDING_OUTPUT = 16;
+
+    public static final String WIDE_ENABLE = "wideEnable";
+
+    public static final String DEEP_ENABLE = "deepEnable";
+
+    public static final String EMBED_ENABLE = "embedEnable";
 
 }
