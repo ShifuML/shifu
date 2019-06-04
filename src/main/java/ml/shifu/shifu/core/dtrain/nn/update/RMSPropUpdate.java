@@ -25,8 +25,6 @@ package ml.shifu.shifu.core.dtrain.nn.update;
 
 import java.util.Set;
 
-import ml.shifu.shifu.core.dtrain.Weight;
-
 /**
  * Created by jeffh on 7/15/2016.
  * 
@@ -41,10 +39,10 @@ public class RMSPropUpdate implements UpdateRule {
     private double learningRate;
 
     @Override
-    public void init(Weight weight) {
-        this.learningRate = weight.getLearningRate();
-        this.cache = new double[weight.getNumWeight()];
-        this.decayRate = weight.getLearningDecay();
+    public void init(Update update) {
+        this.learningRate = update.getLearningRate();
+        this.cache = new double[update.getNumWeight()];
+        this.decayRate = update.getLearningDecay();
     }
 
     @Override

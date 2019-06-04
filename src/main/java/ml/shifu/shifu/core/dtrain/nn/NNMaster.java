@@ -240,13 +240,13 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         double totalTestSum = 0.0d;
         int totalWorkerCount = 0;
         for(NNParams nn : context.getWorkerResults()) {
-            totalTestError += nn.getTestError();
+            totalTestError += nn.getValidationError();
             totalTrainError += nn.getTrainError();
             this.globalNNParams.accumulateGradients(nn.getGradients());
             this.globalNNParams.accumulateTrainSize(nn.getTrainSize());
             totalCount += nn.getCount();
             totalTrainSum += nn.getTrainSum();
-            totalTestSum += nn.getTestSum();
+            totalTestSum += nn.getValidationSum();
             // original worker count before combinable
             totalWorkerCount += nn.getWrCount();
             size++;
@@ -304,7 +304,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
 
         NNParams params = new NNParams();
         params.setTrainError(currentTrainError);
-        params.setTestError(currentTestError);
+        params.setValidationError(currentTestError);
         // prevent null point
         params.setGradients(new double[0]);
         params.setEvaluatedWeights(oldWeights);
@@ -396,7 +396,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         this.flatNetwork = (FloatFlatNetwork) network.getFlat();
 
         params.setTrainError(0);
-        params.setTestError(0);
+        params.setValidationError(0);
         // prevent null point
         params.setGradients(new double[0]);
         params.setWeights(network.getFlat().getWeights());

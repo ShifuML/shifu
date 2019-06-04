@@ -40,6 +40,7 @@ public class BasicUpdater {
     protected Map<String, Double> hybridColumnNames;
     protected Map<String, Integer> categoricalColumnHashSeeds;
     
+    @SuppressWarnings("unused")
     private final static Logger LOG = LoggerFactory.getLogger(BasicUpdater.class);
 
 

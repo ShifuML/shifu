@@ -31,7 +31,7 @@ public class AdaGrad implements Optimizer {
     }
 
     @Override
-    public void update(float[] weight, float[] grad, String uniqueKey) {
+    public void update(double[] weight, double[] grad, String uniqueKey, double trainCount) {
         if(weight == null || grad == null || grad.length == 0 || weight.length != grad.length) {
             return;
         }
@@ -50,19 +50,19 @@ public class AdaGrad implements Optimizer {
     }
 
     @Override
-    public void update(float[] weight, Map<Integer, Float> grad, String uniqueKey) {
+    public void update(double[] weight, Map<Integer, Double> grad, String uniqueKey, double trainCount) {
         if(weight == null || weight.length == 0 || grad == null || grad.size() == 0) {
             return;
         }
 
         double sumG2 = 0;
-        for(Entry<Integer, Float> entry: grad.entrySet()) {
+        for(Entry<Integer, Double> entry: grad.entrySet()) {
             sumG2 += entry.getValue() * entry.getValue();
         }
         double sumG2Sqrt = Math.sqrt(sumG2) + 0.000001;
 
         int len = weight.length;
-        for(Entry<Integer, Float> entry: grad.entrySet()) {
+        for(Entry<Integer, Double> entry: grad.entrySet()) {
             int index = entry.getKey();
             double delta = learningRate * entry.getValue() / sumG2Sqrt;
             if(index < len) {
@@ -72,8 +72,8 @@ public class AdaGrad implements Optimizer {
     }
 
     @Override
-    public float updateWeight(float gradient, String uniqueKey) {
-        return Double.valueOf(this.learningRate * gradient).floatValue();
+    public double updateWeight(double gradient, String uniqueKey, double trainCount) {
+        return Double.valueOf(this.learningRate * gradient).doubleValue();
     }
 
     public double getLearningRate() {

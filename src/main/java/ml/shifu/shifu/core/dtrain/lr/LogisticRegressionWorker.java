@@ -19,6 +19,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -305,29 +306,35 @@ public class LogisticRegressionWorker extends
             return new LogisticRegressionParams();
         } else {
             this.weights = context.getLastMasterResult().getParameters();
+            LOG.info("Weights {}.", Arrays.toString(this.weights));
+
             double[] gradients = new double[this.inputNum + 1];
             double trainingFinalError = 0.0d;
-            double testingFinalError = 0.0d;
-            long trainingSize = this.trainingData.size();
-            long testingSize = this.validationData.size();
+            double validationFinalError = 0.0d;
+            double wgtTrainSize = 0d;
+            double wgtValidationError = 0d;
             this.trainingData.reOpen();
             for(Data data: trainingData) {
-                double result = sigmoid(data.inputs, this.weights);
+                wgtTrainSize += data.getSignificance();
+                double logits = logits(data.inputs, this.weights);
+                double result = sigmoid(logits);
                 double error = data.outputs[0] - result;
-                trainingFinalError += caculateMSEError(error);
+                trainingFinalError += caculateMSEError(error) * data.getSignificance();
+                double[] tmpGradients = new double[gradients.length];
                 for(int i = 0; i < gradients.length; i++) {
                     if(i < gradients.length - 1) {
                         // compute gradient for each weight, this is not like traditional LR (no derived function), with
                         // derived function, we see good convergence speed in our models.
                         // TODO extract function to provide traditional lr gradients and derived version for user to
                         // configure
-                        gradients[i] += error * data.inputs[i] * (derivedFunction(result) + FLAT_SPOT_VALUE)
+                        tmpGradients[i] = error * data.inputs[i] * (derivedFunction(result) + FLAT_SPOT_VALUE)
                                 * data.getSignificance();
                     } else {
                         // for bias parameter, input is a constant 1d
-                        gradients[i] += error * 1d * (derivedFunction(result) + FLAT_SPOT_VALUE)
+                        tmpGradients[i] = error * 1d * (derivedFunction(result) + FLAT_SPOT_VALUE)
                                 * data.getSignificance();
                     }
+                    gradients[i] += tmpGradients[i];
                 }
             }
 
@@ -335,16 +342,19 @@ public class LogisticRegressionWorker extends
             // TODO here we should use current weights+gradients to compute testing error, so far it is for last error
             // computing.
             for(Data data: validationData) {
-                double result = sigmoid(data.inputs, this.weights);
+                wgtValidationError += data.getSignificance();
+                double logits = logits(data.inputs, this.weights);
+                double result = sigmoid(logits);
                 double error = result - data.outputs[0];
-                testingFinalError += caculateMSEError(error);
+                validationFinalError += caculateMSEError(error) * data.getSignificance();
             }
+
             LOG.info("Iteration {} training data with error {}", context.getCurrentIteration(),
-                    trainingFinalError / trainingSize);
+                    trainingFinalError / wgtTrainSize);
             LOG.info("Iteration {} testing data with error {}", context.getCurrentIteration(),
-                    testingFinalError / testingSize);
-            return new LogisticRegressionParams(gradients, trainingFinalError, testingFinalError, trainingSize,
-                    testingSize);
+                    validationFinalError / wgtValidationError);
+            return new LogisticRegressionParams(gradients, trainingFinalError, validationFinalError, wgtTrainSize,
+                    wgtValidationError, this.trainingData.size(), this.validationData.size());
         }
     }
 
@@ -365,14 +375,18 @@ public class LogisticRegressionWorker extends
     /**
      * Compute sigmoid value by dot operation of two vectors.
      */
-    private double sigmoid(float[] inputs, double[] weights) {
+    private double logits(float[] inputs, double[] weights) {
         double value = 0.0d;
         for(int i = 0; i < inputs.length; i++) {
             value += weights[i] * inputs[i];
         }
         // append bias
         value += weights[inputs.length] * 1d;
-        return 1.0d / (1.0d + BoundMath.exp(-1 * value));
+        return value;
+    }
+
+    private double sigmoid(double logit) {
+        return 1.0d / (1.0d + BoundMath.exp(-1 * logit));
     }
 
     @SuppressWarnings("unused")

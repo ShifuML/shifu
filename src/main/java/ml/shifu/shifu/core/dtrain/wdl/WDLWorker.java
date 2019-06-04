@@ -34,9 +34,11 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.MapReduceUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.encog.mathutil.BoundMath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +55,8 @@ import java.util.stream.Collectors;
  * iteration.
  * 
  * <p>
- * Data loading into memory as memory list includes two parts: numerical float array and sparse input object array which
+ * Data loading into memory as memory list includes two parts: numerical double array and sparse input object array
+ * which
  * is for categorical variables. To leverage sparse feature of categorical variables, sparse object is leveraged to
  * save memory and matrix computation.
  * 
@@ -238,7 +241,8 @@ public class WDLWorker extends
     private WideAndDeep wnd;
 
     /**
-     * Logic to load data into memory list which includes float array for numerical features and sparse object array for
+     * Logic to load data into memory list which includes double array for numerical features and sparse object array
+     * for
      * categorical features.
      */
     @Override
@@ -250,29 +254,29 @@ public class WDLWorker extends
 
         // hashcode for fixed input split in train and validation
         long hashcode = 0;
-        float[] inputs = new float[this.numInputs];
+        double[] inputs = new double[this.numInputs];
         this.cateInputs = (int) this.columnConfigList.stream().filter(ColumnConfig::isCategorical).count();
         SparseInput[] cateInputs = new SparseInput[this.cateInputs];
-        float ideal = 0f, significance = 1f;
+        double ideal = 0d, significance = 1d;
         int index = 0, numIndex = 0, cateIndex = 0;
         // use guava Splitter to iterate only once
         for(String input: this.splitter.split(currentValue.getWritable().toString())) {
-            // if no wgt column at last pos, no need process here 
+            // if no wgt column at last pos, no need process here
             if(index == this.columnConfigList.size()) {
                 significance = getWeightValue(input);
                 break; // the last field is significance, break here
             } else {
                 ColumnConfig config = this.columnConfigList.get(index);
                 if(config != null && config.isTarget()) {
-                    ideal = getFloatValue(input);
+                    ideal = getDoubleValue(input);
                 } else {
                     // final select some variables but meta and target are not included
                     if(validColumn(config)) {
                         if(config.isNumerical()) {
-                            inputs[numIndex] = getFloatValue(input);
+                            inputs[numIndex] = getDoubleValue(input);
                             this.inputIndexMap.putIfAbsent(config.getColumnNum(), numIndex++);
                         } else if(config.isCategorical()) {
-                            cateInputs[cateIndex] = new SparseInput(config.getColumnNum(), getCateIndex(input, config));
+                            cateInputs[cateIndex] = new SparseInput(config.getColumnNum(), (int) getDoubleValue(input));
                             this.inputIndexMap.putIfAbsent(config.getColumnNum(), cateIndex++);
                         }
                         hashcode = hashcode * 31 + input.hashCode();
@@ -309,7 +313,7 @@ public class WDLWorker extends
                 || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()));
     }
 
-    private boolean sampleNegOnly(long hashcode, float ideal) {
+    private boolean sampleNegOnly(long hashcode, double ideal) {
         boolean ret = false;
         if(modelConfig.getTrain().getSampleNegOnly()) {
             double bagSampleRate = this.modelConfig.getBaggingSampleRate();
@@ -407,7 +411,7 @@ public class WDLWorker extends
             }
         } else {
             if(Double.compare(this.modelConfig.getValidSetRate(), 0d) != 0) {
-                int classValue = (int) (data.label + 0.01f);
+                int classValue = (int) (data.label + 0.01d);
                 Random random = null;
                 if(this.isStratifiedSampling) {
                     // each class use one random instance
@@ -482,8 +486,8 @@ public class WDLWorker extends
         }
     }
 
-    private boolean isPositive(float value) {
-        return Float.compare(1f, value) == 0;
+    private boolean isPositive(double value) {
+        return Double.compare(1d, value) == 0;
     }
 
     private boolean isInRange(long hashcode, int startHashCode, int endHashCode) {
@@ -501,7 +505,7 @@ public class WDLWorker extends
     /**
      * If no enough columns for model training, most of the cases root cause is from inconsistent delimiter.
      */
-    private void validateInputLength(WorkerContext<WDLParams, WDLParams> context, float[] inputs, int numInputIndex) {
+    private void validateInputLength(WorkerContext<WDLParams, WDLParams> context, double[] inputs, int numInputIndex) {
         if(numInputIndex != inputs.length) {
             String delimiter = context.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER,
                     Constants.DEFAULT_DELIMITER);
@@ -523,6 +527,7 @@ public class WDLWorker extends
         }
     }
 
+    @SuppressWarnings("unused")
     private int getCateIndex(String input, ColumnConfig columnConfig) {
         int shortValue = (columnConfig.getBinCategory().size());
         if(input.length() == 0) { // missing which is invalid category
@@ -537,25 +542,25 @@ public class WDLWorker extends
         return shortValue;
     }
 
-    private float getWeightValue(String input) {
-        float significance = 1f;
+    private double getWeightValue(String input) {
+        double significance = 1d;
         if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())) {
-            // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 1f)
-            significance = input.length() == 0 ? 1f : NumberFormatUtils.getFloat(input, 1f);
-            // if invalid weight, set it to 1f and warning in log
-            if(significance < 0f) {
+            // check here to avoid bad performance in failed NumberFormatUtils.getDouble(input, 1d)
+            significance = input.length() == 0 ? 1d : NumberFormatUtils.getDouble(input, 1d);
+            // if invalid weight, set it to 1d and warning in log
+            if(significance < 0d) {
                 LOG.warn("Record {} with weight {} is less than 0 and invalid, set it to 1.", count, significance);
-                significance = 1f;
+                significance = 1d;
             }
         }
         return significance;
     }
 
-    private float getFloatValue(String input) {
-        // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-        float floatValue = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(input, 0f);
+    private double getDoubleValue(String input) {
+        // check here to avoid bad performance in failed NumberFormatUtils.getDouble(input, 0d)
+        double doubleValue = input.length() == 0 ? 0d : NumberFormatUtils.getDouble(input, 0d);
         // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
-        return (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
+        return (Double.isNaN(doubleValue) || Double.isNaN(doubleValue)) ? 0d : doubleValue;
     }
 
     @Override
@@ -656,9 +661,13 @@ public class WDLWorker extends
         int numLayers = (Integer) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
-        Float l2reg = ((Double) this.validParams.get(CommonConstants.WDL_L2_REG)).floatValue();
-        this.wnd = new WideAndDeep(idBinCateSizeMap, numInputs, numericalIds, embedColumnIds, embedOutputList,
-                wideColumnIds, hiddenNodes, actFunc, l2reg);
+        double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0d);
+        Object wideEnableObj = this.validParams.get(CommonConstants.WIDE_ENABLE);
+        boolean wideEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.WIDE_ENABLE), true);
+        boolean deepEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.DEEP_ENABLE), true);
+        boolean embedEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.EMBED_ENABLE), true);
+        this.wnd = new WideAndDeep(wideEnable, deepEnable, embedEnable, idBinCateSizeMap, numInputs, numericalIds,
+                embedColumnIds, embedOutputList, wideColumnIds, hiddenNodes, actFunc, l2reg);
     }
 
     private void initCateIndexMap() {
@@ -687,40 +696,80 @@ public class WDLWorker extends
         // update master global model into worker WideAndDeep graph
         this.wnd.updateWeights(context.getLastMasterResult());
 
+        // LOG.info("Init dense weights: {}.", Arrays.toString(this.wnd.getWl().getDenseLayer().getWeights()));
+        // for(WideFieldLayer wfl: this.wnd.getWl().getLayers()) {
+        // LOG.info("Init wide weights: {}.", Arrays.toString(wfl.getWeights()));
+        // }
+
+        long start = System.currentTimeMillis();
         // forward and backward compute gradients for each iteration
-        int trainCnt = trainingData.size(), validCnt = validationData.size();
+        double trainCnt = trainingData.size(), validCnt = validationData.size();
+        double trainSize = 0, validationSize = 0;
         double trainSumError = 0d, validSumError = 0d;
+        // LOG.info("Before training dense wGradients: {}.", Arrays.toString(wnd.getWl().getDenseLayer().getwGrads()));
+
+        int index = 0;
         for(Data data: trainingData) {
-            float[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data), getWideInputs(data));
-            float predict = sigmoid(logits[0]);
-            float error = predict - data.label;
-            // TODO, logloss, squredloss, weighted error or not
-            trainSumError +=  data.getWeight() * error * error;
-            this.wnd.backward(new float[] { predict }, new float[] { data.label }, data.getWeight());
+            if(index <= 30) {
+                this.wnd.setDebug(false);
+                this.wnd.getWl().getDenseLayer().setDebug(false);
+            } else {
+                this.wnd.getWl().getDenseLayer().setDebug(false);
+                this.wnd.setDebug(false);
+            }
+            trainSize += data.getWeight();
+            double[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data), getWideInputs(data));
+            double predict = sigmoid(logits[0]);
+            double error = predict - data.label;
+            trainSumError += (error * error * data.getWeight());
+            this.wnd.backward(new double[] { predict }, new double[] { data.label }, data.getWeight());
+            index += 1;
         }
+
+        // LOG.info("After training dense wGradients: {}.", Arrays.toString(wnd.getWl().getDenseLayer().getwGrads()));
+
+        LOG.info("Worker with training time {} ms.", (System.currentTimeMillis() - start));
+
+        start = System.currentTimeMillis();
+        index = 0;
+
+        LOG.info("Start validation computation.");
+
+        this.wnd.setIndex(0);
 
         // compute validation error
         for(Data data: validationData) {
-            float[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data), getWideInputs(data));
-            float error = sigmoid(logits[0]) - data.label;
-            validSumError += data.weight * error * error;
+            double[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data), getWideInputs(data));
+            double sigmoid = sigmoid(logits[0]);
+            if(index++ <= 0) {
+                LOG.info("Index {}, logit {}, sigmoid {}, label {}.", index, logits[0], sigmoid, data.label);
+            }
+            validationSize += data.getWeight();
+            double error = sigmoid - data.label;
+            validSumError += (error * error * data.getWeight());
         }
-        
+
         LOG.info("training error is {} {}", trainSumError, validSumError);
+        LOG.info("Worker gradients in dense layer {}", Arrays.toString(this.wnd.getWl().getDenseLayer().getwGrads()));
         // set cnt, error to params and return to master
         WDLParams params = new WDLParams();
         params.setTrainCount(trainCnt);
         params.setValidationCount(validCnt);
+        params.setTrainSize(trainSize);
+        params.setValidationSize(validationSize);
         params.setTrainError(trainSumError);
         params.setValidationError(validSumError);
         params.setSerializationType(SerializationType.GRADIENTS);
         this.wnd.setSerializationType(SerializationType.GRADIENTS);
         params.setWnd(this.wnd);
+        LOG.info("Worker with validation run time {} ms.", (System.currentTimeMillis() - start));
+
         return params;
     }
 
-    public float sigmoid(float logit) {
-        return (float) (1 / (1 + Math.min(1.0E19, Math.exp(-logit))));
+    public double sigmoid(double logit) {
+        // return (double) (1 / (1 + Math.min(1.0E19, Math.exp(-logit))));
+        return 1.0d / (1.0d + BoundMath.exp(-1 * logit));
     }
 
     private List<SparseInput> getWideInputs(Data data) {
@@ -768,7 +817,7 @@ public class WDLWorker extends
     }
 
     /**
-     * {@link Data} denotes training record with a float array of dense (numerical) inputs and a list of sparse inputs
+     * {@link Data} denotes training record with a double array of dense (numerical) inputs and a list of sparse inputs
      * of categorical input features.
      * 
      * @author Zhang David (pengzhang@paypal.com)
@@ -778,7 +827,7 @@ public class WDLWorker extends
         /**
          * Numerical values
          */
-        private float[] numericalValues;
+        private double[] numericalValues;
 
         /**
          * Categorical values in sparse object
@@ -788,12 +837,12 @@ public class WDLWorker extends
         /**
          * The weight of one training record like dollar amount in one txn
          */
-        private float weight;
+        private double weight;
 
         /**
          * Target value of one record
          */
-        private float label;
+        private double label;
 
         /**
          * Constructor for a unified data object which is for a line of training record.
@@ -807,7 +856,7 @@ public class WDLWorker extends
          * @param ideal
          *            the label field, 0 or 1
          */
-        public Data(float[] numericalValues, SparseInput[] categoricalValues, float weight, float ideal) {
+        public Data(double[] numericalValues, SparseInput[] categoricalValues, double weight, double ideal) {
             this.numericalValues = numericalValues;
             this.categoricalValues = categoricalValues;
             this.weight = weight;
@@ -817,7 +866,7 @@ public class WDLWorker extends
         /**
          * @return the numericalValues
          */
-        public float[] getNumericalValues() {
+        public double[] getNumericalValues() {
             return numericalValues;
         }
 
@@ -825,7 +874,7 @@ public class WDLWorker extends
          * @param numericalValues
          *            the numericalValues to set
          */
-        public void setNumericalValues(float[] numericalValues) {
+        public void setNumericalValues(double[] numericalValues) {
             this.numericalValues = numericalValues;
         }
 
@@ -847,7 +896,7 @@ public class WDLWorker extends
         /**
          * @return the weight
          */
-        public float getWeight() {
+        public double getWeight() {
             return weight;
         }
 
@@ -855,14 +904,14 @@ public class WDLWorker extends
          * @param weight
          *            the weight to set
          */
-        public void setWeight(float weight) {
+        public void setWeight(double weight) {
             this.weight = weight;
         }
 
         /**
          * @return the ideal
          */
-        public float getLabel() {
+        public double getLabel() {
             return label;
         }
 
@@ -870,7 +919,7 @@ public class WDLWorker extends
          * @param ideal
          *            the ideal to set
          */
-        public void setLabel(float ideal) {
+        public void setLabel(double ideal) {
             this.label = ideal;
         }
 

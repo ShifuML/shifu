@@ -27,15 +27,15 @@ public class Sigmoid extends Activation {
     /**
      * Last forward results which saved in forward but used in backward.
      */
-    private float[] lastForward;
+    private double[] lastForward;
 
     @Override
-    public float[] forward(float[] in) {
+    public double[] forward(double[] in) {
         AssertUtils.assertNotNull(in);
 
-        float[] results = new float[in.length];
+        double[] results = new double[in.length];
         for(int i = 0; i < results.length; i++) {
-            results[i] = (float) (1 / (1 + Math.min(1.0E19, Math.exp(-1 * in[i]))));
+            results[i] = (double) (1 / (1 + Math.min(1.0E19, Math.exp(-1 * in[i]))));
         }
 
         // temp saved for backward usage
@@ -44,10 +44,10 @@ public class Sigmoid extends Activation {
     }
 
     @Override
-    public float[] backward(float[] out) {
-        AssertUtils.assertFloatArrayNotNullAndLengthEqual(out, lastForward);
+    public double[] backward(double[] out) {
+        AssertUtils.assertDoubleArrayNotNullAndLengthEqual(out, lastForward);
 
-        float[] results = new float[out.length];
+        double[] results = new double[out.length];
         for(int i = 0; i < results.length; i++) {
             results[i] = out[i] * lastForward[i] * (1f - lastForward[i]);
         }

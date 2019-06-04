@@ -172,7 +172,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             this.optimizedWeights = context.getMasterResult().getWeights();
         } else {
             double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON) ? context.getMasterResult()
-                    .getTrainError() : context.getMasterResult().getTestError());
+                    .getTrainError() : context.getMasterResult().getValidationError());
             if ( currentError < this.minTestError ) {
                 this.minTestError = currentError;
                 // the optimizedWeights are the weights just evaluated, not current weights after applying gradients
@@ -226,7 +226,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         String progress = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Epoch #")
                 .append(currentIteration - 1).append(" Training Error:")
                 .append(String.format("%.10f", context.getMasterResult().getTrainError())).append(" Validation Error:")
-                .append(String.format("%.10f", context.getMasterResult().getTestError())).append("\n").toString();
+                .append(String.format("%.10f", context.getMasterResult().getValidationError())).append("\n").toString();
         try {
             LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), progress.toString());
             this.progressOutput.write(progress.getBytes("UTF-8"));
@@ -255,7 +255,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
         if(this.gridSearch.hasHyperParam() || this.isKFoldCV) {
             Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
-            writeValErrorToFileSystem(context.getMasterResult().getTestError(), valErrOutput);
+            writeValErrorToFileSystem(context.getMasterResult().getValidationError(), valErrOutput);
         }
     }
 

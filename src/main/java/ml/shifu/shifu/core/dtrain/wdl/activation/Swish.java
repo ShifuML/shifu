@@ -24,23 +24,23 @@ public class Swish extends Activation {
     /**
      * Tmp save last inputs in forward and then can be used in backward computation.
      */
-    private float[] lastInput;
+    private double[] lastInput;
 
     @Override
-    public float[] forward(float[] input) {
+    public double[] forward(double[] input) {
         this.lastInput = input;
-        float[] result = new float[input.length];
+        double[] result = new double[input.length];
         for(int i = 0; i < result.length; i++) {
-            result[i] = (float) (input[i] * (1/ (Math.exp(-1* input[i]) +1 )));
+            result[i] = (double) (input[i] * (1/ (Math.exp(-1* input[i]) +1 )));
         }
         return result;
     }
 
     @Override
-    public float[] backward(float[] backInput) {
-        float[] result = new float[backInput.length];
+    public double[] backward(double[] backInput) {
+        double[] result = new double[backInput.length];
         for(int i = 0; i < result.length; i++) {
-            float sigmoid = (float) (1 / (1.0 + Math.exp(-lastInput[i])));
+            double sigmoid = (double) (1 / (1.0 + Math.exp(-lastInput[i])));
             result[i] = sigmoid + lastInput[i] * sigmoid * (1 - sigmoid);
         }
         return result;

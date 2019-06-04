@@ -26,25 +26,25 @@ public class Log extends Activation {
     /**
      * Tmp save last inputs in forward and then can be used in backward computation.
      */
-    private float[] lastInput;
+    private double[] lastInput;
 
     @Override
-    public float[] forward(float[] inputs) {
+    public double[] forward(double[] inputs) {
         this.lastInput = inputs;
-        float[] outputs = new float[inputs.length];
+        double[] outputs = new double[inputs.length];
         for(int i = 0; i < inputs.length; i++) {
             if (inputs[i] >= 0) {
-                outputs[i] = (float) BoundMath.log(1 + inputs[i]);
+                outputs[i] = (double) BoundMath.log(1 + inputs[i]);
             } else {
-                outputs[i] = (float) -BoundMath.log(1 - inputs[i]);
+                outputs[i] = (double) -BoundMath.log(1 - inputs[i]);
             }
         }
         return outputs;
     }
 
     @Override
-    public float[] backward(float[] backInput) {
-        float[] results = new float[backInput.length];
+    public double[] backward(double[] backInput) {
+        double[] results = new double[backInput.length];
         for(int i = 0; i < results.length; i++) {
             if (this.lastInput[i] >= 0) {
                 results[i] = 1 / (1 + this.lastInput[i]);

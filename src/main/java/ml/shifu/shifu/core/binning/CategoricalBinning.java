@@ -61,14 +61,14 @@ public class CategoricalBinning extends AbstractBinning<String> {
         super(binningNum, missingValList, maxCategorySize);
         this.categoricalVals = new HashSet<String>();
     }
-    
+
     /*
      * Constructor with expected bin number and missing value list
      * For categorical variable, the binningNum won't be used
      */
     public CategoricalBinning(int binningNum, List<String> missingValList, int maxCategorySize, int hashSeed) {
         this(binningNum, missingValList, maxCategorySize);
-        this.hashSeed =  hashSeed;
+        this.hashSeed = hashSeed;
     }
 
     /*
@@ -123,7 +123,15 @@ public class CategoricalBinning extends AbstractBinning<String> {
 
         this.isValid = (this.isValid && binning.isValid);
         if(this.isValid) {
-            this.categoricalVals.addAll(binning.categoricalVals);
+            for(String cate: binning.categoricalVals) {
+                // check if over max category size, skip to copy to avoid OOM
+                if(this.categoricalVals.size() <= this.maxCategorySize) {
+                    this.categoricalVals.add(cate);
+                } else {
+                    log.warn("Categorical variables binning merge over max category size ({}).", this.maxCategorySize);
+                    break;
+                }
+            }
         } else {
             this.categoricalVals.clear();
         }
