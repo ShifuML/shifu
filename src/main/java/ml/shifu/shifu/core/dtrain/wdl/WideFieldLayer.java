@@ -92,16 +92,12 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, double[], double[
 
     @Override
     public double[] forward(SparseInput si) {
-//        LOG.debug("WideFiledLayer weights:" + Arrays.toString(this.weights));
         this.lastInput = si;
         int valueIndex = si.getValueIndex();
         if(valueIndex < this.weights.length && valueIndex >= 0) {
-//            LOG.debug("si.getValue() = " + si.getValue() + "this.weights[valueIndex]=" + this.weights[valueIndex]);
             return new double[] { si.getValue() * this.weights[valueIndex] };
         }
-//        LOG.error("si.getValue() = " + si.getValue() + ", valueIndex=" + valueIndex + ", columnId=" + columnId
-//                + ", value index out of range, returning 0 for null categories");
-        return new double[] { 0.f };
+        return new double[] { 0d };
     }
 
     @Override
@@ -114,7 +110,6 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, double[], double[
         // category value here is 1f
         tmpGrad += (this.lastInput.getValue() * backInputs[0]);
         // l2 loss
-        // tmpGrad += (this.l2reg * backInputs[0]);
         this.wGrads.put(valueIndex, tmpGrad);
 
         // no need compute backward outputs as it is last layer

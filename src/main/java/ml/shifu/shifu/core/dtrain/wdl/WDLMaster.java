@@ -157,8 +157,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         this.wnd = new WideAndDeep(wideEnable, deepEnable, embedEnable, idBinCateSizeMap, numInputs, numericalIds,
                 embedColumnIds, embedOutputList, wideColumnIds, hiddenNodes, actFunc, l2reg);
         // TODO: make this configurable
-        
-//        this.optimizer = new GradientDescent(learningRate);
+        // this.optimizer = new GradientDescent(learningRate);
         this.wnd.initOptimizer(learningRate, DTrainUtils.RESILIENTPROPAGATION, l2reg, RegulationLevel.L2);
 
     }
@@ -176,7 +175,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
 
         // apply optimizer
         this.wnd.optimizeWeight(aggregation.getTrainSize(), context.getCurrentIteration() - 1, aggregation.getWnd());
-//        this.wnd.update(aggregation.getWnd(), optimizer, aggregation.getTrainSize());
+        // this.wnd.update(aggregation.getWnd(), optimizer, aggregation.getTrainSize());
         LOG.info("train size: {}, error: {}", aggregation.getTrainCount(), aggregation.getTrainError());
 
         // construct master result which contains WideAndDeep current model weights

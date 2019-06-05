@@ -101,6 +101,12 @@ public class WideAndDeep
     boolean embedEnable = true;
 
     private boolean isDebug = false;
+    
+    /**
+     * Flat spot value to smooth lr derived function: result * (1 - result): This value sometimes may be close to zero.
+     * Add flat sport to improve it: result * (1 - result) + 0.1d
+     */
+    private static final double FLAT_SPOT_VALUE = 0.1d;
 
     public WideAndDeep() {
     }
@@ -245,8 +251,8 @@ public class WideAndDeep
         double[] grad2Logits = new double[predicts.length];
         for(int i = 0; i < grad2Logits.length; i++) {
             double error = (predicts[i] - actuals[i]);
-            grad2Logits[i] = error * (derivedFunction(predicts[i]) + 0.1f) * sig * -1;
-            // grad2Logits[i] = error * (derivedFunction(predicts[i]) + 0.1f);
+            grad2Logits[i] = error * (derivedFunction(predicts[i]) + FLAT_SPOT_VALUE) * sig * -1;
+            // grad2Logits[i] = error * (derivedFunction(predicts[i]) + FLAT_SPOT_VALUE);
         }
 
         // wide layer backward, as wide layer in LR actually in backward, only gradients computation is needed.
