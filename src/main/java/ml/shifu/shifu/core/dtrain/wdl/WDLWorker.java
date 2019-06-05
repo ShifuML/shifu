@@ -750,7 +750,8 @@ public class WDLWorker extends
         }
 
         LOG.info("training error is {} {}", trainSumError, validSumError);
-        LOG.info("Worker gradients in dense layer {}", Arrays.toString(this.wnd.getWl().getDenseLayer().getwGrads()));
+        // LOG.info("Worker gradients in dense layer {}",
+        // Arrays.toString(this.wnd.getWl().getDenseLayer().getwGrads()));
         // set cnt, error to params and return to master
         WDLParams params = new WDLParams();
         params.setTrainCount(trainCnt);
