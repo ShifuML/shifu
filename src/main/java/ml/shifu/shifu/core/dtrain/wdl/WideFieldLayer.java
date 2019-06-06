@@ -16,7 +16,7 @@
 package ml.shifu.shifu.core.dtrain.wdl;
 
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimize;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.PropOptimizer;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.WeightOptimizer;
 import org.slf4j.Logger;
@@ -36,7 +36,7 @@ import java.util.Map.Entry;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class WideFieldLayer extends AbstractLayer<SparseInput, double[], double[], double[], WideFieldLayer>
-        implements WeightInitializer<WideFieldLayer>, Optimize<WideFieldLayer> {
+        implements WeightInitializer<WideFieldLayer>, PropOptimizer<WideFieldLayer> {
     private static final Logger LOG = LoggerFactory.getLogger(WideFieldLayer.class);
     /**
      * [in] double array of weights

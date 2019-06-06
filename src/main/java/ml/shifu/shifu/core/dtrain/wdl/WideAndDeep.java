@@ -21,7 +21,7 @@ import ml.shifu.shifu.core.dtrain.AssertUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import static ml.shifu.shifu.core.dtrain.wdl.SerializationUtil.NULL;
 import ml.shifu.shifu.core.dtrain.wdl.activation.*;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimize;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.PropOptimizer;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.util.Tuple;
 import org.apache.commons.lang.StringUtils;
@@ -48,7 +48,7 @@ import java.util.stream.Collectors;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class WideAndDeep
-        implements WeightInitializer<WideAndDeep>, Bytable, Combinable<WideAndDeep>, Optimize<WideAndDeep> {
+        implements WeightInitializer<WideAndDeep>, Bytable, Combinable<WideAndDeep>, PropOptimizer<WideAndDeep> {
 
     private static final Logger LOG = LoggerFactory.getLogger(WideAndDeep.class);
 

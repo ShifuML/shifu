@@ -113,17 +113,9 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
     @Override
     public void init(MasterContext<WDLParams, WDLParams> context) {
         Properties props = context.getProps();
-        try {
-            SourceType sourceType = SourceType
-                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
-            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
-                    sourceType);
-            this.columnConfigList = CommonUtils
-                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        loadConfigs(props);
 
+        // TODO support trainerID with bagging or multiple classification
         // this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
 
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
@@ -156,10 +148,24 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         boolean embedEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.EMBED_ENABLE), true);
         this.wnd = new WideAndDeep(wideEnable, deepEnable, embedEnable, idBinCateSizeMap, numInputs, numericalIds,
                 embedColumnIds, embedOutputList, wideColumnIds, hiddenNodes, actFunc, l2reg);
-        // TODO: make this configurable
         // this.optimizer = new GradientDescent(learningRate);
-        this.wnd.initOptimizer(learningRate, DTrainUtils.RESILIENTPROPAGATION, l2reg, RegulationLevel.L2);
+        Object pObject = this.validParams.get(CommonConstants.PROPAGATION);
+        String propagation = (pObject == null) ? DTrainUtils.RESILIENTPROPAGATION : pObject.toString();
+        // l2 hard code to NONE here because of already in WideAndDeep backward
+        this.wnd.initOptimizer(learningRate, propagation, 0, RegulationLevel.NONE);
+    }
 
+    private void loadConfigs(Properties props) {
+        try {
+            SourceType sourceType = SourceType
+                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
+            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
+                    sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -176,7 +182,6 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         // apply optimizer
         this.wnd.optimizeWeight(aggregation.getTrainSize(), context.getCurrentIteration() - 1, aggregation.getWnd());
         // this.wnd.update(aggregation.getWnd(), optimizer, aggregation.getTrainSize());
-        LOG.info("train size: {}, error: {}", aggregation.getTrainCount(), aggregation.getTrainError());
 
         // construct master result which contains WideAndDeep current model weights
         WDLParams params = new WDLParams();
@@ -218,8 +223,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         } else {
             this.wnd.initWeights();
         }
-        // weights from this.wnd
-        params.setWnd(this.wnd);
+        params.setWnd(this.wnd); // weights from this.wnd
 
         return params;
     }

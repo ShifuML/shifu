@@ -252,8 +252,7 @@ public class WDLWorker extends
             LOG.info("Read {} records.", this.count);
         }
 
-        // hashcode for fixed input split in train and validation
-        long hashcode = 0;
+        long hashcode = 0; // hashcode for fixed input split in train and validation
         double[] inputs = new double[this.numInputs];
         this.cateInputs = (int) this.columnConfigList.stream().filter(ColumnConfig::isCategorical).count();
         SparseInput[] cateInputs = new SparseInput[this.cateInputs];
@@ -287,10 +286,10 @@ public class WDLWorker extends
         }
 
         // output delimiter in norm can be set by user now and if user set a special one later changed, this exception
-        // is helped to quick find such issue.
+        // is helped to quick find such issue., here only check numerical array
         validateInputLength(context, inputs, numIndex);
 
-        // sample negative only logic here
+        // sample negative only logic here, sample negative out, no need continue
         if(sampleNegOnly(hashcode, ideal)) {
             return;
         }
@@ -314,27 +313,26 @@ public class WDLWorker extends
     }
 
     private boolean sampleNegOnly(long hashcode, double ideal) {
+        if(!modelConfig.getTrain().getSampleNegOnly()) { // only works when set sampleNegOnly
+            return false;
+        }
         boolean ret = false;
-        if(modelConfig.getTrain().getSampleNegOnly()) {
-            double bagSampleRate = this.modelConfig.getBaggingSampleRate();
-            if(this.modelConfig.isFixInitialInput()) {
-                // if fixInitialInput, sample hashcode in 1-sampleRate range out if negative records
-                int startHashCode = (100 / this.modelConfig.getBaggingNum()) * this.trainerId;
-                // here BaggingSampleRate means how many data will be used in training and validation, if it is 0.8, we
-                // should take 1-0.8 to check endHashCode
-                int endHashCode = startHashCode + Double.valueOf((1d - bagSampleRate) * 100).intValue();
-                if((modelConfig.isRegression()
-                        || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()))
-                        && (int) (ideal + 0.01d) == 0 && isInRange(hashcode, startHashCode, endHashCode)) {
-                    ret = true;
-                }
-            } else {
-                // if not fixed initial input, for regression or onevsall multiple classification, if negative record
-                if((modelConfig.isRegression()
-                        || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()))
-                        && (int) (ideal + 0.01d) == 0 && negOnlyRnd.nextDouble() > bagSampleRate) {
-                    ret = true;
-                }
+        double bagSampleRate = this.modelConfig.getBaggingSampleRate();
+        if(this.modelConfig.isFixInitialInput()) {
+            // if fixInitialInput, sample hashcode in 1-sampleRate range out if negative records
+            int startHashCode = (100 / this.modelConfig.getBaggingNum()) * this.trainerId;
+            // here BaggingSampleRate means how many data will be used in training and validation, if it is 0.8, we
+            // should take 1-0.8 to check endHashCode
+            int endHashCode = startHashCode + (int) ((1d - bagSampleRate) * 100);
+            if((modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()))
+                    && (int) (ideal + 0.01d) == 0 && isInRange(hashcode, startHashCode, endHashCode)) {
+                ret = true;
+            }
+        } else {
+            // if not fixed initial input, for regression or onevsall multiple classification, if negative record
+            if((modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()))
+                    && (int) (ideal + 0.01d) == 0 && negOnlyRnd.nextDouble() > bagSampleRate) {
+                ret = true;
             }
         }
         return ret;
@@ -371,118 +369,112 @@ public class WDLWorker extends
         boolean isValidation = (attachment != null && attachment instanceof Boolean) ? (Boolean) attachment : false;
 
         if(this.isKFoldCV) {
-            int k = this.modelConfig.getTrain().getNumKFold();
-            if(hashcode % k == this.trainerId) {
-                this.validationData.append(data);
-                if(isPositive(data.label)) {
-                    this.positiveValidationCount += 1L;
-                } else {
-                    this.negativeValidationCount += 1L;
-                }
-                return false;
-            } else {
-                this.trainingData.append(data);
-                if(isPositive(data.label)) {
-                    this.positiveTrainCount += 1L;
-                } else {
-                    this.negativeTrainCount += 1L;
-                }
-                return true;
-            }
+            return addKFoldDataPairToDataSet(hashcode, data);
         }
 
-        if(this.isManualValidation) {
-            if(isValidation) {
-                this.validationData.append(data);
-                if(isPositive(data.label)) {
-                    this.positiveValidationCount += 1L;
+        if(this.isManualValidation) { // validation data set is set by users in ModelConfig:dataSet:validationDataPath
+            return addManualValidationDataPairToDataSet(data, isValidation);
+        } else { // normal case, according to validSetRate, split dataset into training and validation data set
+            return splitDataPairToDataSet(hashcode, data);
+        }
+    }
+
+    private boolean splitDataPairToDataSet(long hashcode, Data data) {
+        if(Double.compare(this.modelConfig.getValidSetRate(), 0d) != 0) {
+            Random random = updateRandom((int) (data.label + 0.01d));
+            if(this.modelConfig.isFixInitialInput()) {
+                // for fix initial input, if hashcode%100 is in [start-hashcode, end-hashcode), validation,
+                // otherwise training. start hashcode in different job is different to make sure bagging jobs have
+                // different data. if end-hashcode is over 100, then check if hashcode is in [start-hashcode, 100]
+                // or [0, end-hashcode]
+                int startHashCode = (100 / this.modelConfig.getBaggingNum()) * this.trainerId;
+                int endHashCode = startHashCode + (int) (this.modelConfig.getValidSetRate() * 100);
+                if(isInRange(hashcode, startHashCode, endHashCode)) {
+                    this.validationData.append(data);
+                    updateValidationPosNegMetrics(data);
+                    return false;
                 } else {
-                    this.negativeValidationCount += 1L;
+                    this.trainingData.append(data);
+                    updateTrainPosNegMetrics(data);
+                    return true;
                 }
-                return false;
             } else {
-                this.trainingData.append(data);
-                if(isPositive(data.label)) {
-                    this.positiveTrainCount += 1L;
+                // not fixed initial input, if random value >= validRate, training, otherwise validation.
+                if(random.nextDouble() >= this.modelConfig.getValidSetRate()) {
+                    this.trainingData.append(data);
+                    updateTrainPosNegMetrics(data);
+                    return true;
                 } else {
-                    this.negativeTrainCount += 1L;
+                    this.validationData.append(data);
+                    updateValidationPosNegMetrics(data);
+                    return false;
                 }
-                return true;
             }
         } else {
-            if(Double.compare(this.modelConfig.getValidSetRate(), 0d) != 0) {
-                int classValue = (int) (data.label + 0.01d);
-                Random random = null;
-                if(this.isStratifiedSampling) {
-                    // each class use one random instance
-                    random = validationRandomMap.get(classValue);
-                    if(random == null) {
-                        random = new Random();
-                        this.validationRandomMap.put(classValue, random);
-                    }
-                } else {
-                    // all data use one random instance
-                    random = validationRandomMap.get(0);
-                    if(random == null) {
-                        random = new Random();
-                        this.validationRandomMap.put(0, random);
-                    }
-                }
+            this.trainingData.append(data);
+            updateTrainPosNegMetrics(data);
+            return true;
+        }
+    }
 
-                if(this.modelConfig.isFixInitialInput()) {
-                    // for fix initial input, if hashcode%100 is in [start-hashcode, end-hashcode), validation,
-                    // otherwise training. start hashcode in different job is different to make sure bagging jobs have
-                    // different data. if end-hashcode is over 100, then check if hashcode is in [start-hashcode, 100]
-                    // or [0, end-hashcode]
-                    int startHashCode = (100 / this.modelConfig.getBaggingNum()) * this.trainerId;
-                    int endHashCode = startHashCode
-                            + Double.valueOf(this.modelConfig.getValidSetRate() * 100).intValue();
-                    if(isInRange(hashcode, startHashCode, endHashCode)) {
-                        this.validationData.append(data);
-                        if(isPositive(data.label)) {
-                            this.positiveValidationCount += 1L;
-                        } else {
-                            this.negativeValidationCount += 1L;
-                        }
-                        return false;
-                    } else {
-                        this.trainingData.append(data);
-                        if(isPositive(data.label)) {
-                            this.positiveTrainCount += 1L;
-                        } else {
-                            this.negativeTrainCount += 1L;
-                        }
-                        return true;
-                    }
-                } else {
-                    // not fixed initial input, if random value >= validRate, training, otherwise validation.
-                    if(random.nextDouble() >= this.modelConfig.getValidSetRate()) {
-                        this.trainingData.append(data);
-                        if(isPositive(data.label)) {
-                            this.positiveTrainCount += 1L;
-                        } else {
-                            this.negativeTrainCount += 1L;
-                        }
-                        return true;
-                    } else {
-                        this.validationData.append(data);
-                        if(isPositive(data.label)) {
-                            this.positiveValidationCount += 1L;
-                        } else {
-                            this.negativeValidationCount += 1L;
-                        }
-                        return false;
-                    }
-                }
-            } else {
-                this.trainingData.append(data);
-                if(isPositive(data.label)) {
-                    this.positiveTrainCount += 1L;
-                } else {
-                    this.negativeTrainCount += 1L;
-                }
-                return true;
+    private boolean addManualValidationDataPairToDataSet(Data data, boolean isValidation) {
+        if(isValidation) {
+            this.validationData.append(data);
+            updateValidationPosNegMetrics(data);
+            return false;
+        } else {
+            this.trainingData.append(data);
+            updateTrainPosNegMetrics(data);
+            return true;
+        }
+    }
+
+    private boolean addKFoldDataPairToDataSet(long hashcode, Data data) {
+        int k = this.modelConfig.getTrain().getNumKFold();
+        if(hashcode % k == this.trainerId) {
+            this.validationData.append(data);
+            updateValidationPosNegMetrics(data);
+            return false;
+        } else {
+            this.trainingData.append(data);
+            updateTrainPosNegMetrics(data);
+            return true;
+        }
+    }
+
+    private Random updateRandom(int classValue) {
+        Random random = null;
+        if(this.isStratifiedSampling) {
+            // each class use one random instance
+            random = validationRandomMap.get(classValue);
+            if(random == null) {
+                random = new Random();
+                this.validationRandomMap.put(classValue, random);
             }
+        } else {
+            // all data use one random instance
+            random = validationRandomMap.get(0);
+            if(random == null) {
+                random = new Random();
+                this.validationRandomMap.put(0, random);
+            }
+        }
+        return random;
+    }
+
+    private void updateTrainPosNegMetrics(Data data) {
+        if(isPositive(data.label)) {
+            this.positiveTrainCount += 1L;
+        } else {
+            this.negativeTrainCount += 1L;
+        }
+    }
+
+    private void updateValidationPosNegMetrics(Data data) {
+        if(isPositive(data.label)) {
+            this.positiveValidationCount += 1L;
+        } else {
+            this.negativeValidationCount += 1L;
         }
     }
 
@@ -741,7 +733,7 @@ public class WDLWorker extends
         for(Data data: validationData) {
             double[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data), getWideInputs(data));
             double sigmoid = sigmoid(logits[0]);
-            if(index++ <= 0) {
+            if(index++ <= 100) {
                 LOG.info("Index {}, logit {}, sigmoid {}, label {}.", index, logits[0], sigmoid, data.label);
             }
             validationSize += data.getWeight();
