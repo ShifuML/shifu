@@ -1,12 +1,4 @@
-package ml.shifu.shifu.core.dtrain.dt.builder;
-
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-
-import java.util.List;
-import java.util.Random;
-
-/**
+/*
  * Copyright [2013-2018] PayPal Software Foundation
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License")
@@ -20,6 +12,13 @@ import java.util.Random;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
+package ml.shifu.shifu.core.dtrain.dt.builder;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+
+import java.util.List;
+import java.util.Random;
 
 @SuppressWarnings("unused")
 public class GBTBuilder extends TreeBuilder {

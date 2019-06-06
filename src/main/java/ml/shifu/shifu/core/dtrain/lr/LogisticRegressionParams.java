@@ -52,17 +52,23 @@ public class LogisticRegressionParams extends HaltBytable implements Combinable<
     private double trainError = 0;
 
     /**
-     * Weighted training record count in one worker
+     * Weighted wgt training record count in one worker
      */
     private double trainSize;
 
     /**
-     * Weighted testing record count in one worker
+     * Weighted wgt testing record count in one worker
      */
     private double validationSize;
 
+    /**
+     * Weighted training record count in one worker
+     */
     private double trainCount;
 
+    /**
+     * Weighted testing record count in one worker
+     */
     private double validationCount;
 
     public LogisticRegressionParams() {
@@ -194,7 +200,8 @@ public class LogisticRegressionParams extends HaltBytable implements Combinable<
     }
 
     /**
-     * @param validationError the validationError to set
+     * @param validationError
+     *            the validationError to set
      */
     public void setValidationError(double validationError) {
         this.validationError = validationError;
@@ -208,7 +215,8 @@ public class LogisticRegressionParams extends HaltBytable implements Combinable<
     }
 
     /**
-     * @param validationSize the validationSize to set
+     * @param validationSize
+     *            the validationSize to set
      */
     public void setValidationSize(double validationSize) {
         this.validationSize = validationSize;
@@ -222,7 +230,8 @@ public class LogisticRegressionParams extends HaltBytable implements Combinable<
     }
 
     /**
-     * @param validationCount the validationCount to set
+     * @param validationCount
+     *            the validationCount to set
      */
     public void setValidationCount(double validationCount) {
         this.validationCount = validationCount;
