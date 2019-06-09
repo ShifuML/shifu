@@ -15,6 +15,20 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.math.NumberUtils;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -26,15 +40,6 @@ import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
 
 /**
  * {@link WDLMaster} is master logic in wide and deep implementation based on Guagua.
@@ -101,23 +106,16 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
     /**
      * The optimizer to update weights.
      */
+    @SuppressWarnings("unused")
     private Optimizer optimizer;
 
     @SuppressWarnings({ "unchecked", "unused" })
     @Override
     public void init(MasterContext<WDLParams, WDLParams> context) {
         Properties props = context.getProps();
-        try {
-            SourceType sourceType = SourceType
-                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
-            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
-                    sourceType);
-            this.columnConfigList = CommonUtils
-                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        loadConfigs(props);
 
+        // TODO support trainerID with bagging or multiple classification
         // this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
 
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
@@ -144,12 +142,30 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         int numLayers = (Integer) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
-        Double l2reg = (Double) this.validParams.get(CommonConstants.WDL_L2_REG);
-        this.wnd = new WideAndDeep(idBinCateSizeMap, numInputs, numericalIds, embedColumnIds, embedOutputList,
-                wideColumnIds, hiddenNodes, actFunc, l2reg);
-        // TODO: make this configurable
-        this.wnd.initOptimizer(learningRate, DTrainUtils.RESILIENTPROPAGATION, l2reg, RegulationLevel.L2);
+        double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0d);
+        boolean wideEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.WIDE_ENABLE), true);
+        boolean deepEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.DEEP_ENABLE), true);
+        boolean embedEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.EMBED_ENABLE), true);
+        this.wnd = new WideAndDeep(wideEnable, deepEnable, embedEnable, idBinCateSizeMap, numInputs, numericalIds,
+                embedColumnIds, embedOutputList, wideColumnIds, hiddenNodes, actFunc, l2reg);
+        // this.optimizer = new GradientDescent(learningRate);
+        Object pObject = this.validParams.get(CommonConstants.PROPAGATION);
+        String propagation = (pObject == null) ? DTrainUtils.RESILIENTPROPAGATION : pObject.toString();
+        // l2 hard code to NONE here because of already in WideAndDeep backward
+        this.wnd.initOptimizer(learningRate, propagation, 0, RegulationLevel.NONE);
+    }
 
+    private void loadConfigs(Properties props) {
+        try {
+            SourceType sourceType = SourceType
+                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
+            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
+                    sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -163,12 +179,9 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         // aggregate all worker gradients to one gradient object.
         WDLParams aggregation = aggregateWorkerGradients(context);
 
-//        LOG.info("Master gradients in dense layer {}",
-//                Arrays.toString(aggregation.getWnd().getWl().getDenseLayer().getwGrads()));
-
         // apply optimizer
         this.wnd.optimizeWeight(aggregation.getTrainSize(), context.getCurrentIteration() - 1, aggregation.getWnd());
-        LOG.info("train size: {}, error: {}", aggregation.getTrainCount(), aggregation.getTrainError());
+        // this.wnd.update(aggregation.getWnd(), optimizer, aggregation.getTrainSize());
 
         // construct master result which contains WideAndDeep current model weights
         WDLParams params = new WDLParams();
@@ -210,8 +223,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         } else {
             this.wnd.initWeights();
         }
-        // weights from this.wnd
-        params.setWnd(this.wnd);
+        params.setWnd(this.wnd); // weights from this.wnd
 
         return params;
     }

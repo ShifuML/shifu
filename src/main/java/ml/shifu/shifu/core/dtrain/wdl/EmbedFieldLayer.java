@@ -16,7 +16,7 @@
 package ml.shifu.shifu.core.dtrain.wdl;
 
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimize;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.PropOptimizer;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.WeightOptimizer;
 import org.slf4j.Logger;
@@ -43,7 +43,7 @@ import java.util.Map.Entry;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class EmbedFieldLayer extends AbstractLayer<SparseInput, double[], double[], double[], EmbedFieldLayer>
-        implements WeightInitializer<EmbedFieldLayer>, Optimize<EmbedFieldLayer> {
+        implements WeightInitializer<EmbedFieldLayer>, PropOptimizer<EmbedFieldLayer> {
     private static final Logger LOG = LoggerFactory.getLogger(EmbedFieldLayer.class);
 
     /**

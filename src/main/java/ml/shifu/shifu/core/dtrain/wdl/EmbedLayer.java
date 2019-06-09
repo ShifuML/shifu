@@ -17,7 +17,7 @@ package ml.shifu.shifu.core.dtrain.wdl;
 
 import ml.shifu.shifu.core.dtrain.AssertUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimize;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.PropOptimizer;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 
 import java.io.DataInput;
@@ -34,7 +34,7 @@ import java.util.List;
  */
 public class EmbedLayer
         extends AbstractLayer<List<SparseInput>, List<double[]>, List<double[]>, List<double[]>, EmbedLayer>
-        implements WeightInitializer<EmbedLayer>, Optimize<EmbedLayer> {
+        implements WeightInitializer<EmbedLayer>, PropOptimizer<EmbedLayer> {
 
     /**
      * List of embed layer which is for each embed column.

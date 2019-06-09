@@ -813,6 +813,21 @@
                             {"label": "Momentum", "value":"Momentum"}
                         ]
                     }, {
+                        "name" : "wideEnable",
+                        "type": "boolean",
+                        "directive": "checkbox",
+                        "defval": true
+                    }, {
+                        "name" : "deepEnable",
+                        "type": "boolean",
+                        "directive": "checkbox",
+                        "defval": true
+                    }, {
+                        "name" : "embedEnable",
+                        "type": "boolean",
+                        "directive": "checkbox",
+                        "defval": true
+                    }, {
                         "name" : "IsELM",
                         "type": "boolean",
                         "directive": "checkbox",

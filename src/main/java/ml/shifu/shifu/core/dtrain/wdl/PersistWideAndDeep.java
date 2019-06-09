@@ -15,11 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.core.dtrain.AssertUtils;
-import ml.shifu.shifu.core.dtrain.wdl.activation.ReLU;
-import ml.shifu.shifu.core.dtrain.wdl.activation.Sigmoid;
-
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -28,23 +23,37 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.core.dtrain.AssertUtils;
+import ml.shifu.shifu.core.dtrain.wdl.activation.ReLU;
+import ml.shifu.shifu.core.dtrain.wdl.activation.Sigmoid;
+
 /**
  * Persistent WideAndDeep models.
  * <p>
  * In this class, we don't close the input or output stream. So you need to close the stream where you open it.
  * <p>
- * @author  Wu Devin (haifwu@paypal.com)
+ * 
+ * @author Wu Devin (haifwu@paypal.com)
  */
 public class PersistWideAndDeep {
 
     /**
      * Save the WideAndDeep into output stream.
-     * @param wnd, the WideAndDeep model
-     * @param dos, the data output stream
-     * @throws IOException IOException when IO operation
+     * 
+     * @param wnd,
+     *            the WideAndDeep model
+     * @param dos,
+     *            the data output stream
+     * @throws IOException
+     *             IOException when IO operation
      */
     public static void save(final WideAndDeep wnd, DataOutputStream dos) throws IOException {
         dos.writeUTF(WideAndDeep.class.getName());
+        // if wide-and-deep, wide only or deep only
+        dos.writeBoolean(wnd.isWideEnable());
+        dos.writeBoolean(wnd.isDeepEnable());
+        dos.writeBoolean(wnd.isEmbedEnable());
 
         // Only write DenseLayer in hidden layers
         List<DenseLayer> denseLayers = getAllDenseLayers(wnd.getHiddenLayers());
@@ -66,13 +75,20 @@ public class PersistWideAndDeep {
 
     /**
      * Load the WideAndDeep from input stream.
-     * @param dis, the data input stream
+     * 
+     * @param dis,
+     *            the data input stream
      * @return the WideAndDeep model
-     * @throws IOException IOException when IO operatio
+     * @throws IOException
+     *             IOException when IO operatio
      */
     @SuppressWarnings("rawtypes")
     public static WideAndDeep load(DataInputStream dis) throws IOException {
         AssertUtils.assertEquals(dis.readUTF(), WideAndDeep.class.getName());
+
+        boolean wideEnable = dis.readBoolean();
+        boolean deepEnable = dis.readBoolean();
+        boolean embedEnable = dis.readBoolean();
 
         // Read DensorLayer only
         List<DenseLayer> denseLayers = readList(dis, DenseLayer.class);
@@ -90,8 +106,9 @@ public class PersistWideAndDeep {
         double l2reg = dis.readDouble();
 
         List<Layer> hiddenLayers = buildHiddenLayers(denseLayers, actiFuncs);
-        return new WideAndDeep(hiddenLayers, finalLayer, ecl, wl, idBinCateSizeMap, numericalSize, denseColumnIds,
-                embedColumnIds, embedOutputs, wideColumnIds, hiddenNodes, actiFuncs, l2reg);
+        return new WideAndDeep(wideEnable, deepEnable, embedEnable, hiddenLayers, finalLayer, ecl, wl, idBinCateSizeMap,
+                numericalSize, denseColumnIds, embedColumnIds, embedOutputs, wideColumnIds, hiddenNodes, actiFuncs,
+                l2reg);
     }
 
     /**
@@ -99,25 +116,30 @@ public class PersistWideAndDeep {
      * <p>
      * Only support three type of data now: String, Integer, ColumnConfig
      * <p>
-     * @param list, the list write to output stream
-     * @param dos, data output stream
-     * @param <T>, generic type
-     * @throws IOException IOException when IO operation
+     * 
+     * @param list,
+     *            the list write to output stream
+     * @param dos,
+     *            data output stream
+     * @param <T>,
+     *            generic type
+     * @throws IOException
+     *             IOException when IO operation
      */
     private static <T> void writeList(List<T> list, DataOutputStream dos) throws IOException {
         dos.writeInt(list.size());
-        for (T element: list) {
-            if (element instanceof Integer) {
+        for(T element: list) {
+            if(element instanceof Integer) {
                 dos.writeInt((Integer) element);
-            } else if (element instanceof String) {
+            } else if(element instanceof String) {
                 dos.writeUTF((String) element);
-            } else if (element instanceof ColumnConfig) {
+            } else if(element instanceof ColumnConfig) {
                 writeColumnConfig((ColumnConfig) element, dos);
-            } else if (element instanceof DenseLayer) {
+            } else if(element instanceof DenseLayer) {
                 writeDenseLayer((DenseLayer) element, dos);
-            } else if (element instanceof EmbedFieldLayer) {
+            } else if(element instanceof EmbedFieldLayer) {
                 writeEmbedFieldLayer((EmbedFieldLayer) element, dos);
-            } else if (element instanceof WideFieldLayer) {
+            } else if(element instanceof WideFieldLayer) {
                 writeWideFieldLayer((WideFieldLayer) element, dos);
             }
         }
@@ -128,28 +150,33 @@ public class PersistWideAndDeep {
      * <p>
      * Only support three type of data now: String, Integer, ColumnConfig
      * <p>
-     * @param dis, the data input stream
-     * @param tClass, the class type of the object in the list
-     * @param <T>, generic type
+     * 
+     * @param dis,
+     *            the data input stream
+     * @param tClass,
+     *            the class type of the object in the list
+     * @param <T>,
+     *            generic type
      * @return A list of specific object
-     * @throws IOException IOException when IO operation
+     * @throws IOException
+     *             IOException when IO operation
      */
-    @SuppressWarnings("unchecked") 
+    @SuppressWarnings("unchecked")
     private static <T> List<T> readList(DataInputStream dis, Class<?> tClass) throws IOException {
         int size = dis.readInt();
         List<T> list = new ArrayList<>(size);
-        for(int i = 0; i < size; i++){
-            if (tClass == Integer.class) {
+        for(int i = 0; i < size; i++) {
+            if(tClass == Integer.class) {
                 list.add((T) Integer.valueOf(dis.readInt()));
-            } else if (tClass == String.class) {
+            } else if(tClass == String.class) {
                 list.add((T) dis.readUTF());
-            } else if (tClass == ColumnConfig.class) {
+            } else if(tClass == ColumnConfig.class) {
                 list.add((T) readColumnConfig(dis));
-            } else if (tClass == DenseLayer.class) {
+            } else if(tClass == DenseLayer.class) {
                 list.add((T) readDenseLayer(dis));
-            } else if (tClass == EmbedFieldLayer.class) {
+            } else if(tClass == EmbedFieldLayer.class) {
                 list.add((T) readEmbedFieldLayer(dis));
-            } else if (tClass == WideFieldLayer.class) {
+            } else if(tClass == WideFieldLayer.class) {
                 list.add((T) readWideFieldLayer(dis));
             }
         }
@@ -158,7 +185,7 @@ public class PersistWideAndDeep {
 
     private static void writeIntegerMap(Map<Integer, Integer> map, DataOutputStream dos) throws IOException {
         dos.writeInt(map.size());
-        for(Map.Entry<Integer, Integer> entry : map.entrySet()) {
+        for(Map.Entry<Integer, Integer> entry: map.entrySet()) {
             dos.writeInt(entry.getKey());
             dos.writeInt(entry.getValue());
         }
@@ -204,7 +231,7 @@ public class PersistWideAndDeep {
         int out = dis.readInt();
         // read bias
         double[] bias = new double[out];
-        for(int i = 0; i < out; i++){
+        for(int i = 0; i < out; i++) {
             bias[i] = dis.readDouble();
         }
         // read weight
@@ -232,8 +259,8 @@ public class PersistWideAndDeep {
         dos.writeInt(embedFieldLayer.getIn());
         dos.writeInt(embedFieldLayer.getOut());
         // write weight
-        for (int i = 0; i < embedFieldLayer.getIn(); i++){
-            for (int j = 0; j < embedFieldLayer.getOut(); j++) {
+        for(int i = 0; i < embedFieldLayer.getIn(); i++) {
+            for(int j = 0; j < embedFieldLayer.getOut(); j++) {
                 dos.writeDouble(embedFieldLayer.getWeights()[i][j]);
             }
         }
@@ -270,7 +297,7 @@ public class PersistWideAndDeep {
         dos.writeInt(wideFieldLayer.getColumnId());
         dos.writeInt(wideFieldLayer.getIn());
         // write weight
-        for(int i = 0; i < wideFieldLayer.getIn(); i++){
+        for(int i = 0; i < wideFieldLayer.getIn(); i++) {
             dos.writeDouble(wideFieldLayer.getWeights()[i]);
         }
     }
@@ -302,7 +329,7 @@ public class PersistWideAndDeep {
 
         List<DenseLayer> denseLayers = new ArrayList<>(hiddenLayers.size() / 2);
         for(Layer<?, ?, ?, ?> layer: hiddenLayers) {
-            if (layer instanceof DenseLayer) {
+            if(layer instanceof DenseLayer) {
                 denseLayers.add((DenseLayer) layer);
             }
         }
@@ -310,7 +337,7 @@ public class PersistWideAndDeep {
     }
 
     @SuppressWarnings("rawtypes")
-    private static List<Layer> buildHiddenLayers(List<DenseLayer> denseLayers, List<String> actiFuncs){
+    private static List<Layer> buildHiddenLayers(List<DenseLayer> denseLayers, List<String> actiFuncs) {
         AssertUtils.assertListNotNullAndSizeEqual(denseLayers, actiFuncs);
         List<Layer> hiddenLayers = new ArrayList<>(actiFuncs.size() * 2);
 

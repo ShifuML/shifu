@@ -16,7 +16,7 @@
 package ml.shifu.shifu.core.dtrain.wdl;
 
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimize;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.PropOptimizer;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.WeightOptimizer;
 import org.slf4j.Logger;
@@ -35,7 +35,7 @@ import java.io.IOException;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class DenseLayer extends AbstractLayer<double[], double[], double[], double[], DenseLayer>
-        implements WeightInitializer<DenseLayer>, Optimize<DenseLayer> {
+        implements WeightInitializer<DenseLayer>, PropOptimizer<DenseLayer> {
     @SuppressWarnings("unused")
     private static final Logger LOG = LoggerFactory.getLogger(DenseLayer.class);
 
@@ -209,7 +209,7 @@ public class DenseLayer extends AbstractLayer<double[], double[], double[], doub
                 // basic derivatives
                 this.wGrads[i][j] += (this.lastInput[i] * backInputs[j]);
                 // l2 loss derivatives
-//                this.wGrads[i][j] += (this.l2reg * backInputs[j]);
+                this.wGrads[i][j] += (this.l2reg * backInputs[j]);
             }
         }
         for(int j = 0; j < this.out; j++) {

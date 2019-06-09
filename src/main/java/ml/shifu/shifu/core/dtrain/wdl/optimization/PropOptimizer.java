@@ -18,11 +18,11 @@ package ml.shifu.shifu.core.dtrain.wdl.optimization;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
 
 /**
- * Interface Despcription.
+ * Support different kinds of optimizations like RProp, QuickProp, BackProp ...
  *
  * @author Wu Devin (haifwu@paypal.com)
  */
-public interface Optimize<SELF extends Optimize> {
+public interface PropOptimizer<SELF extends PropOptimizer<?>> {
     /**
      * Init weight optimizer according to learning rate, algorithm, reg and rl
      * @param learningRate
