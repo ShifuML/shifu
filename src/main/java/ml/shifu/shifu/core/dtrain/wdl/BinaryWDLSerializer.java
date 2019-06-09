@@ -42,6 +42,7 @@ import java.util.zip.GZIPOutputStream;
  * @author Wu Devin (haifwu@paypal.com)
  */
 public class BinaryWDLSerializer {
+    @Deprecated
     public static void save(ModelConfig modelConfig, WideAndDeep wideAndDeep, FileSystem fs, Path output)
             throws IOException {
         DataOutputStream dos = null;

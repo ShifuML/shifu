@@ -20,16 +20,21 @@ import ml.shifu.guagua.io.Combinable;
 import ml.shifu.shifu.core.dtrain.AssertUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import static ml.shifu.shifu.core.dtrain.wdl.SerializationUtil.NULL;
-import ml.shifu.shifu.core.dtrain.wdl.activation.*;
+import ml.shifu.shifu.core.dtrain.wdl.activation.Activation;
+import ml.shifu.shifu.core.dtrain.wdl.activation.ActivationFactory;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimize;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.util.Tuple;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
@@ -825,4 +830,28 @@ public class WideAndDeep implements WeightInitializer<WideAndDeep>, Bytable, Com
         this.wl.optimizeWeight(numTrainSize, iteration, gradWnd.getWl());
     }
 
+    @Override
+    public WideAndDeep clone() {
+        // Set the initial buffer size to 1M
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(1024 * 1024);
+        DataOutputStream dos = new DataOutputStream(byteArrayOutputStream);
+        DataInputStream dis = null;
+        try {
+            write(dos, SerializationType.MODEL_SPEC);
+            dos.flush();
+            ByteArrayInputStream dataInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
+            WideAndDeep wideAndDeep = new WideAndDeep();
+            dis = new DataInputStream(dataInputStream);
+            wideAndDeep.readFields(dis);
+            return wideAndDeep;
+        } catch (IOException e) {
+            LOG.error("IOException happen when clone wideAndDeep model", e);
+        } finally {
+            IOUtils.closeStream(dos);
+            if(dis != null) {
+                IOUtils.closeStream(dis);
+            }
+        }
+        return null;
+    }
 }
