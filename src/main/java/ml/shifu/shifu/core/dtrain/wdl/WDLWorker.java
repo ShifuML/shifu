@@ -187,6 +187,11 @@ public class WDLWorker extends
     private int workerThreadCount;
 
     /**
+     * CompletionService to running gradient update in parallel
+     */
+    CompletionService<WDLParams> completionService;
+
+    /**
      * If has candidate in column list.
      */
     private boolean hasCandidates;
@@ -592,6 +597,7 @@ public class WDLWorker extends
         }
 
         this.workerThreadCount = modelConfig.getTrain().getWorkerThreadCount();
+        this.completionService = new ExecutorCompletionService<>(Executors.newFixedThreadPool(workerThreadCount));
 
         this.poissonSampler = Boolean.TRUE.toString()
                 .equalsIgnoreCase(context.getProps().getProperty(NNConstants.NN_POISON_SAMPLER));
@@ -692,8 +698,11 @@ public class WDLWorker extends
         // update master global model into worker WideAndDeep graph
         this.wnd.updateWeights(context.getLastMasterResult());
         WDLParallelGradient parallelGradient = new WDLParallelGradient(this.wnd, this.workerThreadCount,
-                this.inputIndexMap, this.trainingData, this.validationData);
-        return parallelGradient.doCompute();
+                this.inputIndexMap, this.trainingData, this.validationData, this.completionService);
+        WDLParams wdlParams = parallelGradient.doCompute();
+        wdlParams.setSerializationType(SerializationType.GRADIENTS);
+        this.wnd.setSerializationType(SerializationType.GRADIENTS);
+        return wdlParams;
     }
 
     public double sigmoid(double logit) {

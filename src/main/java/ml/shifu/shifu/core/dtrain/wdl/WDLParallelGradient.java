@@ -37,7 +37,7 @@ public class WDLParallelGradient {
     private WideAndDeep wdl;
     private MemoryLimitedList<WDLWorker.Data> trainData;
     private MemoryLimitedList<WDLWorker.Data> testData;
-    private ExecutorService threadPool;
+    private CompletionService<WDLParams> completionService;
     private ConcurrentMap<Integer, Integer> inputIndexMap;
 
     private int[] trainLows;
@@ -49,12 +49,14 @@ public class WDLParallelGradient {
     public WDLParallelGradient(final WideAndDeep wnd, int threadNumber,
                                ConcurrentMap<Integer, Integer> inputIndexMap,
                                final MemoryLimitedList<WDLWorker.Data> trainData,
-                               final MemoryLimitedList<WDLWorker.Data> testData) {
+                               final MemoryLimitedList<WDLWorker.Data> testData,
+                               CompletionService<WDLParams> completionService) {
         this.threadNumber = threadNumber;
         this.wdl = wnd;
         this.inputIndexMap = inputIndexMap;
         this.trainData = trainData;
         this.testData = testData;
+        this.completionService = completionService;
 
         assert threadNumber > 0 && threadNumber < 33;
         int recordCount = this.trainData.size();
@@ -97,23 +99,24 @@ public class WDLParallelGradient {
         LOG.info("Test record count: {}", testRecordCount);
         LOG.info("Test lows: {}", Arrays.toString(testLows));
         LOG.info("Test highs: {}", Arrays.toString(testHighs));
-
-        this.threadPool = Executors.newFixedThreadPool(threadNumber);
     }
 
     public WDLParams doCompute() {
         long start = System.currentTimeMillis();
-        CompletionService<WDLParams> completionService = new ExecutorCompletionService<>(this.threadPool);
         for(int i = 0; i < this.threadNumber; i++) {
-            completionService.submit(new GradientTask(this.wdl, this.inputIndexMap, this.trainData, this.testData,
+            this.completionService.submit(new GradientTask(this.wdl, this.inputIndexMap, this.trainData, this.testData,
                     this.trainLows[i], this.trainHighs[i], this.testLows[i], this.testHighs[i]));
         }
-        WDLParams params = new WDLParams();
+        WDLParams params = null;
         for(int i = 0; i < this.threadNumber; i++) {
             try {
-                WDLParams paramsTmp = completionService.take().get();
+                WDLParams paramsTmp = this.completionService.take().get();
                 if(paramsTmp != null) {
-                    params.combine(paramsTmp);
+                    if(params != null) {
+                        params.combine(paramsTmp);
+                    } else {
+                        params = paramsTmp;
+                    }
                 }
             } catch (InterruptedException e) {
                 //TODO should i++ here?
@@ -217,13 +220,13 @@ public class WDLParallelGradient {
 
             TASK_LOG.info("training error is {} {}", trainSumError, validSumError);
             // set cnt, error to params and return to master
-            WDLParams params = new WDLParams();
-            params.setTrainCount(trainCnt);
-            params.setValidationCount(validCnt);
-            params.setTrainSize(trainSize);
-            params.setValidationSize(validationSize);
-            params.setTrainError(trainSumError);
-            params.setValidationError(validSumError);
+            wdlParams.setTrainCount(trainCnt);
+            wdlParams.setValidationCount(validCnt);
+            wdlParams.setTrainSize(trainSize);
+            wdlParams.setValidationSize(validationSize);
+            wdlParams.setTrainError(trainSumError);
+            wdlParams.setValidationError(validSumError);
+            wdlParams.setWnd(this.wnd);
 
             TASK_LOG.info("Worker with validation run time {} ms.", (System.currentTimeMillis() - start));
             return wdlParams;

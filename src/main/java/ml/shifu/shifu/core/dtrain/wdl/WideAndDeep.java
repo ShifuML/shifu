@@ -881,6 +881,7 @@ public class WideAndDeep
             WideAndDeep wideAndDeep = new WideAndDeep();
             dis = new DataInputStream(dataInputStream);
             wideAndDeep.readFields(dis);
+            wideAndDeep.initGrads();
             return wideAndDeep;
         } catch (IOException e) {
             LOG.error("IOException happen when clone wideAndDeep model", e);
