@@ -44,10 +44,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
+import java.util.concurrent.*;
 
 /**
  * {@link WDLWorker} is responsible for loading part of data into memory, do iteration gradients computation and send
@@ -183,6 +180,16 @@ public class WDLWorker extends
      * Trainer id used to tag bagging training job, starting from 0, 1, 2 ...
      */
     private int trainerId = 0;
+
+    /**
+     * Worker thread count used as multiple threading to get node status
+     */
+    private int workerThreadCount;
+
+    /**
+     * CompletionService to running gradient update in parallel
+     */
+    CompletionService<WDLParams> completionService;
 
     /**
      * If has candidate in column list.
@@ -589,6 +596,9 @@ public class WDLWorker extends
             LOG.info("Cross validation is enabled by kCrossValidation: {}.", kCrossValidation);
         }
 
+        this.workerThreadCount = modelConfig.getTrain().getWorkerThreadCount();
+        this.completionService = new ExecutorCompletionService<>(Executors.newFixedThreadPool(workerThreadCount));
+
         this.poissonSampler = Boolean.TRUE.toString()
                 .equalsIgnoreCase(context.getProps().getProperty(NNConstants.NN_POISON_SAMPLER));
         this.rng = new PoissonDistribution(1d);
@@ -687,92 +697,17 @@ public class WDLWorker extends
 
         // update master global model into worker WideAndDeep graph
         this.wnd.updateWeights(context.getLastMasterResult());
-
-        // LOG.info("Init dense weights: {}.", Arrays.toString(this.wnd.getWl().getDenseLayer().getWeights()));
-        // for(WideFieldLayer wfl: this.wnd.getWl().getLayers()) {
-        // LOG.info("Init wide weights: {}.", Arrays.toString(wfl.getWeights()));
-        // }
-
-        long start = System.currentTimeMillis();
-        // forward and backward compute gradients for each iteration
-        double trainCnt = trainingData.size(), validCnt = validationData.size();
-        double trainSize = 0, validationSize = 0;
-        double trainSumError = 0d, validSumError = 0d;
-        // LOG.info("Before training dense wGradients: {}.", Arrays.toString(wnd.getWl().getDenseLayer().getwGrads()));
-
-        int index = 0;
-        for(Data data: trainingData) {
-            if(index <= 30) {
-                this.wnd.setDebug(false);
-                this.wnd.getWl().getDenseLayer().setDebug(false);
-            } else {
-                this.wnd.getWl().getDenseLayer().setDebug(false);
-                this.wnd.setDebug(false);
-            }
-            trainSize += data.getWeight();
-            double[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data), getWideInputs(data));
-            double predict = sigmoid(logits[0]);
-            double error = predict - data.label;
-            trainSumError += (error * error * data.getWeight());
-            this.wnd.backward(new double[] { predict }, new double[] { data.label }, data.getWeight());
-            index += 1;
-        }
-
-        // LOG.info("After training dense wGradients: {}.", Arrays.toString(wnd.getWl().getDenseLayer().getwGrads()));
-
-        LOG.info("Worker with training time {} ms.", (System.currentTimeMillis() - start));
-
-        start = System.currentTimeMillis();
-        index = 0;
-
-        LOG.info("Start validation computation.");
-
-        this.wnd.setIndex(0);
-
-        // compute validation error
-        for(Data data: validationData) {
-            double[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data), getWideInputs(data));
-            double sigmoid = sigmoid(logits[0]);
-            if(index++ <= 100) {
-                LOG.info("Index {}, logit {}, sigmoid {}, label {}.", index, logits[0], sigmoid, data.label);
-            }
-            validationSize += data.getWeight();
-            double error = sigmoid - data.label;
-            validSumError += (error * error * data.getWeight());
-        }
-
-        LOG.info("training error is {} {}", trainSumError, validSumError);
-        // LOG.info("Worker gradients in dense layer {}",
-        // Arrays.toString(this.wnd.getWl().getDenseLayer().getwGrads()));
-        // set cnt, error to params and return to master
-        WDLParams params = new WDLParams();
-        params.setTrainCount(trainCnt);
-        params.setValidationCount(validCnt);
-        params.setTrainSize(trainSize);
-        params.setValidationSize(validationSize);
-        params.setTrainError(trainSumError);
-        params.setValidationError(validSumError);
-        params.setSerializationType(SerializationType.GRADIENTS);
+        WDLParallelGradient parallelGradient = new WDLParallelGradient(this.wnd, this.workerThreadCount,
+                this.inputIndexMap, this.trainingData, this.validationData, this.completionService);
+        WDLParams wdlParams = parallelGradient.doCompute();
+        wdlParams.setSerializationType(SerializationType.GRADIENTS);
         this.wnd.setSerializationType(SerializationType.GRADIENTS);
-        params.setWnd(this.wnd);
-        LOG.info("Worker with validation run time {} ms.", (System.currentTimeMillis() - start));
-
-        return params;
+        return wdlParams;
     }
 
     public double sigmoid(double logit) {
         // return (double) (1 / (1 + Math.min(1.0E19, Math.exp(-logit))));
         return 1.0d / (1.0d + BoundMath.exp(-1 * logit));
-    }
-
-    private List<SparseInput> getWideInputs(Data data) {
-        return this.wnd.getWideColumnIds().stream().map(id -> data.getCategoricalValues()[this.inputIndexMap.get(id)])
-                .collect(Collectors.toList());
-    }
-
-    private List<SparseInput> getEmbedInputs(Data data) {
-        return this.wnd.getEmbedColumnIds().stream().map(id -> data.getCategoricalValues()[this.inputIndexMap.get(id)])
-                .collect(Collectors.toList());
     }
 
     @Override
