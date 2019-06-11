@@ -106,7 +106,7 @@ public class WideAndDeep
     boolean embedEnable = true;
 
     private boolean isDebug = false;
-    
+
     /**
      * Flat spot value to smooth lr derived function: result * (1 - result): This value sometimes may be close to zero.
      * Add flat sport to improve it: result * (1 - result) + 0.1d
@@ -257,7 +257,6 @@ public class WideAndDeep
         for(int i = 0; i < grad2Logits.length; i++) {
             double error = (predicts[i] - actuals[i]);
             grad2Logits[i] = error * (derivedFunction(predicts[i]) + FLAT_SPOT_VALUE) * sig * -1;
-            // grad2Logits[i] = error * (derivedFunction(predicts[i]) + FLAT_SPOT_VALUE);
         }
 
         // wide layer backward, as wide layer in LR actually in backward, only gradients computation is needed.
@@ -729,7 +728,7 @@ public class WideAndDeep
         }
 
         AssertUtils.assertListNotNullAndSizeEqual(this.actiFuncs, hiddenDenseLayer);
-        hiddenDenseLayer.forEach(denseLayer -> LOG.info(String.valueOf(denseLayer)));
+        // hiddenDenseLayer.forEach(denseLayer -> LOG.info(String.valueOf(denseLayer)));
         this.hiddenLayers = new ArrayList<>(this.actiFuncs.size() * 2);
         for(int i = 0; i < hiddenDenseLayer.size(); i++) {
             this.hiddenLayers.add(hiddenDenseLayer.get(i));
@@ -748,6 +747,7 @@ public class WideAndDeep
             embedOutputs = SerializationUtil.readIntList(in, embedOutputs);
             wideColumnIds = SerializationUtil.readIntList(in, wideColumnIds);
             hiddenNodes = SerializationUtil.readIntList(in, hiddenNodes);
+            l2reg = in.readDouble();
         }
     }
 

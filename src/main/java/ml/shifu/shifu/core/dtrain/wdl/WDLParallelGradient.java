@@ -119,10 +119,9 @@ public class WDLParallelGradient {
                     }
                 }
             } catch (InterruptedException e) {
-                //TODO should i++ here?
-                LOG.info("Interrupted exception", e);
+                Thread.currentThread().interrupt();
             } catch (ExecutionException e) {
-                LOG.info("ExecutionException exception", e);
+                LOG.error("ExecutionException exception", e);
             }
         }
         LOG.info("Worker with parallel train run time {} ms.", (System.currentTimeMillis() - start));
