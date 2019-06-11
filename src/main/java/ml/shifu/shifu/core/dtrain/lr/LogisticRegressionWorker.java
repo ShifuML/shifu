@@ -425,8 +425,7 @@ public class LogisticRegressionWorker extends
     @Override
     public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue,
             WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
-        ++this.count;
-        if((this.count) % 100000 == 0) {
+        if((this.count++) % 100000 == 0) {
             LOG.info("Read {} records.", this.count);
         }
         String line = currentValue.getWritable().toString();
