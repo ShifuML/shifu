@@ -19,6 +19,8 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
+import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper;
+import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
 import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -312,21 +314,16 @@ public class DateStatComputeMapper extends Mapper<LongWritable, Text, Text, Date
     }
 
     private void populateStats(String[] units, String tag, Double weight, int columnIndex, int newCCIndex) {
-        ColumnConfig columnConfig = this.columnConfigList.get(columnIndex);
-
-        boolean isMissingValue = false;
-        boolean isInvalidValue = false;
-
-        String variableName = columnConfig.getColumnName().toLowerCase();
-        DateStatInfoWritable dateStatInfoWritable = this.dailyStatInfo.get(variableName);
-
-        if(dateStatInfoWritable == null) {
-            dateStatInfoWritable = new DateStatInfoWritable();
-            this.dailyStatInfo.put(variableName, dateStatInfoWritable);
-        }
         String dateVal = "";
         if(dateColumnNum >= 0) {
             dateVal = units[dateColumnNum].toLowerCase();
+        }
+        ColumnConfig columnConfig = this.columnConfigList.get(columnIndex);
+        String variableName = columnConfig.getColumnName().toLowerCase();
+        DateStatInfoWritable dateStatInfoWritable = this.dailyStatInfo.get(variableName);
+        if(dateStatInfoWritable == null) {
+            dateStatInfoWritable = new DateStatInfoWritable();
+            this.dailyStatInfo.put(variableName, dateStatInfoWritable);
         }
         Map<String, DateStatInfoWritable.VariableStatInfo> map = dateStatInfoWritable.getVariableDailyStatInfo();
         DateStatInfoWritable.VariableStatInfo variableStatInfo = map.get(dateVal);
@@ -334,6 +331,17 @@ public class DateStatComputeMapper extends Mapper<LongWritable, Text, Text, Date
             variableStatInfo = new DateStatInfoWritable.VariableStatInfo();
             map.put(dateVal, variableStatInfo);
         }
+
+        AutoTypeDistinctCountMapper.CountAndFrequentItems countAndFrequentItems = variableStatInfo.getCountAndFrequentItems();
+        if(countAndFrequentItems == null) {
+            countAndFrequentItems = new AutoTypeDistinctCountMapper.CountAndFrequentItems();
+            variableStatInfo.setCountAndFrequentItems(countAndFrequentItems);
+        }
+        countAndFrequentItems.offer(this.missingOrInvalidValues, units[columnIndex]);
+
+        boolean isMissingValue = false;
+        boolean isInvalidValue = false;
+
         variableStatInfo.setColumnConfigIndex(columnIndex);
         variableStatInfo.setTotalCount(variableStatInfo.getTotalCount() + 1L);
 
@@ -466,7 +474,10 @@ public class DateStatComputeMapper extends Mapper<LongWritable, Text, Text, Date
         for(Map.Entry<String, DateStatInfoWritable> entry: this.dailyStatInfo.entrySet()) {
             this.outputKey.set(entry.getKey());
             for(Map.Entry<String, DateStatInfoWritable.VariableStatInfo> inEntry : entry.getValue().getVariableDailyStatInfo().entrySet()){
-                LOG.info("output." + entry.getKey() + " " + inEntry.getKey() + " " + inEntry.getValue());
+                AutoTypeDistinctCountMapper.CountAndFrequentItems cfi = inEntry.getValue().getCountAndFrequentItems();
+                inEntry.getValue().setCfiw(new CountAndFrequentItemsWritable(cfi.getCount(), cfi.getInvalidCount(),
+                        cfi.getValidNumCount(), cfi.getHyper().getBytes(), cfi.getFrequentItems()));
+                LOG.info("output. key = {}, inEntryKey = {}, inEntryValue = {}", entry.getKey(), inEntry.getKey(), inEntry.getValue());
             }
             context.write(this.outputKey, entry.getValue());
         }

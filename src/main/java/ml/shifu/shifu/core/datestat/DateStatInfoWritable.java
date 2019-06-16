@@ -15,7 +15,10 @@
  */
 package ml.shifu.shifu.core.datestat;
 
+import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
 import ml.shifu.shifu.core.ColumnStatsCalculator;
+import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper;
+import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
 import org.apache.hadoop.io.Writable;
 
 import java.io.DataInput;
@@ -61,6 +64,7 @@ public class DateStatInfoWritable implements Writable {
             out.writeLong(entry.getValue().totalCount);
 
             out.writeInt(entry.getValue().binCountPos.length);
+            entry.getValue().getCfiw().write(out);
             for(int i = 0; i < entry.getValue().binCountPos.length; i++) {
                 out.writeLong(entry.getValue().binCountPos[i]);
             }
@@ -109,6 +113,7 @@ public class DateStatInfoWritable implements Writable {
             info.totalCount = in.readLong();
 
             int size = in.readInt();
+            info.getCfiw().readFields(in);
             info.binCountPos = new long[size];
             for(int m = 0; m < size; m++) {
                 info.binCountPos[m] = in.readLong();
@@ -182,6 +187,36 @@ public class DateStatInfoWritable implements Writable {
         private double p25th = 0d;
 
         private double p75th = 0d;
+
+        private CountAndFrequentItemsWritable cfiw = new CountAndFrequentItemsWritable();
+
+        private AutoTypeDistinctCountMapper.CountAndFrequentItems countAndFrequentItems;
+
+        private HyperLogLogPlus hyperLogLogPlus = null;
+
+        public CountAndFrequentItemsWritable getCfiw() {
+            return cfiw;
+        }
+
+        public void setCfiw(CountAndFrequentItemsWritable cfiw) {
+            this.cfiw = cfiw;
+        }
+
+        public HyperLogLogPlus getHyperLogLogPlus() {
+            return hyperLogLogPlus;
+        }
+
+        public void setHyperLogLogPlus(HyperLogLogPlus hyperLogLogPlus) {
+            this.hyperLogLogPlus = hyperLogLogPlus;
+        }
+
+        public AutoTypeDistinctCountMapper.CountAndFrequentItems getCountAndFrequentItems() {
+            return countAndFrequentItems;
+        }
+
+        public void setCountAndFrequentItems(AutoTypeDistinctCountMapper.CountAndFrequentItems countAndFrequentItems) {
+            this.countAndFrequentItems = countAndFrequentItems;
+        }
 
         public double getMean() {
             return mean;
@@ -408,6 +443,9 @@ public class DateStatInfoWritable implements Writable {
                     ", binCountTotal=" + Arrays.toString(binCountTotal) +
                     ", p25th=" + p25th +
                     ", p75th=" + p75th +
+                    ", cfiw=" + cfiw +
+                    ", countAndFrequentItems=" + countAndFrequentItems +
+                    ", hyperLogLogPlus=" + hyperLogLogPlus +
                     '}';
         }
     }

@@ -15,10 +15,13 @@
  */
 package ml.shifu.shifu.core.datestat;
 
+import com.clearspring.analytics.stream.cardinality.CardinalityMergeException;
+import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ColumnStatsCalculator;
+import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import org.apache.commons.collections.MapUtils;
@@ -123,7 +126,6 @@ public class DateStatComputeReducer extends Reducer<Text, DateStatInfoWritable, 
             }
         });
 
-
         //Merge into result
         for(DateStatInfoWritable info: values) {
             if(MapUtils.isEmpty(info.getVariableDailyStatInfo())) {
@@ -136,7 +138,21 @@ public class DateStatComputeReducer extends Reducer<Text, DateStatInfoWritable, 
                     variableStatInfo = new DateStatInfoWritable.VariableStatInfo();
                     result.put(entry.getKey(), variableStatInfo);
                 }
+
                 DateStatInfoWritable.VariableStatInfo statInfo = entry.getValue();
+                if(statInfo.getCfiw().getHyperBytes() != null) {
+                    if (variableStatInfo.getHyperLogLogPlus() == null) {
+                        variableStatInfo.setHyperLogLogPlus(HyperLogLogPlus.Builder.build(statInfo.getCfiw().getHyperBytes()));
+                    } else {
+                        try {
+                            variableStatInfo.setHyperLogLogPlus((HyperLogLogPlus) variableStatInfo.getHyperLogLogPlus()
+                                    .merge(HyperLogLogPlus.Builder.build(statInfo.getCfiw().getHyperBytes())));
+                        } catch (CardinalityMergeException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
+
                 variableStatInfo.setColumnConfigIndex(statInfo.getColumnConfigIndex());
                 ColumnConfig columnConfig = this.columnConfigList.get(statInfo.getColumnConfigIndex());
                 variableStatInfo.setTotalCount(variableStatInfo.getTotalCount() + statInfo.getTotalCount());
@@ -274,7 +290,7 @@ public class DateStatComputeReducer extends Reducer<Text, DateStatInfoWritable, 
             if(variableStatInfo.getMin() == Double.MAX_VALUE){
                 variableStatInfo.setMin(0);
             }
-            //variable name|date|column type|max|min|mean|mean|median value|count|missing count|standard deviation|missing ratio|WOE|KS|IV|weighted WOE|weighted KS|weighted IV|skewness|kurtosis|P25th|P75th
+            //variable name|date|column type|max|min|mean|median value|count|missing count|standard deviation|missing ratio|WOE|KS|IV|weighted WOE|weighted KS|weighted IV|skewness|kurtosis|cardinality|P25th|P75th
             sb.append(key)
                     // variable name
                     .append(Constants.DEFAULT_DELIMITER).append(entry.getKey())
@@ -317,7 +333,7 @@ public class DateStatComputeReducer extends Reducer<Text, DateStatInfoWritable, 
                     // weighted IV
                     .append(Constants.DEFAULT_DELIMITER).append(variableStatInfo.getSkewness()) // skewness
                     .append(Constants.DEFAULT_DELIMITER).append(variableStatInfo.getKurtosis()) // kurtosis
-
+                    .append(Constants.DEFAULT_DELIMITER).append(variableStatInfo.getHyperLogLogPlus() == null ? "" : variableStatInfo.getHyperLogLogPlus().cardinality()) // cardinality
                     .append(Constants.DEFAULT_DELIMITER).append(variableStatInfo.getP25th()) // the 25 percentile value
                     .append(Constants.DEFAULT_DELIMITER).append(variableStatInfo.getP75th());
 
