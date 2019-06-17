@@ -353,6 +353,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             throw new IllegalArgumentException("Currently we only support distributed training on HDFS source type.");
         }
 
+        if(Constants.WDL.equalsIgnoreCase(alg) && this.modelConfig.getNormalize().getNormType() != NormType.ZSCALE_INDEX
+                && this.modelConfig.getNormalize().getNormType() != NormType.ZSCORE_INDEX
+                && this.modelConfig.getNormalize().getNormType() != NormType.WOE_INDEX
+                && this.modelConfig.getNormalize().getNormType() != NormType.WOE_ZSCALE_INDEX) {
+            throw new IllegalArgumentException(
+                    "WDL only support normalize#normType with ZSCALE_INDEX/ZSCORE_INDEX/WOE_INDEX/WOE_ZSCALE_INDEX, please reset and run 'shifu norm' again.");
+        }
+
         if(isDebug()) {
             LOG.warn("Currently we haven't debug logic. It's the same as you don't set it.");
         }
@@ -449,8 +457,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private void cleanTmpModelPath() {
-        // if var select job and not continue model training 
-        if(this.isForVarSelect || !modelConfig.getTrain().getIsContinuous() ) {
+        // if var select job and not continue model training
+        if(this.isForVarSelect || !modelConfig.getTrain().getIsContinuous()) {
             try {
                 FileSystem fs = HDFSUtils.getFS();
                 // delete all old models if not continuous
@@ -517,7 +525,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             if(cc.isTarget()) {
                 targetColumnNum = i;
             } else if(cc.isFinalSelect()) {
-                if (cc.isCategorical()) {
+                if(cc.isCategorical()) {
                     seletectedCategoryColumnNums.add(i);
                 } else {
                     seletectedNumericColumnNums.add(i);
@@ -536,7 +544,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     continue;
                 }
                 if(CommonUtils.isGoodCandidate(cc, hasCandidate)) {
-                    if (cc.isCategorical()) {
+                    if(cc.isCategorical()) {
                         seletectedCategoryColumnNums.add(i);
                     } else {
                         seletectedNumericColumnNums.add(i);
@@ -544,13 +552,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 }
             }
         }
-        
+
         globalConf.set("shifu.application.target-column-number", Integer.toString(targetColumnNum));
         globalConf.set("shifu.application.weight-column-number", Integer.toString(weightColumnNum));
-        globalConf.set("shifu.application.selected-numeric-column-numbers", StringUtils.join(seletectedNumericColumnNums, ' '));
-        globalConf.set("shifu.application.selected-category-column-numbers", StringUtils.join(seletectedCategoryColumnNums, ' '));
+        globalConf.set("shifu.application.selected-numeric-column-numbers",
+                StringUtils.join(seletectedNumericColumnNums, ' '));
+        globalConf.set("shifu.application.selected-category-column-numbers",
+                StringUtils.join(seletectedCategoryColumnNums, ' '));
     }
-    
+
     /**
      * update some fields of conf based on current project
      * 
@@ -559,7 +569,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     private void generateGlobalConf() throws IOException {
         if(HDFSUtils.getLocalFS().exists(new Path(globalDefaultConfFile.getName()))) {
             LOG.info("Project already has global conf, we will remove it...");
-            HDFSUtils.getLocalFS().moveToLocalFile(new Path(globalDefaultConfFile.getName()), 
+            HDFSUtils.getLocalFS().moveToLocalFile(new Path(globalDefaultConfFile.getName()),
                     new Path(globalDefaultConfFile.getName() + "_" + System.currentTimeMillis()));
         }
 
@@ -585,17 +595,17 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         globalConf.set("shifu.application.column-conf", super.getPathFinder().getColumnConfigPath(SourceType.LOCAL));
 
         // set python script
-        if (this.modelConfig.getNormalize().getNormType() == NormType.ZSCALE_INDEX) {
+        if(this.modelConfig.getNormalize().getNormType() == NormType.ZSCALE_INDEX) {
             // Running wide and deep
             globalConf.set("shifu.application.python-script-path",
                     super.getPathFinder().getScriptPath("scripts/wnp_ssgd_not_embadding.py"));
-            
+
             setSelectedColumnForWideDeep(globalConf);
         } else {
             // Running normal NN
             globalConf.set("shifu.application.python-script-path",
                     super.getPathFinder().getScriptPath("scripts/ssgd_monitor.py"));
-            
+
             // set selected column number; target column number; weight column number
             setSelectedTargetAndWeightColumnNumber(globalConf);
         }
@@ -627,7 +637,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         for(Map.Entry<Object, Object> entry: shifuConfigMap.entrySet()) {
             globalConf.set(entry.getKey().toString(), entry.getValue().toString());
         }
-        
+
         OutputStream os = null;
         try {
             // Write user's overridden conf to an xml to be localized.
@@ -956,7 +966,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
                 if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
                     copyModelToLocal(modelName, modelPath, sourceType);
-                    foundModels ++;
+                    foundModels++;
                 } else {
                     LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
                             modelPath.toString());
@@ -984,7 +994,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
                 if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
                     copyModelToLocal(modelName, modelPath, sourceType);
-                    foundModels ++;
+                    foundModels++;
                 } else {
                     LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
                             modelPath.toString());
@@ -1001,7 +1011,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
                 if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
                     copyModelToLocal(modelName, modelPath, sourceType);
-                    foundModels ++;
+                    foundModels++;
                 } else {
                     LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
                             modelPath.toString());

@@ -24,11 +24,11 @@ import java.io.IOException;
 
 /**
  * {@link DenseInputLayer} denotes dense input number array. Forward computation is a wrapper with just current input
- * array. {@linkplain #backward(float[])} no need to be supported as it should not be called.
+ * array. {@linkplain #backward(double[])} no need to be supported as it should not be called.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class DenseInputLayer extends AbstractLayer<float[], float[], float[], float[], DenseInputLayer> {
+public class DenseInputLayer extends AbstractLayer<double[], double[], double[], double[], DenseInputLayer> {
 
     /**
      * Output dimension.
@@ -49,14 +49,14 @@ public class DenseInputLayer extends AbstractLayer<float[], float[], float[], fl
     }
 
     @Override
-    public float[] forward(float[] inputs) {
+    public double[] forward(double[] inputs) {
         AssertUtils.assertNotNull(inputs);
         AssertUtils.assertEquals(inputs.length, this.out);
         return inputs;
     }
 
     @Override
-    public float[] backward(float[] backInputs) {
+    public double[] backward(double[] backInputs) {
         throw new UnsupportedOperationException();
     }
 
@@ -86,7 +86,7 @@ public class DenseInputLayer extends AbstractLayer<float[], float[], float[], fl
     }
 
     @Override
-    public void update(DenseInputLayer gradLayer, Optimizer optimizer, String uniqueKey) {
+    public void update(DenseInputLayer gradLayer, Optimizer optimizer, String uniqueKey, double trainCount) {
         // no need to update output dimension
     }
 

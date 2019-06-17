@@ -15,15 +15,50 @@
  */
 package ml.shifu.shifu.util;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.io.Reader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.Predicate;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.pig.backend.executionengine.ExecException;
+import org.apache.pig.data.Tuple;
+import org.encog.ml.BasicML;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
+
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
-import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -33,23 +68,6 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.Predicate;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.math.NumberUtils;
-import org.apache.commons.lang3.tuple.MutablePair;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.pig.backend.executionengine.ExecException;
-import org.apache.pig.data.Tuple;
-import org.encog.ml.BasicML;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.*;
-import java.util.*;
-import java.util.Map.Entry;
 
 /**
  * {@link CommonUtils} is used to for almost all kinds of utility function in this framework.
@@ -64,7 +82,6 @@ public final class CommonUtils {
 
     private static final Logger log = LoggerFactory.getLogger(CommonUtils.class);
 
-    
     /**
      * Sync up all local configuration files to HDFS.
      *
@@ -84,21 +101,20 @@ public final class CommonUtils {
         FileSystem hdfs = HDFSUtils.getFS();
         FileSystem localFs = HDFSUtils.getLocalFS();
 
-        Path pathModelSet = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
+        Path hdfsMSPath = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
+        Path pathModelSet = hdfsMSPath;
         // don't check whether pathModelSet is exists, should be remove by user.
         hdfs.mkdirs(pathModelSet);
 
         // Copy ModelConfig
         Path srcModelConfig = new Path(pathFinder.getModelConfigPath(SourceType.LOCAL));
-        Path dstModelConfig = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
-        hdfs.copyFromLocalFile(srcModelConfig, dstModelConfig);
+        hdfs.copyFromLocalFile(srcModelConfig, hdfsMSPath);
 
         // Copy GridSearch config file if exists
         String gridConfigFile = modelConfig.getTrain().getGridConfigFile();
         if(gridConfigFile != null && !gridConfigFile.trim().equals("")) {
             Path srcGridConfig = new Path(modelConfig.getTrain().getGridConfigFile());
-            Path dstGridConfig = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
-            hdfs.copyFromLocalFile(srcGridConfig, dstGridConfig);
+            hdfs.copyFromLocalFile(srcGridConfig, hdfsMSPath);
         }
 
         // Copy ColumnConfig
@@ -108,7 +124,10 @@ public final class CommonUtils {
             hdfs.copyFromLocalFile(srcColumnConfig, dstColumnConfig);
         }
 
-        // copy others
+        // Copy column related config files
+        copyColumnConfigFiles(modelConfig, hdfs, hdfsMSPath);
+
+        // Copy others
         Path srcVersion = new Path(pathFinder.getModelVersion(SourceType.LOCAL));
         if(localFs.exists(srcVersion)) {
             Path dstVersion = new Path(pathFinder.getModelVersion(SourceType.HDFS));
@@ -136,6 +155,33 @@ public final class CommonUtils {
         }
 
         return true;
+    }
+
+    private static void copyColumnConfigFiles(ModelConfig modelConfig, FileSystem hdfs, Path hdfsMSPath)
+            throws IOException {
+        Path colFilePath = new Path(hdfsMSPath, "columns");
+        hdfs.mkdirs(colFilePath);
+        if(StringUtils.isNotBlank(modelConfig.getDataSet().getCategoricalColumnNameFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getDataSet().getCategoricalColumnNameFile()), colFilePath);
+        }
+        if(StringUtils.isNotBlank(modelConfig.getDataSet().getMetaColumnNameFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getDataSet().getMetaColumnNameFile()), colFilePath);
+        }
+        if(StringUtils.isNotBlank(modelConfig.getVarSelect().getForceSelectColumnNameFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getVarSelect().getForceSelectColumnNameFile()), colFilePath);
+        }
+        if(StringUtils.isNotBlank(modelConfig.getVarSelect().getCandidateColumnNameFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getVarSelect().getCandidateColumnNameFile()), colFilePath);
+        }
+        if(StringUtils.isNotBlank(modelConfig.getVarSelect().getForceRemoveColumnNameFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getVarSelect().getForceRemoveColumnNameFile()), colFilePath);
+        }
+        if(StringUtils.isNotBlank(modelConfig.getDataSet().getHybridColumnNameFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getDataSet().getHybridColumnNameFile()), colFilePath);
+        }
+        if(StringUtils.isNotBlank(modelConfig.getDataSet().getSegExpressionFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getDataSet().getSegExpressionFile()), colFilePath);
+        }
     }
 
     /**
@@ -416,10 +462,7 @@ public final class CommonUtils {
             // NPE protection
             return columnName;
         }
-        return columnName.replaceAll("\\.", "_").
-                          replaceAll(" ", "_").
-                          replaceAll("/", "_").
-                          replaceAll("-", "_");
+        return columnName.replaceAll("\\.", "_").replaceAll(" ", "_").replaceAll("/", "_").replaceAll("-", "_");
     }
 
     /**
@@ -1010,7 +1053,7 @@ public final class CommonUtils {
     public static boolean isTreeModel(String alg) {
         return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
     }
-    
+
     public static boolean isTensorFlowModel(String alg) {
         return Constants.TF_ALG_NAME.equalsIgnoreCase(alg);
     }
@@ -1034,7 +1077,6 @@ public final class CommonUtils {
     public static boolean isGBDTAlgorithm(String alg) {
         return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
     }
-
 
     /*
      * Expanding score by expandingFactor
@@ -1074,110 +1116,6 @@ public final class CommonUtils {
             return File.separator;
         } else {
             return Constants.BACK_SLASH + File.separator;
-        }
-    }
-
-    /**
-     * Update target, listMeta, listForceSelect, listForceRemove
-     *
-     * @param modelConfig
-     *            model config list
-     * @param columnConfigList
-     *            the column config list
-     * @throws IOException
-     *             any io exception
-     *
-     * @throws IllegalArgumentException
-     *             if modelConfig is null or columnConfigList is null.
-     */
-    public static void updateColumnConfigFlags(ModelConfig modelConfig, List<ColumnConfig> columnConfigList)
-            throws IOException {
-        String targetColumnName = modelConfig.getTargetColumnName();
-        String weightColumnName = modelConfig.getWeightColumnName();
-
-        Set<NSColumn> setCategorialColumns = new HashSet<NSColumn>();
-        List<String> categoricalColumnNames = modelConfig.getCategoricalColumnNames();
-        if(CollectionUtils.isNotEmpty(categoricalColumnNames)) {
-            for(String column: categoricalColumnNames) {
-                setCategorialColumns.add(new NSColumn(column));
-            }
-        }
-
-        Set<NSColumn> setHybridColumns = new HashSet<NSColumn>();
-        Map<String, Double> hybridColumnNames = modelConfig.getHybridColumnNames();
-        if(hybridColumnNames != null && hybridColumnNames.size() > 0) {
-            for(Entry<String, Double> entry: hybridColumnNames.entrySet()) {
-                setHybridColumns.add(new NSColumn(entry.getKey()));
-            }
-        }
-
-        Set<NSColumn> setMeta = new HashSet<NSColumn>();
-        if(CollectionUtils.isNotEmpty(modelConfig.getMetaColumnNames())) {
-            for(String meta: modelConfig.getMetaColumnNames()) {
-                setMeta.add(new NSColumn(meta));
-            }
-        }
-
-        Set<NSColumn> setForceRemove = new HashSet<NSColumn>();
-        if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())
-                && CollectionUtils.isNotEmpty(modelConfig.getListForceRemove())) {
-            // if we need to update force remove, only and if one the force is enabled
-            for(String forceRemoveName: modelConfig.getListForceRemove()) {
-                setForceRemove.add(new NSColumn(forceRemoveName));
-            }
-        }
-
-        Set<NSColumn> setForceSelect = new HashSet<NSColumn>(512);
-        if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())
-                && CollectionUtils.isNotEmpty(modelConfig.getListForceSelect())) {
-            // if we need to update force select, only and if one the force is enabled
-            for(String forceSelectName: modelConfig.getListForceSelect()) {
-                setForceSelect.add(new NSColumn(forceSelectName));
-            }
-        }
-
-        for(ColumnConfig config: columnConfigList) {
-            String varName = config.getColumnName();
-
-            // reset it
-            config.setColumnFlag(null);
-
-            if(NSColumnUtils.isColumnEqual(weightColumnName, varName)) {
-                config.setColumnFlag(ColumnFlag.Weight);
-                config.setFinalSelect(false); // reset final select
-            } else if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
-                config.setColumnFlag(ColumnFlag.Target);
-                config.setFinalSelect(false); // reset final select
-            } else if(setMeta.contains(new NSColumn(varName))) {
-                config.setColumnFlag(ColumnFlag.Meta);
-                config.setFinalSelect(false); // reset final select
-            } else if(setForceRemove.contains(new NSColumn(varName))) {
-                config.setColumnFlag(ColumnFlag.ForceRemove);
-                config.setFinalSelect(false); // reset final select
-            } else if(setForceSelect.contains(new NSColumn(varName))) {
-                config.setColumnFlag(ColumnFlag.ForceSelect);
-            }
-
-            if(NSColumnUtils.isColumnEqual(weightColumnName, varName)) {
-                // weight column is numerical
-                config.setColumnType(ColumnType.N);
-            } else if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
-                // target column is set to categorical column
-                config.setColumnType(ColumnType.C);
-            } else if(setHybridColumns.contains(new NSColumn(varName))) {
-                config.setColumnType(ColumnType.H);
-                String newVarName = null;
-                if(Environment.getBoolean(Constants.SHIFU_NAMESPACE_STRICT_MODE, false)) {
-                    newVarName = new NSColumn(varName).getFullColumnName();
-                } else {
-                    newVarName = new NSColumn(varName).getSimpleName();
-                }
-                config.setHybridThreshold(hybridColumnNames.get(newVarName));
-            } else if(setCategorialColumns.contains(new NSColumn(varName))) {
-                config.setColumnType(ColumnType.C);
-            } else {
-                config.setColumnType(ColumnType.N);
-            }
         }
     }
 
@@ -1612,7 +1550,7 @@ public final class CommonUtils {
         }
         return columnName;
     }
-    
+
     /**
      * Return first two lines split string array. This is used to detect data schema and check if data
      * schema is the
@@ -1787,7 +1725,6 @@ public final class CommonUtils {
         }
     }
 
-
     /**
      * Check whether candidates are set or not
      *
@@ -1806,7 +1743,6 @@ public final class CommonUtils {
 
         return (candidateCnt > 0);
     }
-
 
     /**
      * flatten categorical value group into values list
@@ -1904,5 +1840,12 @@ public final class CommonUtils {
         return key.startsWith("nn") || key.startsWith("guagua") || key.startsWith("shifu") || key.startsWith("mapred")
                 || key.startsWith("io") || key.startsWith("hadoop") || key.startsWith("yarn") || key.startsWith("pig")
                 || key.startsWith("hive") || key.startsWith("job");
+    }
+
+    public static boolean getBooleanValue(Object object, boolean defaultValue) {
+        if(object == null) {
+            return defaultValue;
+        }
+        return Boolean.TRUE.toString().equalsIgnoreCase(object.toString());
     }
 }

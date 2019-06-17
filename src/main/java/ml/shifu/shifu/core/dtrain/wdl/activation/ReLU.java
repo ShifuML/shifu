@@ -25,12 +25,12 @@ public class ReLU extends Activation {
     /**
      * Tmp save last inputs in forward and then can be used in backward computation.
      */
-    private float[] lastInput;
+    private double[] lastInput;
 
     @Override
-    public float[] forward(float[] inputs) {
+    public double[] forward(double[] inputs) {
         this.lastInput = inputs;
-        float[] outputs = new float[inputs.length];
+        double[] outputs = new double[inputs.length];
         for(int i = 0; i < inputs.length; i++) {
             outputs[i] = Math.max(0, inputs[i]);
         }
@@ -38,8 +38,8 @@ public class ReLU extends Activation {
     }
 
     @Override
-    public float[] backward(float[] outputs) {
-        float[] results = new float[outputs.length];
+    public double[] backward(double[] outputs) {
+        double[] results = new double[outputs.length];
         for(int i = 0; i < outputs.length; i++) {
             results[i] = this.lastInput[i] > 0 ? outputs[i] * 1f : 0f;
         }

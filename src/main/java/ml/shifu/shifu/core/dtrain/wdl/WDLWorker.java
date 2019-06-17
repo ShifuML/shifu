@@ -34,17 +34,17 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.MapReduceUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.encog.mathutil.BoundMath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * {@link WDLWorker} is responsible for loading part of data into memory, do iteration gradients computation and send
@@ -52,7 +52,8 @@ import java.util.concurrent.TimeUnit;
  * iteration.
  * 
  * <p>
- * Data loading into memory as memory list includes two parts: numerical float array and sparse input object array which
+ * Data loading into memory as memory list includes two parts: numerical double array and sparse input object array
+ * which
  * is for categorical variables. To leverage sparse feature of categorical variables, sparse object is leveraged to
  * save memory and matrix computation.
  * 
@@ -181,6 +182,16 @@ public class WDLWorker extends
     private int trainerId = 0;
 
     /**
+     * Worker thread count used as multiple threading to get node status
+     */
+    private int workerThreadCount;
+
+    /**
+     * CompletionService to running gradient update in parallel
+     */
+    CompletionService<WDLParams> completionService;
+
+    /**
      * If has candidate in column list.
      */
     private boolean hasCandidates;
@@ -237,7 +248,8 @@ public class WDLWorker extends
     private WideAndDeep wnd;
 
     /**
-     * Logic to load data into memory list which includes float array for numerical features and sparse object array for
+     * Logic to load data into memory list which includes double array for numerical features and sparse object array
+     * for
      * categorical features.
      */
     @Override
@@ -247,31 +259,30 @@ public class WDLWorker extends
             LOG.info("Read {} records.", this.count);
         }
 
-        // hashcode for fixed input split in train and validation
-        long hashcode = 0;
-        float[] inputs = new float[this.numInputs];
+        long hashcode = 0; // hashcode for fixed input split in train and validation
+        double[] inputs = new double[this.numInputs];
         this.cateInputs = (int) this.columnConfigList.stream().filter(ColumnConfig::isCategorical).count();
         SparseInput[] cateInputs = new SparseInput[this.cateInputs];
-        float ideal = 0f, significance = 1f;
+        double ideal = 0d, significance = 1d;
         int index = 0, numIndex = 0, cateIndex = 0;
         // use guava Splitter to iterate only once
         for(String input: this.splitter.split(currentValue.getWritable().toString())) {
-            // if no wgt column at last pos, no need process here 
+            // if no wgt column at last pos, no need process here
             if(index == this.columnConfigList.size()) {
                 significance = getWeightValue(input);
                 break; // the last field is significance, break here
             } else {
                 ColumnConfig config = this.columnConfigList.get(index);
                 if(config != null && config.isTarget()) {
-                    ideal = getFloatValue(input);
+                    ideal = getDoubleValue(input);
                 } else {
                     // final select some variables but meta and target are not included
                     if(validColumn(config)) {
                         if(config.isNumerical()) {
-                            inputs[numIndex] = getFloatValue(input);
+                            inputs[numIndex] = getDoubleValue(input);
                             this.inputIndexMap.putIfAbsent(config.getColumnNum(), numIndex++);
                         } else if(config.isCategorical()) {
-                            cateInputs[cateIndex] = new SparseInput(config.getColumnNum(), getCateIndex(input, config));
+                            cateInputs[cateIndex] = new SparseInput(config.getColumnNum(), (int) getDoubleValue(input));
                             this.inputIndexMap.putIfAbsent(config.getColumnNum(), cateIndex++);
                         }
                         hashcode = hashcode * 31 + input.hashCode();
@@ -282,10 +293,10 @@ public class WDLWorker extends
         }
 
         // output delimiter in norm can be set by user now and if user set a special one later changed, this exception
-        // is helped to quick find such issue.
+        // is helped to quick find such issue., here only check numerical array
         validateInputLength(context, inputs, numIndex);
 
-        // sample negative only logic here
+        // sample negative only logic here, sample negative out, no need continue
         if(sampleNegOnly(hashcode, ideal)) {
             return;
         }
@@ -308,28 +319,27 @@ public class WDLWorker extends
                 || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()));
     }
 
-    private boolean sampleNegOnly(long hashcode, float ideal) {
+    private boolean sampleNegOnly(long hashcode, double ideal) {
+        if(!modelConfig.getTrain().getSampleNegOnly()) { // only works when set sampleNegOnly
+            return false;
+        }
         boolean ret = false;
-        if(modelConfig.getTrain().getSampleNegOnly()) {
-            double bagSampleRate = this.modelConfig.getBaggingSampleRate();
-            if(this.modelConfig.isFixInitialInput()) {
-                // if fixInitialInput, sample hashcode in 1-sampleRate range out if negative records
-                int startHashCode = (100 / this.modelConfig.getBaggingNum()) * this.trainerId;
-                // here BaggingSampleRate means how many data will be used in training and validation, if it is 0.8, we
-                // should take 1-0.8 to check endHashCode
-                int endHashCode = startHashCode + Double.valueOf((1d - bagSampleRate) * 100).intValue();
-                if((modelConfig.isRegression()
-                        || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()))
-                        && (int) (ideal + 0.01d) == 0 && isInRange(hashcode, startHashCode, endHashCode)) {
-                    ret = true;
-                }
-            } else {
-                // if not fixed initial input, for regression or onevsall multiple classification, if negative record
-                if((modelConfig.isRegression()
-                        || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()))
-                        && (int) (ideal + 0.01d) == 0 && negOnlyRnd.nextDouble() > bagSampleRate) {
-                    ret = true;
-                }
+        double bagSampleRate = this.modelConfig.getBaggingSampleRate();
+        if(this.modelConfig.isFixInitialInput()) {
+            // if fixInitialInput, sample hashcode in 1-sampleRate range out if negative records
+            int startHashCode = (100 / this.modelConfig.getBaggingNum()) * this.trainerId;
+            // here BaggingSampleRate means how many data will be used in training and validation, if it is 0.8, we
+            // should take 1-0.8 to check endHashCode
+            int endHashCode = startHashCode + (int) ((1d - bagSampleRate) * 100);
+            if((modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()))
+                    && (int) (ideal + 0.01d) == 0 && isInRange(hashcode, startHashCode, endHashCode)) {
+                ret = true;
+            }
+        } else {
+            // if not fixed initial input, for regression or onevsall multiple classification, if negative record
+            if((modelConfig.isRegression() || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()))
+                    && (int) (ideal + 0.01d) == 0 && negOnlyRnd.nextDouble() > bagSampleRate) {
+                ret = true;
             }
         }
         return ret;
@@ -366,123 +376,117 @@ public class WDLWorker extends
         boolean isValidation = (attachment != null && attachment instanceof Boolean) ? (Boolean) attachment : false;
 
         if(this.isKFoldCV) {
-            int k = this.modelConfig.getTrain().getNumKFold();
-            if(hashcode % k == this.trainerId) {
-                this.validationData.append(data);
-                if(isPositive(data.label)) {
-                    this.positiveValidationCount += 1L;
-                } else {
-                    this.negativeValidationCount += 1L;
-                }
-                return false;
-            } else {
-                this.trainingData.append(data);
-                if(isPositive(data.label)) {
-                    this.positiveTrainCount += 1L;
-                } else {
-                    this.negativeTrainCount += 1L;
-                }
-                return true;
-            }
+            return addKFoldDataPairToDataSet(hashcode, data);
         }
 
-        if(this.isManualValidation) {
-            if(isValidation) {
-                this.validationData.append(data);
-                if(isPositive(data.label)) {
-                    this.positiveValidationCount += 1L;
-                } else {
-                    this.negativeValidationCount += 1L;
-                }
-                return false;
-            } else {
-                this.trainingData.append(data);
-                if(isPositive(data.label)) {
-                    this.positiveTrainCount += 1L;
-                } else {
-                    this.negativeTrainCount += 1L;
-                }
-                return true;
-            }
-        } else {
-            if(Double.compare(this.modelConfig.getValidSetRate(), 0d) != 0) {
-                int classValue = (int) (data.label + 0.01f);
-                Random random = null;
-                if(this.isStratifiedSampling) {
-                    // each class use one random instance
-                    random = validationRandomMap.get(classValue);
-                    if(random == null) {
-                        random = new Random();
-                        this.validationRandomMap.put(classValue, random);
-                    }
-                } else {
-                    // all data use one random instance
-                    random = validationRandomMap.get(0);
-                    if(random == null) {
-                        random = new Random();
-                        this.validationRandomMap.put(0, random);
-                    }
-                }
-
-                if(this.modelConfig.isFixInitialInput()) {
-                    // for fix initial input, if hashcode%100 is in [start-hashcode, end-hashcode), validation,
-                    // otherwise training. start hashcode in different job is different to make sure bagging jobs have
-                    // different data. if end-hashcode is over 100, then check if hashcode is in [start-hashcode, 100]
-                    // or [0, end-hashcode]
-                    int startHashCode = (100 / this.modelConfig.getBaggingNum()) * this.trainerId;
-                    int endHashCode = startHashCode
-                            + Double.valueOf(this.modelConfig.getValidSetRate() * 100).intValue();
-                    if(isInRange(hashcode, startHashCode, endHashCode)) {
-                        this.validationData.append(data);
-                        if(isPositive(data.label)) {
-                            this.positiveValidationCount += 1L;
-                        } else {
-                            this.negativeValidationCount += 1L;
-                        }
-                        return false;
-                    } else {
-                        this.trainingData.append(data);
-                        if(isPositive(data.label)) {
-                            this.positiveTrainCount += 1L;
-                        } else {
-                            this.negativeTrainCount += 1L;
-                        }
-                        return true;
-                    }
-                } else {
-                    // not fixed initial input, if random value >= validRate, training, otherwise validation.
-                    if(random.nextDouble() >= this.modelConfig.getValidSetRate()) {
-                        this.trainingData.append(data);
-                        if(isPositive(data.label)) {
-                            this.positiveTrainCount += 1L;
-                        } else {
-                            this.negativeTrainCount += 1L;
-                        }
-                        return true;
-                    } else {
-                        this.validationData.append(data);
-                        if(isPositive(data.label)) {
-                            this.positiveValidationCount += 1L;
-                        } else {
-                            this.negativeValidationCount += 1L;
-                        }
-                        return false;
-                    }
-                }
-            } else {
-                this.trainingData.append(data);
-                if(isPositive(data.label)) {
-                    this.positiveTrainCount += 1L;
-                } else {
-                    this.negativeTrainCount += 1L;
-                }
-                return true;
-            }
+        if(this.isManualValidation) { // validation data set is set by users in ModelConfig:dataSet:validationDataPath
+            return addManualValidationDataPairToDataSet(data, isValidation);
+        } else { // normal case, according to validSetRate, split dataset into training and validation data set
+            return splitDataPairToDataSet(hashcode, data);
         }
     }
 
-    private boolean isPositive(float value) {
-        return Float.compare(1f, value) == 0;
+    private boolean splitDataPairToDataSet(long hashcode, Data data) {
+        if(Double.compare(this.modelConfig.getValidSetRate(), 0d) != 0) {
+            Random random = updateRandom((int) (data.label + 0.01d));
+            if(this.modelConfig.isFixInitialInput()) {
+                // for fix initial input, if hashcode%100 is in [start-hashcode, end-hashcode), validation,
+                // otherwise training. start hashcode in different job is different to make sure bagging jobs have
+                // different data. if end-hashcode is over 100, then check if hashcode is in [start-hashcode, 100]
+                // or [0, end-hashcode]
+                int startHashCode = (100 / this.modelConfig.getBaggingNum()) * this.trainerId;
+                int endHashCode = startHashCode + (int) (this.modelConfig.getValidSetRate() * 100);
+                if(isInRange(hashcode, startHashCode, endHashCode)) {
+                    this.validationData.append(data);
+                    updateValidationPosNegMetrics(data);
+                    return false;
+                } else {
+                    this.trainingData.append(data);
+                    updateTrainPosNegMetrics(data);
+                    return true;
+                }
+            } else {
+                // not fixed initial input, if random value >= validRate, training, otherwise validation.
+                if(random.nextDouble() >= this.modelConfig.getValidSetRate()) {
+                    this.trainingData.append(data);
+                    updateTrainPosNegMetrics(data);
+                    return true;
+                } else {
+                    this.validationData.append(data);
+                    updateValidationPosNegMetrics(data);
+                    return false;
+                }
+            }
+        } else {
+            this.trainingData.append(data);
+            updateTrainPosNegMetrics(data);
+            return true;
+        }
+    }
+
+    private boolean addManualValidationDataPairToDataSet(Data data, boolean isValidation) {
+        if(isValidation) {
+            this.validationData.append(data);
+            updateValidationPosNegMetrics(data);
+            return false;
+        } else {
+            this.trainingData.append(data);
+            updateTrainPosNegMetrics(data);
+            return true;
+        }
+    }
+
+    private boolean addKFoldDataPairToDataSet(long hashcode, Data data) {
+        int k = this.modelConfig.getTrain().getNumKFold();
+        if(hashcode % k == this.trainerId) {
+            this.validationData.append(data);
+            updateValidationPosNegMetrics(data);
+            return false;
+        } else {
+            this.trainingData.append(data);
+            updateTrainPosNegMetrics(data);
+            return true;
+        }
+    }
+
+    private Random updateRandom(int classValue) {
+        Random random = null;
+        if(this.isStratifiedSampling) {
+            // each class use one random instance
+            random = validationRandomMap.get(classValue);
+            if(random == null) {
+                random = new Random();
+                this.validationRandomMap.put(classValue, random);
+            }
+        } else {
+            // all data use one random instance
+            random = validationRandomMap.get(0);
+            if(random == null) {
+                random = new Random();
+                this.validationRandomMap.put(0, random);
+            }
+        }
+        return random;
+    }
+
+    private void updateTrainPosNegMetrics(Data data) {
+        if(isPositive(data.label)) {
+            this.positiveTrainCount += 1L;
+        } else {
+            this.negativeTrainCount += 1L;
+        }
+    }
+
+    private void updateValidationPosNegMetrics(Data data) {
+        if(isPositive(data.label)) {
+            this.positiveValidationCount += 1L;
+        } else {
+            this.negativeValidationCount += 1L;
+        }
+    }
+
+    private boolean isPositive(double value) {
+        return Double.compare(1d, value) == 0;
     }
 
     private boolean isInRange(long hashcode, int startHashCode, int endHashCode) {
@@ -500,7 +504,7 @@ public class WDLWorker extends
     /**
      * If no enough columns for model training, most of the cases root cause is from inconsistent delimiter.
      */
-    private void validateInputLength(WorkerContext<WDLParams, WDLParams> context, float[] inputs, int numInputIndex) {
+    private void validateInputLength(WorkerContext<WDLParams, WDLParams> context, double[] inputs, int numInputIndex) {
         if(numInputIndex != inputs.length) {
             String delimiter = context.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER,
                     Constants.DEFAULT_DELIMITER);
@@ -522,6 +526,7 @@ public class WDLWorker extends
         }
     }
 
+    @SuppressWarnings("unused")
     private int getCateIndex(String input, ColumnConfig columnConfig) {
         int shortValue = (columnConfig.getBinCategory().size());
         if(input.length() == 0) { // missing which is invalid category
@@ -536,25 +541,25 @@ public class WDLWorker extends
         return shortValue;
     }
 
-    private float getWeightValue(String input) {
-        float significance = 1f;
+    private double getWeightValue(String input) {
+        double significance = 1d;
         if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())) {
-            // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 1f)
-            significance = input.length() == 0 ? 1f : NumberFormatUtils.getFloat(input, 1f);
-            // if invalid weight, set it to 1f and warning in log
-            if(significance < 0f) {
+            // check here to avoid bad performance in failed NumberFormatUtils.getDouble(input, 1d)
+            significance = input.length() == 0 ? 1d : NumberFormatUtils.getDouble(input, 1d);
+            // if invalid weight, set it to 1d and warning in log
+            if(significance < 0d) {
                 LOG.warn("Record {} with weight {} is less than 0 and invalid, set it to 1.", count, significance);
-                significance = 1f;
+                significance = 1d;
             }
         }
         return significance;
     }
 
-    private float getFloatValue(String input) {
-        // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-        float floatValue = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(input, 0f);
+    private double getDoubleValue(String input) {
+        // check here to avoid bad performance in failed NumberFormatUtils.getDouble(input, 0d)
+        double doubleValue = input.length() == 0 ? 0d : NumberFormatUtils.getDouble(input, 0d);
         // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
-        return (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
+        return (Double.isNaN(doubleValue) || Double.isNaN(doubleValue)) ? 0d : doubleValue;
     }
 
     @Override
@@ -590,6 +595,9 @@ public class WDLWorker extends
             isKFoldCV = true;
             LOG.info("Cross validation is enabled by kCrossValidation: {}.", kCrossValidation);
         }
+
+        this.workerThreadCount = modelConfig.getTrain().getWorkerThreadCount();
+        this.completionService = new ExecutorCompletionService<>(Executors.newFixedThreadPool(workerThreadCount));
 
         this.poissonSampler = Boolean.TRUE.toString()
                 .equalsIgnoreCase(context.getProps().getProperty(NNConstants.NN_POISON_SAMPLER));
@@ -655,9 +663,13 @@ public class WDLWorker extends
         int numLayers = (Integer) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
-        Float l2reg = ((Double) this.validParams.get(CommonConstants.WDL_L2_REG)).floatValue();
-        this.wnd = new WideAndDeep(idBinCateSizeMap, numInputs, numericalIds, embedColumnIds, embedOutputList,
-                wideColumnIds, hiddenNodes, actFunc, l2reg);
+        double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0d);
+        Object wideEnableObj = this.validParams.get(CommonConstants.WIDE_ENABLE);
+        boolean wideEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.WIDE_ENABLE), true);
+        boolean deepEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.DEEP_ENABLE), true);
+        boolean embedEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.EMBED_ENABLE), true);
+        this.wnd = new WideAndDeep(wideEnable, deepEnable, embedEnable, idBinCateSizeMap, numInputs, numericalIds,
+                embedColumnIds, embedOutputList, wideColumnIds, hiddenNodes, actFunc, l2reg);
     }
 
     private void initCateIndexMap() {
@@ -685,56 +697,17 @@ public class WDLWorker extends
 
         // update master global model into worker WideAndDeep graph
         this.wnd.updateWeights(context.getLastMasterResult());
-
-        // forward and backward compute gradients for each iteration
-        int trainCnt = trainingData.size(), validCnt = validationData.size();
-        double trainSumError = 0d, validSumError = 0d;
-        for(Data data: trainingData) {
-            float[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data), getWideInputs(data));
-            float predict = sigmoid(logits[0]);
-            float error = predict - data.label;
-            // TODO, logloss, squredloss, weighted error or not
-            trainSumError += data.weight * error * error;
-            this.wnd.backward(new float[] { predict }, new float[] { data.label }, data.getWeight());
-        }
-
-        // compute validation error
-        for(Data data: validationData) {
-            float[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data), getWideInputs(data));
-            float error = sigmoid(logits[0]) - data.label;
-            validSumError += data.weight * error * error;
-        }
-        
-        LOG.info("training error is {} {}", trainSumError, validSumError);
-        // set cnt, error to params and return to master
-        WDLParams params = new WDLParams();
-        params.setTrainCount(trainCnt);
-        params.setValidationCount(validCnt);
-        params.setTrainError(trainSumError);
-        params.setValidationError(validSumError);
-        params.setSerializationType(SerializationType.GRADIENTS);
-        params.setWnd(this.wnd);
-        return params;
+        WDLParallelGradient parallelGradient = new WDLParallelGradient(this.wnd, this.workerThreadCount,
+                this.inputIndexMap, this.trainingData, this.validationData, this.completionService);
+        WDLParams wdlParams = parallelGradient.doCompute();
+        wdlParams.setSerializationType(SerializationType.GRADIENTS);
+        this.wnd.setSerializationType(SerializationType.GRADIENTS);
+        return wdlParams;
     }
 
-    public float sigmoid(float logit) {
-        return (float) (1 / (1 + Math.min(1.0E19, Math.exp(-logit))));
-    }
-
-    private List<SparseInput> getWideInputs(Data data) {
-        List<SparseInput> wideInputs = new ArrayList<SparseInput>();
-        for(Integer columnId: this.wnd.getWideColumnIds()) {
-            wideInputs.add(data.getCategoricalValues()[this.inputIndexMap.get(columnId)]);
-        }
-        return wideInputs;
-    }
-
-    private List<SparseInput> getEmbedInputs(Data data) {
-        List<SparseInput> embedInputs = new ArrayList<>();
-        for(Integer columnId: this.wnd.getEmbedColumnIds()) {
-            embedInputs.add(data.getCategoricalValues()[this.inputIndexMap.get(columnId)]);
-        }
-        return embedInputs;
+    public double sigmoid(double logit) {
+        // return (double) (1 / (1 + Math.min(1.0E19, Math.exp(-logit))));
+        return 1.0d / (1.0d + BoundMath.exp(-1 * logit));
     }
 
     @Override
@@ -772,7 +745,7 @@ public class WDLWorker extends
     }
 
     /**
-     * {@link Data} denotes training record with a float array of dense (numerical) inputs and a list of sparse inputs
+     * {@link Data} denotes training record with a double array of dense (numerical) inputs and a list of sparse inputs
      * of categorical input features.
      * 
      * @author Zhang David (pengzhang@paypal.com)
@@ -782,7 +755,7 @@ public class WDLWorker extends
         /**
          * Numerical values
          */
-        private float[] numericalValues;
+        private double[] numericalValues;
 
         /**
          * Categorical values in sparse object
@@ -792,12 +765,12 @@ public class WDLWorker extends
         /**
          * The weight of one training record like dollar amount in one txn
          */
-        private float weight;
+        private double weight;
 
         /**
          * Target value of one record
          */
-        private float label;
+        private double label;
 
         /**
          * Constructor for a unified data object which is for a line of training record.
@@ -811,7 +784,7 @@ public class WDLWorker extends
          * @param ideal
          *            the label field, 0 or 1
          */
-        public Data(float[] numericalValues, SparseInput[] categoricalValues, float weight, float ideal) {
+        public Data(double[] numericalValues, SparseInput[] categoricalValues, double weight, double ideal) {
             this.numericalValues = numericalValues;
             this.categoricalValues = categoricalValues;
             this.weight = weight;
@@ -821,7 +794,7 @@ public class WDLWorker extends
         /**
          * @return the numericalValues
          */
-        public float[] getNumericalValues() {
+        public double[] getNumericalValues() {
             return numericalValues;
         }
 
@@ -829,7 +802,7 @@ public class WDLWorker extends
          * @param numericalValues
          *            the numericalValues to set
          */
-        public void setNumericalValues(float[] numericalValues) {
+        public void setNumericalValues(double[] numericalValues) {
             this.numericalValues = numericalValues;
         }
 
@@ -851,7 +824,7 @@ public class WDLWorker extends
         /**
          * @return the weight
          */
-        public float getWeight() {
+        public double getWeight() {
             return weight;
         }
 
@@ -859,14 +832,14 @@ public class WDLWorker extends
          * @param weight
          *            the weight to set
          */
-        public void setWeight(float weight) {
+        public void setWeight(double weight) {
             this.weight = weight;
         }
 
         /**
          * @return the ideal
          */
-        public float getLabel() {
+        public double getLabel() {
             return label;
         }
 
@@ -874,7 +847,7 @@ public class WDLWorker extends
          * @param ideal
          *            the ideal to set
          */
-        public void setLabel(float ideal) {
+        public void setLabel(double ideal) {
             this.label = ideal;
         }
 

@@ -190,7 +190,7 @@ public class ModelConfig {
         if(enableHadoop) {
             Path dst = new Path(File.separator + "user" + File.separator
                     + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement");
-            if ( !ShifuFileUtils.isFileExists(dst, SourceType.HDFS) ) {
+            if(!ShifuFileUtils.isFileExists(dst, SourceType.HDFS)) {
                 HDFSUtils.getFS().mkdirs(dst);
                 HDFSUtils.getFS().copyFromLocalFile(new Path(exampleLocalDSPath), dst);
             }
@@ -295,9 +295,7 @@ public class ModelConfig {
             evalSet.setSource(SourceType.HDFS);
             Path dst = new Path(File.separator + "user" + File.separator
                     + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement");
-            if ( !ShifuFileUtils.isFileExists(dst, SourceType.HDFS) ) {
-                HDFSUtils.getFS().copyFromLocalFile(new Path(exampleLocalESFolder), dst);
-            }
+            HDFSUtils.getFS().copyFromLocalFile(new Path(exampleLocalESFolder), dst);
 
             evalSet.setDataPath(
                     new File(File.separator + "user" + File.separator + Environment.getProperty(Environment.SYSTEM_USER)
@@ -660,6 +658,44 @@ public class ModelConfig {
             }
         }
         return CommonUtils.readConfNamesAsList(categoricalColumnNameFile, SourceType.LOCAL, delimiter);
+    }
+
+    @JsonIgnore
+    public Map<String, Integer> getCategoricalColumnHashSeedConf() throws IOException {
+        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter()
+                : this.getHeaderDelimiter();
+        String categoricalHashSeedConfFile = dataSet.getCategoricalHashSeedConfFile();
+        if(StringUtils.isBlank(categoricalHashSeedConfFile)) {
+            String defaultCategoricalHashFile = Constants.COLUMN_META_FOLDER_NAME + File.separator
+                    + Constants.DEFAULT_CATEGORICAL_HASH_FILE;
+            if(ShifuFileUtils.isFileExists(defaultCategoricalHashFile, SourceType.LOCAL)) {
+                categoricalHashSeedConfFile = defaultCategoricalHashFile;
+                LOG.info(
+                        "'dataSet::categoricalColumnHashSeedConfFile' is not set while default categoricalColumnHashSeedConfFile: {} is found, default categorical hash seed file will be used.",
+                        defaultCategoricalHashFile);
+            } else {
+                LOG.info(
+                        "'dataSet::categoricalColumnHashSeedConfFile' is not set and default categoricalColumnHashSeedConfFile: {} is not found, no categorical hash seed files.",
+                        defaultCategoricalHashFile);
+                return new HashMap<String, Integer>();
+            }
+        }
+
+        List<String> hashPairs = CommonUtils.readConfFileIntoList(categoricalHashSeedConfFile, SourceType.LOCAL);
+        Map<String, Integer> columnHashSeeds = new HashMap<String, Integer>();
+        try {
+            for(String pair: hashPairs) {
+                if(StringUtils.isEmpty(pair))
+                    continue;
+                String[] values = CommonUtils.split(pair, delimiter);
+                if(values != null && values.length == 2) {
+                    columnHashSeeds.put(CommonUtils.normColumnName(values[0]), Integer.parseInt(values[1]));
+                }
+            }
+        } catch (NumberFormatException e) {
+            LOG.error("Hash seed value must be integer", e);
+        }
+        return columnHashSeeds;
     }
 
     @JsonIgnore

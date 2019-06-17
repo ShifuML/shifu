@@ -26,13 +26,13 @@ import java.io.IOException;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class BiasLayer extends AbstractLayer<Float, Float, Float, Float, BiasLayer> implements WeightInitializer<BiasLayer> {
+public class BiasLayer extends AbstractLayer<Double, Double, Double, Double, BiasLayer> implements WeightInitializer<BiasLayer> {
 
-    private float weight;
+    private double weight;
 
-    private float wGrad;
+    private double wGrad;
 
-    public BiasLayer(float weight) {
+    public BiasLayer(double weight) {
         this.weight = weight;
     }
 
@@ -45,22 +45,23 @@ public class BiasLayer extends AbstractLayer<Float, Float, Float, Float, BiasLay
     }
 
     @Override
-    public Float forward(Float input) {
+    public Double forward(Double input) {
         return weight;
     }
 
     @Override
-    public Float backward(Float backInput) {
-        this.wGrad = backInput; // no need l2 reg in bias layer
+    public Double backward(Double backInput) {
+        // no need l2 reg in bias layer
+        this.wGrad = backInput;
         // no need backward output computation as it is last layer.
         return backInput * weight;
     }
 
-    public float getWeight() {
+    public double getWeight() {
         return weight;
     }
 
-    public void setWeight(float weight) {
+    public void setWeight(double weight) {
         this.weight = weight;
     }
 
@@ -77,7 +78,7 @@ public class BiasLayer extends AbstractLayer<Float, Float, Float, Float, BiasLay
     /**
      * @return the wGrad
      */
-    public float getwGrad() {
+    public double getwGrad() {
         return wGrad;
     }
 
@@ -85,7 +86,7 @@ public class BiasLayer extends AbstractLayer<Float, Float, Float, Float, BiasLay
      * @param wGrad
      *            the wGrad to set
      */
-    public void setwGrad(float wGrad) {
+    public void setwGrad(double wGrad) {
         this.wGrad = wGrad;
     }
 
@@ -103,10 +104,10 @@ public class BiasLayer extends AbstractLayer<Float, Float, Float, Float, BiasLay
         switch(this.serializationType) {
             case WEIGHTS:
             case MODEL_SPEC:
-                out.writeFloat(weight);
+                out.writeDouble(weight);
                 break;
             case GRADIENTS:
-                out.writeFloat(this.wGrad);
+                out.writeDouble(this.wGrad);
                 break;
             default:
                 break;
@@ -123,10 +124,10 @@ public class BiasLayer extends AbstractLayer<Float, Float, Float, Float, BiasLay
         switch(this.serializationType) {
             case WEIGHTS:
             case MODEL_SPEC:
-                this.weight = in.readFloat();
+                this.weight = in.readDouble();
                 break;
             case GRADIENTS:
-                this.wGrad = in.readFloat();
+                this.wGrad = in.readDouble();
                 break;
             default:
                 break;
@@ -140,8 +141,8 @@ public class BiasLayer extends AbstractLayer<Float, Float, Float, Float, BiasLay
     }
 
     @Override
-    public void update(BiasLayer gradLayer, Optimizer optimizer, String uniqueKey) {
-        this.weight -= optimizer.updateWeight(gradLayer.getwGrad(), uniqueKey);
+    public void update(BiasLayer gradLayer, Optimizer optimizer, String uniqueKey, double trainCount) {
+        this.weight -= optimizer.updateWeight(gradLayer.getwGrad(), uniqueKey, trainCount);
     }
 
 }

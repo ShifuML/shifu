@@ -26,8 +26,6 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.collect.Lists;
-import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.io.LongWritable;
@@ -37,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 
 import ml.shifu.guagua.ComputableMonitor;
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
@@ -49,6 +48,7 @@ import ml.shifu.guagua.worker.AbstractWorkerComputable;
 import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
@@ -248,9 +248,7 @@ public class LogisticRegressionWorker extends
         this.isStratifiedSampling = this.modelConfig.getTrain().getStratifiedSample();
         this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
         Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
-        if(kCrossValidation != null && kCrossValidation > 0) {
-            isKFoldCV = true;
-        }
+        this.isKFoldCV = (kCrossValidation != null && kCrossValidation > 0);
 
         if(this.inputNum == 0) {
             throw new IllegalStateException("No any variables are selected, please try variable select step firstly.");
@@ -262,9 +260,10 @@ public class LogisticRegressionWorker extends
             LOG.info("Enable up sampling with weight {}.", upSampleWeight);
             this.upSampleRng = new PoissonDistribution(upSampleWeight - 1);
         }
+
         double memoryFraction = Double.valueOf(context.getProps().getProperty("guagua.data.memoryFraction", "0.6"));
-        LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
-        double crossValidationRate = this.modelConfig.getValidSetRate();
+        LOG.info("Max heap memory: {}, fraction: {}.", Runtime.getRuntime().maxMemory(), memoryFraction);
+        double vldRate = this.modelConfig.getValidSetRate();
         String tmpFolder = context.getProps().getProperty("guagua.data.tmpfolder", "tmp");
 
         if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
@@ -277,10 +276,10 @@ public class LogisticRegressionWorker extends
                     tmpFolder + File.separator + "test-" + System.currentTimeMillis(), Data.class.getName());
         } else {
             this.trainingData = new BytableMemoryDiskList<Data>(
-                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - crossValidationRate)),
+                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - vldRate)),
                     tmpFolder + File.separator + "train-" + System.currentTimeMillis(), Data.class.getName());
             this.validationData = new BytableMemoryDiskList<Data>(
-                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * crossValidationRate),
+                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * vldRate),
                     tmpFolder + File.separator + "test-" + System.currentTimeMillis(), Data.class.getName());
         }
 
@@ -302,50 +301,52 @@ public class LogisticRegressionWorker extends
     public LogisticRegressionParams doCompute(
             WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         if(context.isFirstIteration()) {
+            // 1. first step wait for master to send init weights.
             return new LogisticRegressionParams();
-        } else {
-            this.weights = context.getLastMasterResult().getParameters();
-            double[] gradients = new double[this.inputNum + 1];
-            double trainingFinalError = 0.0d;
-            double testingFinalError = 0.0d;
-            long trainingSize = this.trainingData.size();
-            long testingSize = this.validationData.size();
-            this.trainingData.reOpen();
-            for(Data data: trainingData) {
-                double result = sigmoid(data.inputs, this.weights);
-                double error = data.outputs[0] - result;
-                trainingFinalError += caculateMSEError(error);
-                for(int i = 0; i < gradients.length; i++) {
-                    if(i < gradients.length - 1) {
-                        // compute gradient for each weight, this is not like traditional LR (no derived function), with
-                        // derived function, we see good convergence speed in our models.
-                        // TODO extract function to provide traditional lr gradients and derived version for user to
-                        // configure
-                        gradients[i] += error * data.inputs[i] * (derivedFunction(result) + FLAT_SPOT_VALUE)
-                                * data.getSignificance();
-                    } else {
-                        // for bias parameter, input is a constant 1d
-                        gradients[i] += error * 1d * (derivedFunction(result) + FLAT_SPOT_VALUE)
-                                * data.getSignificance();
-                    }
-                }
-            }
-
-            this.validationData.reOpen();
-            // TODO here we should use current weights+gradients to compute testing error, so far it is for last error
-            // computing.
-            for(Data data: validationData) {
-                double result = sigmoid(data.inputs, this.weights);
-                double error = result - data.outputs[0];
-                testingFinalError += caculateMSEError(error);
-            }
-            LOG.info("Iteration {} training data with error {}", context.getCurrentIteration(),
-                    trainingFinalError / trainingSize);
-            LOG.info("Iteration {} testing data with error {}", context.getCurrentIteration(),
-                    testingFinalError / testingSize);
-            return new LogisticRegressionParams(gradients, trainingFinalError, testingFinalError, trainingSize,
-                    testingSize);
         }
+
+        // 2. get latest model weithts
+        this.weights = context.getLastMasterResult().getParameters();
+
+        // 3. forward and backward training to get gradients
+        double[] gradients = new double[this.inputNum + 1];
+        double totalTrainError = 0.0d, totalVldError = 0.0d, wgtTrainSize = 0d, wgtVldSize = 0d;
+        this.trainingData.reOpen();
+        for(Data data: trainingData) {
+            wgtTrainSize += data.getSignificance();
+            double result = sigmoid(logits(data.inputs, this.weights));
+            double error = data.outputs[0] - result;
+            totalTrainError += caculateMSEError(error) * data.getSignificance();
+            double[] tmpGrds = new double[gradients.length];
+            for(int i = 0; i < gradients.length; i++) {
+                if(i < gradients.length - 1) {
+                    // compute gradient for each weight, derivedFunction is sigmoid derive.
+                    tmpGrds[i] = error * data.inputs[i] * (derivedFunction(result) + FLAT_SPOT_VALUE)
+                            * data.getSignificance();
+                } else {
+                    // for bias parameter, input is a constant 1d
+                    tmpGrds[i] = error * 1d * (derivedFunction(result) + FLAT_SPOT_VALUE) * data.getSignificance();
+                }
+                gradients[i] += tmpGrds[i];
+            }
+        }
+
+        // 4. validation error computation
+        // TODO here we should use current weights+gradients to compute testing error, so far it is for last error
+        this.validationData.reOpen();
+        for(Data data: validationData) {
+            wgtVldSize += data.getSignificance();
+            double result = sigmoid(logits(data.inputs, this.weights));
+            double error = data.outputs[0] - result;
+            totalVldError += caculateMSEError(error) * data.getSignificance();
+        }
+        LOG.info("Iteration {} training error {}", context.getCurrentIteration(), totalTrainError / wgtTrainSize);
+        LOG.info("Iteration {} testing error {}", context.getCurrentIteration(), totalVldError / wgtVldSize);
+
+        // return gradients and other params to master
+        return new LogisticRegressionParams(gradients, totalTrainError, totalVldError, wgtTrainSize, wgtVldSize,
+                this.trainingData.size(), this.validationData.size());
+
     }
 
     /**
@@ -365,14 +366,18 @@ public class LogisticRegressionWorker extends
     /**
      * Compute sigmoid value by dot operation of two vectors.
      */
-    private double sigmoid(float[] inputs, double[] weights) {
+    private double logits(float[] inputs, double[] weights) {
         double value = 0.0d;
         for(int i = 0; i < inputs.length; i++) {
             value += weights[i] * inputs[i];
         }
         // append bias
         value += weights[inputs.length] * 1d;
-        return 1.0d / (1.0d + BoundMath.exp(-1 * value));
+        return value;
+    }
+
+    private double sigmoid(double logit) {
+        return 1.0d / (1.0d + BoundMath.exp(-1 * logit));
     }
 
     @SuppressWarnings("unused")
@@ -420,8 +425,7 @@ public class LogisticRegressionWorker extends
     @Override
     public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue,
             WorkerContext<LogisticRegressionParams, LogisticRegressionParams> context) {
-        ++this.count;
-        if((this.count) % 100000 == 0) {
+        if((this.count++) % 100000 == 0) {
             LOG.info("Read {} records.", this.count);
         }
         String line = currentValue.getWritable().toString();

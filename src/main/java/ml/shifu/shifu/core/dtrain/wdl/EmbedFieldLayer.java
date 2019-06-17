@@ -15,7 +15,12 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
+import ml.shifu.shifu.core.dtrain.RegulationLevel;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.PropOptimizer;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.WeightOptimizer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -23,9 +28,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * {@link EmbedFieldLayer} is for each column like sparse categorical feature. The input of this layer is one-hot
@@ -40,19 +42,24 @@ import org.slf4j.LoggerFactory;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[], float[], EmbedFieldLayer>
-        implements WeightInitializer<EmbedFieldLayer> {
+public class EmbedFieldLayer extends AbstractLayer<SparseInput, double[], double[], double[], EmbedFieldLayer>
+        implements WeightInitializer<EmbedFieldLayer>, PropOptimizer<EmbedFieldLayer> {
     private static final Logger LOG = LoggerFactory.getLogger(EmbedFieldLayer.class);
 
     /**
      * [in, out] array for deep matrix weights
      */
-    private float[][] weights;
+    private double[][] weights;
+
+    /**
+     * [in] array weight optimizers
+     */
+    private WeightOptimizer[] optimizers;
 
     /**
      * Weight gradients in back computation
      */
-    private Map<Integer, float[]> wGrads;
+    private Map<Integer, double[]> wGrads;
 
     /**
      * The output dimension
@@ -77,7 +84,7 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
     public EmbedFieldLayer() {
     }
 
-    public EmbedFieldLayer(int columnId, float[][] weights, int out, int in) {
+    public EmbedFieldLayer(int columnId, double[][] weights, int out, int in) {
         this.columnId = columnId;
         this.weights = weights;
         this.out = out;
@@ -88,7 +95,7 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
         this.columnId = columnId;
         this.out = out;
         this.in = in;
-        this.weights = new float[in][out];
+        this.weights = new double[in][out];
     }
 
     @Override
@@ -97,10 +104,10 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
     }
 
     @Override
-    public float[] forward(SparseInput si) {
+    public double[] forward(SparseInput si) {
         this.lastInput = si;
         int valueIndex = si.getValueIndex();
-        float[] results = new float[this.out];
+        double[] results = new double[this.out];
         if(valueIndex < weights.length && valueIndex >= 0) {
             for(int i = 0; i < results.length; i++) {
                 results[i] = si.getValue() * this.getWeights()[valueIndex][i];
@@ -112,10 +119,10 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
     }
 
     @Override
-    public float[] backward(float[] backInputs) {
+    public double[] backward(double[] backInputs) {
         // gradients computation
         int valueIndex = this.lastInput.getValueIndex();
-        this.wGrads.computeIfAbsent(valueIndex, k -> new float[this.out]);
+        this.wGrads.computeIfAbsent(valueIndex, k -> new double[this.out]);
         for(int j = 0; j < this.out; j++) {
             this.wGrads.get(valueIndex)[j] += (this.lastInput.getValue() * backInputs[j]);
         }
@@ -157,7 +164,7 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
     /**
      * @return the weights
      */
-    public float[][] getWeights() {
+    public double[][] getWeights() {
         return weights;
     }
 
@@ -165,7 +172,7 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
      * @param weights
      *            the weights to set
      */
-    public void setWeights(float[][] weights) {
+    public void setWeights(double[][] weights) {
         this.weights = weights;
     }
 
@@ -187,7 +194,7 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
     /**
      * @return the wGrads
      */
-    public Map<Integer, float[]> getwGrads() {
+    public Map<Integer, double[]> getwGrads() {
         return wGrads;
     }
 
@@ -195,7 +202,7 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
      * @param wGrads
      *            the wGrads to set
      */
-    public void setwGrads(Map<Integer, float[]> wGrads) {
+    public void setwGrads(Map<Integer, double[]> wGrads) {
         this.wGrads = wGrads;
     }
 
@@ -231,16 +238,16 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
         switch(this.serializationType) {
             case WEIGHTS:
             case MODEL_SPEC:
-                SerializationUtil.write2DimFloatArray(out, this.weights, this.in, this.out);
+                SerializationUtil.write2DimDoubleArray(out, this.weights, this.in, this.out);
                 break;
             case GRADIENTS:
                 if(this.wGrads == null) {
                     out.writeInt(0);
                 } else {
                     out.writeInt(this.wGrads.size());
-                    for(Entry<Integer, float[]> entry: this.wGrads.entrySet()) {
+                    for(Entry<Integer, double[]> entry: this.wGrads.entrySet()) {
                         out.writeInt(entry.getKey());
-                        SerializationUtil.writeFloatArray(out, entry.getValue(), this.out);
+                        SerializationUtil.writeDoubleArray(out, entry.getValue(), this.out);
                     }
                 }
                 break;
@@ -263,18 +270,18 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
         switch(this.serializationType) {
             case WEIGHTS:
             case MODEL_SPEC:
-                this.weights = SerializationUtil.read2DimFloatArray(in, this.weights, this.in, this.out);
+                this.weights = SerializationUtil.read2DimDoubleArray(in, this.weights, this.in, this.out);
                 break;
             case GRADIENTS:
                 if(this.wGrads != null) {
                     this.wGrads.clear();
                 } else {
-                    this.wGrads = new HashMap<Integer, float[]>();
+                    this.wGrads = new HashMap<Integer, double[]>();
                 }
                 int gradSize = in.readInt();
                 for(int i = 0; i < gradSize; i++) {
                     int lineNumber = in.readInt();
-                    float[] grad = SerializationUtil.readFloatArray(in, null, this.out);
+                    double[] grad = SerializationUtil.readDoubleArray(in, null, this.out);
                     this.wGrads.put(lineNumber, grad);
                 }
                 break;
@@ -288,12 +295,12 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
         if(columnId != from.getColumnId()) {
             return this;
         }
-        Map<Integer, float[]> fromGrads = from.getwGrads();
-        for(Entry<Integer, float[]> entry: fromGrads.entrySet()) {
+        Map<Integer, double[]> fromGrads = from.getwGrads();
+        for(Entry<Integer, double[]> entry: fromGrads.entrySet()) {
             Integer index = entry.getKey();
-            float[] grad = entry.getValue();
+            double[] grad = entry.getValue();
             if(wGrads.containsKey(index)) {
-                float[] thisGrad = wGrads.get(index);
+                double[] thisGrad = wGrads.get(index);
                 for(int i = 0; i < this.out; i++) {
                     grad[i] += thisGrad[i];
                 }
@@ -304,7 +311,27 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, float[], float[]
     }
 
     @Override
-    public void update(EmbedFieldLayer gradLayer, Optimizer optimizer, String uniqueKey) {
-        optimizer.batchUpdate(this.weights, gradLayer.getwGrads(), uniqueKey);
+    public void update(EmbedFieldLayer gradLayer, Optimizer optimizer, String uniqueKey, double trainCount) {
+        optimizer.batchUpdate(this.weights, gradLayer.getwGrads(), uniqueKey, trainCount);
+    }
+
+    @Override
+    public void initOptimizer(double learningRate, String algorithm, double reg, RegulationLevel rl) {
+        this.optimizers = new WeightOptimizer[this.in];
+        for(int i = 0; i < this.in; i++) {
+            this.optimizers[i] = new WeightOptimizer(this.out, learningRate, algorithm, reg, rl);
+        }
+    }
+
+    @Override
+    public void optimizeWeight(double numTrainSize, int iteration, EmbedFieldLayer model) {
+        for(Map.Entry<Integer, double[]> entry: model.getwGrads().entrySet()) {
+            int index = entry.getKey();
+            if(index < this.in) {
+                this.optimizers[index].calculateWeights(this.weights[index], entry.getValue(), iteration, numTrainSize);
+            } else {
+                LOG.error("index {} in EmbedFieldLayer gradient great than in {}", index, this.in);
+            }
+        }
     }
 }

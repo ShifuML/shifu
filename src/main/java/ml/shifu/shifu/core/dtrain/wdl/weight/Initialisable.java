@@ -26,14 +26,14 @@ public interface Initialisable {
      *
      * @return the init number.
      */
-    float initWeight();
+    double initWeight();
 
     /**
      * Init a one dimensional float array with specific length
      * @param length, the array length
      * @return the init array
      */
-    float[] initWeight(int length);
+    double[] initWeight(int length);
 
     /**
      * Init a two dimensional float array with specific row and column
@@ -42,6 +42,6 @@ public interface Initialisable {
      * @param col the column number
      * @return the init array
      */
-    float[][] initWeight(int row, int col);
+    double[][] initWeight(int row, int col);
 
 }

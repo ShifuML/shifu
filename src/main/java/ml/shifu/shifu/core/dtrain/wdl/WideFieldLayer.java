@@ -15,14 +15,16 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
+import ml.shifu.shifu.core.dtrain.RegulationLevel;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.PropOptimizer;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.WeightOptimizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -33,18 +35,23 @@ import java.util.Map.Entry;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[], float[], WideFieldLayer>
-        implements WeightInitializer<WideFieldLayer> {
+public class WideFieldLayer extends AbstractLayer<SparseInput, double[], double[], double[], WideFieldLayer>
+        implements WeightInitializer<WideFieldLayer>, PropOptimizer<WideFieldLayer> {
     private static final Logger LOG = LoggerFactory.getLogger(WideFieldLayer.class);
     /**
-     * [in] float array of weights
+     * [in] double array of weights
      */
-    private float[] weights;
+    private double[] weights;
+
+    /**
+     * Weight optimizer
+     */
+    private WeightOptimizer optimizer;
 
     /**
      * Gradients, using map for sparse updates
      */
-    private Map<Integer, Float> wGrads;
+    private Map<Integer, Double> wGrads;
 
     /**
      * # of inputs
@@ -59,7 +66,7 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
     /**
      * L2 level regularization parameter.
      */
-    private float l2reg;
+    private double l2reg;
 
     /**
      * Last input used in backward computation
@@ -69,43 +76,40 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
     public WideFieldLayer() {
     }
 
-    public WideFieldLayer(int columnId, float[] weights, int in, float l2reg) {
+    public WideFieldLayer(int columnId, double[] weights, int in, double l2reg) {
         this.weights = weights;
         this.in = in;
         this.columnId = columnId;
         this.l2reg = l2reg;
     }
 
-    public WideFieldLayer(int columnId, int in, float l2reg) {
+    public WideFieldLayer(int columnId, int in, double l2reg) {
         this.in = in;
         this.columnId = columnId;
-        this.weights = new float[in];
+        this.weights = new double[in];
         this.l2reg = l2reg;
     }
 
     @Override
-    public float[] forward(SparseInput si) {
-        LOG.debug("WideFiledLayer weights:" + Arrays.toString(this.weights));
+    public double[] forward(SparseInput si) {
         this.lastInput = si;
         int valueIndex = si.getValueIndex();
         if(valueIndex < this.weights.length && valueIndex >= 0) {
-            LOG.debug("si.getValue() = " + si.getValue() + "this.weights[valueIndex]=" + this.weights[valueIndex]);
-            return new float[] { si.getValue() * this.weights[valueIndex] };
+            return new double[] { si.getValue() * this.weights[valueIndex] };
         }
-        LOG.error("si.getValue() = " + si.getValue() + ", valueIndex=" + valueIndex + ", columnId=" + columnId
-                + ", value index out of range, returning 0 for null categories");
-        return new float[] { 0.f };
+        return new double[] { 0d };
     }
 
     @Override
-    public float[] backward(float[] backInputs) {
+    public double[] backward(double[] backInputs) {
         assert backInputs.length == 1;
 
         int valueIndex = this.lastInput.getValueIndex();
-        Float grad = this.wGrads.get(valueIndex);
-        float tmpGrad = grad == null ? 0 : grad;
-        tmpGrad += (this.lastInput.getValue() * backInputs[0]); // category value here is 1f
-        tmpGrad += (this.l2reg * this.weights[valueIndex]); // l2 loss
+        Double grad = this.wGrads.get(valueIndex);
+        double tmpGrad = grad == null ? 0 : grad;
+        // category value here is 1f
+        tmpGrad += (this.lastInput.getValue() * backInputs[0]);
+        // l2 loss
         this.wGrads.put(valueIndex, tmpGrad);
 
         // no need compute backward outputs as it is last layer
@@ -120,7 +124,7 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
     /**
      * @return the weights
      */
-    public float[] getWeights() {
+    public double[] getWeights() {
         return weights;
     }
 
@@ -128,7 +132,7 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
      * @param weights
      *            the weights to set
      */
-    public void setWeights(float[] weights) {
+    public void setWeights(double[] weights) {
         this.weights = weights;
     }
 
@@ -165,7 +169,7 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
     /**
      * @return the wGrads
      */
-    public Map<Integer, Float> getwGrads() {
+    public Map<Integer, Double> getwGrads() {
         return wGrads;
     }
 
@@ -173,14 +177,14 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
      * @param wGrads
      *            the wGrads to set
      */
-    public void setwGrads(Map<Integer, Float> wGrads) {
+    public void setwGrads(Map<Integer, Double> wGrads) {
         this.wGrads = wGrads;
     }
 
     /**
      * @return the l2reg
      */
-    public float getL2reg() {
+    public double getL2reg() {
         return l2reg;
     }
 
@@ -188,12 +192,12 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
      * @param l2reg
      *            the l2reg to set
      */
-    public void setL2reg(float l2reg) {
+    public void setL2reg(double l2reg) {
         this.l2reg = l2reg;
     }
 
     public void initGrads() {
-        this.wGrads = new HashMap<Integer, Float>();
+        this.wGrads = new HashMap<Integer, Double>();
     }
 
     @Override
@@ -216,22 +220,22 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
     @Override
     public void write(DataOutput out) throws IOException {
         out.writeInt(this.columnId);
-        out.writeFloat(this.l2reg);
+        out.writeDouble(this.l2reg);
         out.writeInt(this.in);
 
         switch(this.serializationType) {
             case WEIGHTS:
             case MODEL_SPEC:
-                SerializationUtil.writeFloatArray(out, this.weights, this.in);
+                SerializationUtil.writeDoubleArray(out, this.weights, this.in);
                 break;
             case GRADIENTS:
                 if(this.wGrads == null) {
                     out.writeInt(0);
                 } else {
                     out.writeInt(this.wGrads.size());
-                    for(Entry<Integer, Float> entry: this.wGrads.entrySet()) {
+                    for(Entry<Integer, Double> entry: this.wGrads.entrySet()) {
                         out.writeInt(entry.getKey());
-                        out.writeFloat(entry.getValue());
+                        out.writeDouble(entry.getValue());
                     }
                 }
                 break;
@@ -248,23 +252,23 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
     @Override
     public void readFields(DataInput in) throws IOException {
         this.columnId = in.readInt();
-        this.l2reg = in.readFloat();
+        this.l2reg = in.readDouble();
         this.in = in.readInt();
 
         switch(this.serializationType) {
             case WEIGHTS:
             case MODEL_SPEC:
-                this.weights = SerializationUtil.readFloatArray(in, this.weights, this.in);
+                this.weights = SerializationUtil.readDoubleArray(in, this.weights, this.in);
                 break;
             case GRADIENTS:
                 if(this.wGrads != null) {
                     this.wGrads.clear();
                 } else {
-                    this.wGrads = new HashMap<Integer, Float>();
+                    this.wGrads = new HashMap<Integer, Double>();
                 }
                 int size = in.readInt();
                 for(int i = 0; i < size; i++) {
-                    this.wGrads.put(in.readInt(), in.readFloat());
+                    this.wGrads.put(in.readInt(), in.readDouble());
                 }
                 break;
             default:
@@ -277,17 +281,35 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, float[], float[],
         if(columnId != from.getColumnId()) {
             return this;
         }
-        Map<Integer, Float> fromGrads = from.getwGrads();
-        for(Entry<Integer, Float> entry: fromGrads.entrySet()) {
+        Map<Integer, Double> fromGrads = from.getwGrads();
+        for(Entry<Integer, Double> entry: fromGrads.entrySet()) {
             Integer index = entry.getKey();
-            float grad = entry.getValue();
-            wGrads.put(index, grad + wGrads.getOrDefault(index, 0.0f));
+            double grad = entry.getValue();
+            wGrads.put(index, grad + wGrads.getOrDefault(index, 0.0d));
         }
         return this;
     }
 
     @Override
-    public void update(WideFieldLayer gradLayer, Optimizer optimizer, String uniqueKey) {
-        optimizer.update(this.weights, gradLayer.getwGrads(), uniqueKey);
+    public void update(WideFieldLayer gradLayer, Optimizer optimizer, String uniqueKey, double trainCount) {
+        LOG.info("Column {}, length {}, gradients {}.", this.columnId, this.weights.length, gradLayer.getwGrads());
+        optimizer.update(this.weights, gradLayer.getwGrads(), uniqueKey, trainCount);
+    }
+
+    @Override
+    public void initOptimizer(double learningRate, String algorithm, double reg, RegulationLevel rl) {
+        this.optimizer = new WeightOptimizer(this.in, learningRate, algorithm, reg, rl);
+    }
+
+    @Override
+    public void optimizeWeight(double numTrainSize, int iteration, WideFieldLayer model) {
+        for(Map.Entry<Integer, Double> entry: model.getwGrads().entrySet()) {
+            int index = entry.getKey();
+            if(index < this.in) {
+                this.optimizer.calculateWeights(this.weights, index, entry.getValue(), numTrainSize);
+            } else {
+                LOG.error("index {} in EmbedFieldLayer gradient great than in {}", index, this.in);
+            }
+        }
     }
 }

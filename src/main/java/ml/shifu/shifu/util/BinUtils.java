@@ -15,14 +15,15 @@
  */
 package ml.shifu.shifu.util;
 
-import com.google.common.base.Splitter;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.StringUtils;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.commons.lang.StringUtils;
+
+import com.google.common.base.Splitter;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
 
 /**
  * {@link BinUtils} is used to for almost all kinds of utility function in this framework.
@@ -92,58 +93,38 @@ public final class BinUtils {
         return getBinIndex(binBoundaries, dval);
     }
 
-    /**
-     * Get categorical bin index according to string column value.
-     * 
-     * @param columnConfig
-     *            the column config
-     * @param columnVal
-     *            the column value
-     * @return bin index, -1 if invalid values
-     */
-    public static int getCategoicalBinIndex(ColumnConfig columnConfig, String columnVal) {
-        if(StringUtils.isBlank(columnVal)) {
-            return -1;
-        }
+	/**
+	 * Get categorical bin index according to string column value.
+	 * 
+	 * @param columnConfig the column config
+	 * @param columnVal    the column value
+	 * @return bin index, -1 if invalid values
+	 */
+	public static int getCategoicalBinIndex(ColumnConfig columnConfig, String columnVal) {
+		if (StringUtils.isBlank(columnVal)) {
+			return -1;
+		}
+		if (columnConfig.getHashSeed() > 0) {
+			columnVal = columnVal.hashCode() % columnConfig.getHashSeed() + "";
+		}
+		if (columnConfig.getColumnBinning().getBinCateMap() != null) {
+			Map<String, Integer> binCateMap = columnConfig.getColumnBinning().getBinCateMap();
+			Integer intIndex = binCateMap.get(columnVal);
+			if (intIndex == null || intIndex < 0) {
+				intIndex = -1;
+			}
+			return intIndex;
+		} else {
+			List<String> binCategories = columnConfig.getColumnBinning().getBinCategory();
+			for (int i = 0; i < binCategories.size(); i++) {
+				if (isCategoricalBinValue(binCategories.get(i), columnVal)) {
+					return i;
+				}
+			}
+		}
+		return -1;
+	}
 
-        if(columnConfig.getColumnBinning().getBinCateMap() != null) {
-            Map<String, Integer> binCateMap = columnConfig.getColumnBinning().getBinCateMap();
-            Integer intIndex = binCateMap.get(columnVal);
-            if(intIndex == null || intIndex < 0) {
-                intIndex = -1;
-            }
-            return intIndex;
-        } else {
-            List<String> binCategories = columnConfig.getColumnBinning().getBinCategory();
-            for(int i = 0; i < binCategories.size(); i++) {
-                if(isCategoricalBinValue(binCategories.get(i), columnVal)) {
-                    return i;
-                }
-            }
-        }
-        return -1;
-    }
-
-    /**
-     * Get categorical bin index according to string column value.
-     * 
-     * @param binCategories
-     *            the bin categories
-     * @param columnVal
-     *            the column value
-     * @return bin index, -1 if invalid values
-     */
-    public static int getCategoicalBinIndex(List<String> binCategories, String columnVal) {
-        if(StringUtils.isBlank(columnVal) || CollectionUtils.isEmpty(binCategories)) {
-            return -1;
-        }
-        for(int i = 0; i < binCategories.size(); i++) {
-            if(isCategoricalBinValue(binCategories.get(i), columnVal)) {
-                return i;
-            }
-        }
-        return -1;
-    }
 
     /**
      * Check some categorical value is in the categorical value group or not

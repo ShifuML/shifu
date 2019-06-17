@@ -161,6 +161,10 @@
                 "type" : "text",
                 "directive": "input"
             }, {
+                "name": "categoricalHashSeedConfFile",
+                "type" : "text",
+                "directive": "input"
+            }, {
                 "name": "categoricalColumnNameFile",
                 "type" : "text",
                 "directive": "input"
@@ -816,6 +820,21 @@
                             {"label": "Nesterov", "value":"Nesterov"},
                             {"label": "Momentum", "value":"Momentum"}
                         ]
+                    }, {
+                        "name" : "wideEnable",
+                        "type": "boolean",
+                        "directive": "checkbox",
+                        "defval": true
+                    }, {
+                        "name" : "deepEnable",
+                        "type": "boolean",
+                        "directive": "checkbox",
+                        "defval": true
+                    }, {
+                        "name" : "embedEnable",
+                        "type": "boolean",
+                        "directive": "checkbox",
+                        "defval": true
                     }, {
                         "name" : "IsELM",
                         "type": "boolean",

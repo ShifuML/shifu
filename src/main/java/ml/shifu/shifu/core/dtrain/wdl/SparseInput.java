@@ -16,7 +16,7 @@
 package ml.shifu.shifu.core.dtrain.wdl;
 
 /**
- * {@link SparseInput} is only to save non-zero value instead of one sparse float array to save memory.
+ * {@link SparseInput} is only to save non-zero value instead of one sparse double array to save memory.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -36,7 +36,7 @@ public class SparseInput {
     /**
      * By default value is 1 for sparse input while in other senarios, value could not be 1.
      */
-    private float value = 1f;
+    private double value = 1f;
 
     // TODO if add weight or change valueIndex to array for multiple-hot encoder
 
@@ -63,7 +63,7 @@ public class SparseInput {
      * @param value
      *            the category value
      */
-    public SparseInput(int columnIndex, int valueIndex, float value) {
+    public SparseInput(int columnIndex, int valueIndex, double value) {
         this.columnIndex = columnIndex;
         this.valueIndex = valueIndex;
         this.value = value;
@@ -102,7 +102,7 @@ public class SparseInput {
     /**
      * @return the value
      */
-    public float getValue() {
+    public double getValue() {
         return value;
     }
 
@@ -110,7 +110,7 @@ public class SparseInput {
      * @param value
      *            the value to set
      */
-    public void setValue(float value) {
+    public void setValue(double value) {
         this.value = value;
     }
 

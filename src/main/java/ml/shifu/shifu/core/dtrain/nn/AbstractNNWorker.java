@@ -577,14 +577,14 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                         (this.validationData.getRecordCount() > 0 ? testError : "N/A") });
 
         NNParams params = new NNParams();
-        params.setTestError(testError);
+        params.setValidationError(testError);
         params.setTrainError(trainError);
         params.setGradients(gradients);
         // prevent null point;
         params.setWeights(new double[0]);
         params.setTrainSize(this.trainingData.getRecordCount());
         params.setTrainSum(this.trainingData.getRecordSum());
-        params.setTestSum(this.validationData.getRecordCount() > 0
+        params.setValidationSum(this.validationData.getRecordCount() > 0
                 ? this.validationData.getRecordSum() : this.trainingData.getRecordSum());
         params.setCount(count);
         return params;
@@ -621,7 +621,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         NNParams params = new NNParams();
         params.setWeights(new double[0]);
         params.setGradients(new double[0]);
-        params.setTestError(NNConstants.DRY_ERROR);
+        params.setValidationError(NNConstants.DRY_ERROR);
         params.setTrainError(NNConstants.DRY_ERROR);
         return params;
     }

@@ -23,29 +23,29 @@ package ml.shifu.shifu.core.dtrain.wdl.weight;
 public class Zero implements Initialisable {
 
     /**
-     * Init with one float number.
+     * Init with one double number.
      *
      * @return the init number.
      */
     @Override
-    public float initWeight() {
+    public double initWeight() {
         return 0;
     }
 
     /**
-     * Init a one dimensional float array with specific length
+     * Init a one dimensional double array with specific length
      *
      * @param length
      *          the length of the array
      * @return the init array
      */
     @Override
-    public float[] initWeight(int length) {
-        return new float[length];
+    public double[] initWeight(int length) {
+        return new double[length];
     }
 
     /**
-     * Init a two dimensional float array with specific row and column
+     * Init a two dimensional double array with specific row and column
      *
      * @param row
      *          the row number
@@ -54,7 +54,7 @@ public class Zero implements Initialisable {
      * @return the init array
      */
     @Override
-    public float[][] initWeight(int row, int col) {
-        return new float[row][col];
+    public double[][] initWeight(int row, int col) {
+        return new double[row][col];
     }
 }

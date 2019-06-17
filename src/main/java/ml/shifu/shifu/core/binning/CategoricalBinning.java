@@ -22,10 +22,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import ml.shifu.shifu.util.CommonUtils;
 
 /**
  * CategoricalBinning class
@@ -36,6 +37,7 @@ public class CategoricalBinning extends AbstractBinning<String> {
 
     private boolean isValid = true;
     private Set<String> categoricalVals;
+    private int hashSeed = 0;
 
     /**
      * Empty constructor : it is just for bin merging
@@ -61,6 +63,15 @@ public class CategoricalBinning extends AbstractBinning<String> {
     }
 
     /*
+     * Constructor with expected bin number and missing value list
+     * For categorical variable, the binningNum won't be used
+     */
+    public CategoricalBinning(int binningNum, List<String> missingValList, int maxCategorySize, int hashSeed) {
+        this(binningNum, missingValList, maxCategorySize);
+        this.hashSeed = hashSeed;
+    }
+
+    /*
      * (non-Javadoc)
      * Add the string into value set
      * First of all the input string will be trimmed and check whether it is missing value or not
@@ -71,14 +82,19 @@ public class CategoricalBinning extends AbstractBinning<String> {
     @Override
     public void addData(String val) {
         String fval = (val == null ? "" : val);
+        log.info("hashfeature test");
         if(!isMissingVal(fval)) {
-            if(isValid) {
+            if(isValid && this.hashSeed <= 0) {
                 categoricalVals.add(fval);
+            } else if(isValid && this.hashSeed > 0) {
+                categoricalVals.add(fval.hashCode() % this.hashSeed + "");
             }
 
             if(categoricalVals.size() > maxCategorySize) {
-                isValid = false;
-                categoricalVals.clear();
+                // large than max category size 
+                if(System.currentTimeMillis() % 500 ==0) {
+                    log.warn("Category column over max cate size {}.", maxCategorySize);
+                }
             }
         } else {
             super.incMissingValCnt();
@@ -109,7 +125,15 @@ public class CategoricalBinning extends AbstractBinning<String> {
 
         this.isValid = (this.isValid && binning.isValid);
         if(this.isValid) {
-            this.categoricalVals.addAll(binning.categoricalVals);
+            for(String cate: binning.categoricalVals) {
+                // check if over max category size, skip to copy to avoid OOM
+                if(this.categoricalVals.size() <= this.maxCategorySize) {
+                    this.categoricalVals.add(cate);
+                } else {
+                    log.warn("Categorical variables binning merge over max category size ({}).", this.maxCategorySize);
+                    break;
+                }
+            }
         } else {
             this.categoricalVals.clear();
         }

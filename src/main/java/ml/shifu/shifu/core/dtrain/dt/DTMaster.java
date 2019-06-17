@@ -276,25 +276,23 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             return buildInitialMasterParams();
         }
 
-        if(this.cpMasterParams != null) {
+        if(this.cpMasterParams != null) { // checkpoint recovery if master is done
             DTMasterParams tmpMasterParams = rebuildRecoverMasterResultDepthList();
             // set it to null to avoid send it in next iteration
             this.cpMasterParams = null;
             if(this.isGBDT) {
-                // don't need to send full trees because worker will get existing models from HDFS
-                // only set last tree to do node stats, no need check switch to next tree because of message may be send
-                // to worker already
+                // no need to send full trees because worker will get existing models from HDFS
+                // only set last tree to do node stats, no need check switch to next tree because of message may be sent
+                // to workers already
                 tmpMasterParams.setTrees(trees.subList(trees.size() - 1, trees.size()));
-                // set tmp trees for DTOutput
-                tmpMasterParams.setTmpTrees(this.trees);
+                tmpMasterParams.setTmpTrees(this.trees); // set tmp trees for DTOutput
             }
             return tmpMasterParams;
         }
 
         boolean isFirst = false;
         Map<Integer, NodeStats> nodeStatsMap = null;
-        double trainError = 0d, validationError = 0d;
-        double weightedTrainCount = 0d, weightedValidationCount = 0d;
+        double trainError = 0d, validationError = 0d, weightedTrainCount = 0d, weightedValidationCount = 0d;
         for(DTWorkerParams params: context.getWorkerResults()) {
             if(!isFirst) {
                 isFirst = true;
@@ -313,6 +311,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             weightedTrainCount += params.getTrainCount();
             weightedValidationCount += params.getValidationCount();
         }
+        
         for(Entry<Integer, NodeStats> entry: nodeStatsMap.entrySet()) {
             NodeStats nodeStats = entry.getValue();
             int treeId = nodeStats.getTreeId();
@@ -418,7 +417,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     masterParams.setFirstTree(this.trees.size() == 1);
                     // finish current tree, no need features information
                     treeNode.setFeatures(null);
-                    TreeNode newRootNode = new TreeNode(this.trees.size(), new Node(Node.ROOT_INDEX), this.learningRate);
+                    TreeNode newRootNode = new TreeNode(this.trees.size(), new Node(Node.ROOT_INDEX),
+                            this.learningRate);
                     LOG.info("The {} tree is to be built.", this.trees.size());
                     this.trees.add(newRootNode);
                     newRootNode.setFeatures(getSubsamplingFeatures(this.featureSubsetStrategy, this.featureSubsetRate));
@@ -658,8 +658,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             @Override
             public void run() {
                 long start = System.currentTimeMillis();
-                writeStatesToHdfs(DTMaster.this.checkpointOutput, masterParams, finalTrees, finalIsLeaf,
-                        finalTodoQueue, finalToSplitQueue);
+                writeStatesToHdfs(DTMaster.this.checkpointOutput, masterParams, finalTrees, finalIsLeaf, finalTodoQueue,
+                        finalToSplitQueue);
                 LOG.info("Do checkpoint in iteration {} with run time {}", context.getCurrentIteration(),
                         (System.currentTimeMillis() - start));
             }
@@ -773,10 +773,10 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                 treeNode.setFeatures(features);
 
                 currMem += getStatsMem(features);
-                if ( currMem < this.maxStatsMemory ) {
+                if(currMem < this.maxStatsMemory) {
                     todoNodes.put(nodeIndexInGroup, treeNode);
                     nodeIndexInGroup += 1;
-                } else { //over memory, just put it into queue
+                } else { // over memory, just put it into queue
                     this.toDoQueue.offer(treeNode);
                 }
                 int treeId = treeNode.getTreeId();
@@ -819,7 +819,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         return masterParams;
     }
 
-    private List<Integer> getSubsamplingFeatures(FeatureSubsetStrategy featureSubsetStrategy, double featureSubsetRate) {
+    private List<Integer> getSubsamplingFeatures(FeatureSubsetStrategy featureSubsetStrategy,
+            double featureSubsetRate) {
         if(featureSubsetStrategy == null) {
             return sampleFeaturesForNodeStats(this.allFeatures, (int) (this.allFeatures.size() * featureSubsetRate));
         } else {
@@ -899,12 +900,12 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         // init model config and column config list at first
         SourceType sourceType;
         try {
-            sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
-                    SourceType.HDFS.toString()));
+            sourceType = SourceType
+                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -921,8 +922,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
         int trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
         // If grid search, select valid paramters, if not parameters is what in ModelConfig.json
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
-                .getGridConfigFileContent());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(),
+                modelConfig.getTrain().getGridConfigFileContent());
         Map<String, Object> validParams = this.modelConfig.getTrain().getParams();
         if(gs.hasHyperParam()) {
             validParams = gs.getParams(trainerId);
@@ -1032,17 +1033,17 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         }
 
         // checkpoint folder and interval (every # iterations to do checkpoint)
-        this.checkpointInterval = NumberFormatUtils.getInt(context.getProps().getProperty(
-                CommonConstants.SHIFU_DT_MASTER_CHECKPOINT_INTERVAL, "20"));
-        this.checkpointOutput = new Path(context.getProps().getProperty(
-                CommonConstants.SHIFU_DT_MASTER_CHECKPOINT_FOLDER, "tmp/cp_" + context.getAppId()));
+        this.checkpointInterval = NumberFormatUtils
+                .getInt(context.getProps().getProperty(CommonConstants.SHIFU_DT_MASTER_CHECKPOINT_INTERVAL, "20"));
+        this.checkpointOutput = new Path(context.getProps()
+                .getProperty(CommonConstants.SHIFU_DT_MASTER_CHECKPOINT_FOLDER, "tmp/cp_" + context.getAppId()));
 
         // cache conf to avoid new
         this.conf = new Configuration();
 
         // if continuous model training is enabled
-        this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
-                context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
+        this.isContinuousEnabled = Boolean.TRUE.toString()
+                .equalsIgnoreCase(context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
 
         this.dtEarlyStopDecider = new DTEarlyStopDecider(this.maxDepth);
         if(validParams.containsKey("EnableEarlyStop")
@@ -1053,10 +1054,10 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         LOG.info(
                 "Master init params: isAfterVarSel={}, featureSubsetStrategy={}, featureSubsetRate={} maxDepth={}, maxStatsMemory={}, "
                         + "treeNum={}, impurity={}, workerNumber={}, minInstancesPerNode={}, minInfoGain={}, isRF={}, "
-                        + "isGBDT={}, isContinuousEnabled={}, enableEarlyStop={}.", isAfterVarSelect,
-                featureSubsetStrategy, this.featureSubsetRate, maxDepth, maxStatsMemory, treeNum, imStr,
-                this.workerNumber, minInstancesPerNode, minInfoGain, this.isRF, this.isGBDT, this.isContinuousEnabled,
-                this.enableEarlyStop);
+                        + "isGBDT={}, isContinuousEnabled={}, enableEarlyStop={}.",
+                isAfterVarSelect, featureSubsetStrategy, this.featureSubsetRate, maxDepth, maxStatsMemory, treeNum,
+                imStr, this.workerNumber, minInstancesPerNode, minInfoGain, this.isRF, this.isGBDT,
+                this.isContinuousEnabled, this.enableEarlyStop);
 
         this.toDoQueue = new LinkedList<TreeNode>();
 
@@ -1064,8 +1065,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             this.toSplitQueue = new PriorityQueue<TreeNode>(64, new Comparator<TreeNode>() {
                 @Override
                 public int compare(TreeNode o1, TreeNode o2) {
-                    return Double.compare(o2.getNode().getWgtCntRatio() * o2.getNode().getGain(), o1.getNode()
-                            .getWgtCntRatio() * o1.getNode().getGain());
+                    return Double.compare(o2.getNode().getWgtCntRatio() * o2.getNode().getGain(),
+                            o1.getNode().getWgtCntRatio() * o1.getNode().getGain());
                 }
             });
         }

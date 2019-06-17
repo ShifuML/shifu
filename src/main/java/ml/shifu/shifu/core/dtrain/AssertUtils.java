@@ -67,6 +67,18 @@ public class AssertUtils {
         assertNotNull(b);
         assertEquals(a.size(), b.size());
     }
+    
+    /**
+     * Assert if two float array is not null and their size are equal
+     *
+     * @param a, the first array
+     * @param b, the second array
+     */
+    public static void assertDoubleArrayNotNullAndLengthEqual(double[] a, double[] b) {
+        assertNotNull(a);
+        assertNotNull(b);
+        assertEquals(a.length, b.length);
+    }
 
     /**
      * Assert if two float array is not null and their size are equal

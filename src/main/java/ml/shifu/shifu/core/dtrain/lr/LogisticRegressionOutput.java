@@ -41,8 +41,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * {@link LogisticRegressionOutput} is used to write the final model output to file system.
  */
-public class LogisticRegressionOutput extends
-        BasicMasterInterceptor<LogisticRegressionParams, LogisticRegressionParams> {
+public class LogisticRegressionOutput
+        extends BasicMasterInterceptor<LogisticRegressionParams, LogisticRegressionParams> {
 
     private static final Logger LOG = LoggerFactory.getLogger(LogisticRegressionOutput.class);
 
@@ -110,24 +110,24 @@ public class LogisticRegressionOutput extends
             return;
         }
 
-        if (minimumEpochs < 0) {
+        if(minimumEpochs < 0) {
             double minimumStepsRatio = DTrainUtils.getDouble(context.getProps(), // get # of steps to choose parameters
                     CommonConstants.SHIFU_TRAIN_VAL_STEPS_RATIO, 0.1);
-            minimumEpochs = (int) (modelConfig.getNumTrainEpochs() * minimumStepsRatio) ;
+            minimumEpochs = (int) (modelConfig.getNumTrainEpochs() * minimumStepsRatio);
         }
 
-
-        if ( context.getCurrentIteration() < minimumEpochs ) {
+        if(context.getCurrentIteration() < minimumEpochs) {
             this.optimizedWeights = context.getMasterResult().getParameters();
         } else {
-            double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON) ? context.getMasterResult()
-                    .getTrainError() : context.getMasterResult().getTestError());
-            if ( currentError < this.minTestError ) {
+            double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON)
+                    ? context.getMasterResult().getTrainError()
+                    : context.getMasterResult().getValidationError());
+            if(currentError < this.minTestError) {
                 this.minTestError = currentError;
                 this.optimizedWeights = Arrays.copyOf(context.getMasterResult().getParameters(),
                         context.getMasterResult().getParameters().length);
-                LOG.info("change minTestError to {}, and update best weights at {}-th epoch.",
-                        this.minTestError, context.getCurrentIteration());
+                LOG.info("change minTestError to {}, and update best weights at {}-th epoch.", this.minTestError,
+                        context.getCurrentIteration());
             }
         }
 
@@ -174,7 +174,7 @@ public class LogisticRegressionOutput extends
         String progress = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Epoch #")
                 .append(currentIteration - 1).append(" Training Error:")
                 .append(context.getMasterResult().getTrainError()).append(" Validation Error:")
-                .append(context.getMasterResult().getTestError()).append("\n").toString();
+                .append(context.getMasterResult().getValidationError()).append("\n").toString();
         try {
             LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), progress.toString());
             this.progressOutput.write(progress.getBytes("UTF-8"));
@@ -202,7 +202,7 @@ public class LogisticRegressionOutput extends
         writeModelWeightsToFileSystem(optimizedWeights, out);
         if(this.isKFoldCV || this.isGsMode) {
             Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
-            writeValErrorToFileSystem(context.getMasterResult().getTestError(), valErrOutput);
+            writeValErrorToFileSystem(context.getMasterResult().getValidationError(), valErrOutput);
         }
         IOUtils.closeStream(this.progressOutput);
     }
@@ -224,8 +224,8 @@ public class LogisticRegressionOutput extends
      * Save tmp nn model to HDFS.
      */
     private void saveTmpModelToHDFS(int iteration, double[] weights) {
-        Path out = new Path(DTrainUtils.getTmpModelName(this.tmpModelsFolder, this.trainerId, iteration, modelConfig
-                .getTrain().getAlgorithm().toLowerCase()));
+        Path out = new Path(DTrainUtils.getTmpModelName(this.tmpModelsFolder, this.trainerId, iteration,
+                modelConfig.getTrain().getAlgorithm().toLowerCase()));
         writeModelWeightsToFileSystem(weights, out);
     }
 
@@ -244,7 +244,8 @@ public class LogisticRegressionOutput extends
                 isKFoldCV = true;
             }
 
-            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
+            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(),
+                    modelConfig.getTrain().getGridConfigFileContent());
             this.isGsMode = gs.hasHyperParam();
         }
 
@@ -268,8 +269,8 @@ public class LogisticRegressionOutput extends
      */
     private void loadConfigFiles(final Properties props) {
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
-                    SourceType.HDFS.toString()));
+            SourceType sourceType = SourceType
+                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
         } catch (IOException e) {

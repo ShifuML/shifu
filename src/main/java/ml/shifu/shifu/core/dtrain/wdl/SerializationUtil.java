@@ -1,3 +1,18 @@
+/*
+ * Copyright [2013-2019] PayPal Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package ml.shifu.shifu.core.dtrain.wdl;
 
 import java.io.DataInput;
@@ -14,7 +29,7 @@ public class SerializationUtil {
     public static final int NULL = 0;
 
     /**
-     * Serialize float array with null and length check.
+     * Serialize double array with null and length check.
      * 
      * @param out
      *            the data output stream
@@ -25,19 +40,19 @@ public class SerializationUtil {
      * @throws IOException
      *             if an I/O error occurs.
      */
-    public static void writeFloatArray(DataOutput out, float[] array, int size) throws IOException {
+    public static void writeDoubleArray(DataOutput out, double[] array, int size) throws IOException {
         if(array == null || array.length != size) {
             out.writeBoolean(false);
         } else {
             out.writeBoolean(true);
-            for(float value: array) {
-                out.writeFloat(value);
+            for(double value: array) {
+                out.writeDouble(value);
             }
         }
     }
 
     /**
-     * De-serialize float array. Will try to use provided array to save memory, but will re-create array if provided is
+     * De-serialize double array. Will try to use provided array to save memory, but will re-create array if provided is
      * null or size dose not match.
      * 
      * @param in
@@ -51,20 +66,20 @@ public class SerializationUtil {
      * @throws IOException
      *             if an I/O error occurs.
      */
-    public static float[] readFloatArray(DataInput in, float[] array, int size) throws IOException {
+    public static double[] readDoubleArray(DataInput in, double[] array, int size) throws IOException {
         if(in.readBoolean()) {
             if(array == null || array.length != size) {
-                array = new float[size];
+                array = new double[size];
             }
             for(int i = 0; i < size; i++) {
-                array[i] = in.readFloat();
+                array[i] = in.readDouble();
             }
         }
         return array;
     }
 
     /**
-     * Serialize two dimensional float array with null and length check.
+     * Serialize two dimensional double array with null and length check.
      * 
      * @param out
      *            the data output stream
@@ -78,21 +93,21 @@ public class SerializationUtil {
      * @throws IOException
      *             if an I/O error occurs.
      */
-    public static void write2DimFloatArray(DataOutput out, float[][] array, int width, int length) throws IOException {
+    public static void write2DimDoubleArray(DataOutput out, double[][] array, int width, int length) throws IOException {
         if(array == null || array.length != width || array[0].length != length) {
             out.writeBoolean(false);
         } else {
             out.writeBoolean(true);
             for(int i = 0; i < width; i++) {
                 for(int j = 0; j < length; j++) {
-                    out.writeFloat(array[i][j]);
+                    out.writeDouble(array[i][j]);
                 }
             }
         }
     }
 
     /**
-     * De-serialize two dimensional float array. Will try to use provided array to save memory, but will re-create array
+     * De-serialize two dimensional double array. Will try to use provided array to save memory, but will re-create array
      * if provided is null or size does not match.
      * 
      * @param in
@@ -108,15 +123,15 @@ public class SerializationUtil {
      * @throws IOException
      *             if an I/O error occurs.
      */
-    public static float[][] read2DimFloatArray(DataInput in, float[][] array, int width, int length)
+    public static double[][] read2DimDoubleArray(DataInput in, double[][] array, int width, int length)
             throws IOException {
         if(in.readBoolean()) {
             if(array == null || array.length != width || array[0].length != length) {
-                array = new float[width][length];
+                array = new double[width][length];
             }
             for(int i = 0; i < width; i++) {
                 for(int j = 0; j < length; j++) {
-                    array[i][j] = in.readFloat();
+                    array[i][j] = in.readDouble();
                 }
             }
         }

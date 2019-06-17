@@ -30,7 +30,7 @@ import java.io.IOException;
  *
  * @author Zhang David (pengzhang@paypal.com)
  */
-public abstract class Activation implements Layer<float[], float[], float[], float[]>, Bytable {
+public abstract class Activation implements Layer<double[], double[], double[], double[]>, Bytable {
 
     @Override
     public int getOutDim() {

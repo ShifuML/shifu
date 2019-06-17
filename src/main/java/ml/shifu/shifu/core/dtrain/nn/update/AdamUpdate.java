@@ -25,8 +25,6 @@ package ml.shifu.shifu.core.dtrain.nn.update;
 
 import java.util.Set;
 
-import ml.shifu.shifu.core.dtrain.Weight;
-
 /**
  * Created by jeffh on 7/15/2016.
  * 
@@ -43,12 +41,12 @@ public class AdamUpdate implements UpdateRule {
     private double learningRate;
 
     @Override
-    public void init(Weight weight) {
-        this.learningRate = weight.getLearningRate();
-        this.m = new double[weight.getNumWeight()];
-        this.v = new double[weight.getNumWeight()];
-        this.beta1 = weight.getAdamBeta1();
-        this.beta2 = weight.getAdamBeta2();
+    public void init(Update update) {
+        this.learningRate = update.getLearningRate();
+        this.m = new double[update.getNumWeight()];
+        this.v = new double[update.getNumWeight()];
+        this.beta1 = update.getAdamBeta1();
+        this.beta2 = update.getAdamBeta2();
     }
 
     @Override

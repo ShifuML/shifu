@@ -27,17 +27,17 @@ public class Gaussian extends Activation {
     /**
      * The center
      */
-    private float center;
+    private double center;
 
     /**
      * The peak
      */
-    private float peak;
+    private double peak;
 
     /**
      * The width
      */
-    private float width;
+    private double width;
 
     /**
      * Default construction, used for build an empty Gaussian
@@ -45,7 +45,7 @@ public class Gaussian extends Activation {
     public Gaussian() {
     }
 
-    public Gaussian(float center, float peak, float width) {
+    public Gaussian(double center, double peak, double width) {
         this.center = center;
         this.peak = peak;
         this.width = width;
@@ -54,25 +54,25 @@ public class Gaussian extends Activation {
     /**
      * Tmp save last inputs in forward and then can be used in backward computation.
      */
-    private float[] lastInput;
+    private double[] lastInput;
 
     @Override
-    public float[] forward(float[] inputs) {
+    public double[] forward(double[] inputs) {
         this.lastInput = inputs;
-        float[] outputs = new float[inputs.length];
+        double[] outputs = new double[inputs.length];
         for(int i = 0; i < inputs.length; i++) {
-            outputs[i] = (float) (this.peak * BoundMath.exp(-Math.pow(inputs[i] - this.center, 2)
+            outputs[i] = (double) (this.peak * BoundMath.exp(-Math.pow(inputs[i] - this.center, 2)
                     / (2.0 * this.width * this.width)));
         }
         return outputs;
     }
 
     @Override
-    public float[] backward(float[] outputs) {
-        float[] results = new float[outputs.length];
+    public double[] backward(double[] outputs) {
+        double[] results = new double[outputs.length];
         for(int i = 0; i < outputs.length; i++) {
-            float interExpValue = this.width * this.width * this.lastInput[i] * this.lastInput[i];
-            results[i] = (float) (Math.exp(-0.5 * interExpValue) * peak * width * width * (interExpValue - 1));
+            double interExpValue = this.width * this.width * this.lastInput[i] * this.lastInput[i];
+            results[i] = (double) (Math.exp(-0.5 * interExpValue) * peak * width * width * (interExpValue - 1));
         }
         return results;
     }
@@ -80,42 +80,42 @@ public class Gaussian extends Activation {
     /**
      * @return the center
      */
-    public float getCenter() {
+    public double getCenter() {
         return center;
     }
 
     /**
      * @param center the center to set
      */
-    public void setCenter(float center) {
+    public void setCenter(double center) {
         this.center = center;
     }
 
     /**
      * @return the peak
      */
-    public float getPeak() {
+    public double getPeak() {
         return peak;
     }
 
     /**
      * @param peak the peak to set
      */
-    public void setPeak(float peak) {
+    public void setPeak(double peak) {
         this.peak = peak;
     }
 
     /**
      * @return the width
      */
-    public float getWidth() {
+    public double getWidth() {
         return width;
     }
 
     /**
      * @param width the width to set
      */
-    public void setWidth(float width) {
+    public void setWidth(double width) {
         this.width = width;
     }
 }
