@@ -34,6 +34,8 @@ public interface Constants {
 
     public static final String COLUMN_STATS_CSV_FILE_NAME = "ColumnStats.csv";
 
+    public static final String LOCAL_DATE_STATS_CSV_FILE_NAME = "DateStats.csv";
+
     public static final String MODEL_SETS = "ModelSets";
 
     public static final String TMP = "tmp";
