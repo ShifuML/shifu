@@ -917,6 +917,11 @@ public class ModelConfig {
     }
 
     @JsonIgnore
+    public String getDateColumnName() {
+        return dataSet.getDateColumnName();
+    }
+
+    @JsonIgnore
     public String getHeaderPath() {
         return dataSet.getHeaderPath();
     }
