@@ -234,7 +234,7 @@ public class DenseLayer extends AbstractLayer<double[], double[], double[], doub
         }
         for(int i = 0; i < this.in; i++) {
             for(int j = 0; j < this.out; j++) {
-                this.wGrads[i][j] = 0f;
+                this.wGrads[i][j] = 0d;
             }
         }
 
@@ -243,7 +243,7 @@ public class DenseLayer extends AbstractLayer<double[], double[], double[], doub
             this.bGrads = new double[this.bias.length];
         }
         for(int j = 0; j < this.out; j++) {
-            this.bGrads[j] = 0f;
+            this.bGrads[j] = 0d;
         }
     }
 
@@ -280,6 +280,7 @@ public class DenseLayer extends AbstractLayer<double[], double[], double[], doub
     @Override
     public void initWeight(InitMethod method) {
         this.weights = method.getInitialisable().initWeight(this.in, this.out);
+        this.bias = method.getInitialisable().initWeight(this.out);
     }
 
     @Override
@@ -288,6 +289,10 @@ public class DenseLayer extends AbstractLayer<double[], double[], double[], doub
             for(int j = 0; j < this.out; j++) {
                 this.weights[i][j] = updateModel.getWeights()[i][j];
             }
+        }
+
+        for(int j = 0; j < this.out; j++) {
+            this.bias[j] = updateModel.getBias()[j];
         }
     }
 

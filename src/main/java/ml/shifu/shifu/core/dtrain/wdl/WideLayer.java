@@ -315,6 +315,7 @@ public class WideLayer
             wideFieldLayer.initOptimizer(learningRate, algorithm, reg, rl);
         }
         this.denseLayer.initOptimizer(learningRate, algorithm, reg, rl);
+        this.bias.initOptimizer(learningRate, algorithm, reg, rl);
     }
 
     @Override
@@ -323,5 +324,6 @@ public class WideLayer
             this.layers.get(i).optimizeWeight(numTrainSize, iteration, model.getLayers().get(i));
         }
         this.denseLayer.optimizeWeight(numTrainSize, iteration, model.getDenseLayer());
+        this.bias.optimizeWeight(numTrainSize, iteration, model.getBias());
     }
 }

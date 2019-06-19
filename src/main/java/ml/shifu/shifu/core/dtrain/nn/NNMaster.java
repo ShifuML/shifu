@@ -266,7 +266,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         if(this.weightCalculator == null) {
             this.learningRate = this.rawLearningRate;
             this.weightCalculator = new Weight(this.globalNNParams.getGradients().length,
-                    this.globalNNParams.getTrainSize(), learningRate, propagation, this.regularizedConstant,
+                    this.globalNNParams.getTrainSum(), learningRate, propagation, this.regularizedConstant,
                     RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)), this.propagation,
                     this.momentum, this.learningDecay, this.adamBeta1, this.adamBeta2, this.fixedWeightIndexSet);
         } else {
@@ -274,7 +274,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             // without learningDecay Parameter using sqrt(iteration number) to decrease learning rate
             // this.learningRate = this.learningRate / Math.sqrt(context.getCurrentIteration() -1);
             this.weightCalculator.setLearningRate(this.learningRate);
-            this.weightCalculator.setNumTrainSize(this.globalNNParams.getTrainSize());
+            this.weightCalculator.setNumTrainSize(this.globalNNParams.getTrainSum());
         }
 
         double[] oldWeights = Arrays.copyOf(this.globalNNParams.getWeights(), this.globalNNParams.getWeights().length);

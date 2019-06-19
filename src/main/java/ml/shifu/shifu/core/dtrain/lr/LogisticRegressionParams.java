@@ -62,12 +62,12 @@ public class LogisticRegressionParams extends HaltBytable implements Combinable<
     private double validationSize;
 
     /**
-     * Weighted training record count in one worker
+     * Training record count in one worker
      */
     private double trainCount;
 
     /**
-     * Weighted testing record count in one worker
+     * Testing record count in one worker
      */
     private double validationCount;
 

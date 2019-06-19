@@ -248,7 +248,7 @@ public class LogisticRegressionMaster
         }
 
         // 3. compute to get latest model weights; on demand init Weight instance because of trainCount needed
-        initWeightOptimizerIfNeeded(trainCount);
+        initWeightOptimizerIfNeeded(trainSize);
         int currItr = context.getCurrentIteration();
         this.weights = this.weightCalculator.calculateWeights(this.weights, gradients, (currItr - 1));
 

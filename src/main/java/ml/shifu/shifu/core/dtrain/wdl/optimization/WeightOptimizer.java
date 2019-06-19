@@ -26,9 +26,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * {@link WeightOptimizer} is used to update NN weights according to propagation option. Which is also copied from Encog.
+ * {@link WeightOptimizer} is used to update NN weights according to propagation option. Which is also copied from
+ * Encog.
  * 
  * <p>
+ * 
  * @author Wu Devin (haifwu@paypal.com)
  */
 public class WeightOptimizer implements Update {
@@ -120,12 +122,12 @@ public class WeightOptimizer implements Update {
     }
 
     public WeightOptimizer(int numWeight, double rate, String algorithm, double reg, RegulationLevel rl,
-                           String propagation) {
+            String propagation) {
         this(numWeight, rate, algorithm, reg, rl, propagation, 0.5d, 0d, 0.9d, 0.999d);
     }
 
-    public WeightOptimizer(int numWeight, double rate, String algorithm, double reg, RegulationLevel rl, String propagation, double momentum, double learningDecay, double adamBeta1,
-                           double adamBeta2) {
+    public WeightOptimizer(int numWeight, double rate, String algorithm, double reg, RegulationLevel rl,
+            String propagation, double momentum, double learningDecay, double adamBeta1, double adamBeta2) {
         this.numWeight = numWeight;
         this.lastDelta = new double[numWeight];
         this.lastGradient = new double[numWeight];
@@ -230,11 +232,11 @@ public class WeightOptimizer implements Update {
     }
 
     private double updateWeight(int index, double[] weights, double[] gradients) {
-        if (this.fixedWeights.contains(index)) {
+        if(this.fixedWeights.contains(index)) {
             // we do not update fixed weight for fine tune
             return 0.0d;
         }
-        
+
         if(this.algorithm.equalsIgnoreCase(DTrainUtils.BACK_PROPAGATION)) {
             return updateWeightBP(index, weights, gradients);
         } else if(this.algorithm.equalsIgnoreCase(DTrainUtils.QUICK_PROPAGATION)) {
@@ -251,7 +253,7 @@ public class WeightOptimizer implements Update {
     }
 
     private double updateWeight(int index, double[] weights, double gradient) {
-        if (this.fixedWeights.contains(index)) {
+        if(this.fixedWeights.contains(index)) {
             // we do not update fixed weight for fine tune
             return 0.0d;
         }
@@ -259,14 +261,16 @@ public class WeightOptimizer implements Update {
         if(this.algorithm.equalsIgnoreCase(DTrainUtils.RESILIENTPROPAGATION)) {
             return updateWeightRLP(index, weights, gradient);
         } else {
-            LOG.error("Currently this method updateWeight(int index, double[] weights, double gradient) only support resilient!");
+            LOG.error(
+                    "Currently this method updateWeight(int index, double[] weights, double gradient) only support resilient!");
         }
 
         return 0.0;
     }
 
     private double updateWeightBP(int index, double[] weights, double[] gradients) {
-        double delta = (gradients[index] * this.getLearningRate()) + (this.lastDelta[index] * this.getMomentum());
+        double delta = (gradients[index] * this.getLearningRate() / this.getNumTrainSize())
+                + (this.lastDelta[index] * this.getMomentum());
         this.lastDelta[index] = delta;
         return delta;
     }
