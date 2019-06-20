@@ -33,6 +33,8 @@ public interface Optimizer {
      *            the gradients
      * @param uniqueKey
      *            unique key identify the call upstream
+     * @param trainCount
+     *            total training count which used for learning rate adjustment
      */
     void update(double[] weight, double[] grad, String uniqueKey, double trainCount);
 
@@ -45,6 +47,8 @@ public interface Optimizer {
      *            sparse representation of gradients
      * @param uniqueKey
      *            unique key identify the call upstream, usually the class name
+     * @param trainCount
+     *            total training count which used for learning rate adjustment
      */
     void update(double[] weight, Map<Integer, Double> grad, String uniqueKey, double trainCount);
 
@@ -55,6 +59,8 @@ public interface Optimizer {
      *            gradient value
      * @param uniqueKey
      *            unique key identify the call upstream, usually the class name
+     * @param trainCount
+     *            total training count which used for learning rate adjustment
      * @return
      *         weight update
      */

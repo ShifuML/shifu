@@ -18,6 +18,7 @@ package ml.shifu.shifu.core.dtrain.wdl;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -194,6 +195,21 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         params.setSerializationType(SerializationType.WEIGHTS);
         this.wnd.setSerializationType(SerializationType.WEIGHTS);
         params.setWnd(this.wnd);
+
+        double[] ww = this.wnd.getWl().getDenseLayer().getWeights();
+        if(this.wnd.isWideEnable()) {
+            LOG.info("final wide denser layer weights {}.", Arrays.toString(ww));
+            double[] wgrads = aggregation.getWnd().getWl().getDenseLayer().getwGrads();
+            LOG.info(
+                    "wgrads[159] {}, wgrads[271] {}, wgrads[320] {}, wgrads[492] {}, wgrads[516] {}, wgrads[559] {}, wgrads[560] {}.",
+                    wgrads[159], wgrads[271], wgrads[320], wgrads[492], wgrads[516], wgrads[559], wgrads[560]);
+        }
+
+        for(int i = 0; i < ww.length; i++) {
+            if(Math.abs(ww[i]) > 10) {
+                LOG.info("Column {}, with wegiht {} > 10, weights {}.", i, ww[i], Arrays.toString(ww));
+            }
+        }
         return params;
     }
 

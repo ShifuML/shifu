@@ -635,6 +635,11 @@
                             }                            
                          ]
                      }, {
+                        "name" : "NumEmbedOuputs",
+                        "type" : "integer",
+                        "directive": "input",
+                        "defval" : 8
+                     }, {
                         "name" : "NumEmbedColumnIds",
                         "type" : "list",
                         "directive": "input",

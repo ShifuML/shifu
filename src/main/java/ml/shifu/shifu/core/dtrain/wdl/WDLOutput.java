@@ -127,7 +127,12 @@ public class WDLOutput extends BasicMasterInterceptor<WDLParams, WDLParams> {
                     if(!isHalt && currentIteration != totalIteration) {
                         Path tmpModelPath = getTmpModelPath(currentIteration);
                         writeModelToFileSystem(context.getMasterResult(), out);
-
+                        // a bug in new version to write last model, wait 1s for model flush hdfs successfully.
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e1) {
+                            Thread.currentThread().interrupt();
+                        }
                         // in such case tmp model is final model, just copy to tmp models
                         LOG.info("Copy checkpointed model to tmp folder: {}", tmpModelPath.toString());
                         try {
@@ -212,9 +217,8 @@ public class WDLOutput extends BasicMasterInterceptor<WDLParams, WDLParams> {
 
     private void writeModelToFileSystem(WDLParams params, Path out) {
         try {
-            BinaryWDLSerializer
-                    .save(this.modelConfig, this.columnConfigList, params.getWnd(), FileSystem.get(new Configuration()),
-                            out);
+            BinaryWDLSerializer.save(this.modelConfig, this.columnConfigList, params.getWnd(),
+                    FileSystem.get(new Configuration()), out);
         } catch (IOException e) {
             LOG.error("Error in writing WideAndDeep model", e);
         }
