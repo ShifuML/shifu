@@ -101,6 +101,9 @@
                 "name": "targetColumnName",
                 "type": "text",
                 "directive": "input"
+            }, {"name": "dateColumnName",
+                "type": "text",
+                "directive": "input"
             }, {
                 "name": "posTags",
                 "type" : "list",
@@ -239,6 +242,11 @@
                 ]
             }, {
                 "name": "psiColumnName",
+                "type": "text",
+                "directive": "input",
+                "defval" : ""
+            }, {
+                "name": "dateStatsOutputFileName",
                 "type": "text",
                 "directive": "input",
                 "defval" : ""
@@ -626,6 +634,11 @@
                                 "defval": 45
                             }                            
                          ]
+                     }, {
+                        "name" : "NumEmbedOuputs",
+                        "type" : "integer",
+                        "directive": "input",
+                        "defval" : 8
                      }, {
                         "name" : "NumEmbedColumnIds",
                         "type" : "list",

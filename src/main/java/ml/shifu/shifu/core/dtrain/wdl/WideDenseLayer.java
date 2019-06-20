@@ -16,7 +16,7 @@
 package ml.shifu.shifu.core.dtrain.wdl;
 
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimize;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.PropOptimizer;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.WeightOptimizer;
 import org.slf4j.Logger;
@@ -33,7 +33,7 @@ import java.util.List;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class WideDenseLayer extends AbstractLayer<double[], double[], double[], double[], WideDenseLayer>
-        implements WeightInitializer<WideDenseLayer>, Optimize<WideDenseLayer> {
+        implements WeightInitializer<WideDenseLayer>, PropOptimizer<WideDenseLayer> {
     @SuppressWarnings("unused")
     private static final Logger LOG = LoggerFactory.getLogger(WideDenseLayer.class);
     /**

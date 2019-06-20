@@ -15,7 +15,9 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
+import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.WeightOptimizer;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -26,11 +28,14 @@ import java.io.IOException;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class BiasLayer extends AbstractLayer<Double, Double, Double, Double, BiasLayer> implements WeightInitializer<BiasLayer> {
+public class BiasLayer extends AbstractLayer<Double, Double, Double, Double, BiasLayer>
+        implements WeightInitializer<BiasLayer> {
 
     private double weight;
 
     private double wGrad;
+
+    private WeightOptimizer optimizer;
 
     public BiasLayer(double weight) {
         this.weight = weight;
@@ -92,6 +97,16 @@ public class BiasLayer extends AbstractLayer<Double, Double, Double, Double, Bia
 
     public void initGrads() {
         this.wGrad = 0f;
+    }
+
+    public void initOptimizer(double learningRate, String algorithm, double reg, RegulationLevel rl) {
+        this.optimizer = new WeightOptimizer(1, learningRate, algorithm, reg, rl);
+    }
+
+    public void optimizeWeight(double numTrainSize, int iteration, BiasLayer model) {
+        double[] newWgt = this.optimizer.calculateWeights(new double[] { this.weight },
+                new double[] { model.getwGrad() }, iteration, numTrainSize);
+        this.weight = newWgt[0];
     }
 
     /*

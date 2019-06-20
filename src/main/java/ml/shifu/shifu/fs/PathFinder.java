@@ -465,6 +465,17 @@ public class PathFinder {
         }
     }
 
+    public String getDailyStatInfoPath(SourceType sourceType){
+        String preTrainPath = getPreferPath(modelConfig.getTrain().getCustomPaths(),
+                Constants.KEY_PRE_TRAIN_STATS_PATH);
+
+        if(StringUtils.isBlank(preTrainPath)) {
+            return getPathBySourceType(new Path(Constants.TMP, "DailyStatInfo"), sourceType);
+        } else {
+            return new Path(preTrainPath).toString();
+        }
+    }
+
     public String getPSIInfoPath() {
         return this.getPSIInfoPath(modelConfig.getDataSet().getSource());
     }

@@ -181,10 +181,6 @@ public class PigExecutor {
             if(StringUtils.isNotBlank(hdpVersion)) {
                 // for hdp 2.2.4, hdp.version should be set and configuration files should be added to container class
                 pigServer.getPigContext().getProperties().put("hdp.version", hdpVersion);
-                pigServer.getPigContext().addJar(HDPUtils.findContainingFile("hdfs-site.xml"));
-                pigServer.getPigContext().addJar(HDPUtils.findContainingFile("core-site.xml"));
-                pigServer.getPigContext().addJar(HDPUtils.findContainingFile("mapred-site.xml"));
-                pigServer.getPigContext().addJar(HDPUtils.findContainingFile("yarn-site.xml"));
             }
         } else {
             log.info("ExecType: LOCAL");

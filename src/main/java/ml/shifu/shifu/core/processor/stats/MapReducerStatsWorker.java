@@ -15,11 +15,7 @@
  */
 package ml.shifu.shifu.core.processor.stats;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.zip.GZIPInputStream;
 
 import com.google.common.collect.Lists;
 import ml.shifu.shifu.fs.SourceFile;
@@ -40,7 +37,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.jexl2.JexlException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -86,6 +83,11 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.ValueVisitor;
+import ml.shifu.shifu.core.datestat.DateStatComputeMapper;
+import ml.shifu.shifu.core.datestat.DateStatComputeReducer;
+import ml.shifu.shifu.core.datestat.DateStatInfoWritable;
+
+import static ml.shifu.shifu.util.Constants.LOCAL_DATE_STATS_CSV_FILE_NAME;
 
 /**
  * Created by zhanhu on 6/30/16.
@@ -176,6 +178,9 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             processor.syncDataToHdfs(modelConfig.getDataSet().getSource());
         }
 
+        //run daily stat compute
+        updateDateStatWithMRJob();
+
         return true;
     }
 
@@ -245,6 +250,121 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         log.info("Updating binning info ...");
         updateBinningInfoWithMRJob();
     }
+
+    protected void updateDateStatWithMRJob() throws IOException, InterruptedException, ClassNotFoundException {
+        if(StringUtils.isEmpty(this.modelConfig.getDateColumnName())){
+            log.info("Date column name is not set in ModelConfig file, will cancel updateDateStatWithMRJob.");
+            return ;
+        }
+
+        RawSourceData.SourceType source = this.modelConfig.getDataSet().getSource();
+
+        Configuration conf = new Configuration();
+        prepareJobConf(source, conf, null);
+
+        @SuppressWarnings("deprecation")
+        Job job = new Job(conf, "Shifu: Date Stats Job : " + this.modelConfig.getModelSetName());
+        job.setJarByClass(getClass());
+        job.setMapperClass(DateStatComputeMapper.class);
+        job.setMapOutputKeyClass(Text.class);
+        job.setMapOutputValueClass(DateStatInfoWritable.class);
+        job.setInputFormatClass(CombineInputFormat.class);
+        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
+                .makeQualified(new Path(super.modelConfig.getDataSetRawPath())));
+
+        job.setReducerClass(DateStatComputeReducer.class);
+
+        int mapperSize = new CombineInputFormat().getSplits(job).size();
+        log.info("DEBUG: Test mapper size is {} ", mapperSize);
+        Integer reducerSize = Environment.getInt(CommonConstants.SHIFU_DAILYSTAT_REDUCER);
+        if(reducerSize != null) {
+            job.setNumReduceTasks(Environment.getInt(CommonConstants.SHIFU_DAILYSTAT_REDUCER, 20));
+        } else {
+            // By average, each reducer handle 100 variables
+            int newReducerSize = (this.columnConfigList.size() / 100) + 1;
+            // if(newReducerSize < 1) {
+            // newReducerSize = 1;
+            // }
+            // if(newReducerSize > 500) {
+            // newReducerSize = 500;
+            // }
+            log.info("Adjust date stat info reducer size to {} ", newReducerSize);
+            job.setNumReduceTasks(newReducerSize);
+        }
+        job.setOutputKeyClass(NullWritable.class);
+        job.setOutputValueClass(Text.class);
+        job.setOutputFormatClass(TextOutputFormat.class);
+
+        String preTrainingInfo = this.pathFinder.getPreTrainingStatsPath(source);
+        Path path = new Path(preTrainingInfo);
+        log.info("Output path:" + path);
+        FileOutputFormat.setOutputPath(job, path);
+
+        // clean output firstly
+        ShifuFileUtils.deleteFile(preTrainingInfo, source);
+
+        // submit job
+        if(!job.waitForCompletion(true)) {
+            throw new RuntimeException("MapReduce Job Updating date stat Info failed.");
+        } else {
+            long totalValidCount = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT")
+                    .getValue();
+            long invalidTagCount = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")
+                    .getValue();
+            long filterOut = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT")
+                    .getValue();
+            long weightExceptions = job.getCounters().findCounter(Constants.SHIFU_GROUP_COUNTER, "WEIGHT_EXCEPTION")
+                    .getValue();
+            log.info(
+                    "Total valid records {}, invalid tag records {}, filter out records {}, weight exception records {}",
+                    totalValidCount, invalidTagCount, filterOut, weightExceptions);
+
+            if(totalValidCount > 0L && invalidTagCount * 1d / totalValidCount >= 0.8d) {
+                log.warn("Too many invalid tags, please check you configuration on positive tags and negative tags.");
+            }
+            copyFileToLocal(conf, path);
+        }
+    }
+
+    private void copyFileToLocal(Configuration conf, Path path) throws IOException {
+        FileSystem hdfs = FileSystem.get(conf);
+        RemoteIterator<LocatedFileStatus> locatedFileStatusRemoteIterator = hdfs.listFiles(path, false);
+        List<Path> list = new ArrayList<>();
+        while(locatedFileStatusRemoteIterator.hasNext()) {
+            LocatedFileStatus next = locatedFileStatusRemoteIterator.next();
+            Path p = next.getPath();
+            if(p.getName().endsWith("gz")) {
+                list.add(p);
+            }
+        }
+        Collections.sort(list, new Comparator<Path>() {
+
+            private Integer getDigitInPath(String path){
+                String resultStr = StringUtils.substringBefore(StringUtils.substringAfterLast(path, "-"), ".");
+                if(StringUtils.isEmpty(resultStr)) {
+                    return 0;
+                }
+                return Integer.parseInt(resultStr);
+            }
+
+            @Override
+            public int compare(Path o1, Path o2) {
+                return getDigitInPath(o1.getName()) - getDigitInPath(o2.getName());
+            }
+        });
+        String dateStatsOutputFileName = this.modelConfig.getStats().getDateStatsOutputFileName();
+        File file = new File(StringUtils.isEmpty(dateStatsOutputFileName)? LOCAL_DATE_STATS_CSV_FILE_NAME : dateStatsOutputFileName);
+        OutputStream out = org.apache.commons.io.FileUtils.openOutputStream(file);
+        for(Path p : list){
+            FSDataInputStream in = hdfs.open(p);
+            GZIPInputStream gzin = new GZIPInputStream(in);
+            IOUtils.copy(gzin, out);
+            IOUtils.closeQuietly(gzin);
+        }
+        IOUtils.closeQuietly(out);
+        log.info("Copy file to local:" + file.getAbsolutePath());
+    }
+
 
     protected void updateBinningInfoWithMRJob() throws IOException, InterruptedException, ClassNotFoundException {
         RawSourceData.SourceType source = this.modelConfig.getDataSet().getSource();
@@ -337,7 +457,11 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
     private void prepareJobConf(RawSourceData.SourceType source, final Configuration conf, String filePath)
             throws IOException {
         // add jars to hadoop mapper and reducer
-        new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars(), "-files", filePath });
+        if(StringUtils.isNotEmpty(filePath)){
+            new GenericOptionsParser(conf, new String[]{"-libjars", addRuntimeJars(), "-files", filePath});
+        }else{
+            new GenericOptionsParser(conf, new String[]{"-libjars", addRuntimeJars()});
+        }
 
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
         conf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", true);
@@ -368,10 +492,6 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         if(StringUtils.isNotBlank(hdpVersion)) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
             conf.set("hdp.version", hdpVersion);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
         }
 
         // one can set guagua conf in shifuconfig

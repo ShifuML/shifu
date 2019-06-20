@@ -490,10 +490,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         if(StringUtils.isNotBlank(hdpVersion)) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
             conf.set("hdp.version", hdpVersion);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
         }
         guaguaClient.createJob(args.toArray(new String[0])).waitForCompletion(true);
 
@@ -693,10 +689,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
         if(StringUtils.isNotBlank(hdpVersion)) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
-            jars.add(HDPUtils.findContainingFile("hdfs-site.xml"));
-            jars.add(HDPUtils.findContainingFile("core-site.xml"));
-            jars.add(HDPUtils.findContainingFile("mapred-site.xml"));
-            jars.add(HDPUtils.findContainingFile("yarn-site.xml"));
         }
 
         return StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR);
@@ -897,10 +889,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         if(StringUtils.isNotBlank(hdpVersion)) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
             conf.set("hdp.version", hdpVersion);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
         }
         // one can set guagua conf in shifuconfig
         CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {

@@ -20,16 +20,21 @@ import ml.shifu.guagua.io.Combinable;
 import ml.shifu.shifu.core.dtrain.AssertUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import static ml.shifu.shifu.core.dtrain.wdl.SerializationUtil.NULL;
-import ml.shifu.shifu.core.dtrain.wdl.activation.*;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimize;
+import ml.shifu.shifu.core.dtrain.wdl.activation.Activation;
+import ml.shifu.shifu.core.dtrain.wdl.activation.ActivationFactory;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.PropOptimizer;
 import ml.shifu.shifu.util.Tuple;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
@@ -48,7 +53,7 @@ import java.util.stream.Collectors;
  * @author Zhang David (pengzhang@paypal.com)
  */
 public class WideAndDeep
-        implements WeightInitializer<WideAndDeep>, Bytable, Combinable<WideAndDeep>, Optimize<WideAndDeep> {
+        implements WeightInitializer<WideAndDeep>, Bytable, Combinable<WideAndDeep>, PropOptimizer<WideAndDeep> {
 
     private static final Logger LOG = LoggerFactory.getLogger(WideAndDeep.class);
 
@@ -101,7 +106,7 @@ public class WideAndDeep
     boolean embedEnable = true;
 
     private boolean isDebug = false;
-    
+
     /**
      * Flat spot value to smooth lr derived function: result * (1 - result): This value sometimes may be close to zero.
      * Add flat sport to improve it: result * (1 - result) + 0.1d
@@ -252,7 +257,6 @@ public class WideAndDeep
         for(int i = 0; i < grad2Logits.length; i++) {
             double error = (predicts[i] - actuals[i]);
             grad2Logits[i] = error * (derivedFunction(predicts[i]) + FLAT_SPOT_VALUE) * sig * -1;
-            // grad2Logits[i] = error * (derivedFunction(predicts[i]) + FLAT_SPOT_VALUE);
         }
 
         // wide layer backward, as wide layer in LR actually in backward, only gradients computation is needed.
@@ -724,7 +728,7 @@ public class WideAndDeep
         }
 
         AssertUtils.assertListNotNullAndSizeEqual(this.actiFuncs, hiddenDenseLayer);
-        hiddenDenseLayer.forEach(denseLayer -> LOG.info(String.valueOf(denseLayer)));
+        // hiddenDenseLayer.forEach(denseLayer -> LOG.info(String.valueOf(denseLayer)));
         this.hiddenLayers = new ArrayList<>(this.actiFuncs.size() * 2);
         for(int i = 0; i < hiddenDenseLayer.size(); i++) {
             this.hiddenLayers.add(hiddenDenseLayer.get(i));
@@ -743,6 +747,7 @@ public class WideAndDeep
             embedOutputs = SerializationUtil.readIntList(in, embedOutputs);
             wideColumnIds = SerializationUtil.readIntList(in, wideColumnIds);
             hiddenNodes = SerializationUtil.readIntList(in, hiddenNodes);
+            l2reg = in.readDouble();
         }
     }
 
@@ -861,6 +866,32 @@ public class WideAndDeep
         this.finalLayer.optimizeWeight(numTrainSize, iteration, gradWnd.getFinalLayer());
         this.ecl.optimizeWeight(numTrainSize, iteration, gradWnd.getEcl());
         this.wl.optimizeWeight(numTrainSize, iteration, gradWnd.getWl());
+    }
+
+    @Override
+    public WideAndDeep clone() {
+        // Set the initial buffer size to 1M
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(1024 * 1024);
+        DataOutputStream dos = new DataOutputStream(byteArrayOutputStream);
+        DataInputStream dis = null;
+        try {
+            write(dos, SerializationType.MODEL_SPEC);
+            dos.flush();
+            ByteArrayInputStream dataInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
+            WideAndDeep wideAndDeep = new WideAndDeep();
+            dis = new DataInputStream(dataInputStream);
+            wideAndDeep.readFields(dis);
+            wideAndDeep.initGrads();
+            return wideAndDeep;
+        } catch (IOException e) {
+            LOG.error("IOException happen when clone wideAndDeep model", e);
+        } finally {
+            IOUtils.closeStream(dos);
+            if(dis != null) {
+                IOUtils.closeStream(dis);
+            }
+        }
+        return null;
     }
 
     /**

@@ -64,8 +64,8 @@ import ml.shifu.shifu.util.ModelSpecLoaderUtils;
  * <p>
  * L1 and l2 regulations are supported by configuration: RegularizedConstant in model params of ModelConfig.json.
  */
-public class LogisticRegressionMaster extends
-        AbstractMasterComputable<LogisticRegressionParams, LogisticRegressionParams> {
+public class LogisticRegressionMaster
+        extends AbstractMasterComputable<LogisticRegressionParams, LogisticRegressionParams> {
 
     private static final Logger LOG = LoggerFactory.getLogger(LogisticRegressionMaster.class);
 
@@ -139,8 +139,8 @@ public class LogisticRegressionMaster extends
         loadConfigFiles(context.getProps());
         int trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
 
-        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain()
-                .getGridConfigFileContent());
+        GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(),
+                modelConfig.getTrain().getGridConfigFileContent());
         validParams = this.modelConfig.getTrain().getParams();
         if(gs.hasHyperParam()) {
             validParams = gs.getParams(trainerId);
@@ -152,7 +152,8 @@ public class LogisticRegressionMaster extends
                 this.columnConfigList);
         this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
 
-        Boolean enabledEarlyStop = DTrainUtils.getBoolean(validParams, CommonConstants.ENABLE_EARLY_STOP, Boolean.FALSE);
+        Boolean enabledEarlyStop = DTrainUtils.getBoolean(validParams, CommonConstants.ENABLE_EARLY_STOP,
+                Boolean.FALSE);
         if(enabledEarlyStop) {
             Double validTolerance = DTrainUtils.getDouble(validParams, CommonConstants.VALIDATION_TOLERANCE, null);
             if(validTolerance == null) {
@@ -174,21 +175,11 @@ public class LogisticRegressionMaster extends
         Object rconstant = validParams.get(CommonConstants.REGULARIZED_CONSTANT);
         this.regularizedConstant = NumberFormatUtils.getDouble(rconstant == null ? "" : rconstant.toString(), 0d);
 
-        this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(
-                context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
-        LOG.info("continuousEnabled: {}", this.isContinuousEnabled);
+        this.isContinuousEnabled = Boolean.TRUE.toString()
+                .equalsIgnoreCase(context.getProps().getProperty(CommonConstants.CONTINUOUS_TRAINING));
 
         // not initialized and not first iteration, should be fault tolerance, recover state in LogisticRegressionMaster
-        if(!context.isFirstIteration()) {
-            LogisticRegressionParams lastMasterResult = context.getMasterResult();
-            if(lastMasterResult != null && lastMasterResult.getParameters() != null) {
-                // recover state in current master computable and return to workers
-                this.weights = lastMasterResult.getParameters();
-            } else {
-                // no weights, restarted from the very beginning, this may not happen
-                this.weights = initWeights().getParameters();
-            }
-        }
+        this.weights = recoverMasterState(context).getParameters();
     }
 
     private LogisticRegressionParams initModelParams(LR loadModel) {
@@ -224,80 +215,102 @@ public class LogisticRegressionMaster extends
     }
 
     @Override
-    public LogisticRegressionParams doCompute(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+    public LogisticRegressionParams doCompute(
+            MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+        // 0. fault tolerance logic for master
         if(isInitialized.compareAndSet(false, true)) {
-            // not initialized and not first iteration, should be fault tolerance, recover state in
-            // LogisticRegressionMaster
-            if(!context.isFirstIteration()) {
-                LogisticRegressionParams lastMasterResult = context.getMasterResult();
-                if(lastMasterResult != null && lastMasterResult.getParameters() != null) {
-                    // recover state in current master computable and return to workers
-                    this.weights = lastMasterResult.getParameters();
-                    return lastMasterResult;
-                } else {
-                    // no weights, restarted from the very beginning, this may not happen
-                    return initWeights();
-                }
-            }
+            // not initialized and not first iteration, should be fault tolerance, recover state in master
+            return recoverMasterState(context);
         }
 
+        // 1. init or read weights from existing model if continuous enabled only in first step
         if(context.isFirstIteration()) {
-            if(this.isContinuousEnabled) {
-                return initOrRecoverParams(context);
+            return initOrContinueTrain(context);
+        }
+
+        // 2. accumulate all gradients together
+        double[] gradients = new double[this.inputNum + 1]; // append bias
+        double trainError = 0.0d, validationError = 0d;
+        double trainSize = 0, vldSize = 0, trainCount = 0, vldCount = 0;
+        for(LogisticRegressionParams param: context.getWorkerResults()) {
+            if(param == null) {
+                continue;
+            }
+            for(int i = 0; i < gradients.length; i++) {
+                gradients[i] += param.getParameters()[i];
+            }
+            trainError += param.getTrainError();
+            validationError += param.getValidationError();
+            trainSize += param.getTrainSize();
+            vldSize += param.getValidationSize();
+            trainCount += param.getTrainCount();
+            vldCount += param.getValidationCount();
+        }
+
+        // 3. compute to get latest model weights; on demand init Weight instance because of trainCount needed
+        initWeightOptimizerIfNeeded(trainSize);
+        int currItr = context.getCurrentIteration();
+        this.weights = this.weightCalculator.calculateWeights(this.weights, gradients, (currItr - 1));
+
+        // 4. return latest model weights to workers
+        double finalTrainError = trainError / trainSize;
+        double finalTestError = validationError / vldSize;
+        LOG.info("Iteration {} with train error {}, test error {}", currItr, finalTrainError, finalTestError);
+        return buildReturnParams(context, trainSize, vldSize, trainCount, vldCount, finalTrainError, finalTestError);
+    }
+
+    private LogisticRegressionParams buildReturnParams(
+            MasterContext<LogisticRegressionParams, LogisticRegressionParams> context, double trainSize,
+            double validationSize, double trainCount, double validationCount, double finalTrainError,
+            double finalTestError) {
+        LogisticRegressionParams lrParams = new LogisticRegressionParams(weights, finalTrainError, finalTestError,
+                trainSize, validationSize, trainCount, validationCount);
+
+        if(finalTestError < this.bestValidationError) {
+            this.bestValidationError = finalTestError;
+        }
+
+        if(earlyStopStrategy != null) {
+            boolean isToStopEarly = earlyStopStrategy.shouldEarlyStop(context.getCurrentIteration(), weights,
+                    finalTrainError, finalTestError);
+            if(isToStopEarly) {
+                lrParams.setHalt(true);
+            }
+        }
+        return lrParams;
+    }
+
+    private LogisticRegressionParams initOrContinueTrain(
+            MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+        if(this.isContinuousEnabled) {
+            return initOrRecoverParams(context);
+        } else {
+            return initWeights();
+        }
+    }
+
+    private LogisticRegressionParams recoverMasterState(
+            MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
+        if(!context.isFirstIteration()) {
+            LogisticRegressionParams lastMasterResult = context.getMasterResult();
+            if(lastMasterResult != null && lastMasterResult.getParameters() != null) {
+                // recover state in current master computable and return to workers
+                this.weights = lastMasterResult.getParameters();
+                return lastMasterResult;
             } else {
+                // no weights, restarted from the very beginning, this may not happen
                 return initWeights();
             }
+        }
+        return initWeights();
+    }
+
+    private void initWeightOptimizerIfNeeded(double trainCount) {
+        if(this.weightCalculator == null) {
+            this.weightCalculator = new Weight(weights.length, trainCount, learningRate, this.propagation,
+                    this.regularizedConstant, RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)));
         } else {
-            // append bias
-            double[] gradients = new double[this.inputNum + 1];
-            double trainError = 0.0d, validationError = 0d;
-            double trainSize = 0, validationSize = 0;
-            double trainCount = 0, validationCount = 0;
-            for(LogisticRegressionParams param: context.getWorkerResults()) {
-                if(param != null) {
-                    for(int i = 0; i < gradients.length; i++) {
-                        gradients[i] += param.getParameters()[i];
-                    }
-                    trainError += param.getTrainError();
-                    validationError += param.getValidationError();
-                    trainSize += param.getTrainSize();
-                    validationSize += param.getValidationSize();
-                    trainCount += param.getTrainCount();
-                    validationCount += param.getValidationCount();
-                }
-            }
-
-            if(this.weightCalculator == null) {
-                this.weightCalculator = new Weight(weights.length, trainCount, learningRate, this.propagation,
-                        this.regularizedConstant, RegulationLevel.to(this.validParams
-                                .get(CommonConstants.REG_LEVEL_KEY)));
-            } else {
-                this.weightCalculator.setNumTrainSize(trainCount);
-            }
-
-            this.weights = this.weightCalculator.calculateWeights(this.weights, gradients,
-                    (context.getCurrentIteration() - 1));
-
-            double finalTrainError = trainError / trainSize;
-            double finalTestError = validationError / validationSize;
-            LOG.info("Iteration {} with train error {}, test error {}", context.getCurrentIteration(), finalTrainError,
-                    finalTestError);
-            LogisticRegressionParams lrParams = new LogisticRegressionParams(weights, finalTrainError, finalTestError,
-                    trainSize, validationSize, trainCount, validationCount);
-
-            if(finalTestError < this.bestValidationError) {
-                this.bestValidationError = finalTestError;
-            }
-
-            if(earlyStopStrategy != null) {
-                boolean isToStopEarly = earlyStopStrategy
-                        .shouldEarlyStop(context.getCurrentIteration(), weights, finalTrainError, finalTestError);
-                if(isToStopEarly) {
-                    lrParams.setHalt(true);
-                }
-            }
-
-            return lrParams;
+            this.weightCalculator.setNumTrainSize(trainCount);
         }
     }
 
@@ -311,12 +324,12 @@ public class LogisticRegressionMaster extends
 
     private void loadConfigFiles(final Properties props) {
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
-                    SourceType.HDFS.toString()));
+            SourceType sourceType = SourceType
+                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

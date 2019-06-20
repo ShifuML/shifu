@@ -61,6 +61,8 @@ public interface CommonConstants {
 
     public static final String SHIFU_UPDATEBINNING_REDUCER = "shifu.updatebinning.reducer";
 
+    public static final String SHIFU_DAILYSTAT_REDUCER = "shifu.datestat.reducer";
+
     public static final String SHIFU_NN_FEATURE_SUBSET = "shifu.nn.feature.subset";
 
     public static final String SHIFU_TREE_CHECKPOINT_INTERVAL = "shifu.tree.checkpoint.interval";
@@ -144,7 +146,7 @@ public interface CommonConstants {
 
     public static final int WDL_FORMAT_VERSION = 1;
 
-    public static final int DEFAULT_EMBEDING_OUTPUT = 16;
+    public static final int DEFAULT_EMBEDING_OUTPUT = 8;
 
     public static final String WIDE_ENABLE = "wideEnable";
 
