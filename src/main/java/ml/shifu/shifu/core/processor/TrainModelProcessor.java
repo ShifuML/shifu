@@ -977,14 +977,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 progressLogList.add(progressLogFile);
                 localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                         CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE, progressLogFile));
-//                 String hdpVersion = HDPUtils.getHdpVersionForHDP224();
-//                if(StringUtils.isNotBlank(hdpVersion)) {
-//                    localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, "hdp.version", hdpVersion));
-//                    HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
-//                    HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
-//                    HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
-//                    HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
-//                }
 
                 if(isParallel) {
                     guaguaClient.addJob(localArgs.toArray(new String[0]));

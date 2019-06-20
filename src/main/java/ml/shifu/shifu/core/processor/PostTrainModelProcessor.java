@@ -253,10 +253,6 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         if(StringUtils.isNotBlank(hdpVersion)) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
             conf.set("hdp.version", hdpVersion);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
         }
 
         // one can set guagua conf in shifuconfig
@@ -327,10 +323,6 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         if(StringUtils.isNotBlank(hdpVersion)) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
             conf.set("hdp.version", hdpVersion);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
         }
 
         // one can set guagua conf in shifuconfig

@@ -129,7 +129,7 @@ public class WDLOutput extends BasicMasterInterceptor<WDLParams, WDLParams> {
                         writeModelToFileSystem(context.getMasterResult(), out);
                         // a bug in new version to write last model, wait 1s for model flush hdfs successfully.
                         try {
-                            Thread.sleep(1000);
+                            Thread.sleep(100);
                         } catch (InterruptedException e1) {
                             Thread.currentThread().interrupt();
                         }
