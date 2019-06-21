@@ -15,28 +15,36 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
-import ml.shifu.guagua.io.Bytable;
-import ml.shifu.guagua.io.Combinable;
-import ml.shifu.shifu.core.dtrain.AssertUtils;
-import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import static ml.shifu.shifu.core.dtrain.wdl.SerializationUtil.NULL;
-import ml.shifu.shifu.core.dtrain.wdl.activation.Activation;
-import ml.shifu.shifu.core.dtrain.wdl.activation.ActivationFactory;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.PropOptimizer;
-import ml.shifu.shifu.util.Tuple;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import ml.shifu.guagua.io.Bytable;
+import ml.shifu.guagua.io.Combinable;
+import ml.shifu.shifu.core.dtrain.AssertUtils;
+import ml.shifu.shifu.core.dtrain.RegulationLevel;
+import ml.shifu.shifu.core.dtrain.wdl.activation.Activation;
+import ml.shifu.shifu.core.dtrain.wdl.activation.ActivationFactory;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.PropOptimizer;
+import ml.shifu.shifu.util.Tuple;
 
 /**
  * {@link WideAndDeep} graph definition which is for whole network including deep side and wide side.
@@ -592,6 +600,13 @@ public class WideAndDeep
         InitMethod defaultMode = InitMethod.NEGATIVE_POSITIVE_ONE_RANGE_RANDOM;
         initWeight(defaultMode);
 
+        int hiddenCount = 0;
+        for(@SuppressWarnings("rawtypes") Layer layer: this.hiddenLayers) {
+            if(layer instanceof DenseLayer) {
+                hiddenCount += ((DenseLayer)layer).getIn();
+            }
+        }
+        
         LOG.info("Init weight be called with mode:{}", defaultMode.name());
     }
 

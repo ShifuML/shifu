@@ -26,7 +26,6 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 
-import ml.shifu.shifu.util.NormalUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
@@ -64,6 +63,7 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.MapReduceUtils;
+import ml.shifu.shifu.util.NormalUtils;
 
 /**
  * {@link AbstractNNWorker} is refactored as a common class for different NN input format.
@@ -424,8 +424,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : (classes == 2 ? 1 : classes));
         this.candidateCount = inputOutputIndex[2];
         boolean isAfterVarSelect = inputOutputIndex[0] != 0;
-        LOG.info("isAfterVarSelect {}: Input count {}, output count {}, candidate count {}",
-                isAfterVarSelect, inputNodeCount, outputNodeCount, candidateCount);
+        LOG.info("isAfterVarSelect {}: Input count {}, output count {}, candidate count {}", isAfterVarSelect,
+                inputNodeCount, outputNodeCount, candidateCount);
         // cache all feature list for sampling features
         this.allFeatures = NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
         String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);
@@ -583,9 +583,10 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         // prevent null point;
         params.setWeights(new double[0]);
         params.setTrainSize(this.trainingData.getRecordCount());
+        params.setTrainSize(this.validationData.getRecordCount());
         params.setTrainSum(this.trainingData.getRecordSum());
-        params.setValidationSum(this.validationData.getRecordCount() > 0
-                ? this.validationData.getRecordSum() : this.trainingData.getRecordSum());
+        params.setValidationSum(this.validationData.getRecordCount() > 0 ? this.validationData.getRecordSum()
+                : this.trainingData.getRecordSum());
         params.setCount(count);
         return params;
     }

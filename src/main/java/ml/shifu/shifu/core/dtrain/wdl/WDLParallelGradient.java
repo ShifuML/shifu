@@ -252,12 +252,6 @@ public class WDLParallelGradient {
                         break;
                     }
                 }
-
-                // LOG.info(
-                // "wgrads[159] {}, wgrads[271] {}, wgrads[320] {}, wgrads[492] {}, wgrads[516] {}, wgrads[559] {},
-                // wgrads[560] {}.",
-                // wgrads[159][0], wgrads[271][0], wgrads[320][0], wgrads[492][0], wgrads[516][0], wgrads[559][0],
-                // wgrads[560][0]);
             }
 
             TASK_LOG.info("Worker with validation run time {} ms.", (System.currentTimeMillis() - start));
