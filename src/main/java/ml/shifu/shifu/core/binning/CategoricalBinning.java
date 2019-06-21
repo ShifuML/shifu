@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import ml.shifu.shifu.util.Constants;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,24 +81,26 @@ public class CategoricalBinning extends AbstractBinning<String> {
      * @see ml.shifu.shifu.core.binning.AbstractBinning#addData(java.lang.Object)
      */
     @Override
-	public void addData(String val) {
-		String fval = (val == null ? "" : val);
-		log.debug("hash feature test");
-		if (!isMissingVal(fval)) {
-			if (isValid && this.hashSeed <= 0) {
-				categoricalVals.add(fval);
-			} else if (isValid && this.hashSeed > 0) {
-				categoricalVals.add(Integer.toString(fval.hashCode() % this.hashSeed));
-			}
+    public void addData(String val) {
+        String fval = (val == null ? "" : val);
+        log.debug("hash feature test");
+        if (isMissingVal(fval)) {
+            super.incMissingValCnt();
+        } else if (fval.length() > Constants.MAX_CATEGORICAL_VAL_LENGTH) {
+            super.incInvalidValCnt();
+        } else {
+            if (isValid && this.hashSeed <= 0) {
+                categoricalVals.add(fval);
+            } else if (isValid && this.hashSeed > 0) {
+                categoricalVals.add(Integer.toString(fval.hashCode() % this.hashSeed));
+            }
 
-			if (categoricalVals.size() > maxCategorySize) {
-				isValid = false;
-				categoricalVals.clear();
-			}
-		} else {
-			super.incMissingValCnt();
-		}
-	}
+            if (categoricalVals.size() > maxCategorySize) {
+                isValid = false;
+                categoricalVals.clear();
+            }
+        }
+    }
 
     /*
      * (non-Javadoc)

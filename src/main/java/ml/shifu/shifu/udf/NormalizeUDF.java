@@ -673,9 +673,13 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                             schemaStr.append(normalName + ":" + getOutputPrecisionType() + ",");
                         }
                     } else {
-                        List<String> normColumnNames = this.genNormColumnNames(config, this.normType);
-                        for(String normalName: normColumnNames) {
-                            schemaStr.append(normalName + ":" + getOutputPrecisionType() + ",");
+                        if(CommonUtils.isToNormVariable(config, super.hasCandidates, modelConfig.isRegression())) {
+                            List<String> normColumnNames = this.genNormColumnNames(config, this.normType);
+                            for(String normalName : normColumnNames) {
+                                schemaStr.append(normalName + ":" + getOutputPrecisionType() + ",");
+                            }
+                        } else {
+                            schemaStr.append(CommonUtils.normColumnName(config.getColumnName()) + ":chararray" + ",");
                         }
                     }
                 }
