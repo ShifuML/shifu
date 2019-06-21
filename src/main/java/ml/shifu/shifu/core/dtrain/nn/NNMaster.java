@@ -236,8 +236,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         this.globalNNParams.reset();
 
         long totalCount = 0L;
-        double totalTrainSum = 0.0d;
-        double totalTestSum = 0.0d;
+        double totalTrainSum = 0.0d, totalValidationSum = 0.0d;
         int totalWorkerCount = 0;
         for(NNParams nn : context.getWorkerResults()) {
             totalTestError += nn.getValidationError();
@@ -246,16 +245,19 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             this.globalNNParams.accumulateTrainSize(nn.getTrainSize());
             totalCount += nn.getCount();
             totalTrainSum += nn.getTrainSum();
-            totalTestSum += nn.getValidationSum();
+            totalValidationSum += nn.getValidationSum();
             // original worker count before combinable
             totalWorkerCount += nn.getWrCount();
             size++;
         }
+        this.globalNNParams.setTrainSum(totalTrainSum);
+        this.globalNNParams.setValidationSum(totalValidationSum);
+        this.globalNNParams.setCount(totalCount);
 
         LOG.debug("ELM gradients debug for 0 gradient {}", this.globalNNParams.getGradients()[0]);
         LOG.info("Total Count is {}. totalWorkerCount is {}", totalCount, totalWorkerCount);
         LOG.info("Total Train Error is {}. totalTrainSum is {}", totalTrainError, totalTrainSum);
-        LOG.info("Total Test Error is {}. totalTestSum is {}", totalTestError, totalTestSum);
+        LOG.info("Total Test Error is {}. totalTestSum is {}", totalTestError, totalValidationSum);
 
         // worker result size is 0. throw exception because shouldn't happen
         if(size == 0) {
@@ -284,7 +286,6 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         double[] weights = this.weightCalculator
                 .calculateWeights(this.globalNNParams.getWeights(), this.globalNNParams.getGradients(),
                         (context.getCurrentIteration() - 1));
-
         if(LOG.isDebugEnabled()) {
             logSameWeights(oldWeights, weights);
         }
@@ -292,7 +293,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         this.globalNNParams.setWeights(weights);
 
         // average error
-        double currentTestError = totalTestError / totalTestSum;
+        double currentTestError = totalTestError / totalValidationSum;
         double currentTrainError = totalTrainError / totalTrainSum;
 
         if(currentTestError < this.bestValidationError) {
@@ -556,7 +557,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             }
         }
 
-        LOG.info("layerIndex:{}; layerCounts:{}; dropoutNodes:{}", Arrays.toString(this.flatNetwork.getLayerIndex()),
+        LOG.debug("layerIndex:{}; layerCounts:{}; dropoutNodes:{}", Arrays.toString(this.flatNetwork.getLayerIndex()),
                 Arrays.toString(this.flatNetwork.getLayerCounts()),
                 Arrays.toString(droppedNodeIndices.toArray(new Integer[droppedNodeIndices.size()])));
         return droppedNodeIndices;
