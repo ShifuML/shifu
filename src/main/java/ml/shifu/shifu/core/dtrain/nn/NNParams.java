@@ -53,14 +53,14 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
     private double[] gradients;
 
     /**
-     * Current test error which can be sent to master
-     */
-    private double validationError = 0;
-
-    /**
      * Current train error which can be sent to master
      */
     private double trainError = 0;
+
+    /**
+     * Current test error which can be sent to master
+     */
+    private double validationError = 0;
 
     /**
      * Training size of each worker and master

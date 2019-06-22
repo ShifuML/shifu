@@ -38,7 +38,6 @@ import ml.shifu.shifu.util.Constants;
  */
 public class EqualPopulationBinningTest {
 
-    @SuppressWarnings("unused")
     @Test
     void testExtraSmallBins() {
         EqualPopulationBinning binning = new EqualPopulationBinning(10);
