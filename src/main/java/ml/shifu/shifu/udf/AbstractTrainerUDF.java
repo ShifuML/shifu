@@ -15,21 +15,22 @@
  */
 package ml.shifu.shifu.udf;
 
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
-
 import org.apache.pig.EvalFunc;
 import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * AbstractTrainerUDF class is the abstract class for most UDF
@@ -140,5 +141,32 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
      */
     protected String getUdfProperty(String udfPropertyName) {
         return getUdfProperty(udfPropertyName, null);
+    }
+
+    /**
+     * Generate the normalized Column names for one config
+     * @param config - ColumnConfig to norm
+     * @param normType - normalization type
+     * @return
+     *      if the NormType is ONEHOT, it will be normalized to multi variables
+     *      or it will be just one normalized column name
+     */
+    protected List<String> genNormColumnNames(ColumnConfig config, NormType normType) {
+        List<String> normalizedNames = new ArrayList<>();
+        if(NormType.ONEHOT.equals(normType) && config.isNumerical()) { // ONEHOT and numerical variable
+            for(int i = 0; i < config.getBinBoundary().size(); i++) {
+                normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_" + i);
+            }
+            normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_missing");
+        } else if((NormType.ONEHOT.equals(normType) || NormType.ZSCALE_ONEHOT.equals(normType))
+                && config.isCategorical()) { // ONEHOT or ZSCALE_ONEHOT for categorical variable
+            for(int i = 0; i < config.getBinCategory().size(); i++) {
+                normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_" + i);
+            }
+            normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_missing");
+        } else {
+            normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()));
+        }
+        return normalizedNames;
     }
 }

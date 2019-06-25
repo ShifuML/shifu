@@ -50,11 +50,9 @@ public class VarSelUpdater extends BasicUpdater {
                     && this.setCandidates.contains(new NSColumn(varName)))) {
                 columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
             }
-        } else if(NSColumnUtils.isColumnEqual(this.weightColumnName, varName)) {
-            columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Weight);
         } else if(this.setCandidates.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Candidate);
-        } else if ( this.setCategorialColumns.contains(new NSColumn(varName)) ) {
+        } else if ( this.setCategoricalColumns.contains(new NSColumn(varName)) ) {
             columnConfig.setColumnType(ColumnType.C);
         }
     }

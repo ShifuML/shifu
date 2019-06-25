@@ -295,8 +295,9 @@ public class ModelConfig {
             evalSet.setSource(SourceType.HDFS);
             Path dst = new Path(File.separator + "user" + File.separator
                     + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement");
-            HDFSUtils.getFS().copyFromLocalFile(new Path(exampleLocalESFolder), dst);
-
+            if (!ShifuFileUtils.isFileExists(dst, SourceType.HDFS)) {
+                HDFSUtils.getFS().copyFromLocalFile(new Path(exampleLocalESFolder), dst);
+            }
             evalSet.setDataPath(
                     new File(File.separator + "user" + File.separator + Environment.getProperty(Environment.SYSTEM_USER)
                             + File.separator + "cancer-judgement" + File.separator + "EvalSet1").toString());

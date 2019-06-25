@@ -51,7 +51,7 @@ public class DTrainTest {
 
     public static final int NUM_EPOCHS = 20;
 
-    public double rate = 0.5;
+    public double rate = 0.01;
 
     public int numSplit = 24;
 

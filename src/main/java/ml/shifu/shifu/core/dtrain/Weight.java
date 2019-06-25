@@ -236,7 +236,7 @@ public class Weight implements Update {
     }
 
     private double updateWeightBP(int index, double[] weights, double[] gradients) {
-        double delta = (gradients[index] * this.getLearningRate()/this.getNumTrainSize()) + (this.lastDelta[index] * this.getMomentum());
+        double delta = (gradients[index] * this.getLearningRate()) + (this.lastDelta[index] * this.getMomentum());
         this.lastDelta[index] = delta;
         return delta;
     }

@@ -119,7 +119,7 @@ public class TensorflowTrainer {
                 targetColumnNum = i;
             } else if(cc.isFinalSelect()) {
                 seletectedColumnNums.add(i);
-            } else if(cc.isWeight()) {
+            } else if(CommonUtils.isWeightColumn(modelConfig.getWeightColumnName(), cc)) {
                 weightColumnNum = i;
             }
         }

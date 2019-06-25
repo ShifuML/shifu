@@ -294,6 +294,23 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      */
     protected boolean hasCandidates = false;
 
+    /**
+     * The normalized data is compacted or not
+     */
+    protected boolean isCompactMode = false;
+
+    /**
+     * The column num of weight column
+     */
+    protected int weightColumnId = -1;
+
+    /**
+     * The weight column is Meta column or not
+     *      if the weight column is meta column, use the raw value directly
+     *      else use the last column of the normalized data
+     */
+    protected boolean isWeightColumnMeta = false;
+
     protected boolean isUpSampleEnabled() {
         // only enabled in regression
         return this.upSampleRng != null && (modelConfig.isRegression()
@@ -315,6 +332,16 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                     .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
             this.isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
             this.hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
+            if (StringUtils.isNotBlank(modelConfig.getWeightColumnName())) {
+                String weightColumnName = StringUtils.trimToEmpty(modelConfig.getWeightColumnName());
+                for (ColumnConfig config: this.columnConfigList) {
+                    if (StringUtils.equals(weightColumnName, config.getColumnName())) {
+                        this.weightColumnId = config.getColumnNum();
+                        this.isWeightColumnMeta = config.isMeta();
+                        break;
+                    }
+                }
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
