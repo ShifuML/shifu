@@ -596,18 +596,66 @@ public class WideAndDeep
     /**
      * Init the weights in WideAndDeep Model and it's sub module
      */
+    @SuppressWarnings("rawtypes")
     public void initWeights() {
         InitMethod defaultMode = InitMethod.NEGATIVE_POSITIVE_ONE_RANGE_RANDOM;
         initWeight(defaultMode);
 
+        // for NguyenWidrowRandomizer, TODO, as stratety to be configured
         int hiddenCount = 0;
-        for(@SuppressWarnings("rawtypes") Layer layer: this.hiddenLayers) {
+        for(Layer layer: this.hiddenLayers) {
             if(layer instanceof DenseLayer) {
-                hiddenCount += ((DenseLayer)layer).getIn();
+                hiddenCount += ((DenseLayer) layer).getIn();
             }
         }
+        // can't really do much, use regular randomization
+        if(hiddenCount < 1) {
+            return;
+        }
+
+        int inputCount = 0;
+        if(this.embedEnable) {
+            inputCount = dil.getOutDim() + ecl.getOutDim();
+        } else {
+            inputCount = dil.getOutDim();
+        }
+        double beta = 0.7 * Math.pow(hiddenCount, 1.0 / inputCount);
+
+        for(Layer layer: this.hiddenLayers) {
+            if(!(layer instanceof DenseLayer)) {
+                continue;
+            }
+            initDenserLayerWeights((DenseLayer) layer, beta);
+        }
+
+        initDenserLayerWeights(finalLayer, beta);
         
+        // TODO init embed layers, does beta value need to be changed?
         LOG.info("Init weight be called with mode:{}", defaultMode.name());
+    }
+
+    private void initDenserLayerWeights(DenseLayer layer, double beta) {
+        double n = 0d;
+        double[][] weights = layer.getWeights();
+        for(int i = 0; i < weights.length; i++) {
+            for(int j = 0; j < weights[i].length; j++) {
+                n += (weights[i][j] * weights[i][j]);
+            }
+        }
+        double[] bias = layer.getBias();
+        for(int i = 0; i < bias.length; i++) {
+            n += (bias[i] * bias[i]);
+        }
+        n = Math.sqrt(n);
+
+        for(int i = 0; i < weights.length; i++) {
+            for(int j = 0; j < weights[i].length; j++) {
+                weights[i][j] = beta * weights[i][j] / n;
+            }
+        }
+        for(int i = 0; i < bias.length; i++) {
+            bias[i] = beta * bias[i] / n;
+        }
     }
 
     @SuppressWarnings("rawtypes")

@@ -305,12 +305,12 @@ public class LogisticRegressionMaster
         return initWeights();
     }
 
-    private void initWeightOptimizerIfNeeded(double trainCount) {
+    private void initWeightOptimizerIfNeeded(double trainSize) {
         if(this.weightCalculator == null) {
-            this.weightCalculator = new Weight(weights.length, trainCount, learningRate, this.propagation,
+            this.weightCalculator = new Weight(weights.length, trainSize, learningRate, this.propagation,
                     this.regularizedConstant, RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)));
         } else {
-            this.weightCalculator.setNumTrainSize(trainCount);
+            this.weightCalculator.setNumTrainSize(trainSize);
         }
     }
 
