@@ -904,28 +904,23 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     private void postProcessFIVarSelect(Map<Integer, MutablePair<String, Double>> importances) throws IOException {
-        int selectCnt = 0;
-        for(ColumnConfig config: super.columnConfigList) {
-            // enable ForceSelect
-            if(config.isForceSelect()) {
-                config.setFinalSelect(true);
-                selectCnt++;
-                log.info("Variable {} is selected, since it is in ForceSelect list.", config.getColumnName());
-            }
-        }
         VariableSelector.setFilterNumberByFilterOutRatio(this.modelConfig, this.columnConfigList);
         int targetCnt = this.modelConfig.getVarSelectFilterNum();
         List<Integer> candidateColumnIdList = new ArrayList<Integer>();
         candidateColumnIdList.addAll(importances.keySet());
-        int i = 0;
         int candidateCount = candidateColumnIdList.size();
+        int i = 0;
+        int selectCnt = 0;
         // try to select another (targetCnt - selectCnt) variables, but we need to exclude those
         // force-selected variables
         for(ColumnConfig columnConfig: this.columnConfigList) {
-            if(columnConfig.isFinalSelect()) {
+            if(columnConfig.isForceSelect()) {
                 columnConfig.setFinalSelect(true);
+                selectCnt++;
+                log.info("Variable {} is selected, since it is in ForceSelect list.", columnConfig.getColumnName());
             }
         }
+        int forceCnt = selectCnt;
 
         Set<NSColumn> userCandidateColumns = CommonUtils.loadCandidateColumns(modelConfig);
 
@@ -946,7 +941,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 log.info("Variable {} is selected.", columnConfig.getColumnName());
             }
         }
-        log.info("{} variables are selected.", selectCnt);
+        log.info("{} variables are selected, while {} are force-selected, and others from {} candidates.",
+                selectCnt, forceCnt, candidateCount);
     }
 
     private void postProcess4SEVarSelect(SourceType source, String varSelectMSEOutputPath) throws IOException {

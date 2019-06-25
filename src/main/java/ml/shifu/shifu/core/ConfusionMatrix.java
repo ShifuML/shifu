@@ -603,6 +603,9 @@ public class ConfusionMatrix {
         // lift = NaN
         po.liftUnit = 0.0;
         po.weightLiftUnit = 0.0;
+        // ftpr = NaN
+        po.ftpr = 0.0;
+        po.weightedFtpr = 0.0;
         po.binLowestScore = prevCmo.getScore();
         return po;
     }

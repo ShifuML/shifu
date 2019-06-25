@@ -1070,6 +1070,11 @@ public final class CommonUtils {
         return "wdl".equalsIgnoreCase(alg);
     }
 
+    public static boolean isWeightColumn(String weightColumnName, ColumnConfig columnConfig) {
+        return StringUtils.isNotBlank(weightColumnName) // weight is set && equals with name of ColumnConfig
+                && StringUtils.equals(StringUtils.trim(weightColumnName), columnConfig.getColumnName());
+    }
+
     public static boolean isRandomForestAlgorithm(String alg) {
         return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg);
     }
