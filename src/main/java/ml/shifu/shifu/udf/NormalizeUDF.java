@@ -180,25 +180,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         this.isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
     }
 
-    private List<String> genNormColumnNames(ColumnConfig config, NormType normType) {
-        List<String> normalizedNames = new ArrayList<>();
-        if(NormType.ONEHOT.equals(normType) && config.isNumerical()) { // ONEHOT and numerical variable
-            for(int i = 0; i < config.getBinBoundary().size(); i++) {
-                normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_" + i);
-            }
-            normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_missing");
-        } else if((NormType.ONEHOT.equals(normType) || NormType.ZSCALE_ONEHOT.equals(normType))
-                && config.isCategorical()) { // ONEHOT or ZSCALE_ONEHOT for categorical variable
-            for(int i = 0; i < config.getBinCategory().size(); i++) {
-                normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_" + i);
-            }
-            normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_missing");
-        } else {
-            normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()));
-        }
-        return normalizedNames;
-    }
-
     @SuppressWarnings("deprecation")
     public Tuple exec(Tuple input) throws IOException {
         if(input == null || input.size() == 0) {

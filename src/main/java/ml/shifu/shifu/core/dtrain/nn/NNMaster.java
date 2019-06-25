@@ -264,7 +264,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
             throw new IllegalArgumentException("workers' results are empty.");
         }
 
-        // initialize weightCalCulater.
+        // initialize weightCalculator.
         if(this.weightCalculator == null) {
             this.learningRate = this.rawLearningRate;
             this.weightCalculator = new Weight(this.globalNNParams.getGradients().length,
