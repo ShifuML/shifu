@@ -194,29 +194,8 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
         boolean hasSelectedVars = DTrainUtils.hasFinalSelectedVars(this.columnConfigList);
         Set<Integer> modelFeatureSet = DTrainUtils
                 .getModelFeatureSet(this.columnConfigList, hasSelectedVars, hasCandidates);
-        if(hasSelectedVars) {
-            for(Integer columnId : modelFeatureSet) {
-                ColumnConfig columnConfig = CommonUtils.getColumnConfig(this.columnConfigList, columnId);
-                if(evalNamesSet.contains(columnConfig.getColumnName())) {
-                    featureNames.add(columnConfig.getColumnName());
-                    outputNames.addAll(super.genNormColumnNames(columnConfig, this.modelConfig.getNormalizeType()));
-                } else {
-                    throw new RuntimeException("FinalSelect variable - " + columnConfig.getColumnName()
-                            + " couldn't be found in eval dataset!");
-                }
-            }
-        } else { // only normalize those good variables that exists in eval data set also
-            for(Integer columnId : modelFeatureSet) {
-                ColumnConfig columnConfig = CommonUtils.getColumnConfig(this.columnConfigList, columnId);
-                if(evalNamesSet.contains(columnConfig.getColumnName())) {
-                    featureNames.add(columnConfig.getColumnName());
-                    outputNames.addAll(super.genNormColumnNames(columnConfig, this.modelConfig.getNormalizeType()));
-                } else {
-                    throw new RuntimeException(
-                            "Variable - " + columnConfig.getColumnName() + " couldn't be found in eval dataset!");
-                }
-            }
-        }
+        appendModelFeatures(this.columnConfigList, modelFeatureSet, evalNamesSet, featureNames, outputNames,
+                ((hasSelectedVars) ? "FinalSelect variable" : "Variable"));
 
         this.scoreName = this.evalConfig.getPerformanceScoreSelector();
         if(StringUtils.isBlank(this.scoreName) || this.scoreName.equalsIgnoreCase("mean")) {
@@ -241,6 +220,21 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
 
         setPrecisionType();
         setCategoryMissingNormType();
+    }
+
+    private void appendModelFeatures(List<ColumnConfig> columnConfigList, Set<Integer> modelFeatureSet,
+            Set<String> evalNamesSet, List<String> featureNames, List<String> outputNames, String varDesc) {
+        for (ColumnConfig columnConfig : columnConfigList) {
+            if (modelFeatureSet.contains(columnConfig.getColumnNum())) {
+                if(evalNamesSet.contains(columnConfig.getColumnName())) {
+                    featureNames.add(columnConfig.getColumnName());
+                    outputNames.addAll(super.genNormColumnNames(columnConfig, this.modelConfig.getNormalizeType()));
+                } else {
+                    throw new RuntimeException(
+                            varDesc + " - " + columnConfig.getColumnName() + " couldn't be found in eval dataset!");
+                }
+            }
+        }
     }
 
     private void setPrecisionType() {
