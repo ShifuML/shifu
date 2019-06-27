@@ -35,8 +35,9 @@ import java.util.List;
 public class ColumnConfig {
 
     // add weight column and weight column is treated the same as meta
+    // add Weight back for back-compatible
     public static enum ColumnFlag {
-        ForceSelect, ForceRemove, Candidate, Meta, Target
+        ForceSelect, ForceRemove, Candidate, Meta, Target, Weight
     }
 
     /**
