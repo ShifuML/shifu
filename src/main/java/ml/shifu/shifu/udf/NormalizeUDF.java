@@ -547,7 +547,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         }
                     }
                 }
-                schemaStr.append("weight:").append(getOutputPrecisionType()).append(")");
+                schemaStr.append("shifu::weight:").append(getOutputPrecisionType()).append(")");
                 // log.info(" schema string is " + schemaStr.toString());
                 return Utils.getSchemaFromString(schemaStr.toString());
             }
