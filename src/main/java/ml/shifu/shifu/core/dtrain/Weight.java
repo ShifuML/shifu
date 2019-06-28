@@ -113,7 +113,7 @@ public class Weight implements Update {
      * Layer IDs which are not updated at all (used for fine tuning)
      */
     private Set<Integer> fixedWeights = new HashSet<Integer>();
-    
+
     public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl) {
         this(numWeight, numTrainSize, rate, algorithm, reg, rl, null);
     }
@@ -123,16 +123,18 @@ public class Weight implements Update {
         this(numWeight, numTrainSize, rate, algorithm, reg, rl, propagation, 0.5d, 0d, 0.9d, 0.999d);
     }
 
-    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl, String propagation, double momentum, double learningDecay, double adamBeta1,
-            double adamBeta2, Set<Integer> fixedWeights) {
-        this(numWeight, numTrainSize, rate, algorithm, reg, rl, propagation, momentum,learningDecay, adamBeta1,adamBeta2);
-        if ( CollectionUtils.isNotEmpty(fixedWeights) ) {
+    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl,
+            String propagation, double momentum, double learningDecay, double adamBeta1, double adamBeta2,
+            Set<Integer> fixedWeights) {
+        this(numWeight, numTrainSize, rate, algorithm, reg, rl, propagation, momentum, learningDecay, adamBeta1,
+                adamBeta2);
+        if(CollectionUtils.isNotEmpty(fixedWeights)) {
             this.fixedWeights = fixedWeights;
         }
     }
-    
-    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl, String propagation, double momentum, double learningDecay, double adamBeta1,
-            double adamBeta2) {
+
+    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl,
+            String propagation, double momentum, double learningDecay, double adamBeta1, double adamBeta2) {
         this.numWeight = numWeight;
         this.lastDelta = new double[numWeight];
         this.lastGradient = new double[numWeight];
@@ -215,11 +217,11 @@ public class Weight implements Update {
     }
 
     private double updateWeight(int index, double[] weights, double[] gradients) {
-        if (this.fixedWeights.contains(index)) {
+        if(this.fixedWeights.contains(index)) {
             // we do not update fixed weight for fine tune
             return 0.0d;
         }
-        
+
         if(this.algorithm.equalsIgnoreCase(DTrainUtils.BACK_PROPAGATION)) {
             return updateWeightBP(index, weights, gradients);
         } else if(this.algorithm.equalsIgnoreCase(DTrainUtils.QUICK_PROPAGATION)) {
@@ -236,7 +238,8 @@ public class Weight implements Update {
     }
 
     private double updateWeightBP(int index, double[] weights, double[] gradients) {
-        double delta = (gradients[index] * this.getLearningRate()) + (this.lastDelta[index] * this.getMomentum());
+        double delta = (gradients[index] * this.getLearningRate() / this.getNumTrainSize())
+                + (this.lastDelta[index] * this.getMomentum());
         this.lastDelta[index] = delta;
         return delta;
     }

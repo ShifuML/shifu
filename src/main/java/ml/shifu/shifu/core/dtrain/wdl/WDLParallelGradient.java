@@ -16,7 +16,6 @@
 package ml.shifu.shifu.core.dtrain.wdl;
 
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
@@ -230,36 +229,36 @@ public class WDLParallelGradient {
             wdlParams.setValidationError(validSumError);
             wdlParams.setWnd(this.wnd);
 
-//            if(this.wnd.isWideEnable()) {
-//                double[] wgrads = this.wnd.getWl().getDenseLayer().getwGrads();
-//                LOG.info(
-//                        "wgrads[159] {}, wgrads[271] {}, wgrads[320] {}, wgrads[492] {}, wgrads[516] {}, wgrads[559] {}, wgrads[560] {}.",
-//                        wgrads[159], wgrads[271], wgrads[320], wgrads[492], wgrads[516], wgrads[559], wgrads[560]);
-//            } else if(this.wnd.isDeepEnable()) {
-//                for(Iterator<Layer> iterator = this.wnd.getHiddenLayers().iterator(); iterator.hasNext();) {
-//                    Layer layer = iterator.next();
-//                    if(layer instanceof DenseLayer) {
-//                        DenseLayer dl = (DenseLayer) layer;
-//                        double[][] ws = dl.getWeights();
-//                        for(int i = 0; i < ws.length; i++) {
-//                            for(int j = 0; j < ws[i].length; j++) {
-//                                if(Math.abs(ws[i][j]) > 10) {
-//                                    LOG.info("Hidden layer Column {}, with wegiht {} > 10, weights {}.", i, ws[i][j],
-//                                            Arrays.toString(ws[i]));
-//                                }
-//                            }
-//                        }
-//                        break;
-//                    }
-//                }
-//
-//                // LOG.info(
-//                // "wgrads[159] {}, wgrads[271] {}, wgrads[320] {}, wgrads[492] {}, wgrads[516] {}, wgrads[559] {},
-//                // wgrads[560] {}.",
-//                // wgrads[159][0], wgrads[271][0], wgrads[320][0], wgrads[492][0], wgrads[516][0], wgrads[559][0],
-//                // wgrads[560][0]);
-//            }
-            }
+            // if(this.wnd.isWideEnable()) {
+            // double[] wgrads = this.wnd.getWl().getDenseLayer().getwGrads();
+            // LOG.info(
+            // "wgrads[159] {}, wgrads[271] {}, wgrads[320] {}, wgrads[492] {}, wgrads[516] {}, wgrads[559] {},
+            // wgrads[560] {}.",
+            // wgrads[159], wgrads[271], wgrads[320], wgrads[492], wgrads[516], wgrads[559], wgrads[560]);
+            // } else if(this.wnd.isDeepEnable()) {
+            // for(Iterator<Layer> iterator = this.wnd.getHiddenLayers().iterator(); iterator.hasNext();) {
+            // Layer layer = iterator.next();
+            // if(layer instanceof DenseLayer) {
+            // DenseLayer dl = (DenseLayer) layer;
+            // double[][] ws = dl.getWeights();
+            // for(int i = 0; i < ws.length; i++) {
+            // for(int j = 0; j < ws[i].length; j++) {
+            // if(Math.abs(ws[i][j]) > 10) {
+            // LOG.info("Hidden layer Column {}, with wegiht {} > 10, weights {}.", i, ws[i][j],
+            // Arrays.toString(ws[i]));
+            // }
+            // }
+            // }
+            // break;
+            // }
+            // }
+            //
+            // // LOG.info(
+            // // "wgrads[159] {}, wgrads[271] {}, wgrads[320] {}, wgrads[492] {}, wgrads[516] {}, wgrads[559] {},
+            // // wgrads[560] {}.",
+            // // wgrads[159][0], wgrads[271][0], wgrads[320][0], wgrads[492][0], wgrads[516][0], wgrads[559][0],
+            // // wgrads[560][0]);
+            // }
 
             TASK_LOG.info("Worker with validation run time {} ms.", (System.currentTimeMillis() - start));
             return wdlParams;

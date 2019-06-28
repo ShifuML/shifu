@@ -256,7 +256,7 @@ public class WideAndDeep
      * Derived function for sigmoid function.
      */
     private double derivedFunction(double result) {
-        return result * (1f - result);
+        return result * (1d - result);
     }
 
     @SuppressWarnings("rawtypes")
@@ -264,7 +264,7 @@ public class WideAndDeep
         double[] grad2Logits = new double[predicts.length];
         for(int i = 0; i < grad2Logits.length; i++) {
             double error = (predicts[i] - actuals[i]);
-            grad2Logits[i] = error * (derivedFunction(predicts[i]) + FLAT_SPOT_VALUE) * sig * -1;
+            grad2Logits[i] = error * (derivedFunction(predicts[i]) + FLAT_SPOT_VALUE) * sig * -1d;
         }
 
         // wide layer backward, as wide layer in LR actually in backward, only gradients computation is needed.
@@ -604,7 +604,7 @@ public class WideAndDeep
         int hiddenCount = 0;
         for(Layer layer: this.hiddenLayers) {
             if(layer instanceof DenseLayer) {
-                hiddenCount += ((DenseLayer) layer).getIn();
+                hiddenCount += ((DenseLayer) layer).getOut();
             }
         }
 
