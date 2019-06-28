@@ -601,13 +601,13 @@ public class WideAndDeep
         InitMethod defaultMode = InitMethod.NEGATIVE_POSITIVE_ONE_RANGE_RANDOM;
         initWeight(defaultMode);
 
-        // for NguyenWidrowRandomizer, TODO, as stratety to be configured
         int hiddenCount = 0;
         for(Layer layer: this.hiddenLayers) {
             if(layer instanceof DenseLayer) {
                 hiddenCount += ((DenseLayer) layer).getIn();
             }
         }
+
         // can't really do much, use regular randomization
         if(hiddenCount < 1) {
             return;
@@ -629,7 +629,7 @@ public class WideAndDeep
         }
 
         initDenserLayerWeights(finalLayer, beta);
-        
+
         // TODO init embed layers, does beta value need to be changed?
         LOG.info("Init weight be called with mode:{}", defaultMode.name());
     }
