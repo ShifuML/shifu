@@ -256,15 +256,16 @@ public class WideAndDeep
      * Derived function for sigmoid function.
      */
     private double derivedFunction(double result) {
-        return result * (1f - result);
+        return result * (1d - result);
     }
 
     @SuppressWarnings("rawtypes")
     public double[] backward(double[] predicts, double[] actuals, double sig) {
+        // TODO add binary cross entropy here
         double[] grad2Logits = new double[predicts.length];
         for(int i = 0; i < grad2Logits.length; i++) {
             double error = (predicts[i] - actuals[i]);
-            grad2Logits[i] = error * (derivedFunction(predicts[i]) + FLAT_SPOT_VALUE) * sig * -1;
+            grad2Logits[i] = error * (derivedFunction(predicts[i]) + FLAT_SPOT_VALUE) * sig * -1d;
         }
 
         // wide layer backward, as wide layer in LR actually in backward, only gradients computation is needed.
@@ -596,18 +597,66 @@ public class WideAndDeep
     /**
      * Init the weights in WideAndDeep Model and it's sub module
      */
+    @SuppressWarnings("rawtypes")
     public void initWeights() {
         InitMethod defaultMode = InitMethod.NEGATIVE_POSITIVE_ONE_RANGE_RANDOM;
         initWeight(defaultMode);
 
         int hiddenCount = 0;
-        for(@SuppressWarnings("rawtypes") Layer layer: this.hiddenLayers) {
+        for(Layer layer: this.hiddenLayers) {
             if(layer instanceof DenseLayer) {
-                hiddenCount += ((DenseLayer)layer).getIn();
+                hiddenCount += ((DenseLayer) layer).getOut();
             }
         }
-        
+
+        // can't really do much, use regular randomization
+        if(hiddenCount < 1) {
+            return;
+        }
+
+        int inputCount = 0;
+        if(this.embedEnable) {
+            inputCount = dil.getOutDim() + ecl.getOutDim();
+        } else {
+            inputCount = dil.getOutDim();
+        }
+        double beta = 0.7 * Math.pow(hiddenCount, 1.0 / inputCount);
+
+        for(Layer layer: this.hiddenLayers) {
+            if(!(layer instanceof DenseLayer)) {
+                continue;
+            }
+            initDenserLayerWeights((DenseLayer) layer, beta);
+        }
+
+        initDenserLayerWeights(finalLayer, beta);
+
+        // TODO init embed layers, does beta value need to be changed?
         LOG.info("Init weight be called with mode:{}", defaultMode.name());
+    }
+
+    private void initDenserLayerWeights(DenseLayer layer, double beta) {
+        double n = 0d;
+        double[][] weights = layer.getWeights();
+        for(int i = 0; i < weights.length; i++) {
+            for(int j = 0; j < weights[i].length; j++) {
+                n += (weights[i][j] * weights[i][j]);
+            }
+        }
+        double[] bias = layer.getBias();
+        for(int i = 0; i < bias.length; i++) {
+            n += (bias[i] * bias[i]);
+        }
+        n = Math.sqrt(n);
+
+        for(int i = 0; i < weights.length; i++) {
+            for(int j = 0; j < weights[i].length; j++) {
+                weights[i][j] = beta * weights[i][j] / n;
+            }
+        }
+        for(int i = 0; i < bias.length; i++) {
+            bias[i] = beta * bias[i] / n;
+        }
     }
 
     @SuppressWarnings("rawtypes")
@@ -864,7 +913,8 @@ public class WideAndDeep
         }
         this.finalLayer.initOptimizer(learningRate, algorithm, reg, rl);
         this.ecl.initOptimizer(learningRate, algorithm, reg, rl);
-        this.wl.initOptimizer(learningRate, algorithm, reg, rl);
+//        this.wl.initOptimizer(learningRate, algorithm, reg, rl);
+        this.wl.initOptimizer(5d, algorithm, reg, rl); // hard code for test
     }
 
     @SuppressWarnings("rawtypes")
