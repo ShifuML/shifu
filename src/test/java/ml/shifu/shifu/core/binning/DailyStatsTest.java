@@ -1,6 +1,18 @@
 package ml.shifu.shifu.core.binning;
 
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.commons.io.IOUtils;
+import org.junit.Test;
+
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData;
@@ -8,12 +20,6 @@ import ml.shifu.shifu.core.ColumnStatsCalculator;
 import ml.shifu.shifu.core.dtrain.StringUtils;
 import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import org.apache.commons.io.IOUtils;
-import org.junit.*;
-
-import java.io.IOException;
-import java.util.*;
 
 public class DailyStatsTest {
 

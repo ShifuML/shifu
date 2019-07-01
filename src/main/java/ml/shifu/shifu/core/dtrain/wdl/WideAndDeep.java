@@ -261,6 +261,7 @@ public class WideAndDeep
 
     @SuppressWarnings("rawtypes")
     public double[] backward(double[] predicts, double[] actuals, double sig) {
+        // TODO add binary cross entropy here
         double[] grad2Logits = new double[predicts.length];
         for(int i = 0; i < grad2Logits.length; i++) {
             double error = (predicts[i] - actuals[i]);
@@ -912,7 +913,8 @@ public class WideAndDeep
         }
         this.finalLayer.initOptimizer(learningRate, algorithm, reg, rl);
         this.ecl.initOptimizer(learningRate, algorithm, reg, rl);
-        this.wl.initOptimizer(learningRate, algorithm, reg, rl);
+//        this.wl.initOptimizer(learningRate, algorithm, reg, rl);
+        this.wl.initOptimizer(5d, algorithm, reg, rl); // hard code for test
     }
 
     @SuppressWarnings("rawtypes")

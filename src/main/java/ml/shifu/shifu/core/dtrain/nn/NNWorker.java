@@ -18,9 +18,6 @@ package ml.shifu.shifu.core.dtrain.nn;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 
@@ -30,13 +27,14 @@ import ml.shifu.guagua.ComputableMonitor;
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
 import ml.shifu.guagua.io.GuaguaFileSplit;
-import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLData;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLDataPair;
 import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataPair;
+import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
 /**
