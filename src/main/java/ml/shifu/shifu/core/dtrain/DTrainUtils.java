@@ -197,8 +197,8 @@ public final class DTrainUtils {
 
     /**
      * Get the model output dimension - usually it will be 1
-     * @param columnConfigList
-     * @return
+     * @param columnConfigList - List for ColumnConfig
+     * @return - output count
      */
     public static int getModelOutputCnt(List<ColumnConfig> columnConfigList) {
         int output = 0;
