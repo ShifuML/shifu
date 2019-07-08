@@ -51,6 +51,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.pig.data.Tuple;
 import org.apache.pig.impl.util.JarManager;
 import org.apache.zookeeper.ZooKeeper;
 import org.encog.ml.BasicML;
@@ -646,6 +647,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     // GuaguaOptionsParser doesn't to support *.jar currently.
     private String addRuntimeJars() throws ClassNotFoundException, FileNotFoundException, IOException {
         List<String> jars = new ArrayList<String>(16);
+        // pig-*.jar
+        jars.add(JarManager.findContainingJar(Tuple.class));
         // jackson-databind-*.jar
         jars.add(JarManager.findContainingJar(ObjectMapper.class));
         // jackson-core-*.jar
