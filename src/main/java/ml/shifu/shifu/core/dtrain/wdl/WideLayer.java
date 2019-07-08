@@ -59,18 +59,19 @@ public class WideLayer
      */
     private BiasLayer bias;
 
+    /**
+     * Enable dense fields in WideLayer when {@link #wideDenseEnable} is true, by default is true.
+     */
+    private boolean wideDenseEnable = true;
+
     public WideLayer() {
     }
 
-    public WideLayer(List<WideFieldLayer> layers, BiasLayer bias) {
-        this.layers = layers;
-        this.bias = bias;
-    }
-
-    public WideLayer(List<WideFieldLayer> layers, WideDenseLayer denseLayer, BiasLayer bias) {
+    public WideLayer(List<WideFieldLayer> layers, WideDenseLayer denseLayer, BiasLayer bias, boolean wideDenseEnable) {
         this.layers = layers;
         this.bias = bias;
         this.denseLayer = denseLayer;
+        this.wideDenseEnable = wideDenseEnable;
     }
 
     @Override
@@ -88,39 +89,26 @@ public class WideLayer
 
     @Override
     public double[] forward(Tuple<List<SparseInput>, double[]> input) {
-//        LOG.debug("Debug in Wide Layer: with input first " + input.getFirst().size() + " second "
-//                + input.getSecond().length);
         AssertUtils.assertListNotNullAndSizeEqual(this.getLayers(), input.getFirst());
         double[] results = new double[layers.get(0).getOutDim()];
         for(int i = 0; i < getLayers().size(); i++) {
             double[] fOuts = this.getLayers().get(i).forward(input.getFirst().get(i));
             for(int j = 0; j < results.length; j++) {
-//                if(this.isDebug) {
-//                    LOG.debug("outputs " + j + " value is " + fOuts[j]);
-//                }
                 results[j] += fOuts[j];
             }
         }
 
-//        this.denseLayer.setDebug(isDebug);
-        double[] denseForwards = this.denseLayer.forward(input.getSecond());
-//        LOG.debug("Densor forward:");
-        assert denseForwards.length == results.length;
-        for(int j = 0; j < results.length; j++) {
-//            if(this.isDebug) {
-//                LOG.info("Densor forward " + j + " value is " + denseForwards[j]);
-//            }
-            results[j] += denseForwards[j];
+        if(this.wideDenseEnable) {
+            // this.denseLayer.setDebug(isDebug);
+            double[] denseForwards = this.denseLayer.forward(input.getSecond());
+            assert denseForwards.length == results.length;
+            for(int j = 0; j < results.length; j++) {
+                results[j] += denseForwards[j];
+            }
         }
 
         for(int j = 0; j < results.length; j++) {
-//            if(this.isDebug) {
-//                LOG.debug("before add bias result " + j + " is " + results[j]);
-//            }
             results[j] += bias.forward(1d);
-            // if(this.isDebug) {
-            // LOG.debug("after add bias result " + j + " is " + results[j]);
-            // }
         }
         return results;
     }
@@ -132,8 +120,9 @@ public class WideLayer
         for(int i = 0; i < getLayers().size(); i++) {
             list.add(this.getLayers().get(i).backward(backInputs));
         }
-
-        list.add(this.denseLayer.backward(backInputs));
+        if(this.wideDenseEnable) {
+            list.add(this.denseLayer.backward(backInputs));
+        }
         list.add(new double[] { bias.backward(backInputs[0]) });
         return list;
     }
@@ -217,6 +206,8 @@ public class WideLayer
      */
     @Override
     public void write(DataOutput out) throws IOException {
+        out.writeBoolean(this.wideDenseEnable);
+
         if(this.layers == null) {
             out.writeInt(NULL);
         } else {
@@ -248,6 +239,8 @@ public class WideLayer
      */
     @Override
     public void readFields(DataInput in) throws IOException {
+        this.wideDenseEnable = in.readBoolean();
+
         int layerSize = in.readInt();
         this.layers = new ArrayList<>(layerSize);
         for(int i = 0; i < layerSize; i++) {
