@@ -17,6 +17,7 @@ package ml.shifu.shifu.core.dtrain.wdl;
 
 import ml.shifu.guagua.io.Combinable;
 import ml.shifu.guagua.io.HaltBytable;
+import ml.shifu.shifu.core.dtrain.SerializationType;
 
 import java.io.DataInput;
 import java.io.DataOutput;

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import ml.shifu.guagua.io.Combinable;
+import ml.shifu.shifu.core.dtrain.SerializationType;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 
 /**
@@ -35,7 +36,7 @@ public abstract class AbstractLayer<FIN, FOUT, BIN, BOUT, SELF extends Bytable>
      * In convention, this field should only be serialized in {@link ml.shifu.shifu.core.dtrain.wdl.WideAndDeep}.
      * {@link ml.shifu.shifu.core.dtrain.wdl.Layer} should not serialize this field so as to save space.
      */
-    protected SerializationType serializationType = SerializationType.MODEL_SPEC;
+    public SerializationType serializationType = SerializationType.MODEL_SPEC;
 
     /**
      * @return the serializationType
@@ -88,23 +89,3 @@ public abstract class AbstractLayer<FIN, FOUT, BIN, BOUT, SELF extends Bytable>
 
 }
 
-enum SerializationType {
-    /**
-     * Serialize types, each of them including different serialize scope
-     */
-    WEIGHTS(0), GRADIENTS(1), MODEL_SPEC(2), ERROR(-1);
-
-    int value;
-
-    SerializationType(int type) {
-        this.value = type;
-    }
-
-    public static SerializationType getSerializationType(int value) {
-        return Arrays.stream(values()).filter(type -> type.value == value).findFirst().orElse(SerializationType.ERROR);
-    }
-
-    public int getValue() {
-        return this.value;
-    }
-}
