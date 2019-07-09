@@ -132,9 +132,9 @@ public class MetaFactoryTest {
         Assert.assertFalse(result.getStatus());
     }
 
-    @AfterClass
-    public void tearDown() throws IOException {
-        FileUtils.deleteDirectory(new File("unittest"));
-    }
+//    @AfterClass
+//    public void tearDown() throws IOException {
+//        FileUtils.deleteDirectory(new File("unittest"));
+//    }
 
 }
