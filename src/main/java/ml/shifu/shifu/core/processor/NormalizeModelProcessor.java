@@ -83,26 +83,13 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                     }
 
                     if(this.isToShuffleData) {
-                        // shuffling normalized data, to make data random
-                        MapReduceShuffle shuffler = new MapReduceShuffle(this.modelConfig);
-                        double expectRatio = getExpectPosRatio();
-                        if (modelConfig.isRegression() && expectRatio > 0) {
-                            ColumnConfig columnConfig = CommonUtils.findTargetColumn(this.columnConfigList);
-                            double totalPosSum = columnConfig.getBinCountPos().stream().mapToDouble(a -> a.doubleValue()).sum();
-                            double totalNegSum = columnConfig.getBinCountNeg().stream().mapToDouble(a -> a.doubleValue()).sum();
-
-                            double currentRatio = totalPosSum / (totalPosSum + totalNegSum);
-                            double rblRatio = expectRatio / currentRatio;
-                            //TODO incorrect if user choose ONEHOT as normalization method
-                            shuffler.run(this.pathFinder.getNormalizedDataPath(), rblRatio, columnConfig.getColumnNum(),
-                                    Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, "|"));
-                        } else {
-                            shuffler.run(this.pathFinder.getNormalizedDataPath());
-                        }
+                        runDataShuffle(this.modelConfig, this.columnConfigList,
+                                this.pathFinder.getNormalizedDataPath(), this.pathFinder.getNormalizedDataHeaderPath(),
+                                this.modelConfig.getDataSet().getSource(), getExpectPosRatio());
                     }
 
                     if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
-                        runDataClean(this.isToShuffleData);
+                        runDataClean(this.isToShuffleData, getExpectPosRatio());
                     }
                     break;
                 case LOCAL:
