@@ -85,7 +85,20 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                     if(this.isToShuffleData) {
                         // shuffling normalized data, to make data random
                         MapReduceShuffle shuffler = new MapReduceShuffle(this.modelConfig);
-                        shuffler.run(this.pathFinder.getNormalizedDataPath());
+                        double expectRatio = getExpectPosRatio();
+                        if (modelConfig.isRegression() && expectRatio > 0) {
+                            ColumnConfig columnConfig = CommonUtils.findTargetColumn(this.columnConfigList);
+                            double totalPosSum = columnConfig.getBinCountPos().stream().mapToDouble(a -> a.doubleValue()).sum();
+                            double totalNegSum = columnConfig.getBinCountNeg().stream().mapToDouble(a -> a.doubleValue()).sum();
+
+                            double currentRatio = totalPosSum / (totalPosSum + totalNegSum);
+                            double rblRatio = expectRatio / currentRatio;
+                            //TODO incorrect if user choose ONEHOT as normalization method
+                            shuffler.run(this.pathFinder.getNormalizedDataPath(), rblRatio, columnConfig.getColumnNum(),
+                                    Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, "|"));
+                        } else {
+                            shuffler.run(this.pathFinder.getNormalizedDataPath());
+                        }
                     }
 
                     if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
@@ -260,6 +273,10 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
 
     public boolean getIsToShuffleData() {
         return getBooleanParam(this.otherConfigs, Constants.IS_TO_SHUFFLE_DATA);
+    }
+
+    public double getExpectPosRatio() {
+        return getDoubleParam(this.otherConfigs, Constants.EXPECT_POS_RATIO, -1.0d);
     }
 
 }
