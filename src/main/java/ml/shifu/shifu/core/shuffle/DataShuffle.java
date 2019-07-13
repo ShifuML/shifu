@@ -19,12 +19,15 @@ import java.util.Random;
  */
 public class DataShuffle {
 
+    public static final String POS_TAG = "1";
+
     public static class ShuffleMapper extends Mapper<LongWritable, Text, IntWritable, Text> {
         private int shuffleSize;
         private int targetIndex;
         private double rblRatio;
         private String delimiter;
         private Random rd;
+        private boolean duplicatePos;
 
         @Override
         public void setup(Context context) throws IOException {
@@ -33,13 +36,20 @@ public class DataShuffle {
             this.rblRatio = context.getConfiguration().getDouble(Constants.SHIFU_NORM_SHUFFLE_RBL_RATIO, -1.0d);
             this.delimiter = Base64Utils.base64Decode(context.getConfiguration().get(Constants.SHIFU_OUTPUT_DATA_DELIMITER, "|"));
             this.rd = new Random(System.currentTimeMillis());
+
+            if (this.rblRatio > 1.0d) {
+                duplicatePos = true;
+            } else {
+                duplicatePos = false;
+                this.rblRatio = 1.0d / this.rblRatio;
+            }
         }
 
         @Override
         public void map(LongWritable key, Text line, Context context) throws IOException, InterruptedException {
             if (this.targetIndex >= 0 && this.rblRatio > 0 ) {
                 String[] fields = CommonUtils.split(line.toString(), this.delimiter);
-                if (CommonUtils.trimTag(fields[targetIndex]).equals("1")) {
+                if (this.duplicatePos == POS_TAG.equals(CommonUtils.trimTag(fields[targetIndex]))) {
                     double totalRatio = rblRatio;
                     while (totalRatio > 0) {
                         double seed = rd.nextDouble();

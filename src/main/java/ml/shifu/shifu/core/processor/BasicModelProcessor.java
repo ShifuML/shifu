@@ -778,8 +778,7 @@ public class BasicModelProcessor {
             ColumnConfig columnConfig = CommonUtils.findTargetColumn(columnConfigList);
             double totalPosSum = columnConfig.getBinCountPos().stream().mapToDouble(a -> a.doubleValue()).sum();
             double totalNegSum = columnConfig.getBinCountNeg().stream().mapToDouble(a -> a.doubleValue()).sum();
-            double currentRatio = totalPosSum / (totalPosSum + totalNegSum);
-            double rblRatio = expectRatio / currentRatio;
+            double rblRatio = (totalNegSum / totalPosSum) * (expectRatio / (1 - expectRatio));
 
             String delimiter = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, "|");
             int targetIndex = locateTargetIndex(headerPath, sourceType, delimiter, modelConfig.getTargetColumnName());
