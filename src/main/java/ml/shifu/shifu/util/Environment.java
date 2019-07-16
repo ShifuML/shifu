@@ -73,11 +73,15 @@ public class Environment {
             logger.warn("No shifuconfig is found or there is no content in it");
         }
 
-        String osName = System.getProperty(OS_NAME).toLowerCase();
-        if(isUnix(osName)) {
-            properties.put(SYSTEM_USER, System.getenv(USER));
-        } else if(isWindows(osName)) {
-            properties.put(SYSTEM_USER, System.getProperty(USER_NAME));
+        String osName = System.getProperty(OS_NAME);
+        System.out.println("OS Name = " + osName);
+        if (StringUtils.isNotBlank(osName)) {
+            osName = osName.toLowerCase();
+            if(isUnix(osName)) {
+                properties.put(SYSTEM_USER, System.getenv(USER));
+            } else if(isWindows(osName)) {
+                properties.put(SYSTEM_USER, System.getProperty(USER_NAME));
+            }
         }
     }
 
