@@ -59,30 +59,28 @@ public class Environment {
     private static Properties properties = new Properties();
 
     static {
+        String shifuHomePath = ((System.getenv(SHIFU_HOME) == null) ? System.getProperty(SHIFU_HOME) : System
+                .getenv(SHIFU_HOME));
+        properties.put(SHIFU_HOME, ((shifuHomePath == null) ? "" : shifuHomePath));
+
         try {
-            String shifuHomePath = ((System.getenv(SHIFU_HOME) == null) ? System.getProperty(SHIFU_HOME) : System.getenv(SHIFU_HOME));
-            properties.put(SHIFU_HOME, ((shifuHomePath == null) ? "" : shifuHomePath));
-
-            try {
-                loadShifuConfig();
-            } catch (IOException e) {
-                throw new ShifuException(ShifuErrorCode.ERROR_SHIFU_CONFIG, e);
-            }
-
-            if(properties.size() == 1) {
-                logger.warn("No shifuconfig is found or there is no content in it");
-            }
-
-            String osName = System.getProperty(OS_NAME).toLowerCase();
-            if(isUnix(osName)) {
-                properties.put(SYSTEM_USER, System.getenv(USER));
-            } else if(isWindows(osName)) {
-                properties.put(SYSTEM_USER, System.getProperty(USER_NAME));
-            }
-        } catch (Exception e) {
-            System.out.println("Exception occurred when loading shifuconfig." + e.getMessage());
-            e.printStackTrace();
+            loadShifuConfig();
+        } catch (IOException e) {
+            throw new ShifuException(ShifuErrorCode.ERROR_SHIFU_CONFIG, e);
         }
+
+        if(properties.size() == 1) {
+            logger.warn("No shifuconfig is found or there is no content in it");
+        }
+
+        String osName = System.getProperty(OS_NAME).toLowerCase();
+        String user = null;
+        if(isUnix(osName)) {
+            user = System.getenv(USER);
+        } else if(isWindows(osName)) {
+            user = System.getProperty(USER_NAME);
+        }
+        properties.put(SYSTEM_USER, (StringUtils.isBlank(user) ? "" : user));
     }
 
     /*
