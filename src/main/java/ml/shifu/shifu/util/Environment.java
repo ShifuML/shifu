@@ -59,29 +59,29 @@ public class Environment {
     private static Properties properties = new Properties();
 
     static {
-        String shifuHomePath = ((System.getenv(SHIFU_HOME) == null) ? System.getProperty(SHIFU_HOME) : System
-                .getenv(SHIFU_HOME));
-        properties.put(SHIFU_HOME, ((shifuHomePath == null) ? "" : shifuHomePath));
-
         try {
-            loadShifuConfig();
-        } catch (IOException e) {
-            throw new ShifuException(ShifuErrorCode.ERROR_SHIFU_CONFIG, e);
-        }
+            String shifuHomePath = ((System.getenv(SHIFU_HOME) == null) ? System.getProperty(SHIFU_HOME) : System.getenv(SHIFU_HOME));
+            properties.put(SHIFU_HOME, ((shifuHomePath == null) ? "" : shifuHomePath));
 
-        if(properties.size() == 1) {
-            logger.warn("No shifuconfig is found or there is no content in it");
-        }
+            try {
+                loadShifuConfig();
+            } catch (IOException e) {
+                throw new ShifuException(ShifuErrorCode.ERROR_SHIFU_CONFIG, e);
+            }
 
-        String osName = System.getProperty(OS_NAME);
-        System.out.println("OS Name = " + osName);
-        if (StringUtils.isNotBlank(osName)) {
-            osName = osName.toLowerCase();
+            if(properties.size() == 1) {
+                logger.warn("No shifuconfig is found or there is no content in it");
+            }
+
+            String osName = System.getProperty(OS_NAME).toLowerCase();
             if(isUnix(osName)) {
                 properties.put(SYSTEM_USER, System.getenv(USER));
             } else if(isWindows(osName)) {
                 properties.put(SYSTEM_USER, System.getProperty(USER_NAME));
             }
+        } catch (Exception e) {
+            System.out.println("Exception occurred when loading shifuconfig." + e.getMessage());
+            e.printStackTrace();
         }
     }
 
