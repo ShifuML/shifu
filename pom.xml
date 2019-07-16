@@ -15,6 +15,9 @@
 		<maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
 		<powermock.version>1.5.1</powermock.version>
 		<guagua.version>0.7.8</guagua.version>
+		<compileSource>1.6</compileSource>
+		<releaseUrl>http://paypalcentral.es.paypalcorp.com/nexus/content/repositories/releases/</releaseUrl>
+		<snapshotUrl>http://paypalcentral.es.paypalcorp.com/nexus/content/repositories/snapshots/</snapshotUrl>
 	</properties>
 
 	<url>https://github.com/ShifuML/shifu/</url>
@@ -782,6 +785,17 @@
 					<version>3.6.2.Final</version>
 				</dependency>
 			</dependencies>
+			<distributionManagement>
+				<repository>
+					<id>raptor.releases</id>
+					<url>${releaseUrl}</url>
+				</repository>
+				<snapshotRepository>
+					<uniqueVersion>false</uniqueVersion>
+					<id>raptor.snapshots</id>
+					<url>${snapshotUrl}</url>
+				</snapshotRepository>
+			</distributionManagement>
 		</profile>
 	</profiles>
 </project>

@@ -74,11 +74,13 @@ public class Environment {
         }
 
         String osName = System.getProperty(OS_NAME).toLowerCase();
+        String user = null;
         if(isUnix(osName)) {
-            properties.put(SYSTEM_USER, System.getenv(USER));
+            user = System.getenv(USER);
         } else if(isWindows(osName)) {
-            properties.put(SYSTEM_USER, System.getProperty(USER_NAME));
+            user = System.getProperty(USER_NAME);
         }
+        properties.put(SYSTEM_USER, (StringUtils.isBlank(user) ? "" : user));
     }
 
     /*
