@@ -85,11 +85,11 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                     if(this.isToShuffleData) {
                         runDataShuffle(this.modelConfig, this.columnConfigList,
                                 this.pathFinder.getNormalizedDataPath(), this.pathFinder.getNormalizedDataHeaderPath(),
-                                this.modelConfig.getDataSet().getSource(), getExpectPosRatio());
+                                this.modelConfig.getDataSet().getSource(), getExpectPosRatio(), getIsRblUpdateWeight());
                     }
 
                     if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
-                        runDataClean(this.isToShuffleData, getExpectPosRatio());
+                        runDataClean(this.isToShuffleData, getExpectPosRatio(), getIsRblUpdateWeight());
                     }
                     break;
                 case LOCAL:
@@ -260,6 +260,10 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
 
     public boolean getIsToShuffleData() {
         return getBooleanParam(this.otherConfigs, Constants.IS_TO_SHUFFLE_DATA);
+    }
+
+    public boolean getIsRblUpdateWeight() {
+        return getBooleanParam(this.otherConfigs, Constants.RBL_UPDATE_WEIGHT);
     }
 
     public double getExpectPosRatio() {

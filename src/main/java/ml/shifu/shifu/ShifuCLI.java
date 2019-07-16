@@ -132,6 +132,7 @@ public class ShifuCLI {
 
     private static final String SHUFFLE = "shuffle";
     private static final String REBALANCE = "rebalance";
+    private static final String UPDATE_WEIGHT = "updateweight";
     private static final String RESUME = "resume";
 
     // for test function
@@ -242,6 +243,7 @@ public class ShifuCLI {
                     Map<String, Object> params = new HashMap<String, Object>();
                     params.put(Constants.IS_TO_SHUFFLE_DATA, cmd.hasOption(SHUFFLE));
                     params.put(Constants.EXPECT_POS_RATIO, cmd.getOptionValue(REBALANCE));
+                    params.put(Constants.RBL_UPDATE_WEIGHT, cmd.hasOption(UPDATE_WEIGHT));
                     status = normalizeTrainData(params);
                     if(status == 0) {
                         log.info(
@@ -738,6 +740,8 @@ public class ShifuCLI {
                 .create(SHUFFLE);
         Option opt_rebalance = OptionBuilder.hasArg().withDescription("rebalance ratio for positive instances")
                 .create(REBALANCE);
+        Option opt_update_weight = OptionBuilder.hasArg(false).withDescription("re-balance data by updating weights")
+                .create(UPDATE_WEIGHT);
         Option opt_resume = OptionBuilder.hasArg(false).withDescription("Resume combo model training.").create(RESUME);
 
         Option opt_list = OptionBuilder.hasArg(false).create(LIST);
@@ -793,6 +797,7 @@ public class ShifuCLI {
         opts.addOption(opt_eval);
         opts.addOption(opt_init);
         opts.addOption(opt_shuffle);
+        opts.addOption(opt_update_weight);
         opts.addOption(opt_rebalance);
         opts.addOption(opt_resume);
 
@@ -847,7 +852,7 @@ public class ShifuCLI {
         System.out.println("\tvarselect/varsel -recoverauto           Recover those variables that are auto-filtered.");
         System.out.println("\tvarselect/varsel -r                     Run variable selection recursively.");
         System.out.println("\tvarselect/varsel -f <file>              Run variable selection based on some file. The file could be raw file, model spec or ColumnConfig.json.");
-        System.out.println("\tnormalize/norm/transform [-shuffle] [-rebalance <ratio>]");
+        System.out.println("\tnormalize/norm/transform [-shuffle] [-rebalance <ratio>] [-updateweight]");
         System.out.println("\t                                        Normalize the columns with finalSelect as true.");
         System.out.println("\ttrain [-dry] [-shuffle]                 Train the model with the normalized data.");
         System.out.println("\tposttrain                               Post-process data after training models.");

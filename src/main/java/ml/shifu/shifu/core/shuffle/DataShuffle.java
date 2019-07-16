@@ -19,54 +19,39 @@ import java.util.Random;
  */
 public class DataShuffle {
 
-    public static final String POS_TAG = "1";
-
     public static class ShuffleMapper extends Mapper<LongWritable, Text, IntWritable, Text> {
+
         private int shuffleSize;
-        private int targetIndex;
-        private double rblRatio;
-        private String delimiter;
-        private Random rd;
-        private boolean duplicatePos;
+        private AbstractDataMapper dataMapper;
 
         @Override
         public void setup(Context context) throws IOException {
-            this.shuffleSize = context.getConfiguration().getInt(Constants.SHIFU_NORM_SHUFFLE_SIZE, 100);
-            this.targetIndex = context.getConfiguration().getInt(Constants.SHIFU_NORM_SHUFFLE_RBL_TARGET_INDEX, -1);
-            this.rblRatio = context.getConfiguration().getDouble(Constants.SHIFU_NORM_SHUFFLE_RBL_RATIO, -1.0d);
-            this.delimiter = Base64Utils.base64Decode(context.getConfiguration().get(Constants.SHIFU_OUTPUT_DATA_DELIMITER, "|"));
-            this.rd = new Random(System.currentTimeMillis());
+            this.shuffleSize = context.getConfiguration()
+                    .getInt(Constants.SHIFU_NORM_SHUFFLE_SIZE, 100);
+            int targetIndex = context.getConfiguration()
+                    .getInt(Constants.SHIFU_NORM_SHUFFLE_RBL_TARGET_INDEX, -1);
 
-            if (this.rblRatio > 1.0d) {
-                duplicatePos = true;
+            if (targetIndex < 0) { // no duplicate
+                dataMapper = new RandomConstDataMapper();
             } else {
-                duplicatePos = false;
-                this.rblRatio = 1.0d / this.rblRatio;
+                double rblRatio = context.getConfiguration()
+                        .getDouble(Constants.SHIFU_NORM_SHUFFLE_RBL_RATIO, -1.0d);
+                boolean rblUpdateWeight = context.getConfiguration()
+                        .getBoolean(Constants.SHIFU_NORM_SHUFFLE_RBL_UPDATE_WEIGHT, false);
+                String delimiter = Base64Utils.base64Decode(context.getConfiguration()
+                        .get(Constants.SHIFU_OUTPUT_DATA_DELIMITER, "|"));
+
+                if (rblUpdateWeight) { // duplicate by update weight column
+                    dataMapper = new UpdateWeightDataMapper(rblRatio, targetIndex, delimiter);
+                } else { // duplicate by add duplicate records
+                    dataMapper = new DuplicateDataMapper(rblRatio, targetIndex, delimiter);
+                }
             }
         }
 
         @Override
         public void map(LongWritable key, Text line, Context context) throws IOException, InterruptedException {
-            if (this.targetIndex >= 0 && this.rblRatio > 0 ) {
-                String[] fields = CommonUtils.split(line.toString(), this.delimiter);
-                if (this.duplicatePos == POS_TAG.equals(CommonUtils.trimTag(fields[targetIndex]))) {
-                    double totalRatio = rblRatio;
-                    while (totalRatio > 0) {
-                        double seed = rd.nextDouble();
-                        if (seed < totalRatio) {
-                            IntWritable shuffleIndex = new IntWritable(this.rd.nextInt(this.shuffleSize));
-                            context.write(shuffleIndex, line);
-                        }
-                        totalRatio -= 1.0d;
-                    }
-                } else {
-                    IntWritable shuffleIndex = new IntWritable(this.rd.nextInt(this.shuffleSize));
-                    context.write(shuffleIndex, line);
-                }
-            } else {
-                IntWritable shuffleIndex = new IntWritable(this.rd.nextInt(this.shuffleSize));
-                context.write(shuffleIndex, line);
-            }
+            dataMapper.mapData(context, line, this.shuffleSize);
         }
     }
 

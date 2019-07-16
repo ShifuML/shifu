@@ -580,7 +580,7 @@ public class BasicModelProcessor {
         this.otherConfigs = otherConfigs;
     }
 
-    protected void runDataClean(boolean isToShuffle, double expectPosRatio) throws IOException {
+    protected void runDataClean(boolean isToShuffle, double expectPosRatio, boolean rblUpdateWeight) throws IOException {
         SourceType sourceType = modelConfig.getDataSet().getSource();
         String cleanedDataPath = this.pathFinder.getCleanedDataPath();
 
@@ -623,7 +623,7 @@ public class BasicModelProcessor {
             try {
                 runDataShuffle(this.modelConfig, this.columnConfigList,
                         this.pathFinder.getCleanedDataPath(), this.pathFinder.getCleanedDataHeaderPath(),
-                        this.modelConfig.getDataSet().getSource(), expectPosRatio);
+                        this.modelConfig.getDataSet().getSource(), expectPosRatio, rblUpdateWeight);
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException("Fail to shuffle the cleaned data.", e);
             } catch (InterruptedException e) {
@@ -771,7 +771,7 @@ public class BasicModelProcessor {
 
     // shuffling normalized data, to make data random
     protected void runDataShuffle(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-            String dataPath, String headerPath, SourceType sourceType, double expectRatio)
+            String dataPath, String headerPath, SourceType sourceType, double expectRatio, boolean rblUpdateWeight)
             throws IOException, InterruptedException, ClassNotFoundException {
         MapReduceShuffle shuffler = new MapReduceShuffle(modelConfig);
         if (modelConfig.isRegression() && expectRatio > 0) {
@@ -782,7 +782,7 @@ public class BasicModelProcessor {
 
             String delimiter = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, "|");
             int targetIndex = locateTargetIndex(headerPath, sourceType, delimiter, modelConfig.getTargetColumnName());
-            shuffler.run(dataPath, rblRatio, targetIndex, delimiter);
+            shuffler.run(dataPath, rblRatio, rblUpdateWeight, targetIndex, delimiter);
         } else {
             shuffler.run(dataPath);
         }

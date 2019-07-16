@@ -54,10 +54,11 @@ public class MapReduceShuffle {
     }
 
     public void run(String rawNormPath) throws IOException, ClassNotFoundException, InterruptedException {
-        run(rawNormPath, 0.0d, -1, null);
+        run(rawNormPath, 0.0d, false, -1, null);
     }
 
-    public void run(String rawNormPath, double rblRatio, int targetIndex, String delimiter) throws IOException, ClassNotFoundException, InterruptedException {
+    public void run(String rawNormPath, double rblRatio, boolean rblUpdateWeight, int targetIndex, String delimiter)
+            throws IOException, ClassNotFoundException, InterruptedException {
         RawSourceData.SourceType source = this.modelConfig.getDataSet().getSource();
         final Configuration conf = new Configuration();
 
@@ -93,6 +94,7 @@ public class MapReduceShuffle {
             log.info("Try to re-balance data by ratio {} on index {}, with the delimiter {}.", rblRatio, targetIndex, delimiter);
             conf.set(Constants.SHIFU_NORM_SHUFFLE_RBL_RATIO, Double.toString(rblRatio));
             conf.set(Constants.SHIFU_NORM_SHUFFLE_RBL_TARGET_INDEX, Integer.toString(targetIndex));
+            conf.set(Constants.SHIFU_NORM_SHUFFLE_RBL_UPDATE_WEIGHT, Boolean.toString(rblUpdateWeight));
             conf.set(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Base64Utils.base64Encode(delimiter));
         }
 
