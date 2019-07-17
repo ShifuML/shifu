@@ -3,7 +3,7 @@ language: java
 before_install:
   # clone and install guagua before building shifu
   - git clone https://github.com/ShifuML/guagua.git
-  - git checkout develop
   - cd guagua
+  - git checkout develop
   - mvn install -DskipTests=true
   - cd ..
