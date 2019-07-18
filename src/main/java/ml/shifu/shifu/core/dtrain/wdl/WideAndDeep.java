@@ -17,6 +17,8 @@ package ml.shifu.shifu.core.dtrain.wdl;
 
 import static ml.shifu.shifu.core.dtrain.wdl.SerializationUtil.NULL;
 
+import ml.shifu.shifu.core.dtrain.SerializationType;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;

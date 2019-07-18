@@ -34,12 +34,21 @@ public class PMMLScoreGenTest {
     public static final double EPS = 1e-6;
 
 //    @Test
+<<<<<<< HEAD
     public void testBaggingPmml() throws Exception {
         verifyPmml("TestNN", "src/test/resources/example/bagging-pmml/ModelConfig.json",
                 "src/test/resources/example/bagging-pmml/ColumnConfig.json",
                 "src/test/resources/example/bagging-pmml/columns", "src/test/resources/example/bagging-pmml/models",
                 "src/test/resources/example/bagging-pmml/EvalSet1/eval.data.csv", "Eval1", "|");
     }
+=======
+//    public void testBaggingPmml() throws Exception {
+//        verifyPmml("TestNN", "src/test/resources/example/bagging-pmml/ModelConfig.json",
+//                "src/test/resources/example/bagging-pmml/ColumnConfig.json",
+//                "src/test/resources/example/bagging-pmml/columns", "src/test/resources/example/bagging-pmml/models",
+//                "src/test/resources/example/bagging-pmml/EvalSet1/eval.data.csv", "Eval1", "|");
+//    }
+>>>>>>> master
 
     private void verifyPmml(String modelName, String modelConfPath, String columnConfPath, String columnsPath,
             String modelsPath, String evalDataSet, String evalSetName, String delimiter) throws Exception {

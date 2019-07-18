@@ -36,7 +36,9 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
+import ml.shifu.shifu.core.dtrain.SerializationType;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
