@@ -186,8 +186,7 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
     }
 
     public void updateWeights(MTNNParams params) {
-        //todo:params
-        //updateWeights(params);
+        updateWeights(params.getMtnn());
         // after update weights, gradients should be re newed.
         this.initGrads();
     }
