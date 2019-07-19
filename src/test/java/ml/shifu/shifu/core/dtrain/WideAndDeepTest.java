@@ -36,19 +36,6 @@ public class WideAndDeepTest {
     private static final Logger LOG = LoggerFactory.getLogger(WideAndDeepTest.class);
 
     @Test
-    public void testTrain() {
-        long f1 = 1, f2 = 2, f3;
-        System.out.println("1:" + f1);
-        System.out.println("2:" + f2);
-        for(int i = 3; i <= 100; i++) {
-            f3 = f2 + f1;
-            System.out.println(i + ": " + f3);
-            f1 = f2;
-            f2 = f3;
-        }
-    }
-
-    @Test
     public void testWideAndDeep() {
         Properties props = new Properties();
         props.setProperty(GuaguaConstants.MASTER_COMPUTABLE_CLASS, WDLMaster.class.getName());
