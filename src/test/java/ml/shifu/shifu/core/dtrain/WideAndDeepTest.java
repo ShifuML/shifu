@@ -49,7 +49,7 @@ public class WideAndDeepTest {
         props.setProperty(CommonConstants.SHIFU_COLUMN_CONFIG,
                 getClass().getResource("/models/WideAndDeep/ColumnConfig.json").toString());
 
-        props.setProperty(GuaguaConstants.GUAGUA_INPUT_DIR, getClass().getResource("/data/part-m-00000").toString());
+        props.setProperty(GuaguaConstants.GUAGUA_INPUT_DIR, getClass().getResource("/data/part-m-00000-1").toString());
 
         GuaguaUnitDriver<WDLParams, WDLParams> driver = new GuaguaMRUnitDriver<>(props);
 
