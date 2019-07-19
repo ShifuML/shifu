@@ -924,7 +924,6 @@ public class WideAndDeep
         this.finalLayer.initOptimizer(learningRate, algorithm, reg, rl);
         this.ecl.initOptimizer(learningRate, algorithm, reg, rl);
         this.wl.initOptimizer(learningRate, algorithm, reg, rl);
-        //this.wl.initOptimizer(5d, algorithm, reg, rl); // hard code for test
     }
 
     @SuppressWarnings("rawtypes")

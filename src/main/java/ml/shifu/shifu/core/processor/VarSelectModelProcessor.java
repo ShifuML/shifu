@@ -917,6 +917,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         // try to select another (targetCnt - selectCnt) variables, but we need to exclude those
         // force-selected variables
         for(ColumnConfig columnConfig: this.columnConfigList) {
+            if(columnConfig.isFinalSelect()) {
+                columnConfig.setFinalSelect(false);
+            }
             if(columnConfig.isForceSelect()) {
                 columnConfig.setFinalSelect(true);
                 selectCnt++;
@@ -1476,13 +1479,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         public String toString() {
             return this.columnId + "-->" + this.sensitivityPerf;
         }
-    }
-
-    public static void main(String[] args) throws IOException {
-        String sss = "/hadoop/home/pengzhang/shifu/shifu-0.13.0-SNAPSHOT/lib/libtensorflow-1.4.0.jar";
-        System.out.println(sss.replaceAll("libtensorflow", "libtensorflow_jni"));
-        System.out.println(sss.replaceAll("libtensorflow", "tensorflow"));
-
     }
 
 }
