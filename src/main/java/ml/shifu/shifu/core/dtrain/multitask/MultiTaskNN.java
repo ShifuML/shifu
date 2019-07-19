@@ -3,12 +3,14 @@ package ml.shifu.shifu.core.dtrain.multitask;
 import ml.shifu.guagua.io.Bytable;
 import ml.shifu.guagua.io.Combinable;
 import ml.shifu.shifu.core.dtrain.AssertUtils;
+import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import ml.shifu.shifu.core.dtrain.SerializationType;
 import ml.shifu.shifu.core.dtrain.wdl.*;
 
 import ml.shifu.shifu.core.dtrain.wdl.activation.Activation;
 import ml.shifu.shifu.core.dtrain.wdl.activation.ActivationFactory;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.wdl.activation.Sigmoid;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.PropOptimizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,55 +20,65 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Combinable<MultiTaskNN> {
+public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Combinable<MultiTaskNN>, PropOptimizer<MultiTaskNN> {
 
     private static final Logger LOG = LoggerFactory.getLogger(MultiTaskNN.class);
 
     private DenseInputLayer dil;
 
-    private List<Layer> hiddenLayers;
-
-    private DenseLayer finalLayer;
-
     private int numericalSize;
+
+    private List<Layer> hiddenLayers;
 
     private List<Integer> hiddenNodes;
 
-    private List<String> actiFuncs;
+    private List<String> HiddenActiFuncs;
 
-    private float l2reg;
+    private DenseLayer finalLayer;
+
+    private int taskNumber;
+
+//    private List<String> finalActiFuncs;
+    private Activation finalActiFunc;
+
+    private double l2reg;
 
     private SerializationType serializationType = SerializationType.MODEL_SPEC;
 
     public MultiTaskNN() {
     }
 
-    public MultiTaskNN(int numericalSize, List<Integer> hiddenNodes, List<String> actiFuncs, float l2reg) {
+    public MultiTaskNN(int numericalSize, List<Integer> hiddenNodes, List<String> HiddenActiFuncs, int taskNumber,  double l2reg) {
         this.numericalSize = numericalSize;
         this.hiddenNodes = hiddenNodes;
-        this.actiFuncs = actiFuncs;
+        this.HiddenActiFuncs = HiddenActiFuncs;
+        this.taskNumber = taskNumber;
+//        this.finalActiFuncs = finalActiFuncs;
         this.l2reg = l2reg;
 
         // build the structure of NN graph.
         this.dil = new DenseInputLayer(numericalSize);
         int preHiddenInputs = dil.getOutDim();
 
-        AssertUtils.assertListNotNullAndSizeEqual(hiddenNodes, actiFuncs);
+        AssertUtils.assertListNotNullAndSizeEqual(hiddenNodes, HiddenActiFuncs);
         this.hiddenLayers = new ArrayList<>(hiddenNodes.size() * 2);
         for (int i = 0; i < hiddenNodes.size(); i++) {
             int hiddenOutputs = hiddenNodes.get(i);
             DenseLayer denseLayer = new DenseLayer(hiddenOutputs, preHiddenInputs, l2reg);
             this.hiddenLayers.add(denseLayer);
-            this.hiddenLayers.add(ActivationFactory.getInstance().getActivation(actiFuncs.get(i)));
+            this.hiddenLayers.add(ActivationFactory.getInstance().getActivation(HiddenActiFuncs.get(i)));
+            preHiddenInputs = hiddenOutputs;
         }
 
-        this.finalLayer = new DenseLayer(1, preHiddenInputs, l2reg);
+//        AssertUtils.assertEquals(taskNumber, finalActiFuncs.size());
+        this.finalLayer = new DenseLayer(taskNumber, preHiddenInputs, l2reg);
+        this.finalActiFunc = new Sigmoid();
     }
 
-    public float[] forward(float[] denseInputs) {
+    public double[] forward(double[] denseInputs) {
         // input layer forward
-        float[] dilOuts = this.dil.forward(denseInputs);
-        float[] inputs = dilOuts;
+        double[] dilOuts = this.dil.forward(denseInputs);
+        double[] inputs = dilOuts;
         // hidden layers forward
         for (Layer layer : this.hiddenLayers) {
             if (layer instanceof DenseLayer) {
@@ -78,19 +90,21 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
             }
         }
         //final layer forward
-        float[] logits = this.finalLayer.forward(inputs);
-        return logits;
+        inputs = this.finalLayer.forward(inputs);
+        //TODO:final Activation list.
+        double[] resluts = this.finalActiFunc.forward(inputs);
+        return resluts;
     }
 
-    public float[] backward(float[] predicts, float[] actuals, float sig) {
-        float[] grad2Logits = new float[predicts.length];
+    public float[] backward(double[] predicts, double[] actuals, float sig) {
+        double[] grad2Logits = new double[predicts.length];
 
         for (int i = 0; i < grad2Logits.length; i++) {
             grad2Logits[i] = (predicts[i] - actuals[i]) * (predicts[i] * (1 - predicts[i])) * sig;
             // error * sigmoid derivertive * weight
         }
 
-        float[] backInputs = this.finalLayer.backward(grad2Logits);
+        double[] backInputs = this.finalLayer.backward(grad2Logits);
         for (int i = 0; i < this.hiddenLayers.size(); i++) {
             Layer layer = this.hiddenLayers.get(this.hiddenLayers.size() - 1 - i);
             if (layer instanceof DenseLayer) {
@@ -157,19 +171,19 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
         this.hiddenNodes = hiddenNodes;
     }
 
-    public List<String> getActiFuncs() {
-        return actiFuncs;
+    public List<String> getHiddenActiFuncs() {
+        return HiddenActiFuncs;
     }
 
-    public void setActiFuncs(List<String> actiFuncs) {
-        this.actiFuncs = actiFuncs;
+    public void setHiddenActiFuncs(List<String> hiddenActiFuncs) {
+        this.HiddenActiFuncs = hiddenActiFuncs;
     }
 
-    public float getL2reg() {
+    public double getL2reg() {
         return l2reg;
     }
 
-    public void setL2reg(float l2reg) {
+    public void setL2reg(double l2reg) {
         this.l2reg = l2reg;
     }
 
@@ -223,21 +237,21 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
         }
     }
 
-    // update model with optimizer
-    public void update(MultiTaskNN gradMultiTask, Optimizer optimizer) {
-        this.dil.update(gradMultiTask.getDil(), optimizer);
-
-        List<Layer> gradHLs = gradMultiTask.getHiddenLayers();
-        int hlSize = this.hiddenLayers.size();
-        for (int i = 0; i < hlSize; i++) {
-            Layer tmpLayer = this.hiddenLayers.get(i);
-            if (tmpLayer instanceof DenseLayer) {
-                ((DenseLayer) tmpLayer).update((DenseLayer) gradHLs.get(i), optimizer);
-            }
-        }
-
-        this.finalLayer.update(gradMultiTask.getFinalLayer(), optimizer);
-    }
+//    // update model with optimizer
+//    public void update(MultiTaskNN gradMultiTask, Optimizer optimizer) {
+//        this.dil.update(gradMultiTask.getDil(), optimizer);
+//
+//        List<Layer> gradHLs = gradMultiTask.getHiddenLayers();
+//        int hlSize = this.hiddenLayers.size();
+//        for (int i = 0; i < hlSize; i++) {
+//            Layer tmpLayer = this.hiddenLayers.get(i);
+//            if (tmpLayer instanceof DenseLayer) {
+//                ((DenseLayer) tmpLayer).update((DenseLayer) gradHLs.get(i), optimizer);
+//            }
+//        }
+//
+//        this.finalLayer.update(gradMultiTask.getFinalLayer(), optimizer);
+//    }
 
     @Override
     public void write(DataOutput out) throws IOException {
@@ -254,4 +268,25 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
         return null;
     }
 
+    @Override
+    public void initOptimizer(double learningRate, String algorithm, double reg, RegulationLevel rl) {
+        for (Layer layer : this.hiddenLayers) {
+            if (layer instanceof DenseLayer) {
+                ((DenseLayer) layer).initOptimizer(learningRate, algorithm, reg, rl);
+            }
+        }
+        this.finalLayer.initOptimizer(learningRate, algorithm, reg, rl);
+    }
+
+    @Override
+    public void optimizeWeight(double numTrainSize, int iteration, MultiTaskNN model) {
+        List<Layer> gradHLs = model.getHiddenLayers();
+        for (int i = 0; i < this.hiddenLayers.size(); i++) {
+            Layer tmpLayer = this.hiddenLayers.get(i);
+            if (tmpLayer instanceof DenseLayer) {
+                ((DenseLayer) tmpLayer).optimizeWeight(numTrainSize, iteration, (DenseLayer) gradHLs.get(i));
+            }
+        }
+        this.finalLayer.optimizeWeight(numTrainSize, iteration, model.getFinalLayer());
+    }
 }

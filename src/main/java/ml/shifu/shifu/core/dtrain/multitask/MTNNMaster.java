@@ -69,7 +69,8 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
         }
 
         MTNNParams aggregation = aggregateWorkerGradients(context);
-        this.mtnn.update(aggregation.getMtnn(), optimizer);
+        //this.mtnn.update(aggregation.getMtnn(), optimizer);
+//        this.mtnn.optimizeWeight();
 
         MTNNParams params = new MTNNParams();
         params.setTrainCount(aggregation.getTrainCount());

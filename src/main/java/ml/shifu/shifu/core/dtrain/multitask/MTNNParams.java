@@ -34,7 +34,9 @@ public class MTNNParams extends HaltBytable implements Combinable<MTNNParams> {
         this.trainError += from.trainError;
         this.validationCount += from.validationCount;
         this.validationError += from.validationError;
-        this.mtnn = this.mtnn.combine(from.getMtnn());
+        if (from.getMtnn() != null) {
+            this.mtnn = this.mtnn.combine(from.getMtnn());
+        }
         return this;
     }
 
