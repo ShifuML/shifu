@@ -153,7 +153,16 @@ public interface CommonConstants {
     public static final String DEEP_ENABLE = "deepEnable";
 
     public static final String EMBED_ENABLE = "embedEnable";
-    
+
     public static final String WIDE_DENSE_ENABLE = "wideDenseEnable";
+
+    /**
+     * Mult-Task Learning delimiter to split multiple target columns and
+     */
+    public static final String MTL_DELIMITER = "|||";
+
+    public static final String MTL_SUBTAG_DELIMITER = "||";
+
+    public static final String MTL_INDEX = "shifu.mtl.index";
 
 }

@@ -29,7 +29,10 @@ public class DataShuffle {
 
         @Override
         public void map(LongWritable key, Text line, Context context) throws IOException, InterruptedException {
-            IntWritable shuffleIndex = new IntWritable(this.rd.nextInt(this.shuffleSize));
+            int shuffleInt = this.rd.nextInt(this.shuffleSize);
+            shuffleInt += this.shuffleSize * this.rd.nextInt(10000);
+            // make write 10000 keys in each reducer to avoid group into one key
+            IntWritable shuffleIndex = new IntWritable(shuffleInt);
             context.write(shuffleIndex, line);
         }
     }
@@ -37,8 +40,9 @@ public class DataShuffle {
     public static class ShuffleReducer extends Reducer<IntWritable, Text, NullWritable, Text> {
 
         @Override
-        public void reduce(IntWritable key, Iterable<Text> iterable, Context context) throws IOException, InterruptedException {
-            for ( Text record : iterable ) {
+        public void reduce(IntWritable key, Iterable<Text> iterable, Context context)
+                throws IOException, InterruptedException {
+            for(Text record: iterable) {
                 context.write(NullWritable.get(), record);
             }
         }

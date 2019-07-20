@@ -23,8 +23,6 @@ import org.apache.commons.lang.math.NumberUtils;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import java.text.DecimalFormat;
-
 /**
  * JexlTest class
  */

@@ -193,6 +193,10 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         paramsMap.put("is_csv", String.valueOf(Boolean.TRUE.toString()
                 .equalsIgnoreCase(Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_CSV, Boolean.FALSE.toString()))));
 
+        // Norm UDF to specify the 1st CC.json for data filter, for NormlizeDF, this is not being used because of
+        // loading all CC.json files.
+        paramsMap.put(CommonConstants.MTL_INDEX, "0");
+
         String expressionsAsString = super.modelConfig.getSegmentFilterExpressionsAsString();
         Environment.getProperties().put("shifu.segment.expressions", expressionsAsString);
 

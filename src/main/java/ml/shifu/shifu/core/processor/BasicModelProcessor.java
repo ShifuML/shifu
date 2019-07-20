@@ -61,6 +61,7 @@ public class BasicModelProcessor {
     protected ModelConfig modelConfig;
     protected List<ColumnConfig> columnConfigList;
     protected PathFinder pathFinder;
+    protected List<List<ColumnConfig>> mtlColumnConfigLists;
 
     /**
      * If not specified SHIFU_HOME env, some key configurations like pig path or lib path can be configured here
@@ -117,22 +118,46 @@ public class BasicModelProcessor {
             case INIT:
                 break;
             default:
-                loadColumnConfig();
-                validateColumnConfig();
+                this.columnConfigList = loadColumnConfig();
 
-                // if in stats but stats -c or stats -p or stats -rebin, column update should be called because of
-                // such stats steps should all be called after 'shifu stats', this is actually to call VoidUpdater
-                boolean strictCallVoidUpdate = (step == ModelStep.STATS)
-                        // && (getBooleanParam(this.params, Constants.IS_COMPUTE_CORR)
-                        && (getBooleanParam(this.params, Constants.IS_COMPUTE_PSI)
-                                || getBooleanParam(this.params, Constants.IS_REBIN));
+                List<List<ColumnConfig>> tmpCCList = new ArrayList<>();
+                List<String> tagColumns = null;
+                if(this.modelConfig.isMultiTask()) {
+                    tagColumns = this.modelConfig.getMultiTaskTargetColumnNames();
+                    this.mtlColumnConfigLists = new ArrayList<>();
+                    for(int i = 0; i < tagColumns.size(); i++) {
+                        String ccPath = this.pathFinder.getMTLColumnConfigPath(SourceType.LOCAL, i);
+                        this.mtlColumnConfigLists.add(this.loadColumnConfig(ccPath));
+                    }
+                    tmpCCList = this.mtlColumnConfigLists;
+                } else {
+                    tmpCCList.add(columnConfigList);
+                }
 
-                // update ColumnConfig and save to disk
-                ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, columnConfigList, step, strictCallVoidUpdate);
+                for(int i = 0; i < tmpCCList.size(); i++) {
+                    List<ColumnConfig> ccs = tmpCCList.get(i);
+                    validateColumnConfig(ccs);
 
-                validateColumnConfigAfterSet();
+                    // if in stats but stats -c or stats -p or stats -rebin, column update should be called because of
+                    // such stats steps should all be called after 'shifu stats', this is actually to call VoidUpdater
+                    boolean strictCallVoidUpdate = (step == ModelStep.STATS)
+                            // && (getBooleanParam(this.params, Constants.IS_COMPUTE_CORR)
+                            && (getBooleanParam(this.params, Constants.IS_COMPUTE_PSI)
+                                    || getBooleanParam(this.params, Constants.IS_REBIN));
+                    // update ColumnConfig and save to disk
+                    ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, ccs, step, strictCallVoidUpdate);
+                    validateColumnConfigAfterSet(ccs);
+                }
 
-                saveColumnConfigList();
+                if(this.modelConfig.isMultiTask()) {
+                    for(int i = 0; i < tagColumns.size(); i++) {
+                        saveColumnConfigList(pathFinder.getMTLColumnConfigPath(SourceType.LOCAL, i),
+                                this.mtlColumnConfigLists.get(i));
+                    }
+                } else {
+                    saveColumnConfigList();
+                }
+
                 break;
         }
 
@@ -154,13 +179,13 @@ public class BasicModelProcessor {
         }
     }
 
-    private void validateColumnConfigAfterSet() {
-        if(this.columnConfigList == null) {
+    private void validateColumnConfigAfterSet(List<ColumnConfig> ccList) {
+        if(ccList == null) {
             return;
         }
         NormType normType = this.modelConfig.getNormalizeType();
 
-        for(ColumnConfig config: this.columnConfigList) {
+        for(ColumnConfig config: ccList) {
             if(config.isHybrid() && !modelConfig.isRegression()) {
                 throw new IllegalArgumentException("Hybrid column " + config.getColumnName()
                         + " is found, but only supported in regression mode, not classfication mode.");
@@ -172,12 +197,12 @@ public class BasicModelProcessor {
         }
     }
 
-    private void validateColumnConfig() {
-        if(this.columnConfigList == null) {
+    private void validateColumnConfig(List<ColumnConfig> ccList) {
+        if(ccList == null) {
             return;
         }
         Set<NSColumn> names = new HashSet<NSColumn>();
-        for(ColumnConfig config: this.columnConfigList) {
+        for(ColumnConfig config: ccList) {
             if(StringUtils.isEmpty(config.getColumnName())) {
                 throw new IllegalArgumentException("Empty column name, please check your header file.");
             }
@@ -188,7 +213,7 @@ public class BasicModelProcessor {
             names.add(new NSColumn(config.getColumnName()));
         }
 
-        if(!names.contains(new NSColumn(modelConfig.getTargetColumnName()))) {
+        if(!modelConfig.isMultiTask() && !names.contains(new NSColumn(modelConfig.getTargetColumnName()))) {
             throw new IllegalArgumentException(
                     "target column " + modelConfig.getTargetColumnName() + " does not exist.");
         }
@@ -245,9 +270,19 @@ public class BasicModelProcessor {
      * @throws IOException
      *             an exception in saving column config
      */
-    public void saveColumnConfigList() throws IOException {
+    public void saveColumnConfigList(List<ColumnConfig> ccList) throws IOException {
         LOG.info("Saving ColumnConfig...");
-        JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), columnConfigList);
+        JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), ccList);
+    }
+
+    /**
+     * save the Column Config
+     * 
+     * @throws IOException
+     *             an exception in saving column config
+     */
+    public void saveColumnConfigList() throws IOException {
+        saveColumnConfigList(this.columnConfigList);
     }
 
     /**
@@ -542,10 +577,14 @@ public class BasicModelProcessor {
      * @throws IOException
      *             in load column config
      */
-    private void loadColumnConfig() throws IOException {
-        columnConfigList = CommonUtils.loadColumnConfigList(
+    private List<ColumnConfig> loadColumnConfig() throws IOException {
+        return CommonUtils.loadColumnConfigList(
                 new Path(CommonUtils.getLocalModelSetPath(otherConfigs), Constants.LOCAL_COLUMN_CONFIG_JSON).toString(),
                 SourceType.LOCAL, false);
+    }
+
+    private List<ColumnConfig> loadColumnConfig(String ccFilePath) throws IOException {
+        return CommonUtils.loadColumnConfigList(ccFilePath, SourceType.LOCAL, false);
     }
 
     /**
@@ -679,7 +718,7 @@ public class BasicModelProcessor {
      *             an exception in saving column config
      */
 
-    protected void saveColumnConfigList(String path, List<ColumnConfig> columnConfigs) throws IOException {
+    public void saveColumnConfigList(String path, List<ColumnConfig> columnConfigs) throws IOException {
         LOG.info("Saving ColumnConfig into {} ... ", path);
         JSONUtils.writeValue(new File(path), columnConfigs);
     }

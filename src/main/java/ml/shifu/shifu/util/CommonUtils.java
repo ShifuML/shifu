@@ -118,10 +118,14 @@ public final class CommonUtils {
         }
 
         // Copy ColumnConfig
-        Path srcColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.LOCAL));
-        Path dstColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.HDFS));
-        if(ShifuFileUtils.isFileExists(srcColumnConfig.toString(), SourceType.LOCAL)) {
-            hdfs.copyFromLocalFile(srcColumnConfig, dstColumnConfig);
+        if(modelConfig.isMultiTask()) {
+            copyMTLColumnConfigs(modelConfig, hdfs, hdfsMSPath);
+        } else {
+            Path srcColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.LOCAL));
+            Path dstColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.HDFS));
+            if(ShifuFileUtils.isFileExists(srcColumnConfig.toString(), SourceType.LOCAL)) {
+                hdfs.copyFromLocalFile(srcColumnConfig, dstColumnConfig);
+            }
         }
 
         // Copy column related config files
@@ -155,6 +159,18 @@ public final class CommonUtils {
         }
 
         return true;
+    }
+
+    private static void copyMTLColumnConfigs(ModelConfig modelConfig, FileSystem hdfs, Path hdfsMSPath)
+            throws IOException {
+        PathFinder pf = new PathFinder(modelConfig);
+        Path mtlHDFSPath = new Path(pf.getMTLColumnConfigFolder(SourceType.HDFS));
+        hdfs.mkdirs(mtlHDFSPath);
+        List<String> tagColumnNames = modelConfig.getMultiTaskTargetColumnNames();
+        for(int i = 0; i < tagColumnNames.size(); i++) {
+            Path srcPath = new Path(pf.getMTLColumnConfigPath(SourceType.LOCAL, i));
+            hdfs.copyFromLocalFile(srcPath, mtlHDFSPath);
+        }
     }
 
     private static void copyColumnConfigFiles(ModelConfig modelConfig, FileSystem hdfs, Path hdfsMSPath)
@@ -895,6 +911,11 @@ public final class CommonUtils {
         return pigParamMap;
     }
 
+    public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType,
+            PathFinder pathFinder) throws IOException {
+        return getPigParamMap(modelConfig, sourceType, pathFinder, -1);
+    }
+
     /**
      * Return all parameters for pig execution.
      *
@@ -911,7 +932,7 @@ public final class CommonUtils {
      *             if modelConfig is null.
      */
     public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType,
-            PathFinder pathFinder) throws IOException {
+            PathFinder pathFinder, int mtlIndex) throws IOException {
         if(modelConfig == null) {
             throw new IllegalArgumentException("modelConfig should not be null.");
         }
@@ -925,14 +946,26 @@ public final class CommonUtils {
 
         pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
         pigParamMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedDataPath(sourceType));
-        pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS, pathFinder.getPreTrainingStatsPath(sourceType));
-        pigParamMap.put(Constants.PATH_STATS_BINNING_INFO, pathFinder.getUpdatedBinningInfoPath(sourceType));
+
+        if(modelConfig.isMultiTask()) {
+            pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS,
+                    pathFinder.getPreTrainingStatsPath(sourceType, mtlIndex));
+            pigParamMap.put(Constants.PATH_STATS_BINNING_INFO,
+                    pathFinder.getUpdatedBinningInfoPath(sourceType, mtlIndex));
+            pigParamMap.put(Constants.PATH_STATS_PSI_INFO, pathFinder.getPSIInfoPath(sourceType, mtlIndex));
+            pigParamMap.put(Constants.PATH_COLUMN_CONFIG, pathFinder.getMTLColumnConfigPath(sourceType, mtlIndex));
+        } else {
+            pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS, pathFinder.getPreTrainingStatsPath(sourceType));
+            pigParamMap.put(Constants.PATH_STATS_BINNING_INFO, pathFinder.getUpdatedBinningInfoPath(sourceType));
+            pigParamMap.put(Constants.PATH_STATS_PSI_INFO, pathFinder.getPSIInfoPath(sourceType));
+            pigParamMap.put(Constants.PATH_COLUMN_CONFIG, pathFinder.getColumnConfigPath(sourceType));
+        }
+
         pigParamMap.put(Constants.PATH_STATS_PSI_INFO, pathFinder.getPSIInfoPath(sourceType));
 
         pigParamMap.put(Constants.WITH_SCORE, Boolean.FALSE.toString());
         pigParamMap.put(Constants.STATS_SAMPLE_RATE, modelConfig.getBinningSampleRate().toString());
         pigParamMap.put(Constants.PATH_MODEL_CONFIG, pathFinder.getModelConfigPath(sourceType));
-        pigParamMap.put(Constants.PATH_COLUMN_CONFIG, pathFinder.getColumnConfigPath(sourceType));
         pigParamMap.put(Constants.PATH_SELECTED_RAW_DATA, pathFinder.getSelectedRawDataPath(sourceType));
         pigParamMap.put(Constants.PATH_BIN_AVG_SCORE, pathFinder.getBinAvgScorePath(sourceType));
         pigParamMap.put(Constants.PATH_TRAIN_SCORE, pathFinder.getTrainScoresPath(sourceType));

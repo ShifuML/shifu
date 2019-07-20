@@ -30,12 +30,30 @@ public abstract class AbstractStatsExecutor {
     protected ModelConfig modelConfig;
     protected List<ColumnConfig> columnConfigList;
 
-    public AbstractStatsExecutor(BasicModelProcessor processor, ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
+    private int mtlIndex = -1;
+
+    public AbstractStatsExecutor(BasicModelProcessor processor, ModelConfig modelConfig,
+            List<ColumnConfig> columnConfigList) {
         this.processor = processor;
         this.modelConfig = modelConfig;
         this.columnConfigList = columnConfigList;
     }
 
     public abstract boolean doStats() throws Exception;
+
+    /**
+     * @return the mtlIndex
+     */
+    public int getMtlIndex() {
+        return mtlIndex;
+    }
+
+    /**
+     * @param mtlIndex
+     *            the mtlIndex to set
+     */
+    public void setMtlIndex(int mtlIndex) {
+        this.mtlIndex = mtlIndex;
+    }
 
 }
