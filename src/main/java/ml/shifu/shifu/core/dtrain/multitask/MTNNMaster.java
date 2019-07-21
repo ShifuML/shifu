@@ -7,11 +7,13 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.tools.ant.types.CommandlineJava;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +62,23 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
             throw new RuntimeException();
         }
 
+        int[] inputOutput = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
+        this.numInputs = inputOutput[0];
+        this.isAfterVarSelect = (inputOutput[3] == 1);
+        this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(props.getProperty(CommonConstants.CONTINUOUS_TRAINING));
+
+        this.validParams = this.modelConfig.getParams();
+        double learningRate = (double) validParams.get(CommonConstants.LEARNING_RATE);
+        List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
+        List<String> hiddenActiFuncs = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
+        int taskNumber = 0;
+        for (ColumnConfig cConfig:this.columnConfigList){
+            ColumnConfig.ColumnFlag flag = ColumnConfig.ColumnFlag.Target;
+            if (cConfig.getColumnFlag().equals(flag)){
+                taskNumber++;
+            }
+        }
+
     }
 
     @Override
@@ -96,7 +115,7 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
 
     public MTNNParams initOrRecoverModelWeights(MasterContext<MTNNParams, MTNNParams> context) {
         MTNNParams params = new MTNNParams();
-        if (this.isContinuousEnabled){
+        if (this.isContinuousEnabled) {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             MultiTaskNN existingModel = loadModel(modelPath);
             if (existingModel != null) {
@@ -105,15 +124,14 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
                 LOG.warn("Continuous training enabled but existing model load failed, do random initialization.");
                 this.mtnn.initWeights();
             }
-        }
-        else {
+        } else {
             this.mtnn.initWeights();
         }
         params.setMtnn(this.mtnn);
         return params;
     }
 
-    public MultiTaskNN loadModel(Path modelPath){
+    public MultiTaskNN loadModel(Path modelPath) {
 //        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS);
 //        InputStream inputStream = null;
 //        try {

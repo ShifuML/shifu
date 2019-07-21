@@ -22,7 +22,7 @@ import java.util.List;
 
 public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Combinable<MultiTaskNN>, PropOptimizer<MultiTaskNN> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MultiTaskNN.class);
+    private static final Logger  LOG = LoggerFactory.getLogger(MultiTaskNN.class);
 
     private DenseInputLayer dil;
 
