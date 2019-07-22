@@ -121,6 +121,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
 
+        this.isMultiTask = modelConfig.isMultiTask();
+
         this.categoryMissingNormType = CategoryMissingNormType
                 .of(getUdfProperty(Constants.SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
         log.info("'categoryMissingNormType' is set to: " + this.categoryMissingNormType);
@@ -160,6 +162,10 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         if(this.modelConfig.isMultiTask()) {
+            if(this.modelConfig.getNormalize().getSampleRate() < 1d) {
+                throw new java.lang.UnsupportedOperationException(
+                        "Multi task learning doesn't support sampling in norm.");
+            }
             initMultTaskConfigs();
         }
 
@@ -244,7 +250,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     }
 
     private void initMultTaskConfigs() throws IOException {
-        this.isMultiTask = true;
         this.mtlColumnConfigLists = new ArrayList<>();
         List<String> tagColumns = this.modelConfig.getMultiTaskTargetColumnNames();
         mtlTagColumnNums = new int[tagColumns.size()];
@@ -290,7 +295,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         // data sampling only for normalization, for data cleaning, shouldn't do data sampling
         // if(!isLinearTarget && !this.isForClean) { // do sampling for TREE model also - by huzza
-        // multi task sampling not supported, need add warning in validation TODO FIXME, add validation if MTL 
+        // multi task sampling not supported, need add warning in validation TODO FIXME, add validation if MTL
         if(!this.isMultiTask && !isLinearTarget) {
             // do data sampling. Unselected data or data with invalid tag will be filtered out.
             boolean isNotSampled = DataSampler.isNotSampled(modelConfig.isRegression(), //
@@ -682,18 +687,16 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 if(this.isMultiTask) {
                     for(int i = 0; i < this.mtlColumnConfigLists.size(); i++) {
                         List<ColumnConfig> ccList = this.mtlColumnConfigLists.get(i);
-                        buildSchema(schemaStr, ccList, this.isMultiTask, -1);
+                        buildSchema(schemaStr, ccList, this.isMultiTask, i);
                     }
                 } else {
                     buildSchema(schemaStr, this.columnConfigList, this.isMultiTask, -1);
                 }
                 schemaStr.append("shifu::weight:").append(getOutputPrecisionType()).append(")");
-                // log.info(" schema string is " + schemaStr.toString());
+                log.info(" schema string is " + schemaStr.toString());
                 return Utils.getSchemaFromString(schemaStr.toString());
             }
-        } catch (
-
-        Exception e) {
+        } catch (Exception e) {
             log.error("error in outputSchema", e);
             return null;
         }
@@ -730,7 +733,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 if(CommonUtils.isToNormVariable(config, super.hasCandidates, modelConfig.isRegression())) {
                     List<String> normColumnNames = this.genNormColumnNames(config, this.normType);
                     for(String normalName: normColumnNames) {
-                        schemaStr.append(normalName + ":" + getOutputPrecisionType() + ",");
+                        schemaStr.append(getColumnName(normalName, isMultiTask, mtlIndex) + ":"
+                                + getOutputPrecisionType() + ",");
                     }
                 } else {
                     schemaStr.append(

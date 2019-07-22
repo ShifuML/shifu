@@ -10,8 +10,8 @@ import java.io.IOException;
  */
 public class VoidUpdater extends BasicUpdater {
 
-    public VoidUpdater(ModelConfig modelConfig) throws IOException {
-        super(modelConfig);
+    public VoidUpdater(ModelConfig modelConfig, int mtlIndex) throws IOException {
+        super(modelConfig, mtlIndex);
     }
 
     @Override

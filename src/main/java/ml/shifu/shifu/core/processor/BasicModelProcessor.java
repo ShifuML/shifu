@@ -118,8 +118,6 @@ public class BasicModelProcessor {
             case INIT:
                 break;
             default:
-                this.columnConfigList = loadColumnConfig();
-
                 List<List<ColumnConfig>> tmpCCList = new ArrayList<>();
                 List<String> tagColumns = null;
                 if(this.modelConfig.isMultiTask()) {
@@ -131,6 +129,7 @@ public class BasicModelProcessor {
                     }
                     tmpCCList = this.mtlColumnConfigLists;
                 } else {
+                    this.columnConfigList = loadColumnConfig();
                     tmpCCList.add(columnConfigList);
                 }
 
@@ -145,7 +144,7 @@ public class BasicModelProcessor {
                             && (getBooleanParam(this.params, Constants.IS_COMPUTE_PSI)
                                     || getBooleanParam(this.params, Constants.IS_REBIN));
                     // update ColumnConfig and save to disk
-                    ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, ccs, step, strictCallVoidUpdate);
+                    ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, ccs, step, strictCallVoidUpdate, i);
                     validateColumnConfigAfterSet(ccs);
                 }
 
@@ -267,6 +266,9 @@ public class BasicModelProcessor {
     /**
      * save the Column Config
      * 
+     * @param ccList
+     *            the column config list
+     * 
      * @throws IOException
      *             an exception in saving column config
      */
@@ -301,24 +303,6 @@ public class BasicModelProcessor {
             ShifuFileUtils.createDirIfNotExists(new SourceFile(Constants.TMP, SourceType.LOCAL));
             saveColumnConfigList(backupColumnConfigPath, this.columnConfigList);
         }
-    }
-
-    public static long mappingToKey(long longValue) {
-        return longValue >>> 8;
-    }
-
-    // we get last AdaGraphStorageConstants.VERTEX_LABEL_INDEX_BIT_LENGTH_IN_INTERNALID bits to be vertex index
-    public static int mappingToVertexIndex(long longValue) {
-        return (int) (longValue & ((1 << 8) - 1));
-    }
-
-    public static long mappingToLong(int vertexIndex, long key) {
-        return (key << 8) + vertexIndex;
-    }
-
-    public static void main(String[] args) {
-        System.out.println(mappingToLong(0, 23977254002229l));
-        System.out.println(new Date(1466060400000L));
     }
 
     /**

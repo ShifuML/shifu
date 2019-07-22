@@ -1,6 +1,8 @@
 package ml.shifu.shifu.util.updater;
 
 import java.io.IOException;
+import java.util.List;
+
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -14,8 +16,8 @@ import org.apache.commons.collections.CollectionUtils;
  */
 public class VarSelUpdater extends BasicUpdater {
 
-    public VarSelUpdater(ModelConfig modelConfig) throws IOException {
-        super(modelConfig);
+    public VarSelUpdater(ModelConfig modelConfig, int mtlIndex) throws IOException {
+        super(modelConfig, mtlIndex);
     }
 
     @Override
@@ -31,7 +33,9 @@ public class VarSelUpdater extends BasicUpdater {
         // No need reset ColumnType since column type should be set well in stats and later cannot be changed
         if(NSColumnUtils.isColumnEqual(this.targetColumnName, varName)) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Target);
-            if ( CollectionUtils.isEmpty(this.modelConfig.getTags()) ) {
+            List<String> tags = this.modelConfig.isMultiTask() ? this.modelConfig.getMTLTags(this.getMtlIndex())
+                    : this.modelConfig.getTags();
+            if(CollectionUtils.isEmpty(tags)) {
                 // allow tags are empty to support linear target
                 // set columnType to N
                 columnConfig.setColumnType(ColumnType.N);
@@ -52,7 +56,7 @@ public class VarSelUpdater extends BasicUpdater {
             }
         } else if(this.setCandidates.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Candidate);
-        } else if ( this.setCategoricalColumns.contains(new NSColumn(varName)) ) {
+        } else if(this.setCategoricalColumns.contains(new NSColumn(varName))) {
             columnConfig.setColumnType(ColumnType.C);
         }
     }

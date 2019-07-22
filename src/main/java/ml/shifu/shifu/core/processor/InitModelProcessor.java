@@ -97,14 +97,16 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             if(this.modelConfig.isMultiTask()) {
                 List<String> tagColumns = this.modelConfig.getMultiTaskTargetColumnNames();
                 for(int i = 0; i < tagColumns.size(); i++) {
-                    List<ColumnConfig> ccList = initColumnConfigList(tagColumns.get(i), tagColumns);
+                    List<ColumnConfig> ccList = initColumnConfigList(tagColumns.get(i), tagColumns, i);
                     if(ccList == null) {
                         return -1;
                     }
+                    ShifuFileUtils.createDirIfNotExists(pathFinder.getMTLColumnConfigFolder(SourceType.LOCAL),
+                            SourceType.LOCAL);
                     saveColumnConfigList(pathFinder.getMTLColumnConfigPath(SourceType.LOCAL, i), ccList);
                 }
             } else {
-                List<ColumnConfig> ccList = initColumnConfigList(this.modelConfig.getTargetColumnName(), null);
+                List<ColumnConfig> ccList = initColumnConfigList(this.modelConfig.getTargetColumnName(), null, -1);
                 if(ccList == null) {
                     return 1;
                 }
@@ -426,7 +428,8 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
     /**
      * Initialize the columnConfig file
      */
-    private List<ColumnConfig> initColumnConfigList(String tagColumnName, List<String> tagColumns) throws IOException {
+    private List<ColumnConfig> initColumnConfigList(String tagColumnName, List<String> tagColumns, int mtlIndex)
+            throws IOException {
         List<ColumnConfig> ccList = new ArrayList<ColumnConfig>();
 
         String[] fields = null;
@@ -484,8 +487,17 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             ccList.add(config);
         }
 
-        ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, ccList, ModelStep.INIT);
+        ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, ccList, ModelStep.INIT, mtlIndex);
 
+        boolean isSuccess = postProcess(tagColumnName, tagColumns, ccList);
+        if(!isSuccess) {
+            return null;
+        }
+
+        return ccList;
+    }
+
+    private boolean postProcess(String tagColumnName, List<String> tagColumns, List<ColumnConfig> columnConfigList) {
         boolean hasTarget = false;
         for(ColumnConfig config: columnConfigList) {
             if(config.isTarget()) {
@@ -508,10 +520,9 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                 log.error("Please check your header file {} and your header delimiter {}", modelConfig.getHeaderPath(),
                         modelConfig.getHeaderDelimiter());
             }
-            return null;
+            return false;
         }
-
-        return ccList;
+        return true;
     }
 
     static class Data {

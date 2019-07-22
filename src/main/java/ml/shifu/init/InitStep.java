@@ -110,7 +110,7 @@ public class InitStep extends Step<List<ColumnConfig>> {
             columnConfigList.add(config);
         }
 
-        ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, columnConfigList, ModelStep.INIT);
+        ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, columnConfigList, ModelStep.INIT, -1);
 
         boolean hasTarget = false;
         for(ColumnConfig config: columnConfigList) {

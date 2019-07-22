@@ -27,6 +27,8 @@ import ml.shifu.shifu.core.ColumnStatsCalculator.ColumnMetrics;
 import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
 import ml.shifu.shifu.core.binning.obj.AbstractBinInfo;
 import ml.shifu.shifu.core.binning.obj.CategoricalBinInfo;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.udf.CalculateStatsUDF;
 import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -98,8 +100,14 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                     context.getConfiguration().get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
                     sourceType);
-            this.columnConfigList = CommonUtils
-                    .loadColumnConfigList(context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+            if(modelConfig.isMultiTask()) {
+                int mtlIndex = context.getConfiguration().getInt(CommonConstants.MTL_INDEX, -1);
+                this.columnConfigList = CommonUtils.loadColumnConfigList(
+                        new PathFinder(this.modelConfig).getMTLColumnConfigPath(SourceType.HDFS, mtlIndex), sourceType);
+            } else {
+                this.columnConfigList = CommonUtils.loadColumnConfigList(
+                        context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

@@ -76,6 +76,9 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
                 if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
                     mtlIndex = NumberFormatUtils
                             .getInt(UDFContext.getUDFContext().getJobConf().get(CommonConstants.MTL_INDEX), -1);
+                } else {
+                   //"when do local initilization mtlIndex is -1, set to 0 to pass");
+                    mtlIndex = 0;
                 }
                 modelConfig.setMtlIndex(mtlIndex);
             }

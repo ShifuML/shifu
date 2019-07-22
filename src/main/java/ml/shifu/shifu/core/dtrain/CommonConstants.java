@@ -163,6 +163,6 @@ public interface CommonConstants {
 
     public static final String MTL_SUBTAG_DELIMITER = "||";
 
-    public static final String MTL_INDEX = "shifu.mtl.index";
+    public static final String MTL_INDEX = "shifu_mtl_index";
 
 }

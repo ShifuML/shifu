@@ -157,18 +157,38 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             // reset all selections if user specify or select by absolute number
             if(getIsToReset()) {
                 log.info("Reset all selections data including type final select etc!");
-                resetAllFinalSelect();
+                if(this.modelConfig.isMultiTask()) {
+                    for(int i = 0; i < this.mtlColumnConfigLists.size(); i++) {
+                        List<ColumnConfig> ccList = this.mtlColumnConfigLists.get(i);
+                        resetAllFinalSelect(ccList);
+                        saveColumnConfigList(pathFinder.getMTLColumnConfigPath(SourceType.LOCAL, i), ccList);
+                    }
+                } else {
+                    resetAllFinalSelect(this.columnConfigList);
+                    saveColumnConfigList(this.columnConfigList);
+                }
             } else if(getIsToList()) {
                 log.info("Below variables are selected - ");
-                for(ColumnConfig columnConfig: this.columnConfigList) {
-                    if(columnConfig.isFinalSelect()) {
-                        log.info(columnConfig.getColumnName());
+                if(this.modelConfig.isMultiTask()) {
+                    for(int i = 0; i < this.mtlColumnConfigLists.size(); i++) {
+                        List<ColumnConfig> ccList = this.mtlColumnConfigLists.get(i);
+                        for(ColumnConfig columnConfig: ccList) {
+                            if(columnConfig.isFinalSelect()) {
+                                log.info("MTL {} selected variable {}", i, columnConfig.getColumnName());
+                            }
+                        }
+                    }
+                } else {
+                    for(ColumnConfig columnConfig: this.columnConfigList) {
+                        if(columnConfig.isFinalSelect()) {
+                            log.info(columnConfig.getColumnName());
+                        }
                     }
                 }
                 log.info("-----  Done -----");
             } else if(getIsToAutoFilter()) {
                 log.info("Start to run variable auto filter.");
-                runAutoVarFilter();
+                runAutoVarFilter(this.columnConfigList);
                 log.info("-----  Done -----");
             } else if(getIsRecoverAuto()) {
                 String varselHistory = pathFinder.getVarSelHistory();
@@ -233,8 +253,18 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_IV)
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_PARETO)
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_MIX)) {
-                        VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
-                        this.columnConfigList = selector.selectByFilter();
+                        if(this.modelConfig.isMultiTask()) {
+                            for(int i = 0; i < this.mtlColumnConfigLists.size(); i++) {
+                                List<ColumnConfig> ccList = this.mtlColumnConfigLists.get(i);
+                                VariableSelector selector = new VariableSelector(this.modelConfig, ccList);
+                                ccList = selector.selectByFilter();
+                                saveColumnConfigList(pathFinder.getMTLColumnConfigPath(SourceType.LOCAL, i), ccList);
+                            }
+                        } else {
+                            VariableSelector selector = new VariableSelector(this.modelConfig, this.columnConfigList);
+                            this.columnConfigList = selector.selectByFilter();
+                            this.saveColumnConfigList(this.columnConfigList);
+                        }
                     } else if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_FI)) {
                         if(!CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
                             throw new IllegalArgumentException(
@@ -318,7 +348,14 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 cleanShadowTargetsForSegments();
 
                 if(modelConfig.getVarSelect().getAutoFilterEnable()) {
-                    runAutoVarFilter();
+                    if(this.modelConfig.isMultiTask()) {
+                        for(int i = 0; i < this.mtlColumnConfigLists.size(); i++) {
+                            List<ColumnConfig> ccList = this.mtlColumnConfigLists.get(i);
+                            runAutoVarFilter(ccList);
+                        }
+                    } else {
+                        runAutoVarFilter(this.columnConfigList);
+                    }
                 }
             }
 
@@ -431,13 +468,12 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
     }
 
-    public void resetAllFinalSelect() throws IOException {
+    public void resetAllFinalSelect(List<ColumnConfig> columnConfigList) throws IOException {
         log.info("!!! Reset all variables finalSelect = false");
-        for(ColumnConfig columnConfig: this.columnConfigList) {
+        for(ColumnConfig columnConfig: columnConfigList) {
             columnConfig.setFinalSelect(false);
             columnConfig.setColumnFlag(null);
         }
-        saveColumnConfigList();
     }
 
     private void validateNormalize() throws IOException {
@@ -947,8 +983,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 log.info("Variable {} is selected.", columnConfig.getColumnName());
             }
         }
-        log.info("{} variables are selected, while {} are force-selected, and others from {} candidates.",
-                selectCnt, forceCnt, candidateCount);
+        log.info("{} variables are selected, while {} are force-selected, and others from {} candidates.", selectCnt,
+                forceCnt, candidateCount);
     }
 
     private void postProcess4SEVarSelect(SourceType source, String varSelectMSEOutputPath) throws IOException {
@@ -1164,11 +1200,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
     }
 
-    /**
-     *
-     * @throws IOException
-     */
-    private void runAutoVarFilter() throws IOException {
+    private void runAutoVarFilter(List<ColumnConfig> columnConfigList) throws IOException {
         if(this.modelConfig.getVarSelect().getPostCorrelationMetric().equals(PostCorrelationMetric.SE)
                 && this.seStatsMap == null) {
             SourceType source = this.modelConfig.getDataSet().getSource();
@@ -1178,7 +1210,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
 
         List<VarSelDesc> varSelDescList = new ArrayList<VarSelDesc>();
-        autoVarSelCondition(varSelDescList);
+        autoVarSelCondition(varSelDescList, columnConfigList);
         if(CollectionUtils.isNotEmpty(varSelDescList)) {
             String varselHistory = this.pathFinder.getVarSelHistory();
             ShifuFileUtils.writeLines(varSelDescList, varselHistory, SourceType.LOCAL);
@@ -1191,7 +1223,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
      * @throws IOException
      *             any IO exception
      */
-    private void autoVarSelCondition(List<VarSelDesc> varSelDescList) throws IOException {
+    private void autoVarSelCondition(List<VarSelDesc> varSelDescList, List<ColumnConfig> columnConfigList) throws IOException {
         // here we do loop again as it is not bad for variables less than 100,000
         // 1. check missing rate
         for(ColumnConfig config: columnConfigList) {

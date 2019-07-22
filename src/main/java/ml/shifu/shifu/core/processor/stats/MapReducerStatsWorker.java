@@ -120,41 +120,11 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         }
         Map<String, String> paramsMap = new HashMap<String, String>();
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
-        int columnParallel = 0;
-        if(columnConfigList.size() <= 100) {
-            columnParallel = columnConfigList.size() * 2;
-        } else if(columnConfigList.size() <= 500) {
-            columnParallel = columnConfigList.size();
-        } else if(columnConfigList.size() <= 1000) {
-            // 1000 => 200 reducers
-            columnParallel = columnConfigList.size() / 2;
-        } else if(columnConfigList.size() > 1000 && columnConfigList.size() <= 2000) {
-            // 2000 => 320 reducers
-            columnParallel = columnConfigList.size() / 4;
-        } else if(columnConfigList.size() > 2000 && columnConfigList.size() <= 3000) {
-            // 3000 => 420 reducers
-            columnParallel = columnConfigList.size() / 6;
-        } else if(columnConfigList.size() > 3000 && columnConfigList.size() <= 4000) {
-            // 4000 => 500
-            columnParallel = columnConfigList.size() / 8;
-        } else {
-            // 5000 => 500
-            columnParallel = columnConfigList.size() / 10;
-        }
-        // limit max reducer to 999
-        int parallelNumbByVolume = getParallelNumByDataVolume();
-        if(columnParallel < parallelNumbByVolume) {
-            columnParallel = parallelNumbByVolume;
-            log.info("Adjust parallel number to {} according data volume", columnParallel);
-        }
-        columnParallel = columnParallel > 999 ? 999 : columnParallel;
+
+        int columnParallel = getColumnParallelNum();
         paramsMap.put("column_parallel", Integer.toString(columnParallel));
 
         paramsMap.put("histo_scale_factor", Environment.getProperty("shifu.stats.histo.scale.factor", "100"));
-
-        // FIXME how to estimate mapper size then to estimate reducer size, in stats,
-        // reducer size is estimated by column_parallel is not a good
-        // new PigInputFormat().getSplits(jobcontext)
 
         try {
             runStatsPig(paramsMap);
@@ -185,6 +155,60 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         updateDateStatWithMRJob();
 
         return true;
+    }
+
+    private int getColumnParallelNum() throws IOException {
+        // this is only roughly estimation to get mapper size
+        Configuration conf = new Configuration();
+        CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
+            @Override
+            public void inject(Object key, Object value) {
+                conf.set(key.toString(), value.toString());
+            }
+        });
+        @SuppressWarnings("deprecation")
+        Job job = new Job(conf, "Shifu: Only for Mapper Size Estimation");
+        FileInputFormat.setInputPaths(job,
+                ShifuFileUtils.getFileSystemBySourceType(modelConfig.getDataSet().getSource())
+                        .makeQualified(new Path(super.modelConfig.getDataSetRawPath())));
+        int mapperSize = new CombineInputFormat().getSplits(job).size();
+        log.info("Estimated mapper size is {}.", mapperSize);
+
+        int columnParallel = 0;
+        if(columnConfigList.size() <= 100) {
+            columnParallel = columnConfigList.size() * 2;
+        } else if(columnConfigList.size() <= 500) {
+            columnParallel = columnConfigList.size();
+        } else if(columnConfigList.size() <= 1000) {
+            // 1000 => 200 reducers
+            columnParallel = columnConfigList.size() / 2;
+        } else if(columnConfigList.size() > 1000 && columnConfigList.size() <= 2000) {
+            // 2000 => 320 reducers
+            columnParallel = columnConfigList.size() / 4;
+        } else if(columnConfigList.size() > 2000 && columnConfigList.size() <= 3000) {
+            // 3000 => 420 reducers
+            columnParallel = columnConfigList.size() / 6;
+        } else if(columnConfigList.size() > 3000 && columnConfigList.size() <= 4000) {
+            // 4000 => 500
+            columnParallel = columnConfigList.size() / 8;
+        } else {
+            // 5000 => 500
+            columnParallel = columnConfigList.size() / 10;
+        }
+
+        // if too small mapper size, reset it to a smaller one to avoid big # of reducers.
+        if(mapperSize <= 20) {
+            columnParallel = Math.min(mapperSize, columnParallel);
+        }
+
+        // limit max reducer to 999
+        int parallelNumbByVolume = getParallelNumByDataVolume();
+        if(columnParallel < parallelNumbByVolume) {
+            columnParallel = parallelNumbByVolume;
+            log.info("Adjust parallel number to {} according data volume", columnParallel);
+        }
+        columnParallel = columnParallel > 999 ? 999 : columnParallel;
+        return columnParallel;
     }
 
     private void saveAndSyncColumnConfigs() throws IOException {
@@ -413,6 +437,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         Configuration conf = new Configuration();
         prepareJobConf(source, conf, filePath);
+        conf.set(CommonConstants.MTL_INDEX, this.getMtlIndex() + "");
 
         @SuppressWarnings("deprecation")
         Job job = new Job(conf, "Shifu: Stats Updating Binning Job : " + this.modelConfig.getModelSetName());

@@ -76,10 +76,12 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                 case MAPRED:
                     runPigNormalize();
 
-                    try {
-                        autoCheckShuffleAndShuffleSize();
-                    } catch (Exception e) {
-                        log.warn("warn: exception in auto check shuffle size, can be ignored as no big impact", e);
+                    if(!this.modelConfig.isMultiTask()) {
+                        try {
+                            autoCheckShuffleAndShuffleSize();
+                        } catch (Exception e) {
+                            log.warn("warn: exception in auto check shuffle size, can be ignored as no big impact", e);
+                        }
                     }
 
                     if(this.isToShuffleData) {
