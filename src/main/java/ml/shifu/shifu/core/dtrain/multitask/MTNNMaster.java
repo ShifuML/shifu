@@ -8,9 +8,12 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.RegulationLevel;
+import ml.shifu.shifu.core.dtrain.SerializationType;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+import org.apache.commons.lang.math.NumberUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.tools.ant.types.CommandlineJava;
@@ -72,13 +75,18 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
         List<String> hiddenActiFuncs = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         int taskNumber = 0;
-        for (ColumnConfig cConfig:this.columnConfigList){
+        for (ColumnConfig cConfig : this.columnConfigList) {
             ColumnConfig.ColumnFlag flag = ColumnConfig.ColumnFlag.Target;
-            if (cConfig.getColumnFlag().equals(flag)){
+            if (cConfig.getColumnFlag().equals(flag)) {
                 taskNumber++;
             }
         }
-
+        // todo:check if MTNN need regression function
+        double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0);
+        Object pObject = this.validParams.get(CommonConstants.PROPAGATION);
+        String propagation = (pObject == null) ? DTrainUtils.RESILIENTPROPAGATION : pObject.toString();
+        this.mtnn = new MultiTaskNN(numInputs, hiddenNodes, hiddenActiFuncs, taskNumber, l2reg);
+        this.mtnn.initOptimizer(learningRate,propagation, 0,RegulationLevel.NONE);
     }
 
     @Override
@@ -88,16 +96,17 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
         }
 
         MTNNParams aggregation = aggregateWorkerGradients(context);
-        //this.mtnn.update(aggregation.getMtnn(), optimizer);
-//        this.mtnn.optimizeWeight();
-
+        this.mtnn.optimizeWeight(aggregation.getTrainSize(),context.getCurrentIteration() -1,aggregation.getMtnn());
         MTNNParams params = new MTNNParams();
+        params.setTrainSize(aggregation.getTrainSize());
+        params.setValidationSize(aggregation.getValidationSize());
         params.setTrainCount(aggregation.getTrainCount());
-        params.setTrainError(aggregation.getTrainError());
         params.setValidationCount(aggregation.getValidationCount());
+        params.setTrainError(aggregation.getTrainError());
         params.setValidationError(aggregation.getValidationError());
-        params.setSerializationType(aggregation.getSerializationType());
-        params.setMtnn(mtnn);
+        params.setSerializationType(SerializationType.WEIGHTS);
+        this.mtnn.setSerializationType(SerializationType.WEIGHTS);
+        params.setMtnn(this.mtnn);
         return params;
     }
 

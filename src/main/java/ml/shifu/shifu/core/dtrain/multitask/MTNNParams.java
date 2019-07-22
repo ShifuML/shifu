@@ -15,6 +15,13 @@ import java.io.IOException;
 public class MTNNParams extends HaltBytable implements Combinable<MTNNParams> {
     private static final boolean MTNN_IS_NULL = true;
 
+    private double trainSize;
+
+    private double validationSize;
+
+    /**
+     * # of training records per such worker.(Now, we don't use it in MTNN.)
+     */
     private double trainCount;
 
     private double validationCount;
@@ -88,6 +95,22 @@ public class MTNNParams extends HaltBytable implements Combinable<MTNNParams> {
 
     public void setValidationCount(double validationCount) {
         this.validationCount = validationCount;
+    }
+
+    public double getTrainSize() {
+        return trainSize;
+    }
+
+    public void setTrainSize(double trainSize) {
+        this.trainSize = trainSize;
+    }
+
+    public double getValidationSize() {
+        return validationSize;
+    }
+
+    public void setValidationSize(double validationSize) {
+        this.validationSize = validationSize;
     }
 
     public double getTrainError() {
