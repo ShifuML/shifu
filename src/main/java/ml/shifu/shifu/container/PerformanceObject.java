@@ -25,7 +25,6 @@ public class PerformanceObject {
         this.binLowestScore = 0.0;
         this.actionRate = 0.0;
         this.weightedActionRate = 0.0;
-
     }
 
     /**
@@ -75,6 +74,13 @@ public class PerformanceObject {
 
     public double weightedFpr;
 
+    /**
+     *  ftpr - false positive true positive ration (FTPR) = fp / tp
+     */
+    public double ftpr;
+
+    public double weightedFtpr;
+
     public double liftUnit;
 
     public double weightLiftUnit;
@@ -100,14 +106,25 @@ public class PerformanceObject {
      */
     @Override
     public String toString() {
-        return "PerformanceObject [binNum=" + binNum + ", binLowestScore=" + binLowestScore + ", actionRate="
-                + actionRate + ", weightedActionRate=" + weightedActionRate + ", recall=" + recall
-                + ", weightedRecall=" + weightedRecall + ", precision=" + precision + ", weightedPrecision="
-                + weightedPrecision + ", fpr=" + fpr + ", weightedFpr=" + weightedFpr + ", liftUnit=" + liftUnit
-                + ", weightLiftUnit=" + weightLiftUnit + ", scoreCount=" + scoreCount + ", scoreWgtCount="
-                + scoreWgtCount + ", tp=" + tp + ", fp=" + fp + ", tn=" + tn + ", fn=" + fn + ", weightedTp="
-                + weightedTp + ", weightedFp=" + weightedFp + ", weightedTn=" + weightedTn + ", weightedFn="
-                + weightedFn + "]";
+        return "PerformanceObject [binNum=" + binNum
+                + ", binLowestScore=" + binLowestScore
+                + ", actionRate=" + actionRate
+                + ", weightedActionRate=" + weightedActionRate
+                + ", recall=" + recall
+                + ", weightedRecall=" + weightedRecall
+                + ", precision=" + precision
+                + ", weightedPrecision=" + weightedPrecision
+                + ", fpr=" + fpr
+                + ", weightedFpr=" + weightedFpr
+                + ", ftpr=" + ftpr
+                + ", weightedFtpr=" + weightedFtpr
+                + ", liftUnit=" + liftUnit
+                + ", weightLiftUnit=" + weightLiftUnit
+                + ", scoreCount=" + scoreCount
+                + ", scoreWgtCount=" + scoreWgtCount
+                + ", tp=" + tp + ", fp=" + fp + ", tn=" + tn + ", fn=" + fn
+                + ", weightedTp=" + weightedTp + ", weightedFp=" + weightedFp
+                + ", weightedTn=" + weightedTn + ", weightedFn=" + weightedFn + "]";
     }
 
 }

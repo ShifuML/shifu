@@ -15,15 +15,19 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
-import ml.shifu.guagua.util.MemoryLimitedList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+
 import org.encog.mathutil.BoundMath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.*;
-import java.util.stream.Collectors;
+import ml.shifu.guagua.util.MemoryLimitedList;
 
 /**
  * To running gradient update in parallel.
@@ -45,12 +49,9 @@ public class WDLParallelGradient {
     private int[] testLows;
     private int[] testHighs;
 
-
-    public WDLParallelGradient(final WideAndDeep wnd, int threadNumber,
-                               ConcurrentMap<Integer, Integer> inputIndexMap,
-                               final MemoryLimitedList<WDLWorker.Data> trainData,
-                               final MemoryLimitedList<WDLWorker.Data> testData,
-                               CompletionService<WDLParams> completionService) {
+    public WDLParallelGradient(final WideAndDeep wnd, int threadNumber, ConcurrentMap<Integer, Integer> inputIndexMap,
+            final MemoryLimitedList<WDLWorker.Data> trainData, final MemoryLimitedList<WDLWorker.Data> testData,
+            CompletionService<WDLParams> completionService) {
         this.threadNumber = threadNumber;
         this.wdl = wnd;
         this.inputIndexMap = inputIndexMap;
@@ -140,9 +141,8 @@ public class WDLParallelGradient {
         private int testHigh;
 
         public GradientTask(final WideAndDeep wdl, ConcurrentMap<Integer, Integer> inputIndexMap,
-                            final MemoryLimitedList<WDLWorker.Data> trainData,
-                            final MemoryLimitedList<WDLWorker.Data> testData,
-                            int trainLow, int trainHigh, int testLow, int testHigh) {
+                final MemoryLimitedList<WDLWorker.Data> trainData, final MemoryLimitedList<WDLWorker.Data> testData,
+                int trainLow, int trainHigh, int testLow, int testHigh) {
             this.wnd = wdl.clone();
             this.inputIndexMap = inputIndexMap;
             this.trainData = trainData;
@@ -154,13 +154,13 @@ public class WDLParallelGradient {
         }
 
         private List<SparseInput> getWideInputs(WDLWorker.Data data) {
-            return this.wnd.getWideColumnIds().stream().map(id -> data.getCategoricalValues()[this.inputIndexMap.get(id)])
-                    .collect(Collectors.toList());
+            return this.wnd.getWideColumnIds().stream()
+                    .map(id -> data.getCategoricalValues()[this.inputIndexMap.get(id)]).collect(Collectors.toList());
         }
 
         private List<SparseInput> getEmbedInputs(WDLWorker.Data data) {
-            return this.wnd.getEmbedColumnIds().stream().map(id -> data.getCategoricalValues()[this.inputIndexMap.get(id)])
-                    .collect(Collectors.toList());
+            return this.wnd.getEmbedColumnIds().stream()
+                    .map(id -> data.getCategoricalValues()[this.inputIndexMap.get(id)]).collect(Collectors.toList());
         }
 
         private double sigmoid(double logit) {
@@ -180,7 +180,6 @@ public class WDLParallelGradient {
                 return wdlParams;
             }
 
-
             long start = System.currentTimeMillis();
             // forward and backward compute gradients for each iteration
             double trainCnt = trainHigh - trainLow, validCnt = testHigh - testLow;
@@ -191,7 +190,8 @@ public class WDLParallelGradient {
             for(int i = trainLow; i < trainHigh; i++) {
                 WDLWorker.Data data = trainData.get(i);
                 trainSize += data.getWeight();
-                double[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data), getWideInputs(data));
+                double[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data),
+                        getWideInputs(data));
                 double predict = sigmoid(logits[0]);
                 double error = predict - data.getLabel();
                 trainSumError += (error * error * data.getWeight());
@@ -207,10 +207,12 @@ public class WDLParallelGradient {
             // compute validation error
             for(int i = testLow; i < testHigh; i++) {
                 WDLWorker.Data data = testData.get(i);
-                double[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data), getWideInputs(data));
+                double[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data),
+                        getWideInputs(data));
                 double sigmoid = sigmoid(logits[0]);
                 if(index++ <= 0) {
-                    TASK_LOG.info("Index {}, logit {}, sigmoid {}, label {}.", index, logits[0], sigmoid, data.getLabel());
+                    TASK_LOG.info("Index {}, logit {}, sigmoid {}, label {}.", index, logits[0], sigmoid,
+                            data.getLabel());
                 }
                 validationSize += data.getWeight();
                 double error = sigmoid - data.getLabel();
@@ -226,6 +228,37 @@ public class WDLParallelGradient {
             wdlParams.setTrainError(trainSumError);
             wdlParams.setValidationError(validSumError);
             wdlParams.setWnd(this.wnd);
+
+            // if(this.wnd.isWideEnable()) {
+            // double[] wgrads = this.wnd.getWl().getDenseLayer().getwGrads();
+            // LOG.info(
+            // "wgrads[159] {}, wgrads[271] {}, wgrads[320] {}, wgrads[492] {}, wgrads[516] {}, wgrads[559] {},
+            // wgrads[560] {}.",
+            // wgrads[159], wgrads[271], wgrads[320], wgrads[492], wgrads[516], wgrads[559], wgrads[560]);
+            // } else if(this.wnd.isDeepEnable()) {
+            // for(Iterator<Layer> iterator = this.wnd.getHiddenLayers().iterator(); iterator.hasNext();) {
+            // Layer layer = iterator.next();
+            // if(layer instanceof DenseLayer) {
+            // DenseLayer dl = (DenseLayer) layer;
+            // double[][] ws = dl.getWeights();
+            // for(int i = 0; i < ws.length; i++) {
+            // for(int j = 0; j < ws[i].length; j++) {
+            // if(Math.abs(ws[i][j]) > 10) {
+            // LOG.info("Hidden layer Column {}, with wegiht {} > 10, weights {}.", i, ws[i][j],
+            // Arrays.toString(ws[i]));
+            // }
+            // }
+            // }
+            // break;
+            // }
+            // }
+            //
+            // // LOG.info(
+            // // "wgrads[159] {}, wgrads[271] {}, wgrads[320] {}, wgrads[492] {}, wgrads[516] {}, wgrads[559] {},
+            // // wgrads[560] {}.",
+            // // wgrads[159][0], wgrads[271][0], wgrads[320][0], wgrads[492][0], wgrads[516][0], wgrads[559][0],
+            // // wgrads[560][0]);
+            // }
 
             TASK_LOG.info("Worker with validation run time {} ms.", (System.currentTimeMillis() - start));
             return wdlParams;

@@ -53,19 +53,24 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
     private double[] gradients;
 
     /**
-     * Current test error which can be sent to master
-     */
-    private double validationError = 0;
-
-    /**
      * Current train error which can be sent to master
      */
     private double trainError = 0;
 
     /**
+     * Current test error which can be sent to master
+     */
+    private double validationError = 0;
+
+    /**
      * Training size of each worker and master
      */
     private long trainSize = 0;
+    
+    /**
+     * Validation size of each worker and master
+     */
+    private long validationSize = 0;
 
     /**
      * Training sum of significance on each worker and master
@@ -198,6 +203,7 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
         out.writeDouble(getValidationError());
 
         out.writeLong(getTrainSize());
+        out.writeLong(this.getValidationSize());
         out.writeDouble(getTrainSum());
         out.writeDouble(getValidationSum());
 
@@ -220,6 +226,7 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
         this.trainError = in.readDouble();
         this.validationError = in.readDouble();
         this.trainSize = in.readLong();
+        this.setValidationSize(in.readLong());
         this.trainSum = in.readDouble();
         this.validationSum = in.readDouble();
 
@@ -266,6 +273,7 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
         assert from != null;
         this.count += from.count;
         this.trainSize += from.trainSize;
+        this.setValidationSize(this.getValidationSize() + from.getValidationSize());
         this.trainSum += from.trainSum;
         this.validationSum += from.validationSum;
         this.trainError += from.trainError;
@@ -299,6 +307,20 @@ public class NNParams extends HaltBytable implements Combinable<NNParams> {
 
     public void setDropoutNodes(Set<Integer> dropoutNodes) {
         this.dropoutNodes = dropoutNodes;
+    }
+
+    /**
+     * @return the validationSize
+     */
+    public long getValidationSize() {
+        return validationSize;
+    }
+
+    /**
+     * @param validationSize the validationSize to set
+     */
+    public void setValidationSize(long validationSize) {
+        this.validationSize = validationSize;
     }
 
     @Override

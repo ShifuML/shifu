@@ -635,6 +635,11 @@
                             }                            
                          ]
                      }, {
+                        "name" : "NumEmbedOuputs",
+                        "type" : "integer",
+                        "directive": "input",
+                        "defval" : 8
+                     }, {
                         "name" : "NumEmbedColumnIds",
                         "type" : "list",
                         "directive": "input",
@@ -832,6 +837,11 @@
                         "defval": true
                     }, {
                         "name" : "embedEnable",
+                        "type": "boolean",
+                        "directive": "checkbox",
+                        "defval": true
+                    }, {
+                        "name" : "wideDenseEnable",
                         "type": "boolean",
                         "directive": "checkbox",
                         "defval": true

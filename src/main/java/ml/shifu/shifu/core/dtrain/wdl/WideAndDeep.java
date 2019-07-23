@@ -15,28 +15,36 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
-import ml.shifu.guagua.io.Bytable;
-import ml.shifu.guagua.io.Combinable;
-import ml.shifu.shifu.core.dtrain.AssertUtils;
-import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import static ml.shifu.shifu.core.dtrain.wdl.SerializationUtil.NULL;
-import ml.shifu.shifu.core.dtrain.wdl.activation.Activation;
-import ml.shifu.shifu.core.dtrain.wdl.activation.ActivationFactory;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.PropOptimizer;
-import ml.shifu.shifu.util.Tuple;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import ml.shifu.guagua.io.Bytable;
+import ml.shifu.guagua.io.Combinable;
+import ml.shifu.shifu.core.dtrain.AssertUtils;
+import ml.shifu.shifu.core.dtrain.RegulationLevel;
+import ml.shifu.shifu.core.dtrain.wdl.activation.Activation;
+import ml.shifu.shifu.core.dtrain.wdl.activation.ActivationFactory;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.wdl.optimization.PropOptimizer;
+import ml.shifu.shifu.util.Tuple;
 
 /**
  * {@link WideAndDeep} graph definition which is for whole network including deep side and wide side.
@@ -105,6 +113,11 @@ public class WideAndDeep
      */
     boolean embedEnable = true;
 
+    /**
+     * Enable dense fields in WideLayer when {@link #wideDenseEnable} is true, by default is true.
+     */
+    private boolean wideDenseEnable = true;
+
     private boolean isDebug = false;
 
     /**
@@ -117,13 +130,15 @@ public class WideAndDeep
     }
 
     @SuppressWarnings("rawtypes")
-    public WideAndDeep(boolean wideEnable, boolean deepEnable, boolean embedEnable, List<Layer> hiddenLayers,
-            DenseLayer finalLayer, EmbedLayer ecl, WideLayer wl, Map<Integer, Integer> idBinCateSizeMap,
-            int numericalSize, List<Integer> denseColumnIds, List<Integer> embedColumnIds, List<Integer> embedOutputs,
-            List<Integer> wideColumnIds, List<Integer> hiddenNodes, List<String> actiFuncs, double l2reg) {
+    public WideAndDeep(boolean wideEnable, boolean deepEnable, boolean embedEnable, boolean wideDenseEnable,
+            List<Layer> hiddenLayers, DenseLayer finalLayer, EmbedLayer ecl, WideLayer wl,
+            Map<Integer, Integer> idBinCateSizeMap, int numericalSize, List<Integer> denseColumnIds,
+            List<Integer> embedColumnIds, List<Integer> embedOutputs, List<Integer> wideColumnIds,
+            List<Integer> hiddenNodes, List<String> actiFuncs, double l2reg) {
         this.wideEnable = wideEnable;
         this.deepEnable = deepEnable;
         this.embedEnable = embedEnable;
+        this.wideDenseEnable = wideDenseEnable;
         this.hiddenLayers = hiddenLayers;
         this.finalLayer = finalLayer;
         this.ecl = ecl;
@@ -142,13 +157,14 @@ public class WideAndDeep
         AssertUtils.assertListNotNullAndSizeEqual(hiddenLayers, actiFuncs);
     }
 
-    public WideAndDeep(boolean wideEnable, boolean deepEnable, boolean embedEnable,
+    public WideAndDeep(boolean wideEnable, boolean deepEnable, boolean embedEnable, boolean wideDenseEnable,
             Map<Integer, Integer> idBinCateSizeMap, int numericalSize, List<Integer> denseColumnIds,
             List<Integer> embedColumnIds, List<Integer> embedOutputs, List<Integer> wideColumnIds,
             List<Integer> hiddenNodes, List<String> actiFuncs, double l2reg) {
         this.wideEnable = wideEnable;
         this.deepEnable = deepEnable;
         this.embedEnable = embedEnable;
+        this.wideDenseEnable = wideDenseEnable;
         this.idBinCateSizeMap = idBinCateSizeMap;
         this.numericalSize = numericalSize;
         this.denseColumnIds = denseColumnIds;
@@ -179,7 +195,7 @@ public class WideAndDeep
         }
 
         WideDenseLayer wdl = new WideDenseLayer(this.denseColumnIds, this.denseColumnIds.size(), l2reg);
-        this.wl = new WideLayer(wfLayers, wdl, new BiasLayer());
+        this.wl = new WideLayer(wfLayers, wdl, new BiasLayer(), this.wideDenseEnable);
 
         int preHiddenInputs;
         if(this.embedEnable) {
@@ -248,15 +264,16 @@ public class WideAndDeep
      * Derived function for sigmoid function.
      */
     private double derivedFunction(double result) {
-        return result * (1f - result);
+        return result * (1d - result);
     }
 
     @SuppressWarnings("rawtypes")
     public double[] backward(double[] predicts, double[] actuals, double sig) {
+        // TODO add binary cross entropy here
         double[] grad2Logits = new double[predicts.length];
         for(int i = 0; i < grad2Logits.length; i++) {
             double error = (predicts[i] - actuals[i]);
-            grad2Logits[i] = error * (derivedFunction(predicts[i]) + FLAT_SPOT_VALUE) * sig * -1;
+            grad2Logits[i] = error * (derivedFunction(predicts[i]) + FLAT_SPOT_VALUE) * sig * -1d;
         }
 
         // wide layer backward, as wide layer in LR actually in backward, only gradients computation is needed.
@@ -588,11 +605,66 @@ public class WideAndDeep
     /**
      * Init the weights in WideAndDeep Model and it's sub module
      */
+    @SuppressWarnings("rawtypes")
     public void initWeights() {
         InitMethod defaultMode = InitMethod.NEGATIVE_POSITIVE_ONE_RANGE_RANDOM;
         initWeight(defaultMode);
 
+        int hiddenCount = 0;
+        for(Layer layer: this.hiddenLayers) {
+            if(layer instanceof DenseLayer) {
+                hiddenCount += ((DenseLayer) layer).getOut();
+            }
+        }
+
+        // can't really do much, use regular randomization
+        if(hiddenCount < 1) {
+            return;
+        }
+
+        int inputCount = 0;
+        if(this.embedEnable) {
+            inputCount = dil.getOutDim() + ecl.getOutDim();
+        } else {
+            inputCount = dil.getOutDim();
+        }
+        double beta = 0.7 * Math.pow(hiddenCount, 1.0 / inputCount);
+
+        for(Layer layer: this.hiddenLayers) {
+            if(!(layer instanceof DenseLayer)) {
+                continue;
+            }
+            initDenserLayerWeights((DenseLayer) layer, beta);
+        }
+
+        initDenserLayerWeights(finalLayer, beta);
+
+        // TODO init embed layers, does beta value need to be changed?
         LOG.info("Init weight be called with mode:{}", defaultMode.name());
+    }
+
+    private void initDenserLayerWeights(DenseLayer layer, double beta) {
+        double n = 0d;
+        double[][] weights = layer.getWeights();
+        for(int i = 0; i < weights.length; i++) {
+            for(int j = 0; j < weights[i].length; j++) {
+                n += (weights[i][j] * weights[i][j]);
+            }
+        }
+        double[] bias = layer.getBias();
+        for(int i = 0; i < bias.length; i++) {
+            n += (bias[i] * bias[i]);
+        }
+        n = Math.sqrt(n);
+
+        for(int i = 0; i < weights.length; i++) {
+            for(int j = 0; j < weights[i].length; j++) {
+                weights[i][j] = beta * weights[i][j] / n;
+            }
+        }
+        for(int i = 0; i < bias.length; i++) {
+            bias[i] = beta * bias[i] / n;
+        }
     }
 
     @SuppressWarnings("rawtypes")
@@ -639,6 +711,7 @@ public class WideAndDeep
         out.writeBoolean(this.isWideEnable());
         out.writeBoolean(this.isDeepEnable());
         out.writeBoolean(this.isEmbedEnable());
+        out.writeBoolean(this.isWideDenseEnable());
 
         writeLayerWithNuLLCheck(out, this.dil);
 
@@ -706,6 +779,7 @@ public class WideAndDeep
         this.wideEnable = in.readBoolean();
         this.deepEnable = in.readBoolean();
         this.embedEnable = in.readBoolean();
+        this.wideDenseEnable = in.readBoolean();
 
         this.dil = (DenseInputLayer) readLayerWithNullCheck(in, new DenseInputLayer());
 
@@ -937,6 +1011,20 @@ public class WideAndDeep
      */
     public void setEmbedEnable(boolean embedEnable) {
         this.embedEnable = embedEnable;
+    }
+
+    /**
+     * @return the wideDenseEnable
+     */
+    public boolean isWideDenseEnable() {
+        return wideDenseEnable;
+    }
+
+    /**
+     * @param wideDenseEnable the wideDenseEnable to set
+     */
+    public void setWideDenseEnable(boolean wideDenseEnable) {
+        this.wideDenseEnable = wideDenseEnable;
     }
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright [2012-2014] PayPal Software Foundation
+ * Copyright [2012-2019] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,9 +26,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * {@link WeightOptimizer} is used to update NN weights according to propagation option. Which is also copied from Encog.
+ * {@link WeightOptimizer} is used to update NN weights according to propagation option. Which is also copied from
+ * Encog.
  * 
  * <p>
+ * 
  * @author Wu Devin (haifwu@paypal.com)
  */
 public class WeightOptimizer implements Update {
@@ -120,12 +122,12 @@ public class WeightOptimizer implements Update {
     }
 
     public WeightOptimizer(int numWeight, double rate, String algorithm, double reg, RegulationLevel rl,
-                           String propagation) {
+            String propagation) {
         this(numWeight, rate, algorithm, reg, rl, propagation, 0.5d, 0d, 0.9d, 0.999d);
     }
 
-    public WeightOptimizer(int numWeight, double rate, String algorithm, double reg, RegulationLevel rl, String propagation, double momentum, double learningDecay, double adamBeta1,
-                           double adamBeta2) {
+    public WeightOptimizer(int numWeight, double rate, String algorithm, double reg, RegulationLevel rl,
+            String propagation, double momentum, double learningDecay, double adamBeta1, double adamBeta2) {
         this.numWeight = numWeight;
         this.lastDelta = new double[numWeight];
         this.lastGradient = new double[numWeight];
@@ -176,24 +178,25 @@ public class WeightOptimizer implements Update {
         }
     }
 
-    public double[] calculateWeights(double[] weights, int i, double gradient, double numTrainSize) {
+    public double[] calculateWeights(double[] weights, int index, double gradient, double numTrainSize) {
         this.setNumTrainSize(numTrainSize);
         switch(this.rl) {
             case NONE:
-                weights[i] += updateWeight(i, weights, gradient);
+                weights[index] += updateWeight(index, weights, gradient);
                 break;
             case L1:
                 if(Double.compare(this.reg, 0d) == 0) {
-                    weights[i] += updateWeight(i, weights, gradient);
+                    weights[index] += updateWeight(index, weights, gradient);
                 } else {
                     double shrinkValue = this.reg / getNumTrainSize();
-                    double delta = updateWeight(i, weights, gradient);
-                    weights[i] = Math.signum(delta) * Math.max(0.0, Math.abs(delta) - shrinkValue);
+                    double delta = updateWeight(index, weights, gradient);
+                    weights[index] = Math.signum(delta) * Math.max(0.0, Math.abs(delta) - shrinkValue);
                 }
                 break;
             case L2:
             default:
-                weights[i] += (updateWeight(i, weights, gradient) - this.reg * weights[i] / getNumTrainSize());
+                weights[index] += (updateWeight(index, weights, gradient)
+                        - this.reg * weights[index] / getNumTrainSize());
                 break;
         }
         return weights;
@@ -230,11 +233,11 @@ public class WeightOptimizer implements Update {
     }
 
     private double updateWeight(int index, double[] weights, double[] gradients) {
-        if (this.fixedWeights.contains(index)) {
+        if(this.fixedWeights.contains(index)) {
             // we do not update fixed weight for fine tune
             return 0.0d;
         }
-        
+
         if(this.algorithm.equalsIgnoreCase(DTrainUtils.BACK_PROPAGATION)) {
             return updateWeightBP(index, weights, gradients);
         } else if(this.algorithm.equalsIgnoreCase(DTrainUtils.QUICK_PROPAGATION)) {
@@ -251,30 +254,51 @@ public class WeightOptimizer implements Update {
     }
 
     private double updateWeight(int index, double[] weights, double gradient) {
-        if (this.fixedWeights.contains(index)) {
+        if(this.fixedWeights.contains(index)) {
             // we do not update fixed weight for fine tune
             return 0.0d;
         }
 
-        if(this.algorithm.equalsIgnoreCase(DTrainUtils.RESILIENTPROPAGATION)) {
+        if(this.algorithm.equalsIgnoreCase(DTrainUtils.BACK_PROPAGATION)) {
+            return updateWeightBP(index, weights, gradient);
+        } else if(this.algorithm.equalsIgnoreCase(DTrainUtils.QUICK_PROPAGATION)) {
+            return updateWeightQBP(index, weights, gradient);
+        } else if(this.algorithm.equalsIgnoreCase(DTrainUtils.MANHATTAN_PROPAGATION)) {
+            return updateWeightMHP(index, weights, gradient);
+        } else if(this.algorithm.equalsIgnoreCase(DTrainUtils.SCALEDCONJUGATEGRADIENT)) {
+            return updateWeightSCG(index, weights, gradient);
+        } else if(this.algorithm.equalsIgnoreCase(DTrainUtils.RESILIENTPROPAGATION)) {
             return updateWeightRLP(index, weights, gradient);
-        } else {
-            LOG.error("Currently this method updateWeight(int index, double[] weights, double gradient) only support resilient!");
         }
 
         return 0.0;
     }
 
-    private double updateWeightBP(int index, double[] weights, double[] gradients) {
-        double delta = (gradients[index] * this.getLearningRate()) + (this.lastDelta[index] * this.getMomentum());
+    private double updateWeightMHP(int index, double[] weights, double gradient) {
+        if(Math.abs(gradient) < ZERO_TOLERANCE) {
+            return 0;
+        } else if(gradient > 0) {
+            return this.getLearningRate();
+        } else {
+            return -this.getLearningRate();
+        }
+    }
+
+    private double updateWeightBP(int index, double[] weights, double gradient) {
+        double delta = (gradient * this.getLearningRate() / this.getNumTrainSize())
+                + (this.lastDelta[index] * this.getMomentum());
         this.lastDelta[index] = delta;
         return delta;
     }
 
-    private double updateWeightQBP(int index, double[] weights, double[] gradients) {
+    private double updateWeightBP(int index, double[] weights, double[] gradients) {
+        return updateWeightBP(index, weights, gradients[index]);
+    }
+
+    private double updateWeightQBP(int index, double[] weights, double gradient) {
         final double w = weights[index];
         final double d = this.lastDelta[index];
-        final double s = -gradients[index] + this.decay * w;
+        final double s = -gradient + this.decay * w;
         final double p = -lastGradient[index];
         double nextStep = 0.0;
 
@@ -314,56 +338,29 @@ public class WeightOptimizer implements Update {
 
         // update global data arrays
         this.lastDelta[index] = nextStep;
-        this.lastGradient[index] = gradients[index];
+        this.lastGradient[index] = gradient;
 
         return nextStep;
     }
 
+    private double updateWeightQBP(int index, double[] weights, double[] gradients) {
+        return updateWeightQBP(index, weights, gradients[index]);
+    }
+
     private double updateWeightMHP(int index, double[] weights, double[] gradients) {
-        if(Math.abs(gradients[index]) < ZERO_TOLERANCE) {
-            return 0;
-        } else if(gradients[index] > 0) {
-            return this.getLearningRate();
-        } else {
-            return -this.getLearningRate();
-        }
+        return updateWeightMHP(index, weights, gradients[index]);
     }
 
     private double updateWeightSCG(int index, double[] weights, double[] gradients) {
         throw new RuntimeException("SCG propagation is not supported in distributed NN computing.");
     }
 
+    private double updateWeightSCG(int index, double[] weights, double gradient) {
+        throw new RuntimeException("SCG propagation is not supported in distributed NN computing.");
+    }
+
     private double updateWeightRLP(int index, double[] weights, double[] gradients) {
-        // multiply the current and previous gradient, and take the sign. We want to see if the gradient has changed its
-        // sign.
-        final int change = DTrainUtils.sign(gradients[index] * lastGradient[index]);
-        double weightChange = 0;
-
-        // if the gradient has retained its sign, then we increase the delta so that it will converge faster
-        if(change > 0) {
-            double delta = this.updateValues[index] * DTrainUtils.POSITIVE_ETA;
-            delta = Math.min(delta, DEFAULT_MAX_STEP);
-            weightChange = DTrainUtils.sign(gradients[index]) * delta;
-            this.updateValues[index] = delta;
-            lastGradient[index] = gradients[index];
-        } else if(change < 0) {
-            // if change<0, then the sign has changed, and the last delta was too big
-            double delta = this.updateValues[index] * DTrainUtils.NEGATIVE_ETA;
-            delta = Math.max(delta, DTrainUtils.DELTA_MIN);
-            this.updateValues[index] = delta;
-            weightChange = -this.lastDelta[index];
-            // set the previous gradient to zero so that there will be no adjustment the next iteration
-            lastGradient[index] = 0;
-        } else if(change == 0) {
-            // if change==0 then there is no change to the delta
-            final double delta = this.updateValues[index];
-            weightChange = DTrainUtils.sign(gradients[index]) * delta;
-            lastGradient[index] = gradients[index];
-        }
-
-        this.lastDelta[index] = weightChange;
-        // apply the weight change, if any
-        return weightChange;
+        return updateWeightRLP(index, weights, gradients[index]);
     }
 
     private double updateWeightRLP(int index, double[] weights, double gradient) {

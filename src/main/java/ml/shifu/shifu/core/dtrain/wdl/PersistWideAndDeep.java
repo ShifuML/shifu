@@ -54,6 +54,7 @@ public class PersistWideAndDeep {
         dos.writeBoolean(wnd.isWideEnable());
         dos.writeBoolean(wnd.isDeepEnable());
         dos.writeBoolean(wnd.isEmbedEnable());
+        dos.writeBoolean(wnd.isWideDenseEnable());
 
         // Only write DenseLayer in hidden layers
         List<DenseLayer> denseLayers = getAllDenseLayers(wnd.getHiddenLayers());
@@ -89,6 +90,7 @@ public class PersistWideAndDeep {
         boolean wideEnable = dis.readBoolean();
         boolean deepEnable = dis.readBoolean();
         boolean embedEnable = dis.readBoolean();
+        boolean wideDenseEnable = dis.readBoolean();
 
         // Read DensorLayer only
         List<DenseLayer> denseLayers = readList(dis, DenseLayer.class);
@@ -106,9 +108,9 @@ public class PersistWideAndDeep {
         double l2reg = dis.readDouble();
 
         List<Layer> hiddenLayers = buildHiddenLayers(denseLayers, actiFuncs);
-        return new WideAndDeep(wideEnable, deepEnable, embedEnable, hiddenLayers, finalLayer, ecl, wl, idBinCateSizeMap,
-                numericalSize, denseColumnIds, embedColumnIds, embedOutputs, wideColumnIds, hiddenNodes, actiFuncs,
-                l2reg);
+        return new WideAndDeep(wideEnable, deepEnable, embedEnable, wideDenseEnable, hiddenLayers, finalLayer, ecl, wl,
+                idBinCateSizeMap, numericalSize, denseColumnIds, embedColumnIds, embedOutputs, wideColumnIds,
+                hiddenNodes, actiFuncs, l2reg);
     }
 
     /**
@@ -288,9 +290,17 @@ public class PersistWideAndDeep {
     }
 
     private static WideLayer readWideLayer(DataInputStream dis) throws IOException {
+        boolean wideDenseEnable = dis.readBoolean();
         List<WideFieldLayer> wideFieldLayers = readList(dis, WideFieldLayer.class);
+        WideDenseLayer wdl = readWideDenseLayer(dis, WideDenseLayer.class);
         BiasLayer biasLayer = readBiasLayer(dis);
-        return new WideLayer(wideFieldLayers, biasLayer);
+        return new WideLayer(wideFieldLayers, wdl, biasLayer, wideDenseEnable);
+    }
+
+    private static WideDenseLayer readWideDenseLayer(DataInputStream dis, Class<WideDenseLayer> class1) throws IOException {
+        WideDenseLayer wdl =  new WideDenseLayer();
+        wdl.readFields(dis);
+        return wdl;
     }
 
     private static void writeWideFieldLayer(WideFieldLayer wideFieldLayer, DataOutputStream dos) throws IOException {

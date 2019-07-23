@@ -298,7 +298,8 @@ public interface Constants {
      * Experience value from modeler
      */
     public static final int MAX_CATEGORICAL_BINC_COUNT = 10000;
-    public static final int MAX_CATEGORICAL_VAL_LENGTH = 10000;
+    // The categorical variable length shouldn't be longer than 512, or it will be treated as invalid
+    public static final int MAX_CATEGORICAL_VAL_LENGTH = 512;
 
     public static final String SHIFU_MAX_CATEGORY_SIZE = "shifu.max.category.size";
 

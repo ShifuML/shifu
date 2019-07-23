@@ -123,7 +123,7 @@ public class BasicModelProcessor {
                 // if in stats but stats -c or stats -p or stats -rebin, column update should be called because of
                 // such stats steps should all be called after 'shifu stats', this is actually to call VoidUpdater
                 boolean strictCallVoidUpdate = (step == ModelStep.STATS)
-                        //  && (getBooleanParam(this.params, Constants.IS_COMPUTE_CORR)
+                        // && (getBooleanParam(this.params, Constants.IS_COMPUTE_CORR)
                         && (getBooleanParam(this.params, Constants.IS_COMPUTE_PSI)
                                 || getBooleanParam(this.params, Constants.IS_REBIN));
 
@@ -216,13 +216,16 @@ public class BasicModelProcessor {
 
     /**
      * Loading ModelConfig from sub-folder
-     * @param subFolder - sub folder in current directory
+     * 
+     * @param subFolder
+     *            - sub folder in current directory
      * @return ModelConfig under sub-folder
-     * @throws IOException if fails to load ModelConfig.json
+     * @throws IOException
+     *             if fails to load ModelConfig.json
      */
     protected ModelConfig loadSubModelConfig(String subFolder) throws IOException {
-        return CommonUtils.loadModelConfig(
-                subFolder + File.separator + Constants.MODEL_CONFIG_JSON_FILE_NAME, SourceType.LOCAL);
+        return CommonUtils.loadModelConfig(subFolder + File.separator + Constants.MODEL_CONFIG_JSON_FILE_NAME,
+                SourceType.LOCAL);
     }
 
     /**
@@ -250,7 +253,8 @@ public class BasicModelProcessor {
     /**
      * Backup current {@link #columnConfigList} to a local folder tmp cc.json with timestamp in 'YYYY-MM-dd-HH:mm:SS'
      * 
-     * @param timestamp - timestamp to back ColumnConfig
+     * @param timestamp
+     *            - timestamp to back ColumnConfig
      * @throws IOException
      *             any IO exception
      * @throws IllegalArgumentException
@@ -262,6 +266,24 @@ public class BasicModelProcessor {
             ShifuFileUtils.createDirIfNotExists(new SourceFile(Constants.TMP, SourceType.LOCAL));
             saveColumnConfigList(backupColumnConfigPath, this.columnConfigList);
         }
+    }
+
+    public static long mappingToKey(long longValue) {
+        return longValue >>> 8;
+    }
+
+    // we get last AdaGraphStorageConstants.VERTEX_LABEL_INDEX_BIT_LENGTH_IN_INTERNALID bits to be vertex index
+    public static int mappingToVertexIndex(long longValue) {
+        return (int) (longValue & ((1 << 8) - 1));
+    }
+
+    public static long mappingToLong(int vertexIndex, long key) {
+        return (key << 8) + vertexIndex;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(mappingToLong(0, 23977254002229l));
+        System.out.println(new Date(1466060400000L));
     }
 
     /**
@@ -482,9 +504,9 @@ public class BasicModelProcessor {
         } else if(Constants.TENSORFLOW.equalsIgnoreCase(alg)) {
             // do nothing
         } else if(Constants.GENERIC.equalsIgnoreCase(alg)) {
-            //do nothing
+            // do nothing
         } else if(Constants.WDL.equalsIgnoreCase(alg)) {
-            //do nothing
+            // do nothing
         } else {
             throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_ALG);
         }
@@ -593,8 +615,8 @@ public class BasicModelProcessor {
         paramsMap.put("sampleRate", modelConfig.getNormalizeSampleRate().toString());
         paramsMap.put("sampleNegOnly", ((Boolean) modelConfig.isNormalizeSampleNegOnly()).toString());
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
-        paramsMap.put("is_csv", String.valueOf(Boolean.TRUE.toString().equalsIgnoreCase(
-                Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_CSV, Boolean.FALSE.toString()))));
+        paramsMap.put("is_csv", String.valueOf(Boolean.TRUE.toString()
+                .equalsIgnoreCase(Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_CSV, Boolean.FALSE.toString()))));
 
         try {
             String normPigPath = pathFinder.getScriptPath("scripts/Normalize.pig");

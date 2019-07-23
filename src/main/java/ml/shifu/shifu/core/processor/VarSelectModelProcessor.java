@@ -51,6 +51,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.pig.data.Tuple;
 import org.apache.pig.impl.util.JarManager;
 import org.apache.zookeeper.ZooKeeper;
 import org.encog.ml.BasicML;
@@ -490,10 +491,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         if(StringUtils.isNotBlank(hdpVersion)) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
             conf.set("hdp.version", hdpVersion);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
         }
         guaguaClient.createJob(args.toArray(new String[0])).waitForCompletion(true);
 
@@ -650,6 +647,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     // GuaguaOptionsParser doesn't to support *.jar currently.
     private String addRuntimeJars() throws ClassNotFoundException, FileNotFoundException, IOException {
         List<String> jars = new ArrayList<String>(16);
+        // pig-*.jar
+        jars.add(JarManager.findContainingJar(Tuple.class));
         // jackson-databind-*.jar
         jars.add(JarManager.findContainingJar(ObjectMapper.class));
         // jackson-core-*.jar
@@ -693,10 +692,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
         if(StringUtils.isNotBlank(hdpVersion)) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
-            jars.add(HDPUtils.findContainingFile("hdfs-site.xml"));
-            jars.add(HDPUtils.findContainingFile("core-site.xml"));
-            jars.add(HDPUtils.findContainingFile("mapred-site.xml"));
-            jars.add(HDPUtils.findContainingFile("yarn-site.xml"));
         }
 
         return StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR);
@@ -897,10 +892,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         if(StringUtils.isNotBlank(hdpVersion)) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
             conf.set("hdp.version", hdpVersion);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("hdfs-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("core-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("mapred-site.xml"), conf);
-            HDPUtils.addFileToClassPath(HDPUtils.findContainingFile("yarn-site.xml"), conf);
         }
         // one can set guagua conf in shifuconfig
         CommonUtils.injectHadoopShifuEnvironments(new ValueVisitor() {
@@ -916,28 +907,26 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     private void postProcessFIVarSelect(Map<Integer, MutablePair<String, Double>> importances) throws IOException {
-        int selectCnt = 0;
-        for(ColumnConfig config: super.columnConfigList) {
-            // enable ForceSelect
-            if(config.isForceSelect()) {
-                config.setFinalSelect(true);
-                selectCnt++;
-                log.info("Variable {} is selected, since it is in ForceSelect list.", config.getColumnName());
-            }
-        }
         VariableSelector.setFilterNumberByFilterOutRatio(this.modelConfig, this.columnConfigList);
         int targetCnt = this.modelConfig.getVarSelectFilterNum();
         List<Integer> candidateColumnIdList = new ArrayList<Integer>();
         candidateColumnIdList.addAll(importances.keySet());
-        int i = 0;
         int candidateCount = candidateColumnIdList.size();
+        int i = 0;
+        int selectCnt = 0;
         // try to select another (targetCnt - selectCnt) variables, but we need to exclude those
         // force-selected variables
         for(ColumnConfig columnConfig: this.columnConfigList) {
             if(columnConfig.isFinalSelect()) {
+                columnConfig.setFinalSelect(false);
+            }
+            if(columnConfig.isForceSelect()) {
                 columnConfig.setFinalSelect(true);
+                selectCnt++;
+                log.info("Variable {} is selected, since it is in ForceSelect list.", columnConfig.getColumnName());
             }
         }
+        int forceCnt = selectCnt;
 
         Set<NSColumn> userCandidateColumns = CommonUtils.loadCandidateColumns(modelConfig);
 
@@ -958,7 +947,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 log.info("Variable {} is selected.", columnConfig.getColumnName());
             }
         }
-        log.info("{} variables are selected.", selectCnt);
+        log.info("{} variables are selected, while {} are force-selected, and others from {} candidates.",
+                selectCnt, forceCnt, candidateCount);
     }
 
     private void postProcess4SEVarSelect(SourceType source, String varSelectMSEOutputPath) throws IOException {
@@ -1489,13 +1479,6 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         public String toString() {
             return this.columnId + "-->" + this.sensitivityPerf;
         }
-    }
-
-    public static void main(String[] args) throws IOException {
-        String sss = "/hadoop/home/pengzhang/shifu/shifu-0.13.0-SNAPSHOT/lib/libtensorflow-1.4.0.jar";
-        System.out.println(sss.replaceAll("libtensorflow", "libtensorflow_jni"));
-        System.out.println(sss.replaceAll("libtensorflow", "tensorflow"));
-
     }
 
 }

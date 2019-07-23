@@ -22,8 +22,6 @@ import org.encog.neural.error.ErrorFunction;
  */
 public class LogErrorFunction implements ErrorFunction {
     
-    // TODO merge logic from SubGradient#process to be here
-
     /*
      * (non-Javadoc)
      * 

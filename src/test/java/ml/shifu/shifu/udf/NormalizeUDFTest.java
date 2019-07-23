@@ -15,6 +15,8 @@
  */
 package ml.shifu.shifu.udf;
 
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
@@ -24,7 +26,6 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import ml.shifu.shifu.udf.norm.PrecisionType;
-import java.io.IOException;
 
 /**
  * NormalizeUDFTest class
@@ -81,10 +82,11 @@ public class NormalizeUDFTest {
                 instance.exec(input).toDelimitedString("|"));
     }
 
-    // @Test
+    @Test
     public void testGetSchema() {
-        Assert.assertEquals(
-                "{Normalized: (diagnosis: int,column_3: float,column_4: float,column_5: float,column_6: float,column_7: float,column_8: float,column_9: float,column_10: float,column_11: float,column_12: float,column_13: float,column_14: float,column_15: float,column_16: float,column_17: float,column_18: float,column_19: float,column_20: float,column_21: float,column_22: float,column_23: float,column_24: float,column_25: float,column_26: float,column_27: float,column_28: float,column_29: float,column_30: float,column_31: float,column_32: float,weight: float)}",
-                instance.outputSchema(null).toString());
+        Assert.assertEquals(instance.outputSchema(null).toString(),
+                "{Normalized: (diagnosis: double,column_3: float,column_4: float,column_5: float,column_6: float,column_7: float,column_8: float,column_9: float,column_10: float,column_11: float,column_12: float,column_13: float,column_14: float,column_15: float,column_16: float,column_17: float,column_18: float,column_19: float,column_20: float,column_21: float,column_22: float,column_23: float,column_24: float,column_25: float,column_26: float,column_27: float,column_28: float,column_29: float,column_30: float,column_31: float,column_32: float,shifu::weight: float)}"
+        );
     }
+
 }

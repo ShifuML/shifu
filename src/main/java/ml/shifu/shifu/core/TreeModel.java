@@ -170,6 +170,13 @@ public class TreeModel extends BasicML implements MLRegression {
                     "Bagging model cannot be supported in Tree Model one element feature importance computing.");
         }
 
+        // initialize for all candidate variables in the model,
+        // so all unused variables will be in the list of feature importance also
+        for (Entry<Integer, String> entry : nameMapping.entrySet()) {
+            String featureName = entry.getValue();
+            importancesSum.put(entry.getKey(), MutablePair.of(featureName, 0.0d));
+        }
+
         for(TreeNode tree: this.getIndependentTreeModel().getTrees().get(0)) {
             // get current tree importance at first
             Map<Integer, Double> subImportances = tree.computeFeatureImportance();
