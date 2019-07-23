@@ -30,7 +30,7 @@ public class BasicUpdater {
     protected String targetColumnName;
     protected String weightColumnName;
 
-    protected Set<NSColumn> setCategorialColumns;
+    protected Set<NSColumn> setCategoricalColumns;
     protected Set<NSColumn> setMeta;
     protected Set<NSColumn> setForceRemove;
     protected Set<NSColumn> setForceSelect;
@@ -53,10 +53,9 @@ public class BasicUpdater {
         this.isForSegs = (this.segs.size() > 0);
 
         this.targetColumnName = modelConfig.getTargetColumnName();
-        this.weightColumnName = modelConfig.getWeightColumnName();
 
         this.setMeta = loadNSColumns(modelConfig.getMetaColumnNames());
-        this.setCategorialColumns = loadNSColumns(modelConfig.getCategoricalColumnNames());
+        this.setCategoricalColumns = loadNSColumns(modelConfig.getCategoricalColumnNames());
         this.categoricalColumnHashSeeds = modelConfig.getCategoricalColumnHashSeedConf();  
         this.setHybridColumns = new HashSet<NSColumn>();
         this.hybridColumnNames = modelConfig.getHybridColumnNames();
@@ -124,17 +123,11 @@ public class BasicUpdater {
                         && this.setCandidates.contains(new NSColumn(varName)))) {
                 columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
             }
-        } else if(NSColumnUtils.isColumnEqual(this.weightColumnName, varName)) {
-            columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Weight);
-            columnConfig.setColumnType(null);
         } else if(this.setCandidates.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.Candidate);
         }
 
-        if(NSColumnUtils.isColumnEqual(weightColumnName, varName)) {
-            // weight column is numerical
-            columnConfig.setColumnType(ColumnType.N);
-        } else if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
+        if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
             if ( CollectionUtils.isEmpty(this.modelConfig.getTags()) ) {
                 // allow tags are empty to support linear target
                 // set columnType to N
@@ -152,7 +145,7 @@ public class BasicUpdater {
                 newVarName = new NSColumn(varName).getSimpleName();
             }
             columnConfig.setHybridThreshold(hybridColumnNames.get(newVarName));
-        } else if(setCategorialColumns.contains(new NSColumn(varName))) {
+        } else if(setCategoricalColumns.contains(new NSColumn(varName))) {
             columnConfig.setColumnType(ColumnType.C);
         } else {
             // meta and other columns are set to numerical if user not set it in categorical column configuration file

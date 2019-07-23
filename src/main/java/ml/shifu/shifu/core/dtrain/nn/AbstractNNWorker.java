@@ -26,7 +26,6 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 
-import ml.shifu.shifu.util.NormalUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
@@ -64,6 +63,7 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.MapReduceUtils;
+import ml.shifu.shifu.util.NormalUtils;
 
 /**
  * {@link AbstractNNWorker} is refactored as a common class for different NN input format.
@@ -294,6 +294,23 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      */
     protected boolean hasCandidates = false;
 
+    /**
+     * The normalized data is compacted or not
+     */
+    protected boolean isCompactMode = false;
+
+    /**
+     * The column num of weight column
+     */
+    protected int weightColumnId = -1;
+
+    /**
+     * The weight column is Meta column or not
+     *      if the weight column is meta column, use the raw value directly
+     *      else use the last column of the normalized data
+     */
+    protected boolean isWeightColumnMeta = false;
+
     protected boolean isUpSampleEnabled() {
         // only enabled in regression
         return this.upSampleRng != null && (modelConfig.isRegression()
@@ -315,6 +332,16 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                     .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
             this.isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
             this.hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
+            if (StringUtils.isNotBlank(modelConfig.getWeightColumnName())) {
+                String weightColumnName = StringUtils.trimToEmpty(modelConfig.getWeightColumnName());
+                for (ColumnConfig config: this.columnConfigList) {
+                    if (StringUtils.equals(weightColumnName, config.getColumnName())) {
+                        this.weightColumnId = config.getColumnNum();
+                        this.isWeightColumnMeta = config.isMeta();
+                        break;
+                    }
+                }
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -424,8 +451,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 : (modelConfig.getTrain().isOneVsAll() ? inputOutputIndex[1] : (classes == 2 ? 1 : classes));
         this.candidateCount = inputOutputIndex[2];
         boolean isAfterVarSelect = inputOutputIndex[0] != 0;
-        LOG.info("isAfterVarSelect {}: Input count {}, output count {}, candidate count {}",
-                isAfterVarSelect, inputNodeCount, outputNodeCount, candidateCount);
+        LOG.info("isAfterVarSelect {}: Input count {}, output count {}, candidate count {}", isAfterVarSelect,
+                inputNodeCount, outputNodeCount, candidateCount);
         // cache all feature list for sampling features
         this.allFeatures = NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
         String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);
@@ -583,9 +610,10 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         // prevent null point;
         params.setWeights(new double[0]);
         params.setTrainSize(this.trainingData.getRecordCount());
+        params.setTrainSize(this.validationData.getRecordCount());
         params.setTrainSum(this.trainingData.getRecordSum());
-        params.setValidationSum(this.validationData.getRecordCount() > 0
-                ? this.validationData.getRecordSum() : this.trainingData.getRecordSum());
+        params.setValidationSum(this.validationData.getRecordCount() > 0 ? this.validationData.getRecordSum()
+                : this.trainingData.getRecordSum());
         params.setCount(count);
         return params;
     }

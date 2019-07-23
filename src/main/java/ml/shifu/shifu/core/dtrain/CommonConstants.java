@@ -146,12 +146,14 @@ public interface CommonConstants {
 
     public static final int WDL_FORMAT_VERSION = 1;
 
-    public static final int DEFAULT_EMBEDING_OUTPUT = 16;
+    public static final int DEFAULT_EMBEDING_OUTPUT = 8;
 
     public static final String WIDE_ENABLE = "wideEnable";
 
     public static final String DEEP_ENABLE = "deepEnable";
 
     public static final String EMBED_ENABLE = "embedEnable";
+    
+    public static final String WIDE_DENSE_ENABLE = "wideDenseEnable";
 
 }

@@ -15,16 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.lr;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.apache.hadoop.fs.Path;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import ml.shifu.guagua.GuaguaRuntimeException;
 import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterContext;
@@ -44,6 +34,16 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.ModelSpecLoaderUtils;
+import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * {@link LogisticRegressionMaster} defines logic to update global <a
@@ -68,11 +68,6 @@ public class LogisticRegressionMaster
         extends AbstractMasterComputable<LogisticRegressionParams, LogisticRegressionParams> {
 
     private static final Logger LOG = LoggerFactory.getLogger(LogisticRegressionMaster.class);
-
-    /**
-     * Input column number without bias
-     */
-    private int inputNum;
 
     /**
      * This is the model weights in LR which will be updated each iteration TODO, if master is failed, how to recovery
@@ -134,9 +129,31 @@ public class LogisticRegressionMaster
      */
     private AbstractEarlyStopStrategy earlyStopStrategy;
 
+    /**
+     * The model set candidate variables or not
+     */
+    protected boolean hasCandidates = false;
+
+    /**
+     * The Column ID set that is used to build model
+     *      - if there are final selected variables, it is the set of all final selected variables
+     *      - if there is not final selected variables, it is the set of all *GOOD* variables (for SE)
+     */
+    protected Set<Integer> modelFeatureSet;
+
+    /**
+     * The input vector length for model
+     */
+    protected int modelInputCnt = 0;
+
     @Override
     public void init(MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         loadConfigFiles(context.getProps());
+
+        // get model input feature and count
+        this.modelFeatureSet = DTrainUtils.getModelFeatureSet(this.columnConfigList, this.hasCandidates);
+        this.modelInputCnt = DTrainUtils.getFeatureInputsCnt(this.modelConfig, this.columnConfigList, this.modelFeatureSet);
+
         int trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
 
         GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(),
@@ -148,10 +165,6 @@ public class LogisticRegressionMaster
         }
 
         this.learningRate = Double.valueOf(this.validParams.get(CommonConstants.LEARNING_RATE).toString());
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
-                this.columnConfigList);
-        this.inputNum = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-
         Boolean enabledEarlyStop = DTrainUtils.getBoolean(validParams, CommonConstants.ENABLE_EARLY_STOP,
                 Boolean.FALSE);
         if(enabledEarlyStop) {
@@ -229,7 +242,7 @@ public class LogisticRegressionMaster
         }
 
         // 2. accumulate all gradients together
-        double[] gradients = new double[this.inputNum + 1]; // append bias
+        double[] gradients = new double[this.modelInputCnt + 1]; // append bias
         double trainError = 0.0d, validationError = 0d;
         double trainSize = 0, vldSize = 0, trainCount = 0, vldCount = 0;
         for(LogisticRegressionParams param: context.getWorkerResults()) {
@@ -248,7 +261,7 @@ public class LogisticRegressionMaster
         }
 
         // 3. compute to get latest model weights; on demand init Weight instance because of trainCount needed
-        initWeightOptimizerIfNeeded(trainCount);
+        initWeightOptimizerIfNeeded(trainSize);
         int currItr = context.getCurrentIteration();
         this.weights = this.weightCalculator.calculateWeights(this.weights, gradients, (currItr - 1));
 
@@ -305,17 +318,17 @@ public class LogisticRegressionMaster
         return initWeights();
     }
 
-    private void initWeightOptimizerIfNeeded(double trainCount) {
+    private void initWeightOptimizerIfNeeded(double trainSize) {
         if(this.weightCalculator == null) {
-            this.weightCalculator = new Weight(weights.length, trainCount, learningRate, this.propagation,
+            this.weightCalculator = new Weight(weights.length, trainSize, learningRate, this.propagation,
                     this.regularizedConstant, RegulationLevel.to(this.validParams.get(CommonConstants.REG_LEVEL_KEY)));
         } else {
-            this.weightCalculator.setNumTrainSize(trainCount);
+            this.weightCalculator.setNumTrainSize(trainSize);
         }
     }
 
     private LogisticRegressionParams initWeights() {
-        weights = new double[this.inputNum + 1];
+        weights = new double[this.modelInputCnt + 1];
         for(int i = 0; i < weights.length; i++) {
             weights[i] = nextDouble(-1, 1);
         }
@@ -330,6 +343,7 @@ public class LogisticRegressionMaster
                     sourceType);
             this.columnConfigList = CommonUtils
                     .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

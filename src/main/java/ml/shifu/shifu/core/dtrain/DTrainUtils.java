@@ -15,6 +15,8 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
+import ml.shifu.guagua.GuaguaRuntimeException;
+import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
@@ -31,6 +33,8 @@ import ml.shifu.shifu.util.HDFSUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
+import org.apache.pig.backend.executionengine.ExecException;
+import org.apache.pig.data.Tuple;
 import org.encog.Encog;
 import org.encog.engine.network.activation.*;
 import org.encog.mathutil.randomize.GaussianRandomizer;
@@ -163,12 +167,10 @@ public final class DTrainUtils {
      */
     public static int[] getInputOutputCandidateCounts(ModelNormalizeConf.NormType normType,
             List<ColumnConfig> columnConfigList) {
-        @SuppressWarnings("unused")
-        int input = 0, output = 0, totalCandidate = 0, goodCandidate = 0;
+        int input = 0, output = 0, goodCandidate = 0;
         boolean hasCandidate = CommonUtils.hasCandidateColumns(columnConfigList);
         for(ColumnConfig config: columnConfigList) {
             if(!config.isTarget() && !config.isMeta()) {
-                totalCandidate += 1;
                 if(CommonUtils.isGoodCandidate(config, hasCandidate)) {
                     goodCandidate += 1;
                 }
@@ -191,6 +193,23 @@ public final class DTrainUtils {
             }
         }
         return new int[] { input, output, goodCandidate };
+    }
+
+    /**
+     * Get the model output dimension - usually it will be 1
+     * 
+     * @param columnConfigList
+     *            the column config list
+     * @return the output count
+     */
+    public static int getModelOutputCnt(List<ColumnConfig> columnConfigList) {
+        int output = 0;
+        for(ColumnConfig config: columnConfigList) {
+            if(config.isTarget()) {
+                output += 1;
+            }
+        }
+        return output;
     }
 
     /**
@@ -271,7 +290,7 @@ public final class DTrainUtils {
         return columnMapping;
     }
 
-    public static List<Integer> getNumericalIds(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect){
+    public static List<Integer> getNumericalIds(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect) {
         List<Integer> numericalIds = new ArrayList<>();
         boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
 
@@ -281,8 +300,8 @@ public final class DTrainUtils {
                     numericalIds.add(config.getColumnNum());
                 }
             } else {
-                if(config.isNumerical() && !config.isTarget() && !config.isMeta() &&
-                        CommonUtils.isGoodCandidate(config, hasCandidates)) {
+                if(config.isNumerical() && !config.isTarget() && !config.isMeta()
+                        && CommonUtils.isGoodCandidate(config, hasCandidates)) {
                     numericalIds.add(config.getColumnNum());
                 }
             }
@@ -359,7 +378,7 @@ public final class DTrainUtils {
                 network.addLayer(new BasicDropoutLayer(new ActivationLeakyReLU(), true, numHiddenNode, dropoutRate));
             } else if(func.equalsIgnoreCase(NNConstants.NN_SWISH)) {
                 network.addLayer(new BasicDropoutLayer(new ActivationSwish(), true, numHiddenNode, dropoutRate));
-            } else if (func.equalsIgnoreCase(NNConstants.NN_PTANH)) {
+            } else if(func.equalsIgnoreCase(NNConstants.NN_PTANH)) {
                 network.addLayer(new BasicDropoutLayer(new ActivationPTANH(), true, numHiddenNode, dropoutRate));
             } else {
                 network.addLayer(new BasicDropoutLayer(new ActivationSigmoid(), true, numHiddenNode, dropoutRate));
@@ -574,12 +593,13 @@ public final class DTrainUtils {
     }
 
     /**
-     * @param columnConfigList the column config list of the model
+     * @param columnConfigList
+     *            the column config list of the model
      * @return the map mapping from column Id to bin category list size
      */
     public static Map<Integer, Integer> getIdBinCategorySizeMap(List<ColumnConfig> columnConfigList) {
         Map<Integer, Integer> idBinCategoryMap = new HashMap<>(columnConfigList.size());
-        for(ColumnConfig columnConfig : columnConfigList) {
+        for(ColumnConfig columnConfig: columnConfigList) {
             if(columnConfig.getBinCategory() != null) {
                 idBinCategoryMap.put(columnConfig.getColumnNum(), columnConfig.getBinCategory().size());
             } else {
@@ -587,5 +607,131 @@ public final class DTrainUtils {
             }
         }
         return idBinCategoryMap;
+    }
+
+    /**
+     * Whether there is any final select variables or not
+     * 
+     * @param columnConfigList
+     *            - the model column config list
+     * @return true - has final selected variables, or false
+     */
+    public static boolean hasFinalSelectedVars(List<ColumnConfig> columnConfigList) {
+        boolean hasFinalSelectedVars = false;
+        for(ColumnConfig columnConfig: columnConfigList) {
+            if(columnConfig.isFinalSelect()) {
+                hasFinalSelectedVars = true;
+                break;
+            }
+        }
+        return hasFinalSelectedVars;
+    }
+
+    /**
+     * Get all the feature IDs that could be used to train model
+     * 
+     * @param columnConfigList
+     *            - the model column config list
+     * @param hasCandidates
+     *            - user specify candidate variables or not
+     * @return - feature IDs that could be used to train model
+     */
+    public static Set<Integer> getModelFeatureSet(List<ColumnConfig> columnConfigList, boolean hasCandidates) {
+        return getModelFeatureSet(columnConfigList, hasFinalSelectedVars(columnConfigList), hasCandidates);
+    }
+
+    /**
+     * Get all the feature IDs that could be used to train model
+     * 
+     * @param columnConfigList
+     *            - the model column config list
+     * @param hasSelectedVars
+     *            - there is selected variables in ColumnConfig.json or not
+     * @param hasCandidates
+     *            - user specify candidate variables or not
+     * @return - feature IDs that could be used to train model
+     */
+    public static Set<Integer> getModelFeatureSet(List<ColumnConfig> columnConfigList, boolean hasSelectedVars,
+            boolean hasCandidates) {
+        Set<Integer> featureSet = new HashSet<>();
+        for(ColumnConfig columnConfig: columnConfigList) {
+            if(hasSelectedVars) {
+                if(columnConfig.isFinalSelect()) {
+                    featureSet.add(columnConfig.getColumnNum());
+                }
+            } else {
+                // should we call CommonUtils.isGoodCandidate(columnConfig, hasCandidates, isBinaryClassification) ?
+                if(CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
+                    featureSet.add(columnConfig.getColumnNum());
+                }
+            }
+        }
+        return featureSet;
+    }
+
+    /**
+     * Parse the field of normalized data
+     * 
+     * @param fields
+     *            - normalized data array
+     * @param dataPos
+     *            - the position of data element
+     * @param defVal
+     *            - the default value, if the data element couldn't be parsed
+     * @return the float value of data element
+     */
+    public static float parseRawNormValue(String[] fields, int dataPos, float defVal) {
+        if(dataPos >= fields.length) { // out of range, when fetching normalization data element
+            LOG.error("Normalization data set doesn't match. Out of Range {}/{}", dataPos, fields.length);
+            throw new RuntimeException("Out of range Normalization data doesn't match with ColumnConfig.json.");
+        }
+
+        String input = fields[dataPos];
+        // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+        float fval = ((input.length() == 0) ? defVal : NumberFormatUtils.getFloat(input, defVal));
+        // no idea about why NaN in input data, we should process it as missing value
+        // TODO , according to norm type
+        fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? defVal : fval;
+        return fval;
+    }
+
+    /**
+     * Parse the field of normalized data
+     * 
+     * @param tuple
+     *            - data tuple of normalized data
+     * @param dataPos
+     *            - the position of data element
+     * @param defVal
+     *            - the default value, if the data element couldn't be parsed
+     * @return the float value of data element
+     */
+    public static float parseRawNormValue(Tuple tuple, int dataPos, float defVal) {
+        if(dataPos >= tuple.size()) { // out of range, when fetching normalization data element
+            LOG.error("Normalization data set doesn't match. Out of Range {}/{}", dataPos, tuple.size());
+            throw new RuntimeException("Out of range Normalization data doesn't match with ColumnConfig.json.");
+        }
+
+        Object element = null;
+        try {
+            element = tuple.get(dataPos);
+        } catch (ExecException e) {
+            throw new GuaguaRuntimeException(e);
+        }
+        float fval = 0.0f;
+        if(element != null) {
+            if(element instanceof Float) {
+                fval = (Float) element;
+            } else {
+                // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
+                fval = (element.toString().length() == 0) ? defVal
+                        : NumberFormatUtils.getFloat(element.toString(), defVal);
+            }
+        }
+
+        // no idea about why NaN in input data, we should process it as missing value
+        // TODO , according to norm type
+        fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? defVal : fval;
+        return fval;
     }
 }

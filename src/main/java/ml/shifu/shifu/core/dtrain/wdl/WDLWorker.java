@@ -668,8 +668,10 @@ public class WDLWorker extends
         boolean wideEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.WIDE_ENABLE), true);
         boolean deepEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.DEEP_ENABLE), true);
         boolean embedEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.EMBED_ENABLE), true);
-        this.wnd = new WideAndDeep(wideEnable, deepEnable, embedEnable, idBinCateSizeMap, numInputs, numericalIds,
-                embedColumnIds, embedOutputList, wideColumnIds, hiddenNodes, actFunc, l2reg);
+        boolean wideDenseEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.WIDE_DENSE_ENABLE),
+                true);
+        this.wnd = new WideAndDeep(wideEnable, deepEnable, embedEnable, wideDenseEnable, idBinCateSizeMap, numInputs,
+                numericalIds, embedColumnIds, embedOutputList, wideColumnIds, hiddenNodes, actFunc, l2reg);
     }
 
     private void initCateIndexMap() {

@@ -235,8 +235,9 @@ public class SubGradient implements Callable<double[]> {
             ((FloatFlatNetwork) this.getNetwork()).compute(input, this.actual, this.dropoutNodes);
         } 
 
+        // cross entropy (log loss) and squared loss implementation here: 
+        // squared loss: (ideal-actual) * derivation of sigmoid * input of  final layer
         this.errorFunction.calculateError(doubleIdeal, actual, this.getLayerDelta());
-
         // TODO this logic should be moved the ErrorFunction
         // there is not dropout applied in output layer, so we do not need to changes output layer delta calculation
         if(this.errorFunction instanceof LogErrorFunction) {

@@ -116,7 +116,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         loadConfigs(props);
 
         // TODO support trainerID with bagging or multiple classification
-        // this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
+//         this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
 
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         this.numInputs = inputOutputIndex[0];
@@ -146,8 +146,10 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         boolean wideEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.WIDE_ENABLE), true);
         boolean deepEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.DEEP_ENABLE), true);
         boolean embedEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.EMBED_ENABLE), true);
-        this.wnd = new WideAndDeep(wideEnable, deepEnable, embedEnable, idBinCateSizeMap, numInputs, numericalIds,
-                embedColumnIds, embedOutputList, wideColumnIds, hiddenNodes, actFunc, l2reg);
+        boolean wideDenseEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.WIDE_DENSE_ENABLE),
+                true);
+        this.wnd = new WideAndDeep(wideEnable, deepEnable, embedEnable, wideDenseEnable, idBinCateSizeMap, numInputs,
+                numericalIds, embedColumnIds, embedOutputList, wideColumnIds, hiddenNodes, actFunc, l2reg);
         // this.optimizer = new GradientDescent(learningRate);
         Object pObject = this.validParams.get(CommonConstants.PROPAGATION);
         String propagation = (pObject == null) ? DTrainUtils.RESILIENTPROPAGATION : pObject.toString();
@@ -194,6 +196,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
         params.setSerializationType(SerializationType.WEIGHTS);
         this.wnd.setSerializationType(SerializationType.WEIGHTS);
         params.setWnd(this.wnd);
+
         return params;
     }
 

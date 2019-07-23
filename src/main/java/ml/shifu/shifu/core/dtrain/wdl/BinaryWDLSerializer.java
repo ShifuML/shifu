@@ -43,29 +43,6 @@ import java.util.zip.GZIPOutputStream;
  */
 public class BinaryWDLSerializer {
 
-    @Deprecated
-    public static void save(ModelConfig modelConfig, WideAndDeep wideAndDeep, FileSystem fs, Path output)
-            throws IOException {
-        DataOutputStream dos = null;
-        try {
-            dos = new DataOutputStream(new GZIPOutputStream(fs.create(output)));
-            // version
-            dos.writeInt(CommonConstants.WDL_FORMAT_VERSION);
-            dos.writeUTF(modelConfig.getAlgorithm());
-            // Reserved two double field, one double field and one string field
-            dos.writeDouble(0.0f);
-            dos.writeDouble(0.0f);
-            dos.writeDouble(0.0d);
-            dos.writeUTF("Reserved field");
-
-            PersistWideAndDeep.save(wideAndDeep, dos);
-            dos.writeUTF(modelConfig.getNormalizeType().name());
-            dos.writeDouble(modelConfig.getNormalizeStdDevCutOff());
-        } finally {
-            IOUtils.closeStream(dos);
-        }
-    }
-
     public static void save(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, WideAndDeep wideAndDeep,
             FileSystem fs, Path output) throws IOException {
         DataOutputStream fos = null;
