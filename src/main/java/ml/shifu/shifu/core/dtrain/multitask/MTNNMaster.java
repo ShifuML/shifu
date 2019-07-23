@@ -70,7 +70,8 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
         this.isAfterVarSelect = (inputOutput[3] == 1);
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(props.getProperty(CommonConstants.CONTINUOUS_TRAINING));
 
-        this.validParams = this.modelConfig.getParams();
+        //build multi-task nn model:
+        this.validParams = this.modelConfig.getTrain().getParams();
         double learningRate = (double) validParams.get(CommonConstants.LEARNING_RATE);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
         List<String> hiddenActiFuncs = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);

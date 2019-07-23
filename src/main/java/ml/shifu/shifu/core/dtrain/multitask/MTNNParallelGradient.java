@@ -81,7 +81,7 @@ public class MTNNParallelGradient {
         LOG.info("Test highs: {}", Arrays.toString(testHighs));
     }
 
-    public MTNNParams doComput() {
+    public MTNNParams doCompute() {
         long start = System.currentTimeMillis();
         for (int i = 0; i < this.threadNumber; i++) {
             this.completionService.submit(new MTNNParallelGradient.GradientTask(this.mtnn, this.trainData, this.testData,
