@@ -6,6 +6,7 @@ import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
 import ml.shifu.guagua.io.GuaguaFileSplit;
 import ml.shifu.guagua.util.MemoryLimitedList;
+import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.guagua.worker.AbstractWorkerComputable;
 import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -13,8 +14,9 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import ml.shifu.shifu.core.dtrain.SerializationType;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.core.dtrain.wdl.WDLParams;
 import ml.shifu.shifu.core.dtrain.wdl.WDLWorker;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -28,10 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.*;
 
 /**
@@ -50,7 +49,6 @@ public class MTNNWorker extends
 
     protected int inputCount;
 
-    protected int numInputs;
 
     protected int cateInputs;
 
@@ -63,9 +61,9 @@ public class MTNNWorker extends
 
     protected long sampleCount;
 
-    private volatile MemoryLimitedList<WDLWorker.Data> trainingData;
+    private volatile MemoryLimitedList<MTNNWorker.Data> trainingData;
 
-    private volatile MemoryLimitedList<WDLWorker.Data> validationData;
+    private volatile MemoryLimitedList<MTNNWorker.Data> validationData;
 
     private Map<Integer, Map<String, Integer>> columnCategoryIndexMapping;
 
@@ -96,6 +94,12 @@ public class MTNNWorker extends
      */
     private boolean isKFoldCV;
 
+    /**
+     * Construct a validation random map for different classes. For stratified sampling, this is useful for class level
+     * sampling.
+     */
+    private Map<Integer, Random> validationRandomMap = new HashMap<Integer, Random>();
+
 
     protected boolean poissonSampler;
 
@@ -113,6 +117,13 @@ public class MTNNWorker extends
      * Parameters defined in ModelConfig.json#train part
      */
     private Map<String, Object> validParams;
+    private long positiveSelectedTrainCount;
+    private long negativeSelectedTrainCount;
+    private long positiveTrainCount;
+    private long negativeTrainCount;
+    private long positiveValidationCount;
+    private long negativeValidationCount;
+    private int taskNumber;
 
 
     // todo:for eval.
@@ -150,6 +161,10 @@ public class MTNNWorker extends
         this.workerThreadCount = modelConfig.getTrain().getWorkerThreadCount();
         this.completionService = new ExecutorCompletionService<>(Executors.newFixedThreadPool(workerThreadCount));
 
+        this.poissonSampler = Boolean.TRUE.toString()
+                .equalsIgnoreCase(context.getProps().getProperty(NNConstants.NN_POISON_SAMPLER));
+        this.rng = new PoissonDistribution(1d);
+
         Double upSampleWeight = modelConfig.getTrain().getUpSampleWeight();
         if (upSampleWeight != 1d && (modelConfig.isRegression()
                 || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()))) {
@@ -166,27 +181,26 @@ public class MTNNWorker extends
         double validationRate = this.modelConfig.getValidSetRate();
         if (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
             // fixed 0.6 and 0.4 of max memory for trainingData and validationData
-            this.trainingData = new MemoryLimitedList<WDLWorker.Data>(
-                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * 0.6), new ArrayList<WDLWorker.Data>());
-            this.validationData = new MemoryLimitedList<WDLWorker.Data>(
-                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * 0.4), new ArrayList<WDLWorker.Data>());
+            this.trainingData = new MemoryLimitedList<Data>(
+                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * 0.6), new ArrayList<Data>());
+            this.validationData = new MemoryLimitedList<Data>(
+                    (long) (Runtime.getRuntime().maxMemory() * memoryFraction * 0.4), new ArrayList<Data>());
         } else {
             if (validationRate != 0d) {
-                this.trainingData = new MemoryLimitedList<WDLWorker.Data>(
+                this.trainingData = new MemoryLimitedList<Data>(
                         (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - validationRate)),
-                        new ArrayList<WDLWorker.Data>());
-                this.validationData = new MemoryLimitedList<WDLWorker.Data>(
+                        new ArrayList<Data>());
+                this.validationData = new MemoryLimitedList<Data>(
                         (long) (Runtime.getRuntime().maxMemory() * memoryFraction * validationRate),
-                        new ArrayList<WDLWorker.Data>());
+                        new ArrayList<Data>());
             } else {
-                this.trainingData = new MemoryLimitedList<WDLWorker.Data>(
-                        (long) (Runtime.getRuntime().maxMemory() * memoryFraction), new ArrayList<WDLWorker.Data>());
+                this.trainingData = new MemoryLimitedList<Data>(
+                        (long) (Runtime.getRuntime().maxMemory() * memoryFraction), new ArrayList<Data>());
             }
         }
 
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         // numerical + categorical = # of all input
-        this.numInputs = inputOutputIndex[0];
         this.inputCount = inputOutputIndex[0] + inputOutputIndex[1];
         // regression outputNodeCount is 1, binaryClassfication, it is 1, OneVsAll it is 1, Native classification it is
         // 1, with index of 0,1,2,3 denotes different classes
@@ -200,16 +214,17 @@ public class MTNNWorker extends
         this.validParams = this.modelConfig.getTrain().getParams();
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
         List<String> hiddenActiFuncs = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
-        int taskNumber = 0;
-        for (ColumnConfig cConfig : this.columnConfigList) {
-            ColumnConfig.ColumnFlag flag = ColumnConfig.ColumnFlag.Target;
-            if (cConfig.getColumnFlag().equals(flag)) {
-                taskNumber++;
-            }
-        }
+        //we have counted it in DTrainUtils.getNumericAndCategoricalInputAndOutputCounts.
+        taskNumber = inputOutputIndex[2];
+//        for (ColumnConfig cConfig : this.columnConfigList) {
+//            ColumnConfig.ColumnFlag flag = ColumnConfig.ColumnFlag.Target;
+//            if (cConfig.getColumnFlag().equals(flag)) {
+//                taskNumber++;
+//            }
+//        }
         // todo:check if MTNN need regression function
         double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0);
-        this.mtnn = new MultiTaskNN(numInputs, hiddenNodes, hiddenActiFuncs, taskNumber, l2reg);
+        this.mtnn = new MultiTaskNN(inputCount, hiddenNodes, hiddenActiFuncs, taskNumber, l2reg);
 
     }
 
@@ -231,6 +246,317 @@ public class MTNNWorker extends
 
     @Override
     public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue, WorkerContext<MTNNParams, MTNNParams> context) {
+        if (++this.count % 5000 ==0){
+            LOG.info("Read {} records.", this.count);
+        }
+
+        long hashcode = 0; // hashcode for fixed input split in train and validation
+        double[] inputs = new double[this.inputCount];
+        double[] ideal = new double[this.taskNumber];
+        double significance = 1d;
+        int index = 0, targetIndex = 0;
+        // use guava Splitter to iterate only once
+        for(String input: this.splitter.split(currentValue.getWritable().toString())) {
+            if (index == this.columnConfigList.size()) {
+                significance = getWeightValue(input);
+                break;
+            }
+            else {
+                ColumnConfig config = this.columnConfigList.get(index);
+                if(config != null && config.isTarget()) {
+                    targetIndex++;
+                    ideal[targetIndex] = getDoubleValue(input);
+                } else {
+                    if (validColumn(config)){
+                        hashcode = hashcode * 31 + input.hashCode();
+                    }
+                }
+            }
+            index++;
+        }
+
+//        // sample negative only logic here, sample negative out, no need continue
+//        if(sampleNegOnly(hashcode, ideal)) {
+//            return;
+//        }
+        // up sampling logic, just add more weights while bagging sampling rate is still not changed
+        if(modelConfig.isRegression() && isUpSampleEnabled() && Double.compare(ideal, 1d) == 0) {
+            // ideal == 1 means positive tags; sample + 1 to avoid sample count to 0
+            significance = significance * (this.upSampleRng.sample() + 1);
+        }
+
+        Data data = new Data(inputs,  significance, ideal);
+        // split into validation and training data set according to validation rate
+        boolean isInTraining = this.addDataPairToDataSet(hashcode, data, context.getAttachment());
+        // update some positive or negative selected count in metrics
+        this.updateMetrics(data, isInTraining);
+    }
+
+    /**
+     * Add to training set or validation set according to validation rate.
+     *
+     * @param hashcode
+     *            the hash code of the data
+     * @param data
+     *            data instance
+     * @param attachment
+     *            if it is validation
+     * @return if in training, training is true, others are false.
+     */
+    protected boolean addDataPairToDataSet(long hashcode, Data data, Object attachment) {
+        // if validation data from configured validation data set
+        boolean isValidation = (attachment != null && attachment instanceof Boolean) ? (Boolean) attachment : false;
+
+        if(this.isKFoldCV) {
+            return addKFoldDataPairToDataSet(hashcode, data);
+        }
+
+        if(this.isManualValidation) { // validation data set is set by users in ModelConfig:dataSet:validationDataPath
+            return addManualValidationDataPairToDataSet(data, isValidation);
+        } else { // normal case, according to validSetRate, split dataset into training and validation data set
+            return splitDataPairToDataSet(hashcode, data);
+        }
+    }
+
+    private boolean addManualValidationDataPairToDataSet(Data data, boolean isValidation) {
+        if(isValidation) {
+            this.validationData.append(data);
+            updateValidationPosNegMetrics(data);
+            return false;
+        } else {
+            this.trainingData.append(data);
+            updateTrainPosNegMetrics(data);
+            return true;
+        }
+    }
+
+    private boolean splitDataPairToDataSet(long hashcode, Data data) {
+        if(Double.compare(this.modelConfig.getValidSetRate(), 0d) != 0) {
+            Random random = updateRandom((int) (data.label + 0.01d));
+            if(this.modelConfig.isFixInitialInput()) {
+                // for fix initial input, if hashcode%100 is in [start-hashcode, end-hashcode), validation,
+                // otherwise training. start hashcode in different job is different to make sure bagging jobs have
+                // different data. if end-hashcode is over 100, then check if hashcode is in [start-hashcode, 100]
+                // or [0, end-hashcode]
+                int startHashCode = (100 / this.modelConfig.getBaggingNum()) * this.trainerId;
+                int endHashCode = startHashCode + (int) (this.modelConfig.getValidSetRate() * 100);
+                if(isInRange(hashcode, startHashCode, endHashCode)) {
+                    this.validationData.append(data);
+                    updateValidationPosNegMetrics(data);
+                    return false;
+                } else {
+                    this.trainingData.append(data);
+                    updateTrainPosNegMetrics(data);
+                    return true;
+                }
+            } else {
+                // not fixed initial input, if random value >= validRate, training, otherwise validation.
+                if(random.nextDouble() >= this.modelConfig.getValidSetRate()) {
+                    this.trainingData.append(data);
+                    updateTrainPosNegMetrics(data);
+                    return true;
+                } else {
+                    this.validationData.append(data);
+                    updateValidationPosNegMetrics(data);
+                    return false;
+                }
+            }
+        } else {
+            this.trainingData.append(data);
+            updateTrainPosNegMetrics(data);
+            return true;
+        }
+    }
+
+    private Random updateRandom(int classValue) {
+        Random random = null;
+        if(this.isStratifiedSampling) {
+            // each class use one random instance
+            random = validationRandomMap.get(classValue);
+            if(random == null) {
+                random = new Random();
+                this.validationRandomMap.put(classValue, random);
+            }
+        } else {
+            // all data use one random instance
+            random = validationRandomMap.get(0);
+            if(random == null) {
+                random = new Random();
+                this.validationRandomMap.put(0, random);
+            }
+        }
+        return random;
+    }
+
+    private boolean addKFoldDataPairToDataSet(long hashcode, Data data) {
+        int k = this.modelConfig.getTrain().getNumKFold();
+        if(hashcode % k == this.trainerId) {
+            this.validationData.append(data);
+            updateValidationPosNegMetrics(data);
+            return false;
+        } else {
+            this.trainingData.append(data);
+            updateTrainPosNegMetrics(data);
+            return true;
+        }
+    }
+
+    private void updateTrainPosNegMetrics(Data data) {
+        boolean ret = true;
+        for (int i=0;i<data.labels.length;i++){
+            if (!isPositive(data.labels[i])){
+                ret = false;
+                break;
+            }
+        }
+        if(ret) {
+            this.positiveTrainCount += 1L;
+        } else {
+            this.negativeTrainCount += 1L;
+        }
+    }
+
+    private void updateValidationPosNegMetrics(Data data) {
+        boolean ret = true;
+        for (int i=0;i<data.labels.length;i++){
+            if (!isPositive(data.labels[i])){
+                ret = false;
+                break;
+            }
+        }
+        if(ret) {
+            this.positiveValidationCount += 1L;
+        } else {
+            this.negativeValidationCount += 1L;
+        }
+    }
+
+    private boolean isPositive(double value) {
+        return Double.compare(1d, value) == 0;
+    }
+
+
+
+    protected boolean isUpSampleEnabled() {
+        // only enabled in regression
+        return this.upSampleRng != null && (modelConfig.isRegression()
+                || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()));
+    }
+
+    /**
+     * If column is valid and be selected in model training
+     */
+    private boolean validColumn(ColumnConfig columnConfig) {
+        if(isAfterVarSelect) {
+            return columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
+                    && columnConfig.isFinalSelect();
+        } else {
+            return !columnConfig.isMeta() && !columnConfig.isTarget()
+                    && CommonUtils.isGoodCandidate(columnConfig, this.hasCandidates);
+        }
+    }
+
+
+    private double getDoubleValue(String input) {
+        // check here to avoid bad performance in failed NumberFormatUtils.getDouble(input, 0d)
+        double doubleValue = input.length() == 0 ? 0d : NumberFormatUtils.getDouble(input, 0d);
+        // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
+        return (Double.isNaN(doubleValue) || Double.isNaN(doubleValue)) ? 0d : doubleValue;
+    }
+
+    private double getWeightValue(String input) {
+        double significance = 1d;
+        if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())) {
+            // check here to avoid bad performance in failed NumberFormatUtils.getDouble(input, 1d)
+            significance = input.length() == 0 ? 1d : NumberFormatUtils.getDouble(input, 1d);
+            // if invalid weight, set it to 1d and warning in log
+            if(significance < 0d) {
+                LOG.warn("Record {} with weight {} is less than 0 and invalid, set it to 1.", count, significance);
+                significance = 1d;
+            }
+        }
+        return significance;
+    }
+
+    @Override
+    protected void postLoad(WorkerContext<MTNNParams, MTNNParams> context) {
+        this.trainingData.switchState();
+        if(validationData != null) {
+            this.validationData.switchState();
+        }
+        LOG.info("    - # Records of the Total Data Set: {}.", this.count);
+        LOG.info("    - Bagging Sample Rate: {}.", this.modelConfig.getBaggingSampleRate());
+        LOG.info("    - Bagging With Replacement: {}.", this.modelConfig.isBaggingWithReplacement());
+        if(this.isKFoldCV) {
+            LOG.info("        - Validation Rate(kFold): {}.", 1d / this.modelConfig.getTrain().getNumKFold());
+        } else {
+            LOG.info("        - Validation Rate: {}.", this.modelConfig.getValidSetRate());
+        }
+        LOG.info("        - # Records of the Training Set: {}.", this.trainingData.size());
+        if(modelConfig.isRegression() || modelConfig.getTrain().isOneVsAll()) {
+            LOG.info("        - # Positive Bagging Selected Records of the Training Set: {}.",
+                    this.positiveSelectedTrainCount);
+            LOG.info("        - # Negative Bagging Selected Records of the Training Set: {}.",
+                    this.negativeSelectedTrainCount);
+            LOG.info("        - # Positive Raw Records of the Training Set: {}.", this.positiveTrainCount);
+            LOG.info("        - # Negative Raw Records of the Training Set: {}.", this.negativeTrainCount);
+        }
+
+        if(validationData != null) {
+            LOG.info("        - # Records of the Validation Set: {}.", this.validationData.size());
+            if(modelConfig.isRegression() || modelConfig.getTrain().isOneVsAll()) {
+                LOG.info("        - # Positive Records of the Validation Set: {}.", this.positiveValidationCount);
+                LOG.info("        - # Negative Records of the Validation Set: {}.", this.negativeValidationCount);
+            }
+        }
 
     }
+
+    public static class Data{
+        /**
+         * All input values
+         */
+        private double[] inputs;
+
+        /**
+         * The weight of one training record like dollar amount in one txn
+         */
+        private double weight;
+
+        /**
+         * Target value of one record
+         */
+        private double labels[];
+
+        public Data(double[] inputs, double weight, double[] labels) {
+            this.inputs = inputs;
+            this.weight = weight;
+            this.labels = labels;
+        }
+
+        public double[] getInputs() {
+            return inputs;
+        }
+
+        public void setInputs(double[] inputs) {
+            this.inputs = inputs;
+        }
+
+        public double getWeight() {
+            return weight;
+        }
+
+        public void setWeight(double weight) {
+            this.weight = weight;
+        }
+
+        public double[] getLabels() {
+            return labels;
+        }
+
+        public void setLabels(double[] labels) {
+            this.labels = labels;
+        }
+    }
+
 }

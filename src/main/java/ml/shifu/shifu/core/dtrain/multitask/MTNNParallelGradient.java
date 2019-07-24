@@ -1,7 +1,7 @@
 package ml.shifu.shifu.core.dtrain.multitask;
 
 import ml.shifu.guagua.util.MemoryLimitedList;
-import ml.shifu.shifu.core.dtrain.wdl.WDLWorker;
+import ml.shifu.shifu.core.dtrain.AssertUtils;
 import org.encog.mathutil.BoundMath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import java.util.Arrays;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -21,8 +20,8 @@ public class MTNNParallelGradient {
 
     private int threadNumber;
     private MultiTaskNN mtnn;
-    private MemoryLimitedList<WDLWorker.Data> trainData;
-    private MemoryLimitedList<WDLWorker.Data> testData;
+    private MemoryLimitedList<MTNNWorker.Data> trainData;
+    private MemoryLimitedList<MTNNWorker.Data> testData;
     private CompletionService<MTNNParams> completionService;
 
     private int[] trainLows;
@@ -30,7 +29,7 @@ public class MTNNParallelGradient {
     private int[] testLows;
     private int[] testHighs;
 
-    public MTNNParallelGradient(int threadNumber, MultiTaskNN mtnn, MemoryLimitedList<WDLWorker.Data> trainData, MemoryLimitedList<WDLWorker.Data> testData, CompletionService<MTNNParams> completionService) {
+    public MTNNParallelGradient(int threadNumber, MultiTaskNN mtnn, MemoryLimitedList<MTNNWorker.Data> trainData, MemoryLimitedList<MTNNWorker.Data> testData, CompletionService<MTNNParams> completionService) {
         this.threadNumber = threadNumber;
         this.mtnn = mtnn;
         this.trainData = trainData;
@@ -111,14 +110,14 @@ public class MTNNParallelGradient {
     class GradientTask implements Callable<MTNNParams> {
         private final Logger TASK_LOG = LoggerFactory.getLogger(MTNNParallelGradient.GradientTask.class);
         private MultiTaskNN mtnn;
-        private MemoryLimitedList<WDLWorker.Data> trainData;
-        private MemoryLimitedList<WDLWorker.Data> testData;
+        private MemoryLimitedList<MTNNWorker.Data> trainData;
+        private MemoryLimitedList<MTNNWorker.Data> testData;
         private int trainLow;
         private int trainHigh;
         private int testLow;
         private int testHigh;
 
-        public GradientTask(MultiTaskNN mtnn, MemoryLimitedList<WDLWorker.Data> trainData, MemoryLimitedList<WDLWorker.Data> testData, int trainLow, int trainHigh, int testLow, int testHigh) {
+        public GradientTask(MultiTaskNN mtnn, MemoryLimitedList<MTNNWorker.Data> trainData, MemoryLimitedList<MTNNWorker.Data> testData, int trainLow, int trainHigh, int testLow, int testHigh) {
             this.mtnn = mtnn;
             this.trainData = trainData;
             this.testData = testData;
@@ -128,9 +127,6 @@ public class MTNNParallelGradient {
             this.testHigh = testHigh;
         }
 
-        private double sigmoid(double logit) {
-            return 1.0d / (1.0d + BoundMath.exp(-1 * logit));
-        }
 
         @Override
         public MTNNParams call() throws Exception {
@@ -149,17 +145,26 @@ public class MTNNParallelGradient {
             // forward and backward compute gradients for each iteration
             double trainCnt = trainHigh - trainLow, validCnt = testHigh - testLow;
             double trainSize = 0, validationSize = 0;
-            double trainSumError = 0d, validSumError = 0d;
+            double[] trainSumError={};
+            double[] validSumError={};
 
             int index = 0;
             for (int i = trainLow; i < trainHigh; i++) {
-                WDLWorker.Data data = trainData.get(i);
+                MTNNWorker.Data data = trainData.get(i);
                 trainSize += data.getWeight();
-                double[] logits = this.mtnn.forward(data.getNumericalValues());
-                double predict = sigmoid(logits[0]);
-                double error = predict - data.getLabel();
-                trainSumError += (error * error * data.getWeight());
-                this.mtnn.backward(new double[]{predict}, new double[]{data.getLabel()}, data.getWeight());
+                double[] predicts = this.mtnn.forward(data.getInputs());
+                double[] actuals = data.getLabels();
+
+                AssertUtils.assertEquals(predicts.length, actuals.length);
+                if (i == trainLow){
+                    trainSumError = new double[predicts.length];
+                }
+                double[] errors = new double[predicts.length];
+                for (int j = 0; j < predicts.length; j++) {
+                    errors[j] = predicts[j] - actuals[j];
+                    trainSumError[j] += (errors[j] * errors[j] * data.getWeight());
+                }
+                this.mtnn.backward(predicts, data.getLabels(), data.getWeight());
                 index += 1;
             }
             TASK_LOG.info("Worker with training time {} ms.", (System.currentTimeMillis() - start));
@@ -170,16 +175,25 @@ public class MTNNParallelGradient {
 
             // compute validation error
             for (int i = testLow; i < testHigh; i++) {
-                WDLWorker.Data data = testData.get(i);
-                double[] logits = this.mtnn.forward(data.getNumericalValues());
-                double sigmoid = sigmoid(logits[0]);
-                if (index++ <= 0) {
-                    TASK_LOG.info("Index {}, logit {}, sigmoid {}, label {}.", index, logits[0], sigmoid,
-                            data.getLabel());
-                }
+                MTNNWorker.Data data = testData.get(i);
                 validationSize += data.getWeight();
-                double error = sigmoid - data.getLabel();
-                validSumError += (error * error * data.getWeight());
+                double[] predicts = this.mtnn.forward(data.getInputs());
+                double[] actuals = data.getLabels();
+
+                AssertUtils.assertEquals(predicts.length, actuals.length);
+//                if (index++ <= 0) {
+//                    TASK_LOG.info("Index {}, logit {}, sigmoid {}, label {}.", index, logits[0], sigmoid,
+//                            data.getLabels());
+//                }
+                if (i == testLow){
+                    validSumError = new double[predicts.length];
+                }
+                double[] errors = new double[predicts.length];
+                for (int j = 0; j < predicts.length; j++) {
+                    errors[j] = predicts[j] - actuals[j];
+                    validSumError[j] += (errors[j] * errors[j] * data.getWeight());
+                }
+
             }
 
             TASK_LOG.info("training error is {} {}", trainSumError, validSumError);
@@ -189,7 +203,7 @@ public class MTNNParallelGradient {
             mtnnParams.setTrainSize(trainSize);
             mtnnParams.setValidationSize(validationSize);
             mtnnParams.setTrainError(trainSumError);
-            mtnnParams.setValidationError(validSumError);
+            mtnnParams.setValidationErrors(validSumError);
             mtnnParams.setMtnn(this.mtnn);
 
             TASK_LOG.info("Worker with validation run time {} ms.", (System.currentTimeMillis() - start));

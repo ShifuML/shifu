@@ -22,11 +22,11 @@ import java.util.List;
 
 public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Combinable<MultiTaskNN>, PropOptimizer<MultiTaskNN> {
 
-    private static final Logger  LOG = LoggerFactory.getLogger(MultiTaskNN.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MultiTaskNN.class);
 
     private DenseInputLayer dil;
 
-    private int numericalSize;
+    private int inputSize;
 
     private List<Layer> hiddenLayers;
 
@@ -38,7 +38,7 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
 
     private int taskNumber;
 
-//    private List<String> finalActiFuncs;
+    //    private List<String> finalActiFuncs;
     private Activation finalActiFunc;
 
     private double l2reg;
@@ -48,8 +48,8 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
     public MultiTaskNN() {
     }
 
-    public MultiTaskNN(int numericalSize, List<Integer> hiddenNodes, List<String> HiddenActiFuncs, int taskNumber,  double l2reg) {
-        this.numericalSize = numericalSize;
+    public MultiTaskNN(int inputSize, List<Integer> hiddenNodes, List<String> HiddenActiFuncs, int taskNumber, double l2reg) {
+        this.inputSize = inputSize;
         this.hiddenNodes = hiddenNodes;
         this.HiddenActiFuncs = HiddenActiFuncs;
         this.taskNumber = taskNumber;
@@ -57,7 +57,7 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
         this.l2reg = l2reg;
 
         // build the structure of NN graph.
-        this.dil = new DenseInputLayer(numericalSize);
+        this.dil = new DenseInputLayer(this.inputSize);
         int preHiddenInputs = dil.getOutDim();
 
         AssertUtils.assertListNotNullAndSizeEqual(hiddenNodes, HiddenActiFuncs);
@@ -155,12 +155,12 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
     }
 
 
-    public int getNumericalSize() {
-        return numericalSize;
+    public int getInputSize() {
+        return inputSize;
     }
 
-    public void setNumericalSize(int numericalSize) {
-        this.numericalSize = numericalSize;
+    public void setInputSize(int inputSize) {
+        this.inputSize = inputSize;
     }
 
     public List<Integer> getHiddenNodes() {
@@ -255,12 +255,12 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
 
     @Override
     public void write(DataOutput out) throws IOException {
-
+        //todo
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
-
+        //todo
     }
 
     @Override

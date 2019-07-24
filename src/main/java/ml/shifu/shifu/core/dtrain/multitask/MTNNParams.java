@@ -26,9 +26,9 @@ public class MTNNParams extends HaltBytable implements Combinable<MTNNParams> {
 
     private double validationCount;
 
-    private double trainError;
+    private double[] trainErrors;
 
-    private double validationError;
+    private double[] validationErrors;
 
     private SerializationType serializationType = SerializationType.MODEL_SPEC;
 
@@ -38,14 +38,19 @@ public class MTNNParams extends HaltBytable implements Combinable<MTNNParams> {
     @Override
     public MTNNParams combine(MTNNParams from) {
         this.trainCount += from.trainCount;
-        this.trainError += from.trainError;
+        for (int i = 0; i < trainErrors.length; i++) {
+            this.trainErrors[i] += from.trainErrors[i];
+        }
         this.validationCount += from.validationCount;
-        this.validationError += from.validationError;
+        for (int i = 0; i < validationErrors.length; i++) {
+            this.validationErrors[i] += from.validationErrors[i];
+        }
         if (from.getMtnn() != null) {
             this.mtnn = this.mtnn.combine(from.getMtnn());
         }
         return this;
     }
+
 
     @Override
     public void doWrite(DataOutput out) throws IOException {
@@ -58,8 +63,12 @@ public class MTNNParams extends HaltBytable implements Combinable<MTNNParams> {
         }
         out.writeDouble(this.trainCount);
         out.writeDouble(this.validationCount);
-        out.writeDouble(this.trainError);
-        out.writeDouble(this.validationError);
+        for (int i = 0; i < trainErrors.length; i++) {
+            out.writeDouble(trainErrors[i]);
+        }
+        for (int i = 0; i < validationErrors.length; i++) {
+            out.writeDouble(validationErrors[i]);
+        }
         out.writeInt(this.serializationType.getValue());
 
     }
@@ -75,8 +84,12 @@ public class MTNNParams extends HaltBytable implements Combinable<MTNNParams> {
         }
         this.trainCount = in.readDouble();
         this.validationCount = in.readDouble();
-        this.trainError = in.readDouble();
-        this.validationError = in.readDouble();
+        for (int i = 0; i < trainErrors.length; i++) {
+            this.trainErrors[i] = in.readDouble();
+        }
+        for (int i = 0; i < validationErrors.length; i++) {
+            this.validationErrors[i] = in.readDouble();
+        }
         this.serializationType = SerializationType.getSerializationType(in.readInt());
     }
 
@@ -113,20 +126,20 @@ public class MTNNParams extends HaltBytable implements Combinable<MTNNParams> {
         this.validationSize = validationSize;
     }
 
-    public double getTrainError() {
-        return trainError;
+    public double[] getTrainError() {
+        return trainErrors;
     }
 
-    public void setTrainError(double trainError) {
-        this.trainError = trainError;
+    public void setTrainError(double[] trainError) {
+        this.trainErrors = trainError;
     }
 
-    public double getValidationError() {
-        return validationError;
+    public double[] getValidationErrors() {
+        return validationErrors;
     }
 
-    public void setValidationError(double validationError) {
-        this.validationError = validationError;
+    public void setValidationErrors(double[] validationErrors) {
+        this.validationErrors = validationErrors;
     }
 
     public SerializationType getSerializationType() {

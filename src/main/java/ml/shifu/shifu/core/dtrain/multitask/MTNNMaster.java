@@ -10,18 +10,13 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import ml.shifu.shifu.core.dtrain.SerializationType;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
-import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.lang.math.NumberUtils;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.tools.ant.types.CommandlineJava;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -44,13 +39,11 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
 
     private boolean isContinuousEnabled = false;
 
-    private int numInputs;
+    private int inputCount;
 
     private Map<String, Object> validParams;
 
     private MultiTaskNN mtnn;
-
-    private Optimizer optimizer;
 
 
     @Override
@@ -65,9 +58,9 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
             throw new RuntimeException();
         }
 
-        int[] inputOutput = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
-        this.numInputs = inputOutput[0];
-        this.isAfterVarSelect = (inputOutput[3] == 1);
+        int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
+        this.inputCount = inputOutputIndex[0] + inputOutputIndex[1];
+        this.isAfterVarSelect = (inputOutputIndex[3] == 1);
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(props.getProperty(CommonConstants.CONTINUOUS_TRAINING));
 
         //build multi-task nn model:
@@ -75,19 +68,21 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
         double learningRate = (double) validParams.get(CommonConstants.LEARNING_RATE);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
         List<String> hiddenActiFuncs = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
-        int taskNumber = 0;
-        for (ColumnConfig cConfig : this.columnConfigList) {
-            ColumnConfig.ColumnFlag flag = ColumnConfig.ColumnFlag.Target;
-            if (cConfig.getColumnFlag().equals(flag)) {
-                taskNumber++;
-            }
-        }
+
+        //we have counted it in DTrainUtils.getNumericAndCategoricalInputAndOutputCounts.
+        int taskNumber = inputOutputIndex[2];
+//        for (ColumnConfig cConfig : this.columnConfigList) {
+//            ColumnConfig.ColumnFlag flag = ColumnConfig.ColumnFlag.Target;
+//            if (cConfig.getColumnFlag().equals(flag)) {
+//                taskNumber++;
+//            }
+//        }
         // todo:check if MTNN need regression function
         double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0);
         Object pObject = this.validParams.get(CommonConstants.PROPAGATION);
         String propagation = (pObject == null) ? DTrainUtils.RESILIENTPROPAGATION : pObject.toString();
-        this.mtnn = new MultiTaskNN(numInputs, hiddenNodes, hiddenActiFuncs, taskNumber, l2reg);
-        this.mtnn.initOptimizer(learningRate,propagation, 0,RegulationLevel.NONE);
+        this.mtnn = new MultiTaskNN(inputCount, hiddenNodes, hiddenActiFuncs, taskNumber, l2reg);
+        this.mtnn.initOptimizer(learningRate, propagation, 0, RegulationLevel.NONE);
     }
 
     @Override
@@ -97,14 +92,14 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
         }
 
         MTNNParams aggregation = aggregateWorkerGradients(context);
-        this.mtnn.optimizeWeight(aggregation.getTrainSize(),context.getCurrentIteration() -1,aggregation.getMtnn());
+        this.mtnn.optimizeWeight(aggregation.getTrainSize(), context.getCurrentIteration() - 1, aggregation.getMtnn());
         MTNNParams params = new MTNNParams();
         params.setTrainSize(aggregation.getTrainSize());
         params.setValidationSize(aggregation.getValidationSize());
         params.setTrainCount(aggregation.getTrainCount());
         params.setValidationCount(aggregation.getValidationCount());
         params.setTrainError(aggregation.getTrainError());
-        params.setValidationError(aggregation.getValidationError());
+        params.setValidationErrors(aggregation.getValidationErrors());
         params.setSerializationType(SerializationType.WEIGHTS);
         this.mtnn.setSerializationType(SerializationType.WEIGHTS);
         params.setMtnn(this.mtnn);

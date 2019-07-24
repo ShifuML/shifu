@@ -363,7 +363,7 @@ public class WDLWorker extends
 
     /**
      * Add to training set or validation set according to validation rate.
-     * 
+     *
      * @param hashcode
      *            the hash code of the data
      * @param data

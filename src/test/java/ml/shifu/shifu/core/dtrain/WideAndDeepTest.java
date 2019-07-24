@@ -31,11 +31,11 @@ public class WideAndDeepTest {
         props.setProperty(GuaguaConstants.GUAGUA_WORKER_RESULT_CLASS, WDLParams.class.getName());
         props.setProperty(CommonConstants.MODELSET_SOURCE_TYPE, "LOCAL");
         props.setProperty(CommonConstants.SHIFU_MODEL_CONFIG,
-                getClass().getResource("/models/WideAndDeep/ModelConfig.json").toString());
+                getClass().getResource("/model/WideAndDeep/ModelConfig.json").toString());
         props.setProperty(CommonConstants.SHIFU_COLUMN_CONFIG,
-                getClass().getResource("/models/WideAndDeep/ColumnConfig.json").toString());
+                getClass().getResource("/model/WideAndDeep/ColumnConfig.json").toString());
 
-        props.setProperty(GuaguaConstants.GUAGUA_INPUT_DIR, getClass().getResource("/data/part-m-00000").toString());
+        props.setProperty(GuaguaConstants.GUAGUA_INPUT_DIR, getClass().getResource("/data/part-m-00000-1000").toString());
 
         GuaguaUnitDriver<WDLParams, WDLParams> driver = new GuaguaMRUnitDriver<>(props);
 
