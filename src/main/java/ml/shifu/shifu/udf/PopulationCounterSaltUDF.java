@@ -1,5 +1,5 @@
 /*
- * Copyright [2013-2015] PayPal Software Foundation
+ * Copyright [2012-2019] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,12 +68,8 @@ public class PopulationCounterSaltUDF extends AbstractTrainerUDF<Tuple> {
         Tuple groupInfo = (Tuple) input.get(0);
         DataBag bag = (DataBag) input.get(1);
         Integer columnId = (Integer) groupInfo.get(1);
-        String groupStr = "";
-        for(int i = 0; i < groupInfo.size(); i++){
-            groupStr += groupInfo.get(i) + ",";
-        }
         ColumnConfig columnConfig = columnConfigList.get(columnId);
-        logger.info("PopulationCounterSaltUDF: Start to count bin value count for {}, bag size {}, group info {}", columnConfig.getColumnName(), bag.size(), groupStr);
+        logger.info("PopulationCounterSaltUDF: Start to count bin value count for {}, bag size {}", columnConfig.getColumnName(), bag.size());
 
         if ( columnConfig.isCategorical()
                 && CollectionUtils.isNotEmpty(columnConfig.getBinCategory()) ) {
@@ -103,11 +99,6 @@ public class PopulationCounterSaltUDF extends AbstractTrainerUDF<Tuple> {
         output.set(2, counter.getUnitSum());
         output.set(3, StringUtils.join(Longs.asList(counter.getPositiveCounter()), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
         output.set(4, StringUtils.join(Longs.asList(counter.getNegativeCounter()), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
-        String outputStr = "";
-        for(int i = 0; i < output.size(); i++){
-            outputStr += output.get(i).toString() + ",";
-        }
-
         return output;
     }
 
@@ -117,7 +108,7 @@ public class PopulationCounterSaltUDF extends AbstractTrainerUDF<Tuple> {
             return Utils
                 .getSchemaFromString("PopulationInfo:Tuple(columnId : int, binLen : int, unitSum : double, positiveCounter : chararray, negativeCounter : chararray)");
         } catch (ParserException e) {
-            log.debug("Error when generating output schema.", e);
+            log.error("Error when generating output schema.", e);
             // just ignore
             return null;
         }

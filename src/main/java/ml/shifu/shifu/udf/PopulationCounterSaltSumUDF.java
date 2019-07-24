@@ -1,5 +1,5 @@
 /*
- * Copyright [2013-2015] PayPal Software Foundation
+ * Copyright [2012-2019] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -125,7 +125,7 @@ public class PopulationCounterSaltSumUDF extends AbstractTrainerUDF<Tuple> {
             return Utils
                 .getSchemaFromString("PopulationInfo:Tuple(columnId : int, population : chararray, unitstats : chararray)");
         } catch (ParserException e) {
-            log.debug("Error when generating output schema.", e);
+            log.error("Error when generating output schema.", e);
             // just ignore
             return null;
         }
