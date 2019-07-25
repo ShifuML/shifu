@@ -115,6 +115,11 @@ public class WideAndDeep
      */
     boolean embedEnable = true;
 
+    /**
+     * Enable dense fields in WideLayer when {@link #wideDenseEnable} is true, by default is true.
+     */
+    private boolean wideDenseEnable = true;
+
     private boolean isDebug = false;
 
     /**
@@ -127,13 +132,15 @@ public class WideAndDeep
     }
 
     @SuppressWarnings("rawtypes")
-    public WideAndDeep(boolean wideEnable, boolean deepEnable, boolean embedEnable, List<Layer> hiddenLayers,
-            DenseLayer finalLayer, EmbedLayer ecl, WideLayer wl, Map<Integer, Integer> idBinCateSizeMap,
-            int numericalSize, List<Integer> denseColumnIds, List<Integer> embedColumnIds, List<Integer> embedOutputs,
-            List<Integer> wideColumnIds, List<Integer> hiddenNodes, List<String> actiFuncs, double l2reg) {
+    public WideAndDeep(boolean wideEnable, boolean deepEnable, boolean embedEnable, boolean wideDenseEnable,
+            List<Layer> hiddenLayers, DenseLayer finalLayer, EmbedLayer ecl, WideLayer wl,
+            Map<Integer, Integer> idBinCateSizeMap, int numericalSize, List<Integer> denseColumnIds,
+            List<Integer> embedColumnIds, List<Integer> embedOutputs, List<Integer> wideColumnIds,
+            List<Integer> hiddenNodes, List<String> actiFuncs, double l2reg) {
         this.wideEnable = wideEnable;
         this.deepEnable = deepEnable;
         this.embedEnable = embedEnable;
+        this.wideDenseEnable = wideDenseEnable;
         this.hiddenLayers = hiddenLayers;
         this.finalLayer = finalLayer;
         this.ecl = ecl;
@@ -152,13 +159,14 @@ public class WideAndDeep
         AssertUtils.assertListNotNullAndSizeEqual(hiddenLayers, actiFuncs);
     }
 
-    public WideAndDeep(boolean wideEnable, boolean deepEnable, boolean embedEnable,
+    public WideAndDeep(boolean wideEnable, boolean deepEnable, boolean embedEnable, boolean wideDenseEnable,
             Map<Integer, Integer> idBinCateSizeMap, int numericalSize, List<Integer> denseColumnIds,
             List<Integer> embedColumnIds, List<Integer> embedOutputs, List<Integer> wideColumnIds,
             List<Integer> hiddenNodes, List<String> actiFuncs, double l2reg) {
         this.wideEnable = wideEnable;
         this.deepEnable = deepEnable;
         this.embedEnable = embedEnable;
+        this.wideDenseEnable = wideDenseEnable;
         this.idBinCateSizeMap = idBinCateSizeMap;
         this.numericalSize = numericalSize;
         this.denseColumnIds = denseColumnIds;
@@ -189,7 +197,7 @@ public class WideAndDeep
         }
 
         WideDenseLayer wdl = new WideDenseLayer(this.denseColumnIds, this.denseColumnIds.size(), l2reg);
-        this.wl = new WideLayer(wfLayers, wdl, new BiasLayer());
+        this.wl = new WideLayer(wfLayers, wdl, new BiasLayer(), this.wideDenseEnable);
 
         int preHiddenInputs;
         if(this.embedEnable) {
@@ -705,6 +713,7 @@ public class WideAndDeep
         out.writeBoolean(this.isWideEnable());
         out.writeBoolean(this.isDeepEnable());
         out.writeBoolean(this.isEmbedEnable());
+        out.writeBoolean(this.isWideDenseEnable());
 
         writeLayerWithNuLLCheck(out, this.dil);
 
@@ -772,6 +781,7 @@ public class WideAndDeep
         this.wideEnable = in.readBoolean();
         this.deepEnable = in.readBoolean();
         this.embedEnable = in.readBoolean();
+        this.wideDenseEnable = in.readBoolean();
 
         this.dil = (DenseInputLayer) readLayerWithNullCheck(in, new DenseInputLayer());
 
@@ -915,8 +925,7 @@ public class WideAndDeep
         }
         this.finalLayer.initOptimizer(learningRate, algorithm, reg, rl);
         this.ecl.initOptimizer(learningRate, algorithm, reg, rl);
-//        this.wl.initOptimizer(learningRate, algorithm, reg, rl);
-        this.wl.initOptimizer(5d, algorithm, reg, rl); // hard code for test
+        this.wl.initOptimizer(learningRate, algorithm, reg, rl);
     }
 
     @SuppressWarnings("rawtypes")
@@ -1004,6 +1013,20 @@ public class WideAndDeep
      */
     public void setEmbedEnable(boolean embedEnable) {
         this.embedEnable = embedEnable;
+    }
+
+    /**
+     * @return the wideDenseEnable
+     */
+    public boolean isWideDenseEnable() {
+        return wideDenseEnable;
+    }
+
+    /**
+     * @param wideDenseEnable the wideDenseEnable to set
+     */
+    public void setWideDenseEnable(boolean wideDenseEnable) {
+        this.wideDenseEnable = wideDenseEnable;
     }
 
 }

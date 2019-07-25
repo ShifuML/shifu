@@ -18,6 +18,8 @@ package ml.shifu.shifu.core.dtrain;
 import java.io.IOException;
 import java.util.Properties;
 
+import org.junit.Test;
+
 import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.hadoop.GuaguaMRUnitDriver;
 import ml.shifu.guagua.unit.GuaguaUnitDriver;
@@ -35,7 +37,7 @@ import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams;
  */
 public class DTTest {
 
-    // @Test
+    @Test
     public void testDtApp() throws IOException {
         Properties props = new Properties();
         props.setProperty(GuaguaConstants.MASTER_COMPUTABLE_CLASS, DTMaster.class.getName());

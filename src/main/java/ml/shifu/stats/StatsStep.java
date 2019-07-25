@@ -68,7 +68,7 @@ public class StatsStep extends Step<List<ColumnConfig>> {
         try {
 
             // User may change variable type after `shifu init`
-            ColumnConfigUpdater.updateColumnConfigFlags(this.modelConfig, this.columnConfigList, ModelStep.STATS);
+            ColumnConfigUpdater.updateColumnConfigFlags(this.modelConfig, this.columnConfigList, ModelStep.STATS, -1);
 
             LOG.info("Saving ModelConfig, ColumnConfig and then upload to HDFS ...");
             JSONUtils.writeValue(new File(pathFinder.getModelConfigPath(SourceType.LOCAL)), modelConfig);
@@ -82,27 +82,34 @@ public class StatsStep extends Step<List<ColumnConfig>> {
 
             if(modelConfig.isMapReduceRunMode()) {
                 if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.DynamicBinning)) {
-                    statsExecutor = new DIBStatsExecutor(new BasicModelProcessor(super.modelConfig,
-                            super.columnConfigList, super.otherConfigs), modelConfig, columnConfigList);
+                    statsExecutor = new DIBStatsExecutor(
+                            new BasicModelProcessor(super.modelConfig, super.columnConfigList, super.otherConfigs),
+                            modelConfig, columnConfigList);
                 } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPat)) {
-                    statsExecutor = new MunroPatStatsExecutor(new BasicModelProcessor(super.modelConfig,
-                            super.columnConfigList, super.otherConfigs), modelConfig, columnConfigList);
+                    statsExecutor = new MunroPatStatsExecutor(
+                            new BasicModelProcessor(super.modelConfig, super.columnConfigList, super.otherConfigs),
+                            modelConfig, columnConfigList);
                 } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPatI)) {
-                    statsExecutor = new MunroPatIStatsExecutor(new BasicModelProcessor(super.modelConfig,
-                            super.columnConfigList, super.otherConfigs), modelConfig, columnConfigList);
+                    statsExecutor = new MunroPatIStatsExecutor(
+                            new BasicModelProcessor(super.modelConfig, super.columnConfigList, super.otherConfigs),
+                            modelConfig, columnConfigList);
                 } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.SPDT)) {
-                    statsExecutor = new SPDTStatsExecutor(new BasicModelProcessor(super.modelConfig,
-                            super.columnConfigList, super.otherConfigs), modelConfig, columnConfigList);
+                    statsExecutor = new SPDTStatsExecutor(
+                            new BasicModelProcessor(super.modelConfig, super.columnConfigList, super.otherConfigs),
+                            modelConfig, columnConfigList);
                 } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.SPDTI)) {
-                    statsExecutor = new SPDTIStatsExecutor(new BasicModelProcessor(super.modelConfig,
-                            super.columnConfigList, super.otherConfigs), modelConfig, columnConfigList);
+                    statsExecutor = new SPDTIStatsExecutor(
+                            new BasicModelProcessor(super.modelConfig, super.columnConfigList, super.otherConfigs),
+                            modelConfig, columnConfigList);
                 } else {
-                    statsExecutor = new SPDTIStatsExecutor(new BasicModelProcessor(super.modelConfig,
-                            super.columnConfigList, super.otherConfigs), modelConfig, columnConfigList);
+                    statsExecutor = new SPDTIStatsExecutor(
+                            new BasicModelProcessor(super.modelConfig, super.columnConfigList, super.otherConfigs),
+                            modelConfig, columnConfigList);
                 }
             } else if(modelConfig.isLocalRunMode()) {
-                statsExecutor = new AkkaStatsWorker(new BasicModelProcessor(super.modelConfig, super.columnConfigList,
-                        super.otherConfigs), modelConfig, columnConfigList);
+                statsExecutor = new AkkaStatsWorker(
+                        new BasicModelProcessor(super.modelConfig, super.columnConfigList, super.otherConfigs),
+                        modelConfig, columnConfigList);
             } else {
                 throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_MODE);
             }

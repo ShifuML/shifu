@@ -14,8 +14,8 @@ import org.apache.commons.collections.CollectionUtils;
  */
 public class TrainUpdater extends BasicUpdater {
 
-    public TrainUpdater(ModelConfig modelConfig) throws IOException {
-        super(modelConfig);
+    public TrainUpdater(ModelConfig modelConfig, int mtlIndex) throws IOException {
+        super(modelConfig, mtlIndex);
     }
 
     @Override

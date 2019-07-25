@@ -52,6 +52,7 @@ import com.google.common.base.Splitter;
 import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper;
@@ -93,34 +94,46 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             setUp(ModelStep.INIT);
 
             // initialize and save ColumnConfig list firstly to make sure in mr jobs we can load columnconfig.json
-            int status = initColumnConfigList();
-
-            if(status != 0) {
-                return status;
-            }
-
-            saveColumnConfigList();
-            syncDataToHdfs(modelConfig.getDataSet().getSource());
-
-            Map<Integer, Data> countInfoMap = null;
-            if(autoTypeEnableCondition()) {
-                countInfoMap = getCountInfoByMRJob();
-            }
-
-            if(autoTypeEnableCondition() && countInfoMap != null) {
-                if(modelConfig.getDataSet().getAutoTypeThreshold() <= 0) {
-                    log.info("Auto type detection is on but threshold <= 0, only compute distinct count but not detect "
-                            + "categorical columns.");
-                    int cateCount = setCategoricalColumnsByCountInfo(countInfoMap, true);
-                    log.info("Automatically check {} variables to categorical type.", cateCount);
-                } else {
-                    int cateCount = setCategoricalColumnsAndDistinctAccount(countInfoMap, true, true);
-                    log.info("Automatically check {} variables to categorical type.", cateCount);
+            if(this.modelConfig.isMultiTask()) {
+                List<String> tagColumns = this.modelConfig.getMultiTaskTargetColumnNames();
+                for(int i = 0; i < tagColumns.size(); i++) {
+                    List<ColumnConfig> ccList = initColumnConfigList(tagColumns.get(i), tagColumns, i);
+                    if(ccList == null) {
+                        return -1;
+                    }
+                    ShifuFileUtils.createDirIfNotExists(pathFinder.getMTLColumnConfigFolder(SourceType.LOCAL),
+                            SourceType.LOCAL);
+                    saveColumnConfigList(pathFinder.getMTLColumnConfigPath(SourceType.LOCAL, i), ccList);
                 }
+            } else {
+                List<ColumnConfig> ccList = initColumnConfigList(this.modelConfig.getTargetColumnName(), null, -1);
+                if(ccList == null) {
+                    return 1;
+                }
+                this.columnConfigList = ccList;
+
+                Map<Integer, Data> countInfoMap = null;
+                if(autoTypeEnableCondition()) {
+                    countInfoMap = getCountInfoByMRJob();
+                }
+
+                if(autoTypeEnableCondition() && countInfoMap != null) {
+                    if(modelConfig.getDataSet().getAutoTypeThreshold() <= 0) {
+                        log.info(
+                                "Auto type detection is on but threshold <= 0, only compute distinct count but not detect "
+                                        + "categorical columns.");
+                        int cateCount = setCategoricalColumnsByCountInfo(countInfoMap, true);
+                        log.info("Automatically check {} variables to categorical type.", cateCount);
+                    } else {
+                        int cateCount = setCategoricalColumnsAndDistinctAccount(countInfoMap, true, true);
+                        log.info("Automatically check {} variables to categorical type.", cateCount);
+                    }
+                }
+
+                // save ColumnConfig list into file
+                saveColumnConfigList();
             }
 
-            // save ColumnConfig list into file
-            saveColumnConfigList();
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
             clearUp(ModelStep.INIT);
@@ -241,11 +254,11 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
     }
 
     private boolean isDoubleFrequentVariable(String[] items) {
-        for(String string: items){
-            if(!StringUtils.isNotBlank(string)){
-                try{
+        for(String string: items) {
+            if(!StringUtils.isNotBlank(string)) {
+                try {
                     Double.parseDouble(string);
-                }catch(NumberFormatException e){
+                } catch (NumberFormatException e) {
                     return false;
                 }
             }
@@ -413,11 +426,12 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
     }
 
     /**
-     * initialize the columnConfig file
-     * 
-     * @throws IOException
+     * Initialize the columnConfig file
      */
-    private int initColumnConfigList() throws IOException {
+    private List<ColumnConfig> initColumnConfigList(String tagColumnName, List<String> tagColumns, int mtlIndex)
+            throws IOException {
+        List<ColumnConfig> ccList = new ArrayList<ColumnConfig>();
+
         String[] fields = null;
         boolean isSchemaProvided = true;
         if(StringUtils.isNotBlank(modelConfig.getHeaderPath())) {
@@ -435,7 +449,7 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                     StringUtils.isBlank(modelConfig.getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter()
                             : modelConfig.getHeaderDelimiter(),
                     modelConfig.getDataSet().getSource());
-            if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
+            if(StringUtils.join(fields, "").contains(tagColumnName)) {
                 // if first line contains target column name, we guess it is csv format and first line is header.
                 isSchemaProvided = true;
                 // first line of data meaning second line in data files excluding first header line
@@ -459,7 +473,6 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             }
         }
 
-        columnConfigList = new ArrayList<ColumnConfig>();
         for(int i = 0; i < fields.length; i++) {
             ColumnConfig config = new ColumnConfig();
             config.setColumnNum(i);
@@ -471,30 +484,45 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
             } else {
                 config.setColumnName(i + "");
             }
-            columnConfigList.add(config);
+            ccList.add(config);
         }
 
-        ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, columnConfigList, ModelStep.INIT);
+        ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, ccList, ModelStep.INIT, mtlIndex);
 
+        boolean isSuccess = postProcess(tagColumnName, tagColumns, ccList);
+        if(!isSuccess) {
+            return null;
+        }
+
+        return ccList;
+    }
+
+    private boolean postProcess(String tagColumnName, List<String> tagColumns, List<ColumnConfig> columnConfigList) {
         boolean hasTarget = false;
         for(ColumnConfig config: columnConfigList) {
             if(config.isTarget()) {
                 hasTarget = true;
             }
+
+            // if mtl other target column, in such CC.json, set other to categorical variables
+            if(tagColumns != null && tagColumns.contains(config.getColumnName())
+                    && !tagColumnName.equals(config.getColumnName())) {
+                config.setColumnFlag(ColumnFlag.Meta);
+                config.setColumnType(ColumnType.C);
+            }
         }
 
         if(!hasTarget) {
-            log.error("Target is not valid: " + modelConfig.getTargetColumnName());
+            log.error("Target is not valid: " + tagColumnName);
             if(StringUtils.isNotBlank(modelConfig.getHeaderPath())) {
                 log.error("Please check your first line of data set file {}", modelConfig.getDataSetRawPath());
             } else {
                 log.error("Please check your header file {} and your header delimiter {}", modelConfig.getHeaderPath(),
                         modelConfig.getHeaderDelimiter());
             }
-            return 1;
+            return false;
         }
-
-        return 0;
+        return true;
     }
 
     static class Data {

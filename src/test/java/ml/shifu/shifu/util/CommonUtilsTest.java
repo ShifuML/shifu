@@ -342,7 +342,7 @@ public class CommonUtilsTest {
         e.setColumnName("d");
         list.add(e);
 
-        ColumnConfigUpdater.updateColumnConfigFlags(config, list, ModelInspector.ModelStep.VARSELECT);
+        ColumnConfigUpdater.updateColumnConfigFlags(config, list, ModelInspector.ModelStep.VARSELECT, -1);
 
         Assert.assertTrue(list.get(0).isMeta());
     }

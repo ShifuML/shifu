@@ -65,6 +65,7 @@ import ml.shifu.guagua.util.ReflectionUtils;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
+import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelStatsConf;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ColumnStatsCalculator;
@@ -93,7 +94,10 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.fs.SourceFile;
-import ml.shifu.shifu.util.*;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.ValueVisitor;
 
 /**
  * statistics, max/min/avg/std for each column dataset if it's numerical
@@ -130,6 +134,10 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                     log.warn("Some mean value of column is null, could you check if you run 'shifu stats'.");
                     return -1;
                 }
+                
+                if(this.modelConfig.isMultiTask()) {
+                    throw new IllegalArgumentException("FIXME corre doesn't support MULTI Task Learning");
+                }
 
                 // 2. compute correlation
                 log.info("Start computing correlation value ...");
@@ -163,6 +171,10 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                     log.warn("To Run PSI please set your PSI column in dataSet::psiColumnName.");
                 }
             } else if(getBooleanParam(this.params, Constants.IS_REBIN)) {
+                if(this.modelConfig.isMultiTask()) {
+                    // FIXME rebin support MULTI Task Learning
+                    throw new IllegalArgumentException("FIXME rebin doesn't support MULTI Task Learning");
+                }
                 // run the re-binning
                 String backupColumnConfigPath = this.pathFinder.getBackupColumnConfig();
                 if(!ShifuFileUtils.isFileExists(new Path(backupColumnConfigPath), SourceType.LOCAL)) {
@@ -205,33 +217,25 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 // use the merge ColumnConfig.json to replace current one
                 saveColumnConfigList();
             } else {
-                AbstractStatsExecutor statsExecutor = null;
+                if(!this.modelConfig.isMultiTask()) {
+                    AbstractStatsExecutor statsExecutor = createStatsExecutor(this.modelConfig, this.columnConfigList);
+                    statsExecutor.doStats();
 
-                if(modelConfig.isMapReduceRunMode()) {
-                    if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.DynamicBinning)) {
-                        statsExecutor = new DIBStatsExecutor(this, modelConfig, columnConfigList);
-                    } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPat)) {
-                        statsExecutor = new MunroPatStatsExecutor(this, modelConfig, columnConfigList);
-                    } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPatI)) {
-                        statsExecutor = new MunroPatIStatsExecutor(this, modelConfig, columnConfigList);
-                    } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.SPDT)) {
-                        statsExecutor = new SPDTStatsExecutor(this, modelConfig, columnConfigList);
-                    } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.SPDTI)) {
-                        statsExecutor = new SPDTIStatsExecutor(this, modelConfig, columnConfigList);
-                    } else {
-                        statsExecutor = new SPDTIStatsExecutor(this, modelConfig, columnConfigList);
-                    }
-                } else if(modelConfig.isLocalRunMode()) {
-                    statsExecutor = new AkkaStatsWorker(this, modelConfig, columnConfigList);
+                    // update the backup ColumnConfig.json after running stats
+                    String backupColumnConfigPath = this.pathFinder.getBackupColumnConfig();
+                    ShifuFileUtils.createDirIfNotExists(new SourceFile(Constants.TMP, SourceType.LOCAL));
+                    saveColumnConfigList(backupColumnConfigPath, this.columnConfigList);
                 } else {
-                    throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_MODE);
+                    // TODO run in parallel
+                    for(int i = 0; i < this.mtlColumnConfigLists.size(); i++) {
+                        AbstractStatsExecutor statsExecutor = createStatsExecutor(this.modelConfig,
+                                this.mtlColumnConfigLists.get(i));
+                        statsExecutor.setMtlIndex(i);
+                        log.info("Start to run the {} multi-task learning job.", i);
+                        statsExecutor.doStats();
+                        log.info("Finish the {} multi-task learning job.", i);
+                    }
                 }
-                statsExecutor.doStats();
-
-                // update the backup ColumnConfig.json after running stats
-                String backupColumnConfigPath = this.pathFinder.getBackupColumnConfig();
-                ShifuFileUtils.createDirIfNotExists(new SourceFile(Constants.TMP, SourceType.LOCAL));
-                saveColumnConfigList(backupColumnConfigPath, this.columnConfigList);
             }
 
             // back up current column config each time as stats will always change CC.json
@@ -250,12 +254,36 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         return 0;
     }
 
+    private AbstractStatsExecutor createStatsExecutor(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
+        AbstractStatsExecutor statsExecutor = null;
+        if(modelConfig.isMapReduceRunMode()) {
+            if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.DynamicBinning)) {
+                statsExecutor = new DIBStatsExecutor(this, modelConfig, columnConfigList);
+            } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPat)) {
+                statsExecutor = new MunroPatStatsExecutor(this, modelConfig, columnConfigList);
+            } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPatI)) {
+                statsExecutor = new MunroPatIStatsExecutor(this, modelConfig, columnConfigList);
+            } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.SPDT)) {
+                statsExecutor = new SPDTStatsExecutor(this, modelConfig, columnConfigList);
+            } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.SPDTI)) {
+                statsExecutor = new SPDTIStatsExecutor(this, modelConfig, columnConfigList);
+            } else {
+                statsExecutor = new SPDTIStatsExecutor(this, modelConfig, columnConfigList);
+            }
+        } else if(modelConfig.isLocalRunMode()) {
+            statsExecutor = new AkkaStatsWorker(this, modelConfig, columnConfigList);
+        } else {
+            throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_MODE);
+        }
+        return statsExecutor;
+    }
+
     private boolean isMeanCalculated() {
         // 1. validate if run stats before run stats -correlation
         boolean foundValidMeanValueColumn = false;
-        for (ColumnConfig config : this.columnConfigList) {
-            if (!config.isMeta() && !config.isTarget()) {
-                if (config.getMean() != null) {
+        for(ColumnConfig config: this.columnConfigList) {
+            if(!config.isMeta() && !config.isTarget()) {
+                if(config.getMean() != null) {
                     foundValidMeanValueColumn = true;
                     break;
                 }
@@ -626,8 +654,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         if(data == null) {
             throw new NullPointerException(String.format("data should not be null. data:%s", Arrays.toString(data)));
         }
-        CorrelationWritable result =  ReflectionUtils
-                .newInstance(CorrelationWritable.class.getName());
+        CorrelationWritable result = ReflectionUtils.newInstance(CorrelationWritable.class.getName());
         DataInputStream dataIn = null;
         try {
             ByteArrayInputStream in = new ByteArrayInputStream(data);

@@ -15,7 +15,8 @@
  */
 package ml.shifu.shifu.udf;
 
-import ml.shifu.shifu.util.Constants;
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
@@ -25,7 +26,6 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import ml.shifu.shifu.udf.norm.PrecisionType;
-import java.io.IOException;
 
 /**
  * NormalizeUDFTest class

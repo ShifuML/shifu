@@ -114,9 +114,11 @@ public class ModelInspector {
             // in INIT, only check if data or header are there or not
             result = ValidateResult.mergeResult(result, checkRawData(modelConfig.getDataSet(), "Train Set:"));
         } else if(ModelStep.STATS.equals(modelStep)) {
-            result = ValidateResult.mergeResult(result,
-                    checkFile("ColumnConfig.json", SourceType.LOCAL, "ColumnConfig.json : "));
-            result = ValidateResult.mergeResult(result, checkStatsConf(modelConfig));
+            if(!modelConfig.isMultiTask()) {
+                result = ValidateResult.mergeResult(result,
+                        checkFile("ColumnConfig.json", SourceType.LOCAL, "ColumnConfig.json : "));
+                result = ValidateResult.mergeResult(result, checkStatsConf(modelConfig));
+            }
             // verify categorical name file
             if(StringUtils.isNotBlank(modelConfig.getDataSet().getCategoricalColumnNameFile())) {
                 result = ValidateResult.mergeResult(result,
@@ -212,6 +214,9 @@ public class ModelInspector {
      */
     private ValidateResult checkColumnConf(ModelConfig modelConfig) throws IOException {
         ValidateResult result = new ValidateResult(true);
+        if(modelConfig.isMultiTask()) {
+            return result;
+        }
 
         if(StringUtils.isBlank(modelConfig.getTargetColumnName())) {
             result.addCause("The target column name is null or empty.");
@@ -285,7 +290,7 @@ public class ModelInspector {
                     new ValidateResult(false, Arrays.asList("stats#maxNumBin should be in [0, 32767].")));
         }
 
-        if(CollectionUtils.isEmpty(modelConfig.getTags())) {
+        if(!modelConfig.isMultiTask() && CollectionUtils.isEmpty(modelConfig.getTags())) {
             if(!(BinningMethod.EqualInterval.equals(modelConfig.getStats().getBinningMethod())
                     || BinningMethod.EqualTotal.equals(modelConfig.getStats().getBinningMethod()))) {
                 result = ValidateResult.mergeResult(result, new ValidateResult(false,
