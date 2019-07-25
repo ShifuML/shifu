@@ -97,6 +97,7 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
     }
 
     public float[] backward(double[] predicts, double[] actuals, double sig) {
+        // it's just replace the finalActiFunc layer.
         double[] grad2Logits = new double[predicts.length];
 
         for (int i = 0; i < grad2Logits.length; i++) {

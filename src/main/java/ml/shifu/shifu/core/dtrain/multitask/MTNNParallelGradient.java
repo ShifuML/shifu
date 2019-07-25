@@ -13,7 +13,6 @@ import java.util.concurrent.ExecutionException;
 
 /**
  * @author haillu
- * @date 7/22/2019 5:39 PM
  */
 public class MTNNParallelGradient {
     private final Logger LOG = LoggerFactory.getLogger(MTNNParallelGradient.class);
@@ -202,7 +201,7 @@ public class MTNNParallelGradient {
             mtnnParams.setValidationCount(validCnt);
             mtnnParams.setTrainSize(trainSize);
             mtnnParams.setValidationSize(validationSize);
-            mtnnParams.setTrainError(trainSumError);
+            mtnnParams.setTrainErrors(trainSumError);
             mtnnParams.setValidationErrors(validSumError);
             mtnnParams.setMtnn(this.mtnn);
 

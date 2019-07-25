@@ -33,7 +33,6 @@ import java.util.concurrent.*;
 
 /**
  * @author haillu
- * @date 7/17/2019 5:05 PM
  */
 @ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 3600)
 public class MTNNWorker extends
@@ -124,6 +123,7 @@ public class MTNNWorker extends
 
     @Override
     public void init(WorkerContext<MTNNParams, MTNNParams> context) {
+        LOG.debug("worker init:");
         Properties props = context.getProps();
         try {
             RawSourceData.SourceType sourceType = RawSourceData.SourceType
@@ -206,8 +206,12 @@ public class MTNNWorker extends
         //we have counted it in DTrainUtils.getNumericAndCategoricalInputAndOutputCounts.
         taskNumber = inputOutputIndex[2];
         // todo:check if MTNN need regression function
-        double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0);
-        this.mtnn = new MultiTaskNN(inputCount, hiddenNodes, hiddenActiFuncs, taskNumber, l2reg);
+        //double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0);
+
+        LOG.debug("params of constructor of MTNN:inputCount:{},hiddenNodes:{},hiddenActiFuncs:{}" +
+                "taskNumber:{}", inputCount, hiddenNodes, hiddenActiFuncs, taskNumber);
+
+        this.mtnn = new MultiTaskNN(inputCount, hiddenNodes, hiddenActiFuncs, taskNumber, 0d);
 
     }
 
@@ -246,8 +250,8 @@ public class MTNNWorker extends
             } else {
                 ColumnConfig config = this.columnConfigList.get(index);
                 if (config != null && config.isTarget()) {
-                    targetIndex++;
                     ideal[targetIndex] = getDoubleValue(input);
+                    targetIndex++;
                 } else {
                     if (validColumn(config)) {
                         hashcode = hashcode * 31 + input.hashCode();

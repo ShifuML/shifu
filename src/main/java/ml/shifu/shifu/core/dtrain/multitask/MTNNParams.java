@@ -10,7 +10,6 @@ import java.io.IOException;
 
 /**
  * @author haillu
- * @date 7/17/2019 3:58 PM
  */
 public class MTNNParams extends HaltBytable implements Combinable<MTNNParams> {
     private static final boolean MTNN_IS_NULL = true;
@@ -126,11 +125,11 @@ public class MTNNParams extends HaltBytable implements Combinable<MTNNParams> {
         this.validationSize = validationSize;
     }
 
-    public double[] getTrainError() {
+    public double[] getTrainErrors() {
         return trainErrors;
     }
 
-    public void setTrainError(double[] trainError) {
+    public void setTrainErrors(double[] trainError) {
         this.trainErrors = trainError;
     }
 

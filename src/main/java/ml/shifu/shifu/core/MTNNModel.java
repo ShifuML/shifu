@@ -6,7 +6,6 @@ import org.encog.ml.data.MLData;
 
 /**
  * @author haillu
- * @date 7/24/2019 10:45 AM
  */
 public class MTNNModel extends BasicML implements MLRegression {
     @Override

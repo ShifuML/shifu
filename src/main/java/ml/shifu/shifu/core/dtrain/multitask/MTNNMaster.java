@@ -23,7 +23,6 @@ import java.util.Properties;
 
 /**
  * @author haillu
- * @date 7/17/2019 5:00 PM
  */
 public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams> {
 
@@ -48,6 +47,7 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
 
     @Override
     public void init(MasterContext<MTNNParams, MTNNParams> context) {
+        LOG.debug("master init:");
         Properties props = context.getProps();
         SourceType sourceType = SourceType.
                 valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
@@ -78,9 +78,14 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
 //            }
 //        }
         // todo:check if MTNN need regression function
-        double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0);
+        //double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0);
+        double l2reg = 0;
         Object pObject = this.validParams.get(CommonConstants.PROPAGATION);
         String propagation = (pObject == null) ? DTrainUtils.RESILIENTPROPAGATION : pObject.toString();
+
+        LOG.debug("params of constructor of MTNN: inputCount: {},hiddenNodes: {},hiddenActiFuncs: {}" +
+                "taskNumber: {},l2reg: {}", inputCount, hiddenNodes, hiddenActiFuncs, taskNumber, l2reg);
+
         this.mtnn = new MultiTaskNN(inputCount, hiddenNodes, hiddenActiFuncs, taskNumber, l2reg);
         this.mtnn.initOptimizer(learningRate, propagation, 0, RegulationLevel.NONE);
     }
@@ -94,11 +99,17 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
         MTNNParams aggregation = aggregateWorkerGradients(context);
         this.mtnn.optimizeWeight(aggregation.getTrainSize(), context.getCurrentIteration() - 1, aggregation.getMtnn());
         MTNNParams params = new MTNNParams();
+
+        LOG.debug("params will be sent to worker: trainSize:{},validationSize:{}," +
+                        "trainCount:{},validationCount:{},trainError:{},validationErrors:{}", aggregation.getTrainSize(),
+                aggregation.getValidationSize(), aggregation.getTrainCount(), aggregation.getValidationCount(),
+                aggregation.getTrainErrors(), aggregation.getValidationErrors());
+
         params.setTrainSize(aggregation.getTrainSize());
         params.setValidationSize(aggregation.getValidationSize());
         params.setTrainCount(aggregation.getTrainCount());
         params.setValidationCount(aggregation.getValidationCount());
-        params.setTrainError(aggregation.getTrainError());
+        params.setTrainErrors(aggregation.getTrainErrors());
         params.setValidationErrors(aggregation.getValidationErrors());
         params.setSerializationType(SerializationType.WEIGHTS);
         this.mtnn.setSerializationType(SerializationType.WEIGHTS);

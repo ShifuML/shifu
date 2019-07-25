@@ -4,7 +4,6 @@ import java.util.Arrays;
 
 /**
  * @author haillu
- * @date 7/16/2019 4:46 PM
  */
 public enum SerializationType {
     /**
