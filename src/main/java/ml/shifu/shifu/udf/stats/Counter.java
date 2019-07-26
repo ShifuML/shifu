@@ -41,6 +41,14 @@ public abstract class Counter {
         this.unitSum = 0.0d;
     }
 
+    public int getBinLen() {
+        return binLen;
+    }
+
+    public double getUnitSum() {
+        return unitSum;
+    }
+
     public abstract void addData(Boolean tag, String val);
 
     public List<Long> getCounter() {
@@ -85,6 +93,22 @@ public abstract class Counter {
             total = total + this.positiveCounter[i] + this.negativeCounter[i];
         }
         return total;
+    }
+
+    public void setBinLen(int binLen) {
+        this.binLen = binLen;
+    }
+
+    public void setPositiveCounter(long[] positiveCounter) {
+        this.positiveCounter = positiveCounter;
+    }
+
+    public void setNegativeCounter(long[] negativeCounter) {
+        this.negativeCounter = negativeCounter;
+    }
+
+    public void setUnitSum(double unitSum) {
+        this.unitSum = unitSum;
     }
 
     protected long getTotalMissingCnt() {

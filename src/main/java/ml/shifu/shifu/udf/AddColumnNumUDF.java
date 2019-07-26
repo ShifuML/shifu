@@ -20,6 +20,7 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.*;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
@@ -143,7 +144,8 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
             }
 
             // add random seed for distribution
-            tuple.set(COLUMN_SEED_INDX, Math.abs(random.nextInt() % 300));
+            tuple.set(COLUMN_SEED_INDX, Math.abs(random.nextInt() % Environment
+                    .getInt("shifu.psi.distribution.salt", 300)));
 
             // get weight value
             tuple.set(COLUMN_WEIGHT_INDX, getWeightColumnVal(input));
