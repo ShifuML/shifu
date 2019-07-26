@@ -18,8 +18,6 @@ package ml.shifu.shifu.core.dtrain;
 import java.io.IOException;
 import java.util.Properties;
 
-import org.testng.annotations.Test;
-
 import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.hadoop.GuaguaMRUnitDriver;
 import ml.shifu.guagua.unit.GuaguaUnitDriver;

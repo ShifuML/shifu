@@ -15,17 +15,14 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
+import java.util.Properties;
+
 import ml.shifu.guagua.GuaguaConstants;
 import ml.shifu.guagua.hadoop.GuaguaMRUnitDriver;
 import ml.shifu.guagua.unit.GuaguaUnitDriver;
 import ml.shifu.shifu.core.dtrain.wdl.WDLMaster;
 import ml.shifu.shifu.core.dtrain.wdl.WDLParams;
 import ml.shifu.shifu.core.dtrain.wdl.WDLWorker;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.testng.annotations.Test;
-
-import java.util.Properties;
 
 /**
  * Test run Wide And Deep Model in Local.
@@ -33,9 +30,8 @@ import java.util.Properties;
  * @author Wu Devin (haifwu@paypal.com)
  */
 public class WideAndDeepTest {
-    private static final Logger LOG = LoggerFactory.getLogger(WideAndDeepTest.class);
 
-    @Test
+//    @Test
     public void testWideAndDeep() {
         Properties props = new Properties();
         props.setProperty(GuaguaConstants.MASTER_COMPUTABLE_CLASS, WDLMaster.class.getName());
