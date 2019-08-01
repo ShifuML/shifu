@@ -41,49 +41,54 @@ public class MTNNParallelGradient {
         this.trainLows = new int[threadNumber];
         this.trainHighs = new int[threadNumber];
 
-        int steps = recordCount / threadNumber;
-        if (recordCount % threadNumber != 0) {
-            steps += (recordCount % threadNumber) / steps;
-        }
-        for (int i = 0; i < threadNumber; i++) {
-            this.trainLows[i] = i * steps;
-            if (i != threadNumber - 1) {
-                this.trainHighs[i] = this.trainLows[i] + steps - 1;
-            } else {
-                this.trainHighs[i] = recordCount - 1;
+        int stepLength = Math.max(recordCount / threadNumber, 1);
+        // we must consider the situation that this iteration has no training data.
+        if (this.trainData != null && this.trainData.size() > 0) {
+            if (recordCount % threadNumber != 0) {
+                stepLength += (recordCount % threadNumber) / stepLength;
             }
-        }
-        LOG.info("Train record count: {}", recordCount);
-        LOG.info("Train lows: {}", Arrays.toString(trainLows));
-        LOG.info("Train highs: {}", Arrays.toString(trainHighs));
-
-        int testRecordCount = this.testData.size();
-        this.testLows = new int[threadNumber];
-        this.testHighs = new int[threadNumber];
-        int testStepCount = testRecordCount / threadNumber;
-        if (testRecordCount % threadNumber != 0) {
-            // move step count to append last gap to avoid last thread worse 2*testStepCount-1
-            testStepCount += (testRecordCount % threadNumber) / testStepCount;
-        }
-        for (int i = 0; i < threadNumber; i++) {
-            this.testLows[i] = i * testStepCount;
-            if (i != threadNumber - 1) {
-                this.testHighs[i] = this.testLows[i] + testStepCount - 1;
-            } else {
-                this.testHighs[i] = testRecordCount - 1;
+            for (int i = 0; i < threadNumber; i++) {
+                this.trainLows[i] = i * stepLength < recordCount ? i * stepLength : recordCount - 1;
+                this.trainHighs[i] = this.trainLows[i] + stepLength - 1 < recordCount ?
+                        this.trainLows[i] + stepLength - 1 : recordCount - 1;
             }
+            LOG.info("Train record count: {}", recordCount);
+            LOG.info("Train lows: {}", Arrays.toString(trainLows));
+            LOG.info("Train highs: {}", Arrays.toString(trainHighs));
         }
 
-        LOG.info("Test record count: {}", testRecordCount);
-        LOG.info("Test lows: {}", Arrays.toString(testLows));
-        LOG.info("Test highs: {}", Arrays.toString(testHighs));
+        if (this.testData != null && this.testData.size() > 0) {
+            int testRecordCount = this.testData.size();
+            this.testLows = new int[threadNumber];
+            this.testHighs = new int[threadNumber];
+            int testStepCount = Math.max(testRecordCount / threadNumber, 1);
+            if (testRecordCount % threadNumber != 0) {
+                // move step count to append last gap to avoid last thread worse 2*testStepCount-1
+                testStepCount += (testRecordCount % threadNumber) / testStepCount;
+            }
+            for (int i = 0; i < threadNumber; i++) {
+                this.testLows[i] = i * testStepCount < testRecordCount ? i * testStepCount : testRecordCount - 1;
+                this.testHighs[i] = this.testLows[i] + testStepCount - 1 < testRecordCount ?
+                        this.testLows[i] + testStepCount - 1 : testRecordCount - 1;
+            }
+
+            LOG.info("Test record count: {}", testRecordCount);
+            LOG.info("Test lows: {}", Arrays.toString(testLows));
+            LOG.info("Test highs: {}", Arrays.toString(testHighs));
+        }
     }
 
     public MTNNParams doCompute() {
         long start = System.currentTimeMillis();
         for (int i = 0; i < this.threadNumber; i++) {
-            this.completionService.submit(new MTNNParallelGradient.GradientTask(this.mtnn, this.trainData, this.testData,
-                    this.trainLows[i], this.trainHighs[i], this.testLows[i], this.testHighs[i]));
+            if (trainData != null && testData != null) {
+                this.completionService.submit(new GradientTask(this.mtnn, this.trainData, this.testData,
+                        this.trainLows[i], this.trainHighs[i], this.testLows[i], this.testHighs[i]));
+            } else if (trainData != null) {
+                this.completionService.submit(new GradientTask(this.mtnn, this.trainData, null,
+                        -1, -1, -1, -1));
+            }
+
         }
         MTNNParams params = null;
         for (int i = 0; i < this.threadNumber; i++) {
@@ -107,7 +112,7 @@ public class MTNNParallelGradient {
     }
 
     class GradientTask implements Callable<MTNNParams> {
-        private final Logger TASK_LOG = LoggerFactory.getLogger(MTNNParallelGradient.GradientTask.class);
+        private final Logger TASK_LOG = LoggerFactory.getLogger(GradientTask.class);
         private MultiTaskNN mtnn;
         private MemoryLimitedList<MTNNWorker.Data> trainData;
         private MemoryLimitedList<MTNNWorker.Data> testData;
@@ -144,8 +149,8 @@ public class MTNNParallelGradient {
             // forward and backward compute gradients for each iteration
             double trainCnt = trainHigh - trainLow, validCnt = testHigh - testLow;
             double trainSize = 0, validationSize = 0;
-            double[] trainSumError={};
-            double[] validSumError={};
+            double[] trainSumError = {};
+            double[] validSumError = {};
 
             int index = 0;
             for (int i = trainLow; i < trainHigh; i++) {
@@ -155,7 +160,7 @@ public class MTNNParallelGradient {
                 double[] actuals = data.getLabels();
 
                 AssertUtils.assertEquals(predicts.length, actuals.length);
-                if (i == trainLow){
+                if (i == trainLow) {
                     trainSumError = new double[predicts.length];
                 }
                 double[] errors = new double[predicts.length];
@@ -173,29 +178,31 @@ public class MTNNParallelGradient {
             TASK_LOG.info("Start validation computation.");
 
             // compute validation error
-            for (int i = testLow; i < testHigh; i++) {
-                MTNNWorker.Data data = testData.get(i);
-                validationSize += data.getWeight();
-                double[] predicts = this.mtnn.forward(data.getInputs());
-                double[] actuals = data.getLabels();
+            if (testData != null) {
+                for (int i = testLow; i < testHigh; i++) {
+                    MTNNWorker.Data data = testData.get(i);
+                    validationSize += data.getWeight();
+                    double[] predicts = this.mtnn.forward(data.getInputs());
+                    double[] actuals = data.getLabels();
 
-                AssertUtils.assertEquals(predicts.length, actuals.length);
+                    AssertUtils.assertEquals(predicts.length, actuals.length);
 //                if (index++ <= 0) {
 //                    TASK_LOG.info("Index {}, logit {}, sigmoid {}, label {}.", index, logits[0], sigmoid,
 //                            data.getLabels());
 //                }
-                if (i == testLow){
-                    validSumError = new double[predicts.length];
-                }
-                double[] errors = new double[predicts.length];
-                for (int j = 0; j < predicts.length; j++) {
-                    errors[j] = predicts[j] - actuals[j];
-                    validSumError[j] += (errors[j] * errors[j] * data.getWeight());
-                }
+                    if (i == testLow) {
+                        validSumError = new double[predicts.length];
+                    }
+                    double[] errors = new double[predicts.length];
+                    for (int j = 0; j < predicts.length; j++) {
+                        errors[j] = predicts[j] - actuals[j];
+                        validSumError[j] += (errors[j] * errors[j] * data.getWeight());
+                    }
 
+                }
             }
 
-            TASK_LOG.info("training error is {} {}", trainSumError, validSumError);
+            TASK_LOG.info("trainSumError is {}, validSumError is {}", trainSumError, validSumError);
             // set cnt, error to params and return to master
             mtnnParams.setTrainCount(trainCnt);
             mtnnParams.setValidationCount(validCnt);

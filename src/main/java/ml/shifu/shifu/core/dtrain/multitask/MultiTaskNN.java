@@ -238,22 +238,6 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
         }
     }
 
-//    // update model with optimizer
-//    public void update(MultiTaskNN gradMultiTask, Optimizer optimizer) {
-//        this.dil.update(gradMultiTask.getDil(), optimizer);
-//
-//        List<Layer> gradHLs = gradMultiTask.getHiddenLayers();
-//        int hlSize = this.hiddenLayers.size();
-//        for (int i = 0; i < hlSize; i++) {
-//            Layer tmpLayer = this.hiddenLayers.get(i);
-//            if (tmpLayer instanceof DenseLayer) {
-//                ((DenseLayer) tmpLayer).update((DenseLayer) gradHLs.get(i), optimizer);
-//            }
-//        }
-//
-//        this.finalLayer.update(gradMultiTask.getFinalLayer(), optimizer);
-//    }
-
     @Override
     public void write(DataOutput out) throws IOException {
         //todo
@@ -266,7 +250,29 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
 
     @Override
     public MultiTaskNN combine(MultiTaskNN from) {
-        return null;
+        // combine input layers.
+        this.dil = this.dil.combine(from.getDil());
+
+        // combine hidden layers
+        List<Layer> fhl = from.hiddenLayers;
+        int hlSize = hiddenLayers.size();
+        List<Layer> combinedLayers = new ArrayList<Layer>(hlSize);
+        for (int i=0;i<hlSize;i++){
+            if (hiddenLayers.get(i) instanceof DenseLayer){
+                Layer nLayer = ((DenseLayer) hiddenLayers.get(i)).combine((DenseLayer) fhl.get(i));
+                combinedLayers.add(nLayer);
+            }
+            // just copy activation layers from mtnn before.
+            else {
+                combinedLayers.add(hiddenLayers.get(i));
+            }
+        }
+        this.hiddenLayers = combinedLayers;
+
+        this.finalLayer = this.finalLayer.combine(from.getFinalLayer());
+
+        this.finalActiFunc = from.finalActiFunc;
+        return this;
     }
 
     @Override

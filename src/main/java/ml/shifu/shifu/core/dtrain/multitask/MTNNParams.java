@@ -44,6 +44,9 @@ public class MTNNParams extends HaltBytable implements Combinable<MTNNParams> {
         for (int i = 0; i < validationErrors.length; i++) {
             this.validationErrors[i] += from.validationErrors[i];
         }
+        this.trainSize += from.trainSize;
+        this.validationSize += from.validationSize;
+        // In the first iteration, the worker may send a empty WDLParams without WideAndDeep Init
         if (from.getMtnn() != null) {
             this.mtnn = this.mtnn.combine(from.getMtnn());
         }

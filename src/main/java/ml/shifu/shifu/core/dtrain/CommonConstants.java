@@ -85,7 +85,7 @@ public interface CommonConstants {
 
     public static final String NUM_HIDDEN_LAYERS = "NumHiddenLayers";
 
-    public static final String WDL_L2_REG = "WDLguagua.data.memoryFractionReg";
+    public static final String WDL_L2_REG = "WDLL2Reg";
 
     public static final String CHECKPOINT_INTERVAL = "CheckpointInterval";
 

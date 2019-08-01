@@ -272,13 +272,12 @@ public class MTNNWorker extends
 //            significance = significance * (this.upSampleRng.sample() + 1);
 //        }
 
-        //todo: don't know what next steps do.Temporarily, comment out it.
-//
-//        Data data = new Data(inputs, significance, ideal);
-//        // split into validation and training data set according to validation rate
-//        boolean isInTraining = this.addDataPairToDataSet(hashcode, data, context.getAttachment());
-//        // update some positive or negative selected count in metrics
-//        this.updateMetrics(data, isInTraining);
+        //todo: some fileds like 'positiveSelectedTrainCount','negativeSelectedTrainCount' should be an array rather than a number.
+        Data data = new Data(inputs, significance, ideal);
+        // split into validation and training data set according to validation rate
+        boolean isInTraining = this.addDataPairToDataSet(hashcode, data, context.getAttachment());
+        // update some positive or negative selected count in metrics
+        this.updateMetrics(data, isInTraining);
     }
 
     private void updateMetrics(Data data, boolean isInTraining) {

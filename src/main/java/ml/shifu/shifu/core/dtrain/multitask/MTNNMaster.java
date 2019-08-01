@@ -93,7 +93,7 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
     @Override
     public MTNNParams doCompute(MasterContext<MTNNParams, MTNNParams> context) {
         if (context.isFirstIteration()) {
-            initOrRecoverModelWeights(context);
+            return initOrRecoverModelWeights(context);
         }
 
         MTNNParams aggregation = aggregateWorkerGradients(context);
