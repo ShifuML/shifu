@@ -41,7 +41,7 @@ public class ModelTrainConf {
      * @author Zhang David (pengzhang@paypal.com)
      */
     public static enum ALGORITHM {
-        NN, LR, SVM, DT, RF, GBT, TENSORFLOW, WDL
+        NN, LR, SVM, DT, RF, GBT, TENSORFLOW, WDL, MTL
     }
 
     /**

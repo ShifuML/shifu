@@ -21,7 +21,7 @@ public class MultiTaskNNTest {
         Properties props = new Properties();
         props.setProperty(GuaguaConstants.MASTER_COMPUTABLE_CLASS, MTNNMaster.class.getName());
         props.setProperty(GuaguaConstants.WORKER_COMPUTABLE_CLASS, MTNNWorker.class.getName());
-        props.setProperty(GuaguaConstants.GUAGUA_ITERATION_COUNT, "100");
+        props.setProperty(GuaguaConstants.GUAGUA_ITERATION_COUNT, "50");
         props.setProperty(GuaguaConstants.GUAGUA_MASTER_RESULT_CLASS, MTNNParams.class.getName());
         props.setProperty(GuaguaConstants.GUAGUA_WORKER_RESULT_CLASS, MTNNParams.class.getName());
         props.setProperty(CommonConstants.MODELSET_SOURCE_TYPE, "LOCAL");

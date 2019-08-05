@@ -122,7 +122,7 @@ public class MTNNParallelGradient {
         private int testHigh;
 
         public GradientTask(MultiTaskNN mtnn, MemoryLimitedList<MTNNWorker.Data> trainData, MemoryLimitedList<MTNNWorker.Data> testData, int trainLow, int trainHigh, int testLow, int testHigh) {
-            this.mtnn = mtnn;
+            this.mtnn = mtnn.clone();
             this.trainData = trainData;
             this.testData = testData;
             this.trainLow = trainLow;

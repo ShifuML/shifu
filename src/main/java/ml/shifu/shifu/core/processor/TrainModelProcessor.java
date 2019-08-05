@@ -41,6 +41,10 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 
+import ml.shifu.shifu.core.dtrain.multitask.MTNNMaster;
+import ml.shifu.shifu.core.dtrain.multitask.MTNNOutput;
+import ml.shifu.shifu.core.dtrain.multitask.MTNNParams;
+import ml.shifu.shifu.core.dtrain.multitask.MTNNWorker;
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
@@ -381,9 +385,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) // NN algorithm
                 || LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) // LR algorithm
                 || CommonUtils.isTreeModel(alg) // RF or GBT algortihm
-                || Constants.TF_ALG_NAME.equalsIgnoreCase(alg) || Constants.WDL.equalsIgnoreCase(alg))) {
+                || Constants.TF_ALG_NAME.equalsIgnoreCase(alg) || Constants.WDL.equalsIgnoreCase(alg)||Constants.MTL.equalsIgnoreCase(alg))) {
             throw new IllegalArgumentException(
-                    "Currently we only support NN, LR, RF(RandomForest), WDL and GBDT(Gradient Boost Desicion Tree) distributed training.");
+                    "Currently we only support NN, LR, RF(RandomForest), WDL , MTL and GBDT(Gradient Boost Desicion Tree) distributed training.");
         }
 
         if((LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)
@@ -1453,6 +1457,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             this.prepareDTParams(args, sourceType);
         } else if(Constants.WDL_ALG_NAME.equalsIgnoreCase(alg)) {
             this.prepareWDLParams(args, sourceType);
+        } else if (Constants.MTL_ALG_NAME.equalsIgnoreCase(alg)){
+            this.prepareMTLParams(args,sourceType);
         }
 
         args.add("-c");
@@ -1548,6 +1554,24 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
                 WDLOutput.class.getName()));
 
+    }
+
+    private void prepareMTLParams(List<String> args, SourceType sourceType) {
+        args.add("-w");
+        args.add(MTNNWorker.class.getName());
+
+        args.add("-m");
+        args.add(MTNNMaster.class.getName());
+
+        args.add("-mr");
+        args.add(MTNNParams.class.getName());
+
+        args.add("-wr");
+        args.add(MTNNParams.class.getName());
+
+        // TODO, add MTNNOutput here
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
+                MTNNOutput.class.getName()));
     }
 
     private int vcoresSetting() {

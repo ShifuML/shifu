@@ -11,14 +11,16 @@ import ml.shifu.shifu.core.dtrain.wdl.activation.Activation;
 import ml.shifu.shifu.core.dtrain.wdl.activation.ActivationFactory;
 import ml.shifu.shifu.core.dtrain.wdl.activation.Sigmoid;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.PropOptimizer;
+import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+
+import static ml.shifu.shifu.core.dtrain.wdl.SerializationUtil.NULL;
 
 public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Combinable<MultiTaskNN>, PropOptimizer<MultiTaskNN> {
 
@@ -32,7 +34,7 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
 
     private List<Integer> hiddenNodes;
 
-    private List<String> HiddenActiFuncs;
+    private List<String> hiddenActiFuncs;
 
     private DenseLayer finalLayer;
 
@@ -51,7 +53,7 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
     public MultiTaskNN(int inputSize, List<Integer> hiddenNodes, List<String> HiddenActiFuncs, int taskNumber, double l2reg) {
         this.inputSize = inputSize;
         this.hiddenNodes = hiddenNodes;
-        this.HiddenActiFuncs = HiddenActiFuncs;
+        this.hiddenActiFuncs = HiddenActiFuncs;
         this.taskNumber = taskNumber;
 //        this.finalActiFuncs = finalActiFuncs;
         this.l2reg = l2reg;
@@ -131,70 +133,6 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
         this.finalLayer.initGrads();
     }
 
-    public DenseInputLayer getDil() {
-        return dil;
-    }
-
-    public void setDil(DenseInputLayer dil) {
-        this.dil = dil;
-    }
-
-    public List<Layer> getHiddenLayers() {
-        return hiddenLayers;
-    }
-
-    public void setHiddenLayers(List<Layer> hiddenLayers) {
-        this.hiddenLayers = hiddenLayers;
-    }
-
-    public DenseLayer getFinalLayer() {
-        return finalLayer;
-    }
-
-    public void setFinalLayer(DenseLayer finalLayer) {
-        this.finalLayer = finalLayer;
-    }
-
-
-    public int getInputSize() {
-        return inputSize;
-    }
-
-    public void setInputSize(int inputSize) {
-        this.inputSize = inputSize;
-    }
-
-    public List<Integer> getHiddenNodes() {
-        return hiddenNodes;
-    }
-
-    public void setHiddenNodes(List<Integer> hiddenNodes) {
-        this.hiddenNodes = hiddenNodes;
-    }
-
-    public List<String> getHiddenActiFuncs() {
-        return HiddenActiFuncs;
-    }
-
-    public void setHiddenActiFuncs(List<String> hiddenActiFuncs) {
-        this.HiddenActiFuncs = hiddenActiFuncs;
-    }
-
-    public double getL2reg() {
-        return l2reg;
-    }
-
-    public void setL2reg(double l2reg) {
-        this.l2reg = l2reg;
-    }
-
-    public SerializationType getSerializationType() {
-        return serializationType;
-    }
-
-    public void setSerializationType(SerializationType serializationType) {
-        this.serializationType = serializationType;
-    }
 
     public void updateWeights(MultiTaskNN multiTask) {
         this.initWeight(multiTask);
@@ -238,15 +176,122 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
         }
     }
 
+    public void write(DataOutput out, SerializationType serializationType) throws IOException {
+        this.serializationType = serializationType;
+        write(out);
+    }
+
     @Override
     public void write(DataOutput out) throws IOException {
-        //todo
+        out.writeInt(this.serializationType.getValue());
+        writeLayerWithNuLLCheck(out, this.dil);
+        if (this.hiddenLayers == null){
+            out.writeInt(NULL);
+        }
+        else{
+            List<DenseLayer> denseLayers = this.hiddenLayers.stream().filter(layer -> layer instanceof DenseLayer)
+                    .map(layer -> (DenseLayer) layer).collect(Collectors.toList());
+            out.writeInt(denseLayers.size());
+
+            denseLayers.forEach(denseLayer -> {
+                try {
+                    denseLayer.write(out, this.serializationType);
+                } catch (IOException e) {
+                    LOG.error("IOException when write hidden nodes dense part", e);
+                }
+            });
+        }
+
+        if(this.hiddenActiFuncs == null) {
+            out.writeInt(NULL);
+        } else {
+            out.writeInt(this.hiddenActiFuncs.size());
+            this.hiddenActiFuncs.forEach(act -> {
+                try {
+                    out.writeUTF(act);
+                } catch (IOException e) {
+                    LOG.error("Write active function " + act, e);
+                }
+            });
+        }
+
+        writeLayerWithNuLLCheck(out,finalLayer);
+        //todo:modify the hard code of final activation.
+        out.writeUTF("Sigmoid");
+        if (this.serializationType == SerializationType.MODEL_SPEC){
+            out.writeInt(inputSize);
+            out.writeDouble(l2reg);
+        }
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
-        //todo
+        this.serializationType = SerializationType.getSerializationType(in.readInt());
+        this.dil = (DenseInputLayer) readLayerWithNullCheck(in,new DenseInputLayer());
+        List<DenseLayer> hiddenDenseLayer = new ArrayList<>();
+        int size = in.readInt();
+        for (int i=0;i<size;i++){
+            DenseLayer denseLayer = new DenseLayer();
+            denseLayer.readFields(in,this.serializationType);
+            hiddenDenseLayer.add(denseLayer);
+        }
+
+        this.hiddenActiFuncs = new ArrayList<>();
+        size = in.readInt();
+        for (int i=0;i<size;i++){
+            this.hiddenActiFuncs.add(in.readUTF());
+        }
+        this.finalLayer = (DenseLayer) readLayerWithNullCheck(in, new DenseLayer());
+        //todo:modify the hard code of final activation.
+        in.readUTF();
+        this.finalActiFunc = new Sigmoid();
+//        this.finalActiFunc = ActivationFactory.getInstance().getActivation(in.readUTF());
+
+        //build hiddenLayers including activations:
+        AssertUtils.assertListNotNullAndSizeEqual(this.hiddenActiFuncs, hiddenDenseLayer);
+        this.hiddenLayers = new ArrayList<>(this.hiddenActiFuncs.size() * 2);
+        for(int i = 0; i < hiddenDenseLayer.size(); i++) {
+            this.hiddenLayers.add(hiddenDenseLayer.get(i));
+            this.hiddenLayers.add(ActivationFactory.getInstance().getActivation(this.hiddenActiFuncs.get(i)));
+        }
+
+        if (serializationType == SerializationType.MODEL_SPEC){
+            this.inputSize = in.readInt();
+            this.l2reg = in.readDouble();
+        }
     }
+
+    /**
+     * Write layer with null check.
+     */
+    @SuppressWarnings("rawtypes")
+    private void writeLayerWithNuLLCheck(DataOutput out, AbstractLayer layer) throws IOException {
+        if (layer == null) {
+            out.writeBoolean(false);
+        } else {
+            out.writeBoolean(true);
+            layer.write(out, this.serializationType);
+        }
+    }
+
+
+    /**
+     * Read layer with null check.
+     *
+     * @param in
+     * @param layer
+     *            the layer to hold serialized data. This value should not be null.
+     * @return de-serialized layer instance
+     * @throws IOException
+     */
+    @SuppressWarnings("rawtypes")
+    private AbstractLayer readLayerWithNullCheck(DataInput in, AbstractLayer layer) throws IOException {
+        if(in.readBoolean()) {
+            layer.readFields(in, this.serializationType);
+        }
+        return layer;
+    }
+
 
     @Override
     public MultiTaskNN combine(MultiTaskNN from) {
@@ -257,8 +302,8 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
         List<Layer> fhl = from.hiddenLayers;
         int hlSize = hiddenLayers.size();
         List<Layer> combinedLayers = new ArrayList<Layer>(hlSize);
-        for (int i=0;i<hlSize;i++){
-            if (hiddenLayers.get(i) instanceof DenseLayer){
+        for (int i = 0; i < hlSize; i++) {
+            if (hiddenLayers.get(i) instanceof DenseLayer) {
                 Layer nLayer = ((DenseLayer) hiddenLayers.get(i)).combine((DenseLayer) fhl.get(i));
                 combinedLayers.add(nLayer);
             }
@@ -296,4 +341,98 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
         }
         this.finalLayer.optimizeWeight(numTrainSize, iteration, model.getFinalLayer());
     }
+
+    // clone by serialization
+    @Override
+    public MultiTaskNN clone() {
+        // Set the initial buffer size to 1M
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(1024 * 1024);
+        DataOutputStream dos = new DataOutputStream(byteArrayOutputStream);
+        DataInputStream dis = null;
+        try {
+            write(dos, SerializationType.MODEL_SPEC);
+            dos.flush();
+            ByteArrayInputStream dataInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
+            MultiTaskNN mtnn = new MultiTaskNN();
+            dis = new DataInputStream(dataInputStream);
+            mtnn.readFields(dis);
+            mtnn.initGrads();
+            return mtnn;
+        } catch (IOException e) {
+            LOG.error("IOException happen when clone mtnn model", e);
+        } finally {
+            IOUtils.closeStream(dos);
+            if (dis !=null){
+                IOUtils.closeStream(dis);
+            }
+        }
+        return null;
+    }
+
+    public DenseInputLayer getDil() {
+        return dil;
+    }
+
+    public void setDil(DenseInputLayer dil) {
+        this.dil = dil;
+    }
+
+    public List<Layer> getHiddenLayers() {
+        return hiddenLayers;
+    }
+
+    public void setHiddenLayers(List<Layer> hiddenLayers) {
+        this.hiddenLayers = hiddenLayers;
+    }
+
+    public DenseLayer getFinalLayer() {
+        return finalLayer;
+    }
+
+    public void setFinalLayer(DenseLayer finalLayer) {
+        this.finalLayer = finalLayer;
+    }
+
+
+    public int getInputSize() {
+        return inputSize;
+    }
+
+    public void setInputSize(int inputSize) {
+        this.inputSize = inputSize;
+    }
+
+    public List<Integer> getHiddenNodes() {
+        return hiddenNodes;
+    }
+
+    public void setHiddenNodes(List<Integer> hiddenNodes) {
+        this.hiddenNodes = hiddenNodes;
+    }
+
+    public List<String> getHiddenActiFuncs() {
+        return hiddenActiFuncs;
+    }
+
+    public void setHiddenActiFuncs(List<String> hiddenActiFuncs) {
+        this.hiddenActiFuncs = hiddenActiFuncs;
+    }
+
+    public double getL2reg() {
+        return l2reg;
+    }
+
+    public void setL2reg(double l2reg) {
+        this.l2reg = l2reg;
+    }
+
+    public SerializationType getSerializationType() {
+        return serializationType;
+    }
+
+    public void setSerializationType(SerializationType serializationType) {
+        this.serializationType = serializationType;
+    }
+
+
 }

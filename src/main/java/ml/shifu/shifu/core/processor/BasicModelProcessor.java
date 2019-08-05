@@ -526,6 +526,8 @@ public class BasicModelProcessor {
             // do nothing
         } else if(Constants.WDL.equalsIgnoreCase(alg)) {
             // do nothing
+        } else if (Constants.MTL.equalsIgnoreCase(alg)) {
+            // do nothing
         } else {
             throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_ALG);
         }
