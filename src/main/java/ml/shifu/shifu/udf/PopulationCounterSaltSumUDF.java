@@ -15,13 +15,10 @@
  */
 package ml.shifu.shifu.udf;
 
-import ml.shifu.guagua.util.MemoryUtils;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.core.ColumnStatsCalculator;
-import ml.shifu.shifu.core.dtrain.wdl.WDLWorker;
-import ml.shifu.shifu.udf.stats.CategoryCounter;
-import ml.shifu.shifu.udf.stats.Counter;
-import ml.shifu.shifu.udf.stats.NumericCounter;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
@@ -33,10 +30,11 @@ import org.apache.pig.parser.ParserException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.core.ColumnStatsCalculator;
+import ml.shifu.shifu.udf.stats.CategoryCounter;
+import ml.shifu.shifu.udf.stats.Counter;
+import ml.shifu.shifu.udf.stats.NumericCounter;
 
 /**
  * Calculate the counter for each bin
@@ -46,6 +44,7 @@ public class PopulationCounterSaltSumUDF extends AbstractTrainerUDF<Tuple> {
     public static Logger logger = LoggerFactory.getLogger(PopulationCounterSaltSumUDF.class);
 
     private Counter counter;
+    @SuppressWarnings("unused")
     private int index;
 
     // DO NOT use this constructor
