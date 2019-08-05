@@ -479,7 +479,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
 
         Object lossObj = validParams.get("Loss");
         this.lossStr = lossObj != null ? lossObj.toString() : "squared";
-        LOG.info("Loss str is {}", this.lossStr);
+        LOG.info("Loss type is {}.", this.lossStr);
 
         this.isDry = Boolean.TRUE.toString()
                 .equalsIgnoreCase(context.getProps().getProperty(CommonConstants.SHIFU_DRY_DTRAIN));

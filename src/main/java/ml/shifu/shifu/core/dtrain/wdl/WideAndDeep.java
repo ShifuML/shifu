@@ -40,6 +40,7 @@ import ml.shifu.guagua.io.Bytable;
 import ml.shifu.guagua.io.Combinable;
 import ml.shifu.shifu.core.dtrain.AssertUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
+import ml.shifu.shifu.core.dtrain.loss.LossType;
 import ml.shifu.shifu.core.dtrain.wdl.activation.Activation;
 import ml.shifu.shifu.core.dtrain.wdl.activation.ActivationFactory;
 import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
@@ -268,12 +269,19 @@ public class WideAndDeep
     }
 
     @SuppressWarnings("rawtypes")
-    public double[] backward(double[] predicts, double[] actuals, double sig) {
-        // TODO add binary cross entropy here
+    public double[] backward(double[] predicts, double[] actuals, double sig, LossType lossType) {
         double[] grad2Logits = new double[predicts.length];
         for(int i = 0; i < grad2Logits.length; i++) {
             double error = (predicts[i] - actuals[i]);
-            grad2Logits[i] = error * (derivedFunction(predicts[i]) + FLAT_SPOT_VALUE) * sig * -1d;
+            switch(lossType) {
+                case LOG:
+                    grad2Logits[i] = error * sig * -1d;
+                    break;
+                case SQUARED:
+                default:
+                    grad2Logits[i] = error * (derivedFunction(predicts[i]) + FLAT_SPOT_VALUE) * sig * -1d;
+                    break;
+            }
         }
 
         // wide layer backward, as wide layer in LR actually in backward, only gradients computation is needed.
@@ -1021,7 +1029,8 @@ public class WideAndDeep
     }
 
     /**
-     * @param wideDenseEnable the wideDenseEnable to set
+     * @param wideDenseEnable
+     *            the wideDenseEnable to set
      */
     public void setWideDenseEnable(boolean wideDenseEnable) {
         this.wideDenseEnable = wideDenseEnable;

@@ -25,15 +25,20 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import ml.shifu.shifu.core.dtrain.dataset.FloatFlatNetwork;
-import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataSet;
-import ml.shifu.shifu.util.ClassUtils;
-
 import org.encog.neural.error.ErrorFunction;
 import org.encog.neural.error.LinearErrorFunction;
 import org.encog.neural.flat.FlatNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import ml.shifu.shifu.core.dtrain.dataset.FloatFlatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataSet;
+import ml.shifu.shifu.core.dtrain.loss.AbsoluteErrorCalculation;
+import ml.shifu.shifu.core.dtrain.loss.AbsoluteErrorFunction;
+import ml.shifu.shifu.core.dtrain.loss.LogErrorCalculation;
+import ml.shifu.shifu.core.dtrain.loss.LogErrorFunction;
+import ml.shifu.shifu.core.dtrain.loss.SquaredErrorCalculation;
+import ml.shifu.shifu.util.ClassUtils;
 
 /**
  * {@link ParallelGradient} is copied from Encog framework. The reason is that we original Gradient don't pop up
@@ -248,7 +253,7 @@ public class ParallelGradient {
 
     public double calculateError() {
         CompletionService<Double> completionService = new ExecutorCompletionService<Double>(this.threadPool);
-        final ml.shifu.shifu.core.dtrain.nn.ErrorCalculation ec = createECInstance();
+        final ml.shifu.shifu.core.dtrain.loss.ErrorCalculation ec = createECInstance();
         for(int i = 0; i < this.threadCount; i++) {
             final SubGradient subGradient = this.subGradients[i];
             completionService.submit(new Callable<Double>() {
@@ -280,8 +285,8 @@ public class ParallelGradient {
      * 
      * @return the ErrorCalculation instance.
      */
-    public ml.shifu.shifu.core.dtrain.nn.ErrorCalculation createECInstance() {
-        ml.shifu.shifu.core.dtrain.nn.ErrorCalculation ec = new SquaredErrorCalculation();
+    public ml.shifu.shifu.core.dtrain.loss.ErrorCalculation createECInstance() {
+        ml.shifu.shifu.core.dtrain.loss.ErrorCalculation ec = new SquaredErrorCalculation();
         if(lossStr.equalsIgnoreCase("log")) {
             ec = new LogErrorCalculation();
         } else if(lossStr.equalsIgnoreCase("absolute")) {
@@ -290,7 +295,7 @@ public class ParallelGradient {
             ec = new SquaredErrorCalculation();
         } else {
             try {
-                ec = (ml.shifu.shifu.core.dtrain.nn.ErrorCalculation) ClassUtils.newInstance(Class.forName(lossStr));
+                ec = (ml.shifu.shifu.core.dtrain.loss.ErrorCalculation) ClassUtils.newInstance(Class.forName(lossStr));
             } catch (ClassNotFoundException e) {
                 LOG.warn("Class not found for {}, using default SquaredLoss", lossStr);
                 ec = new SquaredErrorCalculation();

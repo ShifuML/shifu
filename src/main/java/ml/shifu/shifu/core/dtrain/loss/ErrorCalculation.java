@@ -13,45 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain.nn;
+package ml.shifu.shifu.core.dtrain.loss;
 
 /**
- * Squared error computation logic.
+ * Copy from Encog Error Calculation to support log error, absolute error and squared error.
  */
-public class SquaredErrorCalculation implements ml.shifu.shifu.core.dtrain.nn.ErrorCalculation {
+public interface ErrorCalculation {
 
     /**
-     * The overall error.
+     * Return set size used to compute error.
+     * 
+     * @return the data set size
      */
-    private double globalError;
-
-    /**
-     * The size of a set.
-     */
-    private int setSize;
+    public int getSetSize();
 
     /**
      * Returns the root mean square error for a complete training set.
      * 
      * @return The current error for the neural network.
      */
-    @Override
-    public final double calculate() {
-//        if(this.setSize == 0) {
-//            return 0;
-//        }
-//        return this.globalError / this.setSize;
-        return this.globalError;
-    }
+    public double calculate();
 
     /**
      * Reset the error accumulation to zero.
      */
-    @Override
-    public final void reset() {
-        this.globalError = 0;
-        this.setSize = 0;
-    }
+    public void reset();
 
     /**
      * Update the error with single values.
@@ -61,12 +47,7 @@ public class SquaredErrorCalculation implements ml.shifu.shifu.core.dtrain.nn.Er
      * @param ideal
      *            The ideal value.
      */
-    @Override
-    public final void updateError(final double actual, final double ideal) {
-        double delta = ideal - actual;
-        this.globalError += delta * delta;
-        this.setSize += 1;
-    }
+    public double updateError(final double actual, final double ideal);
 
     /**
      * Called to update for each number that should be checked.
@@ -75,19 +56,9 @@ public class SquaredErrorCalculation implements ml.shifu.shifu.core.dtrain.nn.Er
      *            The actual number.
      * @param ideal
      *            The ideal number.
+     * @param significance
+     *            weight of the record
      */
-    @Override
-    public final void updateError(final double[] actual, final double[] ideal, final double significance) {
-        for(int i = 0; i < actual.length; i++) {
-            double delta = (ideal[i] - actual[i]) ;
-            this.globalError += delta * delta * significance;
-        }
-        this.setSize += ideal.length;
-    }
-
-    @Override
-    public int getSetSize() {
-        return setSize;
-    }
+    public void updateError(final double[] actual, final double[] ideal, final double significance);
 
 }

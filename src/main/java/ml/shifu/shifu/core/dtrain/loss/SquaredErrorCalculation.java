@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain.nn;
+package ml.shifu.shifu.core.dtrain.loss;
 
 /**
- * Absolute error computation logic.
+ * Squared error computation logic.
  */
-public class AbsoluteErrorCalculation implements ml.shifu.shifu.core.dtrain.nn.ErrorCalculation {
+public class SquaredErrorCalculation implements ml.shifu.shifu.core.dtrain.loss.ErrorCalculation {
 
     /**
      * The overall error.
@@ -35,17 +35,15 @@ public class AbsoluteErrorCalculation implements ml.shifu.shifu.core.dtrain.nn.E
      * 
      * @return The current error for the neural network.
      */
+    @Override
     public final double calculate() {
-//        if(this.setSize == 0) {
-//            return 0;
-//        }
-//        return this.globalError / this.setSize;
         return this.globalError;
     }
 
     /**
      * Reset the error accumulation to zero.
      */
+    @Override
     public final void reset() {
         this.globalError = 0;
         this.setSize = 0;
@@ -59,9 +57,13 @@ public class AbsoluteErrorCalculation implements ml.shifu.shifu.core.dtrain.nn.E
      * @param ideal
      *            The ideal value.
      */
-    public final void updateError(final double actual, final double ideal) {
-        this.globalError += Math.abs(ideal - actual);
+    @Override
+    public final double updateError(final double actual, final double ideal) {
+        double delta = ideal - actual;
+        double currentError = delta * delta;
+        this.globalError += currentError;
         this.setSize += 1;
+        return currentError;
     }
 
     /**
@@ -72,11 +74,12 @@ public class AbsoluteErrorCalculation implements ml.shifu.shifu.core.dtrain.nn.E
      * @param ideal
      *            The ideal number.
      */
+    @Override
     public final void updateError(final double[] actual, final double[] ideal, final double significance) {
         for(int i = 0; i < actual.length; i++) {
-            this.globalError += (Math.abs(ideal[i] - actual[i]) * significance);
+            double delta = (ideal[i] - actual[i]);
+            this.globalError += delta * delta * significance;
         }
-
         this.setSize += ideal.length;
     }
 
@@ -84,4 +87,5 @@ public class AbsoluteErrorCalculation implements ml.shifu.shifu.core.dtrain.nn.E
     public int getSetSize() {
         return setSize;
     }
+
 }
