@@ -273,6 +273,12 @@ public interface Constants {
 
     public static final String SHIFU_NORM_PREFER_PART_SIZE = "shifu.norm.prefer.part.size";
 
+    public static final String SHIFU_NORM_SHUFFLE_RBL_RATIO = "shifu.norm.shuffle.rbl.ratio";
+
+    public static final String SHIFU_NORM_SHUFFLE_RBL_TARGET_INDEX = "shifu.norm.shuffle.rbl.target.index";
+
+    public static final String SHIFU_NORM_SHUFFLE_RBL_UPDATE_WEIGHT = "shifu.norm.shuffle.rbl.update.weight";
+
     public static final String SHIFU_SCORE_SCALE = "shifu.score.scale";
 
     public static final String SHIFU_CORRELATION_MULTI_THREADS = "shifu.correlation.multi.threads";
@@ -333,6 +339,8 @@ public interface Constants {
 
     public static final String RECURSIVE_CNT = "RECURSIVE_CNT";
     public static final String IS_TO_SHUFFLE_DATA = "IS_TO_SHUFFLE_DATA";
+    public static final String EXPECT_POS_RATIO = "EXPECT_POS_RATIO";
+    public static final String RBL_UPDATE_WEIGHT = "RBL_UPDATE_WEIGHT";
 
     public static final String STRICT_MODE = "STRICT";
 

@@ -1843,7 +1843,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 || !ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)
                 || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())
                         && !ShifuFileUtils.isFileExists(pathFinder.getCleanedValidationDataPath(), sourceType))) {
-            runDataClean(isToShuffle);
+            // -1.0 means no re-balance
+            runDataClean(isToShuffle, -1.0, false);
         } else {
             // no need regen data
             LOG.warn("For RF/GBT, training input in {} exists, no need to regenerate it.", cleanedDataPath);

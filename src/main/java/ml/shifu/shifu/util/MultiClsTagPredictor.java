@@ -3,12 +3,15 @@ package ml.shifu.shifu.util;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import org.apache.commons.collections.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class MultiClsTagPredictor {
 
+    private static Logger LOG = LoggerFactory.getLogger(MultiClsTagPredictor.class);
     @SuppressWarnings("unused")
     private ModelConfig modelConfig;
     private boolean isOneVsAll;
@@ -28,6 +31,7 @@ public class MultiClsTagPredictor {
             ret = predictMultiClsTag(tags, sc.getScores());
         } else {
             int modelCnt = sc.getScores().size() / tags.size();
+
             List<PredictResult> results = new ArrayList<PredictResult>(modelCnt);
             for (int i = 0; i < modelCnt; i++) {
                 PredictResult result = predictMultiClsTag(tags,
