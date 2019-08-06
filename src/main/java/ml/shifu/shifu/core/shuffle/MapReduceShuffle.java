@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import ml.shifu.shifu.util.*;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -36,10 +37,6 @@ import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-import ml.shifu.shifu.util.ValueVisitor;
 
 /**
  * Created by zhanhu on 2/22/17.
@@ -57,6 +54,11 @@ public class MapReduceShuffle {
     }
 
     public void run(String rawNormPath) throws IOException, ClassNotFoundException, InterruptedException {
+        run(rawNormPath, 0.0d, false, -1, null);
+    }
+
+    public void run(String rawNormPath, double rblRatio, boolean rblUpdateWeight, int targetIndex, String delimiter)
+            throws IOException, ClassNotFoundException, InterruptedException {
         RawSourceData.SourceType source = this.modelConfig.getDataSet().getSource();
         final Configuration conf = new Configuration();
 
@@ -87,6 +89,14 @@ public class MapReduceShuffle {
         int shuffleSize = getDataShuffleSize(rawNormPath, source);
         log.info("Try to shuffle data into - {} parts.", shuffleSize);
         conf.set(Constants.SHIFU_NORM_SHUFFLE_SIZE, Integer.toString(shuffleSize));
+
+        if (targetIndex >= 0 && rblRatio > 0) {
+            log.info("Try to re-balance data by ratio {} on index {}, with the delimiter {}.", rblRatio, targetIndex, delimiter);
+            conf.set(Constants.SHIFU_NORM_SHUFFLE_RBL_RATIO, Double.toString(rblRatio));
+            conf.set(Constants.SHIFU_NORM_SHUFFLE_RBL_TARGET_INDEX, Integer.toString(targetIndex));
+            conf.set(Constants.SHIFU_NORM_SHUFFLE_RBL_UPDATE_WEIGHT, Boolean.toString(rblUpdateWeight));
+            conf.set(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Base64Utils.base64Encode(delimiter));
+        }
 
         Job job = Job.getInstance(conf, "Shifu: Shuffling normalized data - " + this.modelConfig.getModelSetName());
         job.setJarByClass(getClass());

@@ -253,6 +253,48 @@ public class ModelSpecLoaderUtils {
     }
 
     /**
+     * Get model score name list under current workspace
+     *
+     * @param modelConfig
+     *            model config
+     * @param evalConfig
+     *            eval configuration
+     * @param sourceType
+     *            {@link SourceType} LOCAL or HDFS?
+     * @return formatted model score name list
+     * @throws IOException
+     *             Exception when fail to load basic models
+     */
+    public static List<String> getBasicModelScoreNames(ModelConfig modelConfig, EvalConfig evalConfig,
+            RawSourceData.SourceType sourceType) throws IOException {
+        List<Path> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
+        List<String> modelNames = new ArrayList<>();
+        if (CollectionUtils.isNotEmpty(modelFileStats)) {
+            modelFileStats.stream().forEach(modelPath -> modelNames.add(formatModelScoreName(modelPath.getName())));
+        }
+        return modelNames;
+    }
+
+    /**
+     * format file name into the model score name
+     * @param fileName - model spec file name
+     * @return standard model score name
+     */
+    public static String formatModelScoreName(String fileName) {
+        if (StringUtils.isBlank(fileName)) {
+            return null;
+        } else {
+            String name = StringUtils.trim(fileName); // trim empty space
+            name = name.replaceAll("\\.[^.]*$", ""); // remove postfix, like .nn, .gbt
+            name = name.replaceAll("[^0-9a-zA-Z]", "_"); // replace all non-digit, letter with _
+            name = name.replaceAll("_+", "_"); // remove multi _ with one
+            name = name.replaceAll("^_*", ""); // remove leading _
+            name = name.replaceAll("_*$", ""); // remove following _
+            return name;
+        }
+    }
+
+    /**
      * Get how many models under current workspace
      *
      * @param modelConfig
@@ -310,14 +352,17 @@ public class ModelSpecLoaderUtils {
         });
 
         // added in shifu 0.2.5 to slice models not belonging to last training
-        int baggingModelSize = modelConfig.getTrain().getBaggingNum();
+        // Update in shifu 0.13.0: set baggingModelSize = 0
+        // eval all models under models/ directory, user don't need to change bagging size
+        // in order to evaluate other more models
+        int baggingModelSize = 0;
         if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
             baggingModelSize = modelConfig.getTags().size();
         }
 
         Integer kCrossValidation = modelConfig.getTrain().getNumKFold();
         if(kCrossValidation != null && kCrossValidation > 0) {
-            // if kfold is enabled , bagging set it to bagging model size
+            // if k-fold is enabled , bagging set it to bagging model size
             baggingModelSize = kCrossValidation;
         }
 
@@ -328,7 +373,7 @@ public class ModelSpecLoaderUtils {
             baggingModelSize = gs.getFlattenParams().size();
         }
 
-        listStatus = listStatus.size() <= baggingModelSize ? listStatus : listStatus.subList(0, baggingModelSize);
+        listStatus = (baggingModelSize > 0) ? listStatus.subList(0, baggingModelSize) : listStatus;
         return listStatus;
     }
 
@@ -716,6 +761,54 @@ public class ModelSpecLoaderUtils {
         }
 
         return algorithm;
+    }
+
+    /**
+     * Get model score names for all sub-models
+     *
+     * @param modelConfig
+     *            model config
+     * @param columnConfigList
+     *            list of {@link ColumnConfig}
+     * @param evalConfig
+     *            eval configuration
+     * @param sourceType
+     *            {@link SourceType} LOCAL or HDFS?
+     * @return model score names for all sub-models
+     */
+    public static Map<String, List<String>> getSubModelScoreNames(ModelConfig modelConfig,
+            List<ColumnConfig> columnConfigList, EvalConfig evalConfig, RawSourceData.SourceType sourceType) {
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+        PathFinder pathFinder = new PathFinder(modelConfig);
+
+        String modelsPath = null;
+
+        if(evalConfig == null || StringUtils.isEmpty(evalConfig.getModelsPath())) {
+            modelsPath = pathFinder.getModelsPath(sourceType);
+        } else {
+            modelsPath = evalConfig.getModelsPath();
+        }
+
+        Map<String, List<String>> subModelNames = new TreeMap<>();
+
+        try {
+            FileStatus[] fsArr = fs.listStatus(new Path(modelsPath));
+            for(FileStatus fileStatus: fsArr) {
+                if(fileStatus.isDirectory()) {
+                    List<FileStatus> subModelSpecFiles = new ArrayList<>();
+                    getModelsAlgAndSpecFiles(fileStatus, sourceType, subModelSpecFiles, new FileStatus[2]);
+                    if(CollectionUtils.isNotEmpty(subModelSpecFiles)) {
+                        List<String> modelNames = new ArrayList<>();
+                        subModelSpecFiles.stream().forEach(mf -> modelNames.add(mf.getPath().getName()));
+                        subModelNames.put(fileStatus.getPath().getName(), modelNames);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            LOG.error("Error occurred when finnding sub-models.", e);
+        }
+
+        return subModelNames;
     }
 
     /**
