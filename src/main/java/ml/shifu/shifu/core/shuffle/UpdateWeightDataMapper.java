@@ -35,9 +35,9 @@ public class UpdateWeightDataMapper extends AbstractDataMapper {
         this.delimiter = delimiter;
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
-    public void mapData(Mapper.Context context, Text line, int shuffleSize)
-            throws IOException, InterruptedException {
+    public void mapData(Mapper.Context context, Text line, int shuffleSize) throws IOException, InterruptedException {
         String[] fields = CommonUtils.split(line.toString(), this.delimiter);
         if(POS_TAG.equals(CommonUtils.trimTag(fields[targetIndex]))) { // positive record, update weight
             // update the weight

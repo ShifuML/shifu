@@ -23,6 +23,7 @@ import java.io.IOException;
 
 public class RandomConstDataMapper extends AbstractDataMapper {
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     public void mapData(Mapper.Context context, Text line, int shuffleSize) throws IOException, InterruptedException {
         IntWritable shuffleIndex = new IntWritable(this.rd.nextInt(shuffleSize));

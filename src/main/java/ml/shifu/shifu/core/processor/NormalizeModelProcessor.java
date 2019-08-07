@@ -22,25 +22,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-import ml.shifu.shifu.actor.AkkaSystemExecutor;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.shuffle.MapReduceShuffle;
-import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
-import ml.shifu.shifu.exception.ShifuErrorCode;
-import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.pig.PigExecutor;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.tools.pigstats.JobStats;
 import org.apache.pig.tools.pigstats.PigStats;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import ml.shifu.shifu.actor.AkkaSystemExecutor;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
+import ml.shifu.shifu.exception.ShifuErrorCode;
+import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.pig.PigExecutor;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 
 /**
  * Normalize processor, scaling data
@@ -83,8 +84,8 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                     }
 
                     if(this.isToShuffleData) {
-                        runDataShuffle(this.modelConfig, this.columnConfigList,
-                                this.pathFinder.getNormalizedDataPath(), this.pathFinder.getNormalizedDataHeaderPath(),
+                        runDataShuffle(this.modelConfig, this.columnConfigList, this.pathFinder.getNormalizedDataPath(),
+                                this.pathFinder.getNormalizedDataHeaderPath(),
                                 this.modelConfig.getDataSet().getSource(), getExpectPosRatio(), getIsRblUpdateWeight());
                     }
 
@@ -246,10 +247,14 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
             if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
                 ShifuFileUtils.deleteFile(pathFinder.getNormalizedValidationDataPath(), sourceType);
                 paramsMap.put(Constants.IS_COMPRESS, "false");
-                paramsMap.put(Constants.IS_VALIDATION_DATASET, "true");
                 paramsMap.put(Constants.PATH_RAW_DATA, modelConfig.getValidationDataSetRawPath());
                 paramsMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedValidationDataPath());
-                PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap);
+
+                Map<String, String> confMap = new HashMap<>();
+                // validation data set is sent to UDF by MapReduce configuration
+                confMap.put(Constants.IS_VALIDATION_DATASET, "true");
+                PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap,
+                        modelConfig.getDataSet().getSource(), confMap, pathFinder);
             }
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);

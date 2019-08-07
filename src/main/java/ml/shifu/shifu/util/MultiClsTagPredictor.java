@@ -1,17 +1,15 @@
 package ml.shifu.shifu.util;
 
-import ml.shifu.shifu.container.CaseScoreResult;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import org.apache.commons.collections.CollectionUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.collections.CollectionUtils;
+
+import ml.shifu.shifu.container.CaseScoreResult;
+import ml.shifu.shifu.container.obj.ModelConfig;
+
 public class MultiClsTagPredictor {
 
-    private static Logger LOG = LoggerFactory.getLogger(MultiClsTagPredictor.class);
     @SuppressWarnings("unused")
     private ModelConfig modelConfig;
     private boolean isOneVsAll;

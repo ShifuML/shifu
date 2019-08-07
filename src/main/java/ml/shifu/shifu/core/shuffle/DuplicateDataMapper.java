@@ -37,6 +37,7 @@ public class DuplicateDataMapper extends UpdateWeightDataMapper {
         }
     }
 
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     public void mapData(Mapper.Context context, Text line, int shuffleSize)
             throws IOException, InterruptedException {
