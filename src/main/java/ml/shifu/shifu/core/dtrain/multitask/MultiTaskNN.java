@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -223,9 +224,32 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
             out.writeDouble(l2reg);
         }
     }
+    public  int findPos(Object dis) throws NoSuchFieldException, IllegalAccessException {
+        Class clazz = dis.getClass().getSuperclass();
+        Field field = clazz.getDeclaredField("in");
+        field.setAccessible(true);
+        ByteArrayInputStream byteIS = (ByteArrayInputStream) field.get(dis);
+
+        clazz = byteIS.getClass();
+        field = clazz.getDeclaredField("pos");
+        field.setAccessible(true);
+        int pos = (int) field.get(byteIS);
+        System.out.println("pos:"+pos);
+        return pos;
+    }
 
     @Override
     public void readFields(DataInput in) throws IOException {
+
+        // test the pos of inputStream
+//        try {
+//            findPos(in);
+//        } catch (NoSuchFieldException e) {
+//            e.printStackTrace();
+//        } catch (IllegalAccessException e) {
+//            e.printStackTrace();
+//        }
+
         this.serializationType = SerializationType.getSerializationType(in.readInt());
         this.dil = (DenseInputLayer) readLayerWithNullCheck(in,new DenseInputLayer());
         List<DenseLayer> hiddenDenseLayer = new ArrayList<>();

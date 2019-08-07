@@ -25,9 +25,9 @@ public class MTNNParams extends HaltBytable implements Combinable<MTNNParams> {
 
     private double validationCount;
 
-    private double[] trainErrors;
+    private double[] trainErrors = {};
 
-    private double[] validationErrors;
+    private double[] validationErrors = {};
 
     private SerializationType serializationType = SerializationType.MODEL_SPEC;
 
