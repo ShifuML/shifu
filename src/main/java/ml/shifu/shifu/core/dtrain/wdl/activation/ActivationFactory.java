@@ -43,11 +43,11 @@ public class ActivationFactory {
             Set<Class<? extends Activation>> classes = reflections.getSubTypesOf(Activation.class);
             for(Class<? extends Activation> activation: classes) {
                 try {
-                    put(activation.getName().toLowerCase(), activation.newInstance());
+                    put(activation.getSimpleName().toLowerCase(), activation.newInstance());
                 } catch (InstantiationException e) {
-                    LOG.error("Don't have empty construction method for " + activation.getName(), e);
+                    LOG.error("Don't have empty construction method for " + activation.getSimpleName(), e);
                 } catch (IllegalAccessException e) {
-                    LOG.error("Don't have public construction method for " + activation.getName(), e);
+                    LOG.error("Don't have public construction method for " + activation.getSimpleName(), e);
                 }
             }
         }

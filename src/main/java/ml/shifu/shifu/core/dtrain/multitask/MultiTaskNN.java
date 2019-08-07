@@ -217,8 +217,7 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
         }
 
         writeLayerWithNuLLCheck(out,finalLayer);
-        //todo:modify the hard code of final activation.
-        out.writeUTF("Sigmoid");
+        out.writeUTF(this.finalActiFunc.getClass().getSimpleName());
         if (this.serializationType == SerializationType.MODEL_SPEC){
             out.writeInt(inputSize);
             out.writeDouble(l2reg);
@@ -266,10 +265,7 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
             this.hiddenActiFuncs.add(in.readUTF());
         }
         this.finalLayer = (DenseLayer) readLayerWithNullCheck(in, new DenseLayer());
-        //todo:modify the hard code of final activation.
-        in.readUTF();
-        this.finalActiFunc = new Sigmoid();
-//        this.finalActiFunc = ActivationFactory.getInstance().getActivation(in.readUTF());
+        this.finalActiFunc = ActivationFactory.getInstance().getActivation(in.readUTF());
 
         //build hiddenLayers including activations:
         AssertUtils.assertListNotNullAndSizeEqual(this.hiddenActiFuncs, hiddenDenseLayer);
