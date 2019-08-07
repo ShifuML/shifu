@@ -31,7 +31,6 @@ import java.util.Set;
 public class ActivationFactory {
 
     private static final Logger LOG = LoggerFactory.getLogger(ActivationFactory.class);
-    private static final String PACKAGE_DELIMITER = ".";
     private static final Activation DEFAULT_ACTIVATION = new ReLU();
 
     private static ActivationFactory activationFactory;
