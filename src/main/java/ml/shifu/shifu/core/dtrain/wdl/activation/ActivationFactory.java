@@ -31,6 +31,7 @@ import java.util.Set;
 public class ActivationFactory {
 
     private static final Logger LOG = LoggerFactory.getLogger(ActivationFactory.class);
+    private static final String PACKAGE_DELIMITER = ".";
     private static final Activation DEFAULT_ACTIVATION = new ReLU();
 
     private static ActivationFactory activationFactory;
@@ -43,7 +44,7 @@ public class ActivationFactory {
             Set<Class<? extends Activation>> classes = reflections.getSubTypesOf(Activation.class);
             for(Class<? extends Activation> activation: classes) {
                 try {
-                    put(activation.getName().toLowerCase(), activation.newInstance());
+                    put(activation.getSimpleName().toLowerCase(), activation.newInstance());
                 } catch (InstantiationException e) {
                     LOG.error("Don't have empty construction method for " + activation.getName(), e);
                 } catch (IllegalAccessException e) {
