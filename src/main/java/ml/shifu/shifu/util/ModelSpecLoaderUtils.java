@@ -421,7 +421,10 @@ public class ModelSpecLoaderUtils {
                 return TreeModel.loadFromStream(stream, gbtConvertToProb, gbtScoreConvertStrategy);
             } else if(modelPath.getName().endsWith(Constants.WDL_ALG_NAME.toLowerCase())) {
                 return WDLModel.loadFromStream(stream);
-            } else if (modelPath.getName().endsWith(Constants.MTL_ALG_NAME.toLowerCase())) {
+            } else if(modelPath.getName().endsWith(Constants.MTL_ALG_NAME.toLowerCase())) {
+                return MTNNModel.loadFromStream(stream);
+            }
+            else if (modelPath.getName().endsWith(Constants.MTL_ALG_NAME.toLowerCase())) {
                 // todo: MTNNModel.loadFromStream
                 return null;
             } else {

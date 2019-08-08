@@ -146,6 +146,8 @@ public interface CommonConstants {
 
     public static final int WDL_FORMAT_VERSION = 1;
 
+    public static final int MTL_FORMAT_VERSION = 1;
+
     public static final int DEFAULT_EMBEDING_OUTPUT = 8;
 
     public static final String WIDE_ENABLE = "wideEnable";

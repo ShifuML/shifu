@@ -10,13 +10,17 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
 import ml.shifu.shifu.core.dtrain.SerializationType;
+import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.math.NumberUtils;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -148,14 +152,16 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
     }
 
     public MultiTaskNN loadModel(Path modelPath) {
-//        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS);
-//        InputStream inputStream = null;
-//        try {
-//            inputStream = fileSystem.open(modelPath);
-//            return
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
+        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS);
+        InputStream inputStream = null;
+        try {
+            inputStream = fileSystem.open(modelPath);
+            return IndependentMTNNModel.loadFromStream(inputStream).getMtnn();
+        } catch (IOException e) {
+            LOG.error("IOException happen when load MultiTaskNN from HDFS", e);
+        } finally {
+            IOUtils.closeQuietly(inputStream);
+        }
         return null;
     }
 }

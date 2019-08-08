@@ -454,5 +454,11 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
         this.serializationType = serializationType;
     }
 
+    public int getTaskNumber() {
+        return taskNumber;
+    }
 
+    public void setTaskNumber(int taskNumber) {
+        this.taskNumber = taskNumber;
+    }
 }

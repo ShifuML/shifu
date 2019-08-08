@@ -428,6 +428,28 @@ public class Scorer {
                         log.error("error in model evaluation", e);
                     }
                 }
+            } else if (model instanceof MTNNModel){
+                final MTNNModel mtnn = (MTNNModel) model;
+                if(mtnn.getInputCount() != pair.getInput().size()) {
+                    throw new RuntimeException("MTL and input size mismatch: wdl input Size = " + mtnn.getInputCount()
+                            + "; data input Size = " + pair.getInput().size());
+                }
+
+                Callable<MLData> callable = new Callable<MLData>() {
+                    @Override
+                    public MLData call() {
+                        return new BasicMLData(mtnn.compute(pair.getInput()));
+                    }
+                };
+                if(multiThread) {
+                    tasks.add(callable);
+                } else {
+                    try {
+                        modelResults.add(callable.call());
+                    } catch (Exception e) {
+                        log.error("error in MTL model evaluation", e);
+                    }
+                }
             } else {
                 throw new RuntimeException("unsupport models");
             }
