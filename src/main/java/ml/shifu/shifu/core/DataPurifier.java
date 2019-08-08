@@ -93,7 +93,6 @@ public class DataPurifier {
         if(filterExpressions.contains(NEW_TARGET_DELIMITER)) {
             try {
                 this.isNewTag = true;
-
                 String[] splits = CommonUtils.split(filterExpressions, NEW_TARGET_DELIMITER);
                 filterExpressions = splits[0].trim();
 
