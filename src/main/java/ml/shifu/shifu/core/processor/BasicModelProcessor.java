@@ -633,7 +633,10 @@ public class BasicModelProcessor {
                 paramsMap.put(Constants.IS_COMPRESS, "false");
                 paramsMap.put(Constants.PATH_RAW_DATA, modelConfig.getValidationDataSetRawPath());
                 paramsMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getCleanedValidationDataPath());
-                PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap, sourceType, this.pathFinder);
+                Map<String, String> confMap = new HashMap<>();
+                // validation data set is sent to UDF by MapReduce configuration
+                confMap.put(Constants.IS_VALIDATION_DATASET, "true");
+                PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap, sourceType, confMap, this.pathFinder);
             }
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
