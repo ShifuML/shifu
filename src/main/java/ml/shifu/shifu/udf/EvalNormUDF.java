@@ -116,7 +116,7 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
             this.isCsvFormat = true;
         }
 
-        this.headers = CommonUtils.getFinalHeaders(evalConfig);
+        this.headers = CommonUtils.getFinalHeaders(modelConfig, evalConfig);
 
         String filterExpressions = "";
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {

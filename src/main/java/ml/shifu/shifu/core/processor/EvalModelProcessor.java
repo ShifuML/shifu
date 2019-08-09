@@ -736,9 +736,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter,
                     evalConfig.getDataSet().getSource());
             // if first line contains target column name, we guess it is csv format and first line is header.
-            String evalTargetColumnName = ((StringUtils.isBlank(evalConfig.getDataSet().getTargetColumnName()))
-                    ? modelConfig.getTargetColumnName()
-                    : evalConfig.getDataSet().getTargetColumnName());
+            String evalTargetColumnName = modelConfig.getTargetColumnName(evalConfig);
             if(StringUtils.join(fields, "").contains(evalTargetColumnName)) {
                 // first line of data meaning second line in data files excluding first header line
                 String[] dataInFirstLine = CommonUtils.takeFirstTwoLines(evalConfig.getDataSet().getDataPath(),
@@ -797,10 +795,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             validateFinalColumns(evalConfig, this.modelConfig.getModelSetName(), false, this.columnConfigList, names);
         }
 
-        NSColumn targetColumn = new NSColumn(evalConfig.getDataSet().getTargetColumnName());
-        if(StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName()) && !names.contains(targetColumn)
+        String evalTargetName = modelConfig.getTargetColumnName(evalConfig);
+        NSColumn targetColumn = new NSColumn(evalTargetName);
+        if(StringUtils.isNotBlank(evalTargetName) && !names.contains(targetColumn)
                 && !names.contains(new NSColumn(targetColumn.getSimpleName()))) {
-            throw new IllegalArgumentException("Target column " + evalConfig.getDataSet().getTargetColumnName()
+            throw new IllegalArgumentException("Target column " + evalTargetName
                     + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
         }
 

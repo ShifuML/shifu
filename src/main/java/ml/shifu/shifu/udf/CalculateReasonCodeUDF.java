@@ -52,7 +52,7 @@ public class CalculateReasonCodeUDF extends AbstractTrainerUDF<Tuple> {
         reasonCodeMap = CommonUtils
                 .loadAndFlattenReasonCodeMap(pathFinder.getReasonCodeMapPath(sourceType), sourceType);
 
-        headers = CommonUtils.getFinalHeaders(evalConfig);
+        headers = CommonUtils.getFinalHeaders(modelConfig, evalConfig);
 
         log.debug("The length of header is: " + headers.length);
     }

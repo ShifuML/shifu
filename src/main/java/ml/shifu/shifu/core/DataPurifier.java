@@ -84,7 +84,7 @@ public class DataPurifier {
         this(modelConfig, filterExpressions, false);
     }
 
-    public DataPurifier(EvalConfig evalConfig) throws IOException {
+    public DataPurifier(ModelConfig modelConfig, EvalConfig evalConfig) throws IOException {
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getFilterExpressions())) {
             jexl = new JexlEngine();
             try {
@@ -95,7 +95,7 @@ public class DataPurifier {
                 dataFilterExpr = null;
             }
 
-            headers = CommonUtils.getFinalHeaders(evalConfig);
+            headers = CommonUtils.getFinalHeaders(modelConfig, evalConfig);
             dataDelimiter = evalConfig.getDataSet().getDataDelimiter();
         }
     }

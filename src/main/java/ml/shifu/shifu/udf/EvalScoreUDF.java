@@ -127,7 +127,7 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
         }
 
         this.isCsvFormat = StringUtils.isBlank(evalConfig.getDataSet().getHeaderPath());
-        this.headers = CommonUtils.getFinalHeaders(evalConfig);
+        this.headers = CommonUtils.getFinalHeaders(modelConfig, evalConfig);
 
         String filterExpressions;
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {

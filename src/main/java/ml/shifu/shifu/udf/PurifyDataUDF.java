@@ -56,7 +56,7 @@ public class PurifyDataUDF extends AbstractTrainerUDF<Boolean> {
 
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(evalSetName);
         dataPurifier = ((evalConfig == null) ?
-                new DataPurifier(modelConfig, isForValidationDataSet) : new DataPurifier(evalConfig));
+                new DataPurifier(modelConfig, isForValidationDataSet) : new DataPurifier(modelConfig, evalConfig));
     }
 
     /*
