@@ -77,7 +77,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
                 .getSource());
 
         // load the header for evaluation data
-        header = CommonUtils.getFinalHeaders(evalConfig);
+        header = CommonUtils.getFinalHeaders(modelConfig, evalConfig);
 
         receivedStreamCnt = 0;
         resultMap = new HashMap<Integer, StreamBulletin>();

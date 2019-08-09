@@ -153,7 +153,9 @@ public interface CommonConstants {
     public static final String DEEP_ENABLE = "deepEnable";
 
     public static final String EMBED_ENABLE = "embedEnable";
-    
+
     public static final String WIDE_DENSE_ENABLE = "wideDenseEnable";
+
+    public static final String SQUARED_LOSS = "squared";
 
 }

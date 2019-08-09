@@ -15,7 +15,10 @@
  */
 package ml.shifu.shifu.udf;
 
-import ml.shifu.shifu.core.ColumnStatsCalculator;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
@@ -24,36 +27,34 @@ import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.util.Utils;
 import org.apache.pig.parser.ParserException;
-
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.core.ColumnStatsCalculator;
 import ml.shifu.shifu.udf.stats.CategoryCounter;
 import ml.shifu.shifu.udf.stats.Counter;
 import ml.shifu.shifu.udf.stats.NumericCounter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Calculate the counter for each bin
  */
-public class PopulationCounterUDF extends AbstractTrainerUDF<Tuple> {
+public class PopulationCounterSaltSumUDF extends AbstractTrainerUDF<Tuple> {
 
-    public static Logger logger = LoggerFactory.getLogger(PopulationCounterUDF.class);
+    public static Logger logger = LoggerFactory.getLogger(PopulationCounterSaltSumUDF.class);
 
     private Counter counter;
+    @SuppressWarnings("unused")
     private int index;
 
     // DO NOT use this constructor
-    private PopulationCounterUDF(String source, String pathModelConfig, String pathColumnConfig)
+    private PopulationCounterSaltSumUDF(String source, String pathModelConfig, String pathColumnConfig)
         throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
         this.index = 1;
     }
 
-    public PopulationCounterUDF(String source, String pathModelConfig, String pathColumnConfig, String index)
+    public PopulationCounterSaltSumUDF(String source, String pathModelConfig, String pathColumnConfig, String index)
         throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
         this.index = Integer.valueOf(index);
@@ -66,12 +67,10 @@ public class PopulationCounterUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         Tuple groupInfo = (Tuple) input.get(0);
-        DataBag bag = (DataBag) input.get(1);
-
+        DataBag dataBag = (DataBag) input.get(1);
         Integer columnId = (Integer) groupInfo.get(1);
         ColumnConfig columnConfig = columnConfigList.get(columnId);
-
-        logger.info("Start to count bin value count for {}", columnConfig.getColumnName());
+        logger.info("PopulationCounterSaltSumUDF: Start to count bin value count for {}, bag size {}", columnConfig.getColumnName(), dataBag.size());
 
         if ( columnConfig.isCategorical()
                 && CollectionUtils.isNotEmpty(columnConfig.getBinCategory()) ) {
@@ -85,18 +84,23 @@ public class PopulationCounterUDF extends AbstractTrainerUDF<Tuple> {
             return null;
         }
 
-        Iterator<Tuple> iter = bag.iterator();
+        Iterator<Tuple> iter = dataBag.iterator();
         while (iter.hasNext()) {
             Tuple tuple = iter.next();
-            if (tuple != null && tuple.size() != 0) {
-                Object value = tuple.get(index);
-                Boolean tag = (Boolean) tuple.get(index + 1);
-                counter.addData(tag, (value == null) ? null : value.toString());
+            if (tuple != null && tuple.size() != 0 && tuple.size() > 3) {
+                Tuple counters = (Tuple)tuple.get(3);
+                if(counters.size() > 4) {
+                    double unitNum = (Double) counters.get(2);
+                    String positiveStr = (String) counters.get(3);
+                    String negativeStr = (String) counters.get(4);
+                    counter.setUnitSum(counter.getUnitSum() + unitNum);
+                    counter.setPositiveCounter(mergeLongList(counter.getPositiveCounter(), positiveStr));
+                    counter.setNegativeCounter(mergeLongList(counter.getNegativeCounter(), negativeStr));
+                }
             }
         }
 
         List<Long> dataBin = counter.getCounter();
-
         Tuple output = TupleFactory.getInstance().newTuple(3);
         output.set(0, columnId);
         output.set(1, StringUtils.join(dataBin, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
@@ -104,8 +108,15 @@ public class PopulationCounterUDF extends AbstractTrainerUDF<Tuple> {
         String unit = (groupInfo.get(0) == null ? "" : groupInfo.get(0).toString());
         output.set(2,  toStatsText(unit, counter.getUnitMean(),
                 counter.getMissingRate(), counter.getTotalInstCnt(), counter.getDistMetrics()));
-
         return output;
+    }
+
+    private long[] mergeLongList(long[] totalPositive, String positiveStr){
+        String [] positiveList = StringUtils.split(positiveStr, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
+        for(int i = 0; i < totalPositive.length; i++){
+            totalPositive[i] += Long.parseLong(positiveList[i]);
+        }
+        return totalPositive;
     }
 
     public Schema outputSchema(Schema input) {

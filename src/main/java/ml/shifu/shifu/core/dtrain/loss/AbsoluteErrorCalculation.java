@@ -13,31 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain.nn;
+package ml.shifu.shifu.core.dtrain.loss;
 
 /**
- * Copy from Encog Error Calculation to support log error, absolute error and squared error.
+ * Absolute error computation logic.
  */
-public interface ErrorCalculation {
+public class AbsoluteErrorCalculation implements ml.shifu.shifu.core.dtrain.loss.ErrorCalculation {
 
     /**
-     * Return set size used to compute error.
-     * 
-     * @return the data set size
+     * The overall error.
      */
-    public int getSetSize();
+    private double globalError;
+
+    /**
+     * The size of a set.
+     */
+    private int setSize;
 
     /**
      * Returns the root mean square error for a complete training set.
      * 
      * @return The current error for the neural network.
      */
-    public double calculate();
+    public final double calculate() {
+        return this.globalError;
+    }
 
     /**
      * Reset the error accumulation to zero.
      */
-    public void reset();
+    public final void reset() {
+        this.globalError = 0;
+        this.setSize = 0;
+    }
 
     /**
      * Update the error with single values.
@@ -47,7 +55,12 @@ public interface ErrorCalculation {
      * @param ideal
      *            The ideal value.
      */
-    public void updateError(final double actual, final double ideal);
+    public final double updateError(final double actual, final double ideal) {
+        double currentError = Math.abs(ideal - actual);
+        this.globalError += currentError;
+        this.setSize += 1;
+        return currentError;
+    }
 
     /**
      * Called to update for each number that should be checked.
@@ -56,9 +69,17 @@ public interface ErrorCalculation {
      *            The actual number.
      * @param ideal
      *            The ideal number.
-     * @param significance
-     *            weight of the record
      */
-    public void updateError(final double[] actual, final double[] ideal, final double significance);
+    public final void updateError(final double[] actual, final double[] ideal, final double significance) {
+        for(int i = 0; i < actual.length; i++) {
+            this.globalError += (Math.abs(ideal[i] - actual[i]) * significance);
+        }
 
+        this.setSize += ideal.length;
+    }
+
+    @Override
+    public int getSetSize() {
+        return setSize;
+    }
 }

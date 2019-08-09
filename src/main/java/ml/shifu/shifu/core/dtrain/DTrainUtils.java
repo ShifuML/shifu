@@ -197,8 +197,10 @@ public final class DTrainUtils {
 
     /**
      * Get the model output dimension - usually it will be 1
-     * @param columnConfigList - List for ColumnConfig
-     * @return - output count
+     * 
+     * @param columnConfigList
+     *            the column config list
+     * @return the output count
      */
     public static int getModelOutputCnt(List<ColumnConfig> columnConfigList) {
         int output = 0;
@@ -288,7 +290,7 @@ public final class DTrainUtils {
         return columnMapping;
     }
 
-    public static List<Integer> getNumericalIds(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect){
+    public static List<Integer> getNumericalIds(List<ColumnConfig> columnConfigList, boolean isAfterVarSelect) {
         List<Integer> numericalIds = new ArrayList<>();
         boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
 
@@ -298,8 +300,8 @@ public final class DTrainUtils {
                     numericalIds.add(config.getColumnNum());
                 }
             } else {
-                if(config.isNumerical() && !config.isTarget() && !config.isMeta() &&
-                        CommonUtils.isGoodCandidate(config, hasCandidates)) {
+                if(config.isNumerical() && !config.isTarget() && !config.isMeta()
+                        && CommonUtils.isGoodCandidate(config, hasCandidates)) {
                     numericalIds.add(config.getColumnNum());
                 }
             }
@@ -376,7 +378,7 @@ public final class DTrainUtils {
                 network.addLayer(new BasicDropoutLayer(new ActivationLeakyReLU(), true, numHiddenNode, dropoutRate));
             } else if(func.equalsIgnoreCase(NNConstants.NN_SWISH)) {
                 network.addLayer(new BasicDropoutLayer(new ActivationSwish(), true, numHiddenNode, dropoutRate));
-            } else if (func.equalsIgnoreCase(NNConstants.NN_PTANH)) {
+            } else if(func.equalsIgnoreCase(NNConstants.NN_PTANH)) {
                 network.addLayer(new BasicDropoutLayer(new ActivationPTANH(), true, numHiddenNode, dropoutRate));
             } else {
                 network.addLayer(new BasicDropoutLayer(new ActivationSigmoid(), true, numHiddenNode, dropoutRate));
@@ -591,12 +593,13 @@ public final class DTrainUtils {
     }
 
     /**
-     * @param columnConfigList the column config list of the model
+     * @param columnConfigList
+     *            the column config list of the model
      * @return the map mapping from column Id to bin category list size
      */
     public static Map<Integer, Integer> getIdBinCategorySizeMap(List<ColumnConfig> columnConfigList) {
         Map<Integer, Integer> idBinCategoryMap = new HashMap<>(columnConfigList.size());
-        for(ColumnConfig columnConfig : columnConfigList) {
+        for(ColumnConfig columnConfig: columnConfigList) {
             if(columnConfig.getBinCategory() != null) {
                 idBinCategoryMap.put(columnConfig.getColumnNum(), columnConfig.getBinCategory().size());
             } else {
@@ -608,13 +611,15 @@ public final class DTrainUtils {
 
     /**
      * Whether there is any final select variables or not
-     * @param columnConfigList - the model column config list
+     * 
+     * @param columnConfigList
+     *            - the model column config list
      * @return true - has final selected variables, or false
      */
     public static boolean hasFinalSelectedVars(List<ColumnConfig> columnConfigList) {
         boolean hasFinalSelectedVars = false;
-        for (ColumnConfig columnConfig: columnConfigList) {
-            if (columnConfig.isFinalSelect()) {
+        for(ColumnConfig columnConfig: columnConfigList) {
+            if(columnConfig.isFinalSelect()) {
                 hasFinalSelectedVars = true;
                 break;
             }
@@ -624,8 +629,11 @@ public final class DTrainUtils {
 
     /**
      * Get all the feature IDs that could be used to train model
-     * @param columnConfigList - the model column config list
-     * @param hasCandidates - user specify candidate variables or not
+     * 
+     * @param columnConfigList
+     *            - the model column config list
+     * @param hasCandidates
+     *            - user specify candidate variables or not
      * @return - feature IDs that could be used to train model
      */
     public static Set<Integer> getModelFeatureSet(List<ColumnConfig> columnConfigList, boolean hasCandidates) {
@@ -634,22 +642,26 @@ public final class DTrainUtils {
 
     /**
      * Get all the feature IDs that could be used to train model
-     * @param columnConfigList - the model column config list
-     * @param hasSelectedVars  - there is selected variables in ColumnConfig.json or not
-     * @param hasCandidates - user specify candidate variables or not
+     * 
+     * @param columnConfigList
+     *            - the model column config list
+     * @param hasSelectedVars
+     *            - there is selected variables in ColumnConfig.json or not
+     * @param hasCandidates
+     *            - user specify candidate variables or not
      * @return - feature IDs that could be used to train model
      */
-    public static Set<Integer> getModelFeatureSet(List<ColumnConfig> columnConfigList,
-            boolean hasSelectedVars, boolean hasCandidates) {
+    public static Set<Integer> getModelFeatureSet(List<ColumnConfig> columnConfigList, boolean hasSelectedVars,
+            boolean hasCandidates) {
         Set<Integer> featureSet = new HashSet<>();
-        for (ColumnConfig columnConfig: columnConfigList) {
-            if (hasSelectedVars) {
-                if (columnConfig.isFinalSelect()) {
+        for(ColumnConfig columnConfig: columnConfigList) {
+            if(hasSelectedVars) {
+                if(columnConfig.isFinalSelect()) {
                     featureSet.add(columnConfig.getColumnNum());
                 }
             } else {
                 // should we call CommonUtils.isGoodCandidate(columnConfig, hasCandidates, isBinaryClassification) ?
-                if (CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
+                if(CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
                     featureSet.add(columnConfig.getColumnNum());
                 }
             }
@@ -659,13 +671,17 @@ public final class DTrainUtils {
 
     /**
      * Parse the field of normalized data
-     * @param fields - normalized data array
-     * @param dataPos - the position of data element
-     * @param defVal - the default value, if the data element couldn't be parsed
+     * 
+     * @param fields
+     *            - normalized data array
+     * @param dataPos
+     *            - the position of data element
+     * @param defVal
+     *            - the default value, if the data element couldn't be parsed
      * @return the float value of data element
      */
     public static float parseRawNormValue(String[] fields, int dataPos, float defVal) {
-        if (dataPos >= fields.length) { // out of range, when fetching normalization data element
+        if(dataPos >= fields.length) { // out of range, when fetching normalization data element
             LOG.error("Normalization data set doesn't match. Out of Range {}/{}", dataPos, fields.length);
             throw new RuntimeException("Out of range Normalization data doesn't match with ColumnConfig.json.");
         }
@@ -681,13 +697,17 @@ public final class DTrainUtils {
 
     /**
      * Parse the field of normalized data
-     * @param tuple - data tuple of normalized data
-     * @param dataPos - the position of data element
-     * @param defVal - the default value, if the data element couldn't be parsed
+     * 
+     * @param tuple
+     *            - data tuple of normalized data
+     * @param dataPos
+     *            - the position of data element
+     * @param defVal
+     *            - the default value, if the data element couldn't be parsed
      * @return the float value of data element
      */
     public static float parseRawNormValue(Tuple tuple, int dataPos, float defVal) {
-        if (dataPos >= tuple.size()) { // out of range, when fetching normalization data element
+        if(dataPos >= tuple.size()) { // out of range, when fetching normalization data element
             LOG.error("Normalization data set doesn't match. Out of Range {}/{}", dataPos, tuple.size());
             throw new RuntimeException("Out of range Normalization data doesn't match with ColumnConfig.json.");
         }

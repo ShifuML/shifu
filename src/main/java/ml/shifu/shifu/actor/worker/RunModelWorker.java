@@ -56,7 +56,7 @@ public class RunModelWorker extends AbstractWorkerActor {
             header = CommonUtils.getFinalHeaders(modelConfig);
             delimiter = modelConfig.getDataSetDelimiter();
         } else {
-            header = CommonUtils.getFinalHeaders(evalConfig);
+            header = CommonUtils.getFinalHeaders(modelConfig, evalConfig);
             delimiter = evalConfig.getDataSet().getDataDelimiter();
         }
 
