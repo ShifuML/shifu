@@ -15,10 +15,11 @@
  */
 package ml.shifu.shifu.core;
 
-import ml.shifu.shifu.column.NSColumn;
-import ml.shifu.shifu.container.obj.EvalConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.util.CommonUtils;
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.apache.commons.jexl2.Expression;
 import org.apache.commons.jexl2.JexlEngine;
 import org.apache.commons.jexl2.JexlException;
@@ -29,7 +30,11 @@ import org.apache.pig.data.Tuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
+import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.util.CommonUtils;
 
 /**
  * DataPurifier class
@@ -38,21 +43,50 @@ public class DataPurifier {
 
     private static Logger log = LoggerFactory.getLogger(DataPurifier.class);
 
+    private static final String NEW_TARGET_TAG_DELIMITER = "|";
+    private static final String NEW_TARGET_COLUMN_DELIMITER = "||";
+    private static final String NEW_TARGET_DELIMITER = "|||";
+
     private String[] headers;
     private String dataDelimiter;
     private Expression dataFilterExpr;
     private ShifuMapContext jc = new ShifuMapContext();
     private JexlEngine jexl;
 
-    public DataPurifier(ModelConfig modelConfig, boolean isForValidationDataSet) throws IOException {
-        String filterExpression = (isForValidationDataSet ?
-                modelConfig.getDataSet().getValidationFilterExpressions() : modelConfig.getFilterExpressions());
-        if(StringUtils.isNotBlank(filterExpression)) {
+    private final List<ColumnConfig> columnConfigList;
+
+    /**
+     * If data purifier is for new tag, not the one set in MC.json.
+     */
+    private boolean isNewTag = false;
+
+    /**
+     * If {@link #isNewTag} is true, what's the new tag column name.
+     */
+    private String newTagColumnName;
+
+    /**
+     * If {@link #isNewTag} is true, new pos tags
+     */
+    private Set<String> newPosTags;
+
+    /**
+     * If {@link #isNewTag} is true, new neg tags
+     */
+    private Set<String> newNegTags;
+
+    public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, boolean isForValidationDataSet)
+            throws IOException {
+        this.columnConfigList = columnConfigList;
+        String filterExpressions = (isForValidationDataSet ? modelConfig.getDataSet().getValidationFilterExpressions()
+                : modelConfig.getFilterExpressions());
+        if(StringUtils.isNotBlank(filterExpressions)) {
+            filterExpressions = parseNewTagInfo(filterExpressions);
             jexl = new JexlEngine();
             try {
-                dataFilterExpr = jexl.createExpression(filterExpression);
+                dataFilterExpr = jexl.createExpression(filterExpressions);
             } catch (JexlException e) {
-                log.error("The expression `{}` is invalid, please use correct expression.", filterExpression, e);
+                log.error("The expression `{}` is invalid, please use correct expression.", filterExpressions, e);
                 log.error("Please note the expression won't take effect!");
                 dataFilterExpr = null;
             }
@@ -61,8 +95,46 @@ public class DataPurifier {
         }
     }
 
-    public DataPurifier(ModelConfig modelConfig, String filterExpressions, boolean strict) throws IOException {
+    private String parseNewTagInfo(String filterExpressions) {
+        if(filterExpressions.contains(NEW_TARGET_DELIMITER)) {
+            try {
+                this.isNewTag = true;
+                String[] splits = CommonUtils.split(filterExpressions, NEW_TARGET_DELIMITER);
+                filterExpressions = splits[0].trim();
+
+                String[] newTagSplits = CommonUtils.split(splits[1].trim(), NEW_TARGET_COLUMN_DELIMITER);
+                this.newTagColumnName = newTagSplits[0].trim();
+                if(columnConfigList != null) {
+                    ColumnConfig cc = CommonUtils.findColumnConfigByName(columnConfigList, newTagColumnName);
+                    if(cc == null) {
+                        throw new IllegalArgumentException("'filterExpressions' " + filterExpressions + " with new tag "
+                                + this.newTagColumnName + " cannot be found in ColumnConfig.json");
+                    }
+                }
+                String[] newTags = CommonUtils.split(newTagSplits[1].trim(), NEW_TARGET_TAG_DELIMITER);
+                this.newPosTags = new HashSet<>();
+                for(String tag: newTags) {
+                    this.newPosTags.add(tag.trim());
+                }
+                newTags = CommonUtils.split(newTagSplits[2].trim(), NEW_TARGET_TAG_DELIMITER);
+                this.newNegTags = new HashSet<>();
+                for(String tag: newTags) {
+                    this.newNegTags.add(tag.trim());
+                }
+            } catch (Exception e) {
+                throw new IllegalArgumentException(
+                        "Format issue to support new tag segment expassion, the right format should be 'a == 1 |||newTagColumnName||posTag1|posTag2||negTag1|negTag2'.",
+                        e);
+            }
+        }
+        return filterExpressions;
+    }
+
+    public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String filterExpressions,
+            boolean strict) throws IOException {
+        this.columnConfigList = columnConfigList;
         if(StringUtils.isNotBlank(filterExpressions)) {
+            filterExpressions = parseNewTagInfo(filterExpressions);
             jexl = new JexlEngine();
             jexl.setStrict(strict);
             try {
@@ -80,18 +152,20 @@ public class DataPurifier {
         }
     }
 
-    public DataPurifier(ModelConfig modelConfig, String filterExpressions) throws IOException {
-        this(modelConfig, filterExpressions, false);
+    public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String filterExpressions)
+            throws IOException {
+        this(modelConfig, columnConfigList, filterExpressions, false);
     }
 
-    public DataPurifier(ModelConfig modelConfig, EvalConfig evalConfig) throws IOException {
+    public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, EvalConfig evalConfig) throws IOException {
+        this.columnConfigList = columnConfigList;
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getFilterExpressions())) {
             jexl = new JexlEngine();
             try {
                 dataFilterExpr = jexl.createExpression(evalConfig.getDataSet().getFilterExpressions());
             } catch (JexlException e) {
-                log.error("The expression {} is invalid, please use correct expression.", evalConfig.getDataSet()
-                        .getFilterExpressions());
+                log.error("The expression {} is invalid, please use correct expression.",
+                        evalConfig.getDataSet().getFilterExpressions());
                 dataFilterExpr = null;
             }
 
@@ -135,8 +209,8 @@ public class DataPurifier {
         if(retObj != null && retObj instanceof Boolean) {
             result = (Boolean) retObj;
         } else if(retObj != null && !(retObj instanceof Boolean)) {
-            throw new InvalidFilterResultExcetion("Invalid filter return not boolean type: "
-                    + dataFilterExpr.getExpression());
+            throw new InvalidFilterResultExcetion(
+                    "Invalid filter return not boolean type: " + dataFilterExpr.getExpression());
         }
 
         return result;
@@ -173,8 +247,8 @@ public class DataPurifier {
         if(retObj != null && retObj instanceof Boolean) {
             result = (Boolean) retObj;
         } else if(retObj != null && !(retObj instanceof Boolean)) {
-            throw new InvalidFilterResultExcetion("Invalid filter return not boolean type: "
-                    + dataFilterExpr.getExpression());
+            throw new InvalidFilterResultExcetion(
+                    "Invalid filter return not boolean type: " + dataFilterExpr.getExpression());
         }
 
         return result;
@@ -247,6 +321,34 @@ public class DataPurifier {
                 map.clear();
             }
         }
+    }
+
+    /**
+     * @return the isNewTag
+     */
+    public boolean isNewTag() {
+        return isNewTag;
+    }
+
+    /**
+     * @return the newTagColumnName
+     */
+    public String getNewTagColumnName() {
+        return newTagColumnName;
+    }
+
+    /**
+     * @return the newPosTags
+     */
+    public Set<String> getNewPosTags() {
+        return newPosTags;
+    }
+
+    /**
+     * @return the newNegTags
+     */
+    public Set<String> getNewNegTags() {
+        return newNegTags;
     }
 
 }

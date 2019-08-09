@@ -119,7 +119,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 hasColumnSelected = true;
             }
 
-            if (CommonUtils.isWeightColumn(modelConfig.getWeightColumnName(), config)) {
+            if(CommonUtils.isWeightColumn(modelConfig.getWeightColumnName(), config)) {
                 this.weightColumnId = config.getColumnNum();
             }
 
@@ -143,7 +143,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             String[] splits = CommonUtils.split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
             this.dataPurifiers = new ArrayList<DataPurifier>(splits.length);
             for(String split: splits) {
-                this.dataPurifiers.add(new DataPurifier(modelConfig, split, false));
+                this.dataPurifiers.add(new DataPurifier(modelConfig, this.columnConfigList, split, false));
             }
         }
 
@@ -226,7 +226,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         int inputSize = input.size();
         // no segment expressions, the data size should exactly same as len(columnConfigList)
-        if (!this.hasSegExpression) {
+        if(!this.hasSegExpression) {
             if(inputSize != this.columnConfigList.size()) {
                 log.error("the input size - " + input.size() + ", while column size - " + columnConfigList.size());
                 this.mismatchCnt++;
@@ -244,7 +244,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             String val = (input.get(dataIndex) == null) ? "" : input.get(dataIndex).toString();
             ColumnConfig config = columnConfigList.get(i);
 
-            if (this.weightColumnId > 0 && this.weightColumnId == config.getColumnNum()) {
+            if(this.weightColumnId > 0 && this.weightColumnId == config.getColumnNum()) {
                 // has weight column and this is weight column, hold the value
                 weightRaw = val;
             }
@@ -375,11 +375,11 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         // append tuple with weight.
         double weight = 1.0d;
-        if (this.weightColumnId > 0) {
+        if(this.weightColumnId > 0) {
             try {
                 weight = Double.parseDouble(weightRaw);
             } catch (Exception e) {
-                if (System.currentTimeMillis() % 100 == 0) { // avoid error log flood
+                if(System.currentTimeMillis() % 100 == 0) { // avoid error log flood
                     log.error("Incorrect weight column - " + weightRaw, e);
                 }
                 weight = 1.0d; // set to 1.0d as default
@@ -539,7 +539,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     } else {
                         if(CommonUtils.isToNormVariable(config, super.hasCandidates, modelConfig.isRegression())) {
                             List<String> normColumnNames = this.genNormColumnNames(config, this.normType);
-                            for(String normalName : normColumnNames) {
+                            for(String normalName: normColumnNames) {
                                 schemaStr.append(normalName + ":" + getOutputPrecisionType() + ",");
                             }
                         } else {

@@ -41,7 +41,7 @@ public class PurifyDataUDF extends AbstractTrainerUDF<Boolean> {
                     .get(Constants.IS_VALIDATION_DATASET, Boolean.FALSE.toString()));
         }
 
-        dataPurifier = new DataPurifier(modelConfig, isForValidationDataSet);
+        dataPurifier = new DataPurifier(modelConfig, columnConfigList, isForValidationDataSet);
     }
 
     public PurifyDataUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
@@ -55,8 +55,9 @@ public class PurifyDataUDF extends AbstractTrainerUDF<Boolean> {
         }
 
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(evalSetName);
-        dataPurifier = ((evalConfig == null) ?
-                new DataPurifier(modelConfig, isForValidationDataSet) : new DataPurifier(modelConfig, evalConfig));
+        dataPurifier = ((evalConfig == null)
+                ? new DataPurifier(modelConfig, this.columnConfigList, isForValidationDataSet)
+                : new DataPurifier(modelConfig, this.columnConfigList, evalConfig));
     }
 
     /*

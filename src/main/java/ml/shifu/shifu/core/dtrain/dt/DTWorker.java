@@ -1301,12 +1301,11 @@ public class DTWorker extends
         // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
         float floatValue = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(input, 0f);
         // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
-        floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
-        return floatValue;
+        return (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
     }
 
     private boolean isPositive(float value) {
-        return Float.compare(1f, value) == 0 ? true : false;
+        return Float.compare(1f, value) == 0;
     }
 
     /**

@@ -15,7 +15,14 @@
  */
 package ml.shifu.shifu.core.processor.stats;
 
-import java.io.*;
+import static ml.shifu.shifu.util.Constants.LOCAL_DATE_STATS_CSV_FILE_NAME;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,9 +34,6 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.zip.GZIPInputStream;
 
-import com.google.common.collect.Lists;
-import ml.shifu.guagua.util.MemoryUtils;
-import ml.shifu.shifu.fs.SourceFile;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
@@ -38,7 +42,11 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.jexl2.JexlException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -57,6 +65,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 
 import ml.shifu.guagua.hadoop.util.HDPUtils;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
@@ -69,6 +78,9 @@ import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.core.binning.BinningInfoWritable;
 import ml.shifu.shifu.core.binning.UpdateBinningInfoMapper;
 import ml.shifu.shifu.core.binning.UpdateBinningInfoReducer;
+import ml.shifu.shifu.core.datestat.DateStatComputeMapper;
+import ml.shifu.shifu.core.datestat.DateStatComputeReducer;
+import ml.shifu.shifu.core.datestat.DateStatInfoWritable;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.mr.input.CombineInputFormat;
@@ -77,6 +89,7 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.fs.SourceFile;
 import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.udf.CalculateStatsUDF;
 import ml.shifu.shifu.util.Base64Utils;
@@ -84,11 +97,6 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.ValueVisitor;
-import ml.shifu.shifu.core.datestat.DateStatComputeMapper;
-import ml.shifu.shifu.core.datestat.DateStatComputeReducer;
-import ml.shifu.shifu.core.datestat.DateStatInfoWritable;
-
-import static ml.shifu.shifu.util.Constants.LOCAL_DATE_STATS_CSV_FILE_NAME;
 
 /**
  * Created by zhanhu on 6/30/16.

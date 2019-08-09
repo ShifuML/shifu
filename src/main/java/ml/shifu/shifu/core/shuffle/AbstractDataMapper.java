@@ -27,6 +27,7 @@ public abstract class AbstractDataMapper {
 
     protected Random rd = new Random(System.currentTimeMillis());
 
+    @SuppressWarnings("rawtypes")
     public abstract void mapData(Mapper.Context context, Text line, int shuffleSize)
             throws IOException, InterruptedException;
 

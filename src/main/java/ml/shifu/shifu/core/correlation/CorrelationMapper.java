@@ -119,7 +119,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
 
         this.dataSetDelimiter = modelConfig.getDataSetDelimiter();
 
-        this.dataPurifier = new DataPurifier(modelConfig, false);
+        this.dataPurifier = new DataPurifier(modelConfig, columnConfigList, false);
 
         this.isComputeAll = Boolean
                 .valueOf(context.getConfiguration().get(Constants.SHIFU_CORRELATION_COMPUTE_ALL, "false"));
@@ -190,7 +190,8 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                 continue;
             }
 
-            CorrelationWritable cw = CorrelationMultithreadedMapper.finalCorrelationMap.get(columnConfig.getColumnNum());
+            CorrelationWritable cw = CorrelationMultithreadedMapper.finalCorrelationMap
+                    .get(columnConfig.getColumnNum());
             synchronized(cw) {
                 cw.setColumnIndex(i);
                 cw.setCount(cw.getCount() + 1d);
@@ -229,7 +230,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                     cw.setAdjustSumY(adjustSumY);
                 }
 
-                for(int j = (this.isComputeAll ? 0 : i) ; j < columnConfigList.size(); j++) {
+                for(int j = (this.isComputeAll ? 0 : i); j < columnConfigList.size(); j++) {
                     ColumnConfig otherColumnConfig = columnConfigList.get(j);
                     if((otherColumnConfig.getColumnFlag() != ColumnFlag.Target)
                             && ((otherColumnConfig.getColumnFlag() == ColumnFlag.Meta) || (hasCandidates

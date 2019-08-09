@@ -15,12 +15,9 @@
  */
 package ml.shifu.shifu.udf;
 
-import com.google.common.primitives.Longs;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.core.ColumnStatsCalculator;
-import ml.shifu.shifu.udf.stats.CategoryCounter;
-import ml.shifu.shifu.udf.stats.Counter;
-import ml.shifu.shifu.udf.stats.NumericCounter;
+import java.io.IOException;
+import java.util.Iterator;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
@@ -32,9 +29,12 @@ import org.apache.pig.parser.ParserException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.*;
+import com.google.common.primitives.Longs;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.udf.stats.CategoryCounter;
+import ml.shifu.shifu.udf.stats.Counter;
+import ml.shifu.shifu.udf.stats.NumericCounter;
 
 /**
  * Calculate the counter for each bin
@@ -48,20 +48,20 @@ public class PopulationCounterSaltUDF extends AbstractTrainerUDF<Tuple> {
 
     // DO NOT use this constructor
     private PopulationCounterSaltUDF(String source, String pathModelConfig, String pathColumnConfig)
-        throws IOException {
+            throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
         this.index = 1;
     }
 
     public PopulationCounterSaltUDF(String source, String pathModelConfig, String pathColumnConfig, String index)
-        throws IOException {
+            throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
         this.index = Integer.valueOf(index);
     }
 
     @Override
     public Tuple exec(Tuple input) throws IOException {
-        if (input == null || input.size() == 0) {
+        if(input == null || input.size() == 0) {
             return null;
         }
 
@@ -69,24 +69,23 @@ public class PopulationCounterSaltUDF extends AbstractTrainerUDF<Tuple> {
         DataBag bag = (DataBag) input.get(1);
         Integer columnId = (Integer) groupInfo.get(1);
         ColumnConfig columnConfig = columnConfigList.get(columnId);
-        logger.info("PopulationCounterSaltUDF: Start to count bin value count for {}, bag size {}", columnConfig.getColumnName(), bag.size());
+        logger.info("PopulationCounterSaltUDF: Start to count bin value count for {}, bag size {}",
+                columnConfig.getColumnName(), bag.size());
 
-        if ( columnConfig.isCategorical()
-                && CollectionUtils.isNotEmpty(columnConfig.getBinCategory()) ) {
-            this.counter = new CategoryCounter(modelConfig.getMissingOrInvalidValues(),
-                    columnConfig.getBinCategory(), columnConfig.getBinPosRate());
-        } else if (columnConfig.isNumerical()
-                && CollectionUtils.isNotEmpty(columnConfig.getBinBoundary()) ) {
-            this.counter = new NumericCounter(modelConfig.getMissingOrInvalidValues(),
-                    columnConfig.getColumnName(), columnConfig.getBinBoundary());
+        if(columnConfig.isCategorical() && CollectionUtils.isNotEmpty(columnConfig.getBinCategory())) {
+            this.counter = new CategoryCounter(modelConfig.getMissingOrInvalidValues(), columnConfig.getBinCategory(),
+                    columnConfig.getBinPosRate());
+        } else if(columnConfig.isNumerical() && CollectionUtils.isNotEmpty(columnConfig.getBinBoundary())) {
+            this.counter = new NumericCounter(modelConfig.getMissingOrInvalidValues(), columnConfig.getColumnName(),
+                    columnConfig.getBinBoundary());
         } else {
             return null;
         }
 
         Iterator<Tuple> iter = bag.iterator();
-        while (iter.hasNext()) {
+        while(iter.hasNext()) {
             Tuple tuple = iter.next();
-            if (tuple != null && tuple.size() != 0) {
+            if(tuple != null && tuple.size() != 0) {
                 Object value = tuple.get(index);
                 Boolean tag = (Boolean) tuple.get(index + 1);
                 counter.addData(tag, (value == null) ? null : value.toString());
@@ -97,16 +96,17 @@ public class PopulationCounterSaltUDF extends AbstractTrainerUDF<Tuple> {
         output.set(0, columnId);
         output.set(1, counter.getBinLen());
         output.set(2, counter.getUnitSum());
-        output.set(3, StringUtils.join(Longs.asList(counter.getPositiveCounter()), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
-        output.set(4, StringUtils.join(Longs.asList(counter.getNegativeCounter()), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+        output.set(3,
+                StringUtils.join(Longs.asList(counter.getPositiveCounter()), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+        output.set(4,
+                StringUtils.join(Longs.asList(counter.getNegativeCounter()), CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
         return output;
     }
 
-
     public Schema outputSchema(Schema input) {
         try {
-            return Utils
-                .getSchemaFromString("PopulationInfo:Tuple(columnId : int, binLen : int, unitSum : double, positiveCounter : chararray, negativeCounter : chararray)");
+            return Utils.getSchemaFromString(
+                    "PopulationInfo:Tuple(columnId : int, binLen : int, unitSum : double, positiveCounter : chararray, negativeCounter : chararray)");
         } catch (ParserException e) {
             log.error("Error when generating output schema.", e);
             // just ignore

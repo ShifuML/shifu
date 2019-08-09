@@ -55,14 +55,14 @@ public class ShifuTestProcessor extends BasicModelProcessor {
                     status = runFilterTest(modelConfig);
                 } else if(testTarget.equals("*")) { // test filters in train and eval dataset
                     status = runFilterTest(modelConfig);
-                    for (EvalConfig evalConfig : this.modelConfig.getEvals()) {
-                        status +=  runFilterTest(evalConfig);
+                    for(EvalConfig evalConfig: this.modelConfig.getEvals()) {
+                        status += runFilterTest(evalConfig);
                     }
                 } else {
                     String[] evalNames = testTarget.split(",");
-                    for (String evalName : evalNames) {
+                    for(String evalName: evalNames) {
                         EvalConfig evalConfig = this.modelConfig.getEvalConfigByName(StringUtils.trimToEmpty(evalName));
-                        if ( evalConfig == null ) {
+                        if(evalConfig == null) {
                             LOG.error("Eval - {} doesn't exist!");
                             status = 1;
                             break;
@@ -89,15 +89,15 @@ public class ShifuTestProcessor extends BasicModelProcessor {
         }
 
         LOG.info("Start to test the filter against the training dataset.");
-        DataPurifier dataPurifier = new DataPurifier(modelConfig, false);
+        DataPurifier dataPurifier = new DataPurifier(modelConfig, this.columnConfigList, false);
         int status = doFilterTest(dataPurifier, dataset.getDataPath(), dataset.getSource());
-        if ( status > 0 ) {
+        if(status > 0) {
             return status;
         }
 
         if(StringUtils.isNotBlank(dataset.getValidationFilterExpressions())) {
             LOG.info("Start to test the filter against the validation dataset.");
-            dataPurifier = new DataPurifier(modelConfig, true);
+            dataPurifier = new DataPurifier(modelConfig, this.columnConfigList, true);
             status = doFilterTest(dataPurifier, dataset.getValidationDataPath(), dataset.getSource());
         }
 
@@ -112,7 +112,7 @@ public class ShifuTestProcessor extends BasicModelProcessor {
         }
 
         LOG.info("Start to test the filter against eval `{}` dataset.", evalConfig.getName());
-        DataPurifier dataPurifier = new DataPurifier(modelConfig, evalConfig);
+        DataPurifier dataPurifier = new DataPurifier(modelConfig, columnConfigList, evalConfig);
         return doFilterTest(dataPurifier, dataset.getDataPath(), dataset.getSource());
     }
 
@@ -121,18 +121,18 @@ public class ShifuTestProcessor extends BasicModelProcessor {
         int totalLineCnt = 0;
         int matchLineCnt = 0;
         int testRecordCnt = getTestRecordCnt();
-        while (totalLineCnt < testRecordCnt) {
+        while(totalLineCnt < testRecordCnt) {
             String record = hdfsPartFile.readLine();
 
-            if ( record == null ) {
+            if(record == null) {
                 break;
             }
 
             boolean isMatched = dataPurifier.isFilter(record);
-            if ( isMatched ) {
-                matchLineCnt ++;
+            if(isMatched) {
+                matchLineCnt++;
             }
-            totalLineCnt ++;
+            totalLineCnt++;
         }
 
         LOG.info("Filter Result:");

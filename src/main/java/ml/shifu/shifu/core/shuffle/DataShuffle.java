@@ -1,8 +1,7 @@
 package ml.shifu.shifu.core.shuffle;
 
-import ml.shifu.shifu.util.Base64Utils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
+import java.io.IOException;
+
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -11,8 +10,8 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
 
-import java.io.IOException;
-import java.util.Random;
+import ml.shifu.shifu.util.Base64Utils;
+import ml.shifu.shifu.util.Constants;
 
 /**
  * Created by zhanhu on 12/31/16.
