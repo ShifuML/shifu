@@ -42,7 +42,8 @@ import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
  * {@link AutoTypeDistinctCountMapper} is a mapper to get {@link HyperLogLogPlus} statistics per split. Such statistics
  * will be merged in our reducer.
  */
-public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntWritable, CountAndFrequentItemsWritable> {
+public class AutoTypeDistinctCountMapper
+        extends Mapper<LongWritable, Text, IntWritable, CountAndFrequentItemsWritable> {
 
     private final static Logger LOG = LoggerFactory.getLogger(AutoTypeDistinctCountMapper.class);
 
@@ -86,12 +87,12 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
 
     private void loadConfigFiles(final Context context) {
         try {
-            SourceType sourceType = SourceType.valueOf(context.getConfiguration().get(
-                    Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
-            this.modelConfig = CommonUtils.loadModelConfig(
-                    context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG), sourceType);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+            SourceType sourceType = SourceType.valueOf(
+                    context.getConfiguration().get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
+            this.modelConfig = CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
+                    sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -101,7 +102,7 @@ public class AutoTypeDistinctCountMapper extends Mapper<LongWritable, Text, IntW
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
 
-        this.dataPurifier = new DataPurifier(this.modelConfig, false);
+        this.dataPurifier = new DataPurifier(this.modelConfig, columnConfigList, false);
 
         loadTagWeightNum();
 

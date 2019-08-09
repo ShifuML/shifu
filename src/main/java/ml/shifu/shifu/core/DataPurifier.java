@@ -17,6 +17,7 @@ package ml.shifu.shifu.core;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.jexl2.Expression;
@@ -30,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.util.CommonUtils;
@@ -51,6 +53,8 @@ public class DataPurifier {
     private ShifuMapContext jc = new ShifuMapContext();
     private JexlEngine jexl;
 
+    private final List<ColumnConfig> columnConfigList;
+
     /**
      * If data purifier is for new tag, not the one set in MC.json.
      */
@@ -71,7 +75,9 @@ public class DataPurifier {
      */
     private Set<String> newNegTags;
 
-    public DataPurifier(ModelConfig modelConfig, boolean isForValidationDataSet) throws IOException {
+    public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, boolean isForValidationDataSet)
+            throws IOException {
+        this.columnConfigList = columnConfigList;
         String filterExpressions = (isForValidationDataSet ? modelConfig.getDataSet().getValidationFilterExpressions()
                 : modelConfig.getFilterExpressions());
         if(StringUtils.isNotBlank(filterExpressions)) {
@@ -98,6 +104,13 @@ public class DataPurifier {
 
                 String[] newTagSplits = CommonUtils.split(splits[1].trim(), NEW_TARGET_COLUMN_DELIMITER);
                 this.newTagColumnName = newTagSplits[0].trim();
+                if(columnConfigList != null) {
+                    ColumnConfig cc = CommonUtils.findColumnConfigByName(columnConfigList, newTagColumnName);
+                    if(cc == null) {
+                        throw new IllegalArgumentException("'filterExpressions' " + filterExpressions + " with new tag "
+                                + this.newTagColumnName + " cannot be found in ColumnConfig.json");
+                    }
+                }
                 String[] newTags = CommonUtils.split(newTagSplits[1].trim(), NEW_TARGET_TAG_DELIMITER);
                 this.newPosTags = new HashSet<>();
                 for(String tag: newTags) {
@@ -117,7 +130,9 @@ public class DataPurifier {
         return filterExpressions;
     }
 
-    public DataPurifier(ModelConfig modelConfig, String filterExpressions, boolean strict) throws IOException {
+    public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String filterExpressions,
+            boolean strict) throws IOException {
+        this.columnConfigList = columnConfigList;
         if(StringUtils.isNotBlank(filterExpressions)) {
             filterExpressions = parseNewTagInfo(filterExpressions);
             jexl = new JexlEngine();
@@ -137,11 +152,13 @@ public class DataPurifier {
         }
     }
 
-    public DataPurifier(ModelConfig modelConfig, String filterExpressions) throws IOException {
-        this(modelConfig, filterExpressions, false);
+    public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String filterExpressions)
+            throws IOException {
+        this(modelConfig, columnConfigList, filterExpressions, false);
     }
 
-    public DataPurifier(EvalConfig evalConfig) throws IOException {
+    public DataPurifier(List<ColumnConfig> columnConfigList, EvalConfig evalConfig) throws IOException {
+        this.columnConfigList = columnConfigList;
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getFilterExpressions())) {
             jexl = new JexlEngine();
             try {

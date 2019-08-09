@@ -28,7 +28,6 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 
-
 /**
  * DataPurifierTest class
  */
@@ -40,103 +39,115 @@ public class DataPurifierTest {
     @BeforeClass
     public void setUp() throws Exception {
         modelConfig = CommonUtils.loadModelConfig(
-                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
-                SourceType.LOCAL);
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json", SourceType.LOCAL);
     }
 
     @Test
     public void testIsFilterOutA() throws IOException {
-        dataPurifier = new DataPurifier(modelConfig, false);
-        Assert.assertTrue(dataPurifier.isFilter("M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
+        dataPurifier = new DataPurifier(modelConfig, null, false);
+        Assert.assertTrue(dataPurifier.isFilter(
+                "M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
 
         modelConfig.getDataSet().setFilterExpressions("aaa == aaa");
-        dataPurifier = new DataPurifier(modelConfig, false);
-        Assert.assertTrue(dataPurifier.isFilter("M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
+        dataPurifier = new DataPurifier(modelConfig, null, false);
+        Assert.assertTrue(dataPurifier.isFilter(
+                "M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
 
         modelConfig.getDataSet().setFilterExpressions("1 == 2");
-        dataPurifier = new DataPurifier(modelConfig, false);
-        Assert.assertFalse(dataPurifier.isFilter("M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
+        dataPurifier = new DataPurifier(modelConfig, null, false);
+        Assert.assertFalse(dataPurifier.isFilter(
+                "M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
 
         modelConfig.getDataSet().setFilterExpressions("*");
-        dataPurifier = new DataPurifier(modelConfig, false);
-        Assert.assertTrue(dataPurifier.isFilter("M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
+        dataPurifier = new DataPurifier(modelConfig, null, false);
+        Assert.assertTrue(dataPurifier.isFilter(
+                "M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
 
         EvalConfig evalConfig = modelConfig.getEvalConfigByName("EvalA");
         evalConfig.getDataSet().setFilterExpressions("diagnosis == \"M\"");
-        dataPurifier = new DataPurifier(evalConfig);
-        Assert.assertTrue(dataPurifier.isFilter("M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
-        Assert.assertFalse(dataPurifier.isFilter("B|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
+        dataPurifier = new DataPurifier(null, evalConfig);
+        Assert.assertTrue(dataPurifier.isFilter(
+                "M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
+        Assert.assertFalse(dataPurifier.isFilter(
+                "B|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
 
         evalConfig.getDataSet().setFilterExpressions("  ");
-        dataPurifier = new DataPurifier(evalConfig);
-        Assert.assertTrue(dataPurifier.isFilter("M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
-        Assert.assertTrue(dataPurifier.isFilter("B|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
+        dataPurifier = new DataPurifier(null, evalConfig);
+        Assert.assertTrue(dataPurifier.isFilter(
+                "M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
+        Assert.assertTrue(dataPurifier.isFilter(
+                "B|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
 
         evalConfig.getDataSet().setFilterExpressions(" ASDF *** SDFKSADFJKS >  ");
-        dataPurifier = new DataPurifier(evalConfig);
-        Assert.assertTrue(dataPurifier.isFilter("M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
-        Assert.assertTrue(dataPurifier.isFilter("B|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
+        dataPurifier = new DataPurifier(null, evalConfig);
+        Assert.assertTrue(dataPurifier.isFilter(
+                "M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
+        Assert.assertTrue(dataPurifier.isFilter(
+                "B|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
     }
 
     @Test
     public void testFilterNull() throws IOException {
         modelConfig.getDataSet().setFilterExpressions("diagnosis != \"null\"");
-        dataPurifier = new DataPurifier(modelConfig, false);
-        Assert.assertFalse(dataPurifier.isFilter("null|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
+        dataPurifier = new DataPurifier(modelConfig, null, false);
+        Assert.assertFalse(dataPurifier.isFilter(
+                "null|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
 
-        Assert.assertTrue(dataPurifier.isFilter("M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
+        Assert.assertTrue(dataPurifier.isFilter(
+                "M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
     }
 
     @Test
     public void testFilterEqualNull() throws IOException {
         modelConfig.getDataSet().setFilterExpressions("diagnosis != \"NULL\" ");
-        dataPurifier = new DataPurifier(modelConfig, false);
-        Assert.assertFalse(dataPurifier
-                .isFilter("NULL|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
+        dataPurifier = new DataPurifier(modelConfig, null, false);
+        Assert.assertFalse(dataPurifier.isFilter(
+                "NULL|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
 
-        Assert.assertTrue(dataPurifier
-                .isFilter("M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
+        Assert.assertTrue(dataPurifier.isFilter(
+                "M|17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"));
     }
-    
+
     @Test
     public void testFilterIsNull() throws IOException {
         modelConfig.getDataSet().setFilterExpressions("diagnosis != null ");
-        dataPurifier = new DataPurifier(modelConfig, false);
-        
+        dataPurifier = new DataPurifier(modelConfig, null, false);
+
         Tuple tuple = TupleFactory.getInstance().newTuple();
         tuple.append(null);
-        String[] fields = "17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189".split("\\|");
-        for ( String f : fields ) {
+        String[] fields = "17.99|10.38|122.8|1001|0.1184|0.2776|0.3001|0.1471|0.2419|0.07871|1.095|0.9053|8.589|153.4|0.006399|0.04904|0.05373|0.01587|0.03003|0.006193|25.38|17.33|184.6|2019|0.1622|0.6656|0.7119|0.2654|0.4601|0.1189"
+                .split("\\|");
+        for(String f: fields) {
             tuple.append(f);
         }
 
         Assert.assertFalse(dataPurifier.isFilter(tuple));
-        
+
         tuple = TupleFactory.getInstance().newTuple();
         tuple.append(new Object());
-        for ( String f : fields ) {
+        for(String f: fields) {
             tuple.append(f);
         }
-        
+
         Assert.assertTrue(dataPurifier.isFilter(tuple));
 
         modelConfig.getDataSet().setFilterExpressions("diagnosis == null ");
-        dataPurifier = new DataPurifier(modelConfig, false);
-        
+        dataPurifier = new DataPurifier(modelConfig, null, false);
+
         tuple = TupleFactory.getInstance().newTuple();
         tuple.append(null);
-        for ( String f : fields ) {
+        for(String f: fields) {
             tuple.append(f);
         }
 
         Assert.assertTrue(dataPurifier.isFilter(tuple));
-        
+
         tuple = TupleFactory.getInstance().newTuple();
         tuple.append(new Object());
-        for ( String f : fields ) {
+        for(String f: fields) {
             tuple.append(f);
         }
-        
+
         Assert.assertFalse(dataPurifier.isFilter(tuple));
     }
 }

@@ -91,7 +91,7 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
             this.dataPurifiers = new ArrayList<>(splits.length);
             this.newTagIndexes = new ArrayList<>(splits.length);
             for(String split: splits) {
-                DataPurifier dataPurifier = new DataPurifier(modelConfig, split, false);
+                DataPurifier dataPurifier = new DataPurifier(modelConfig, this.columnConfigList, split, false);
                 if(dataPurifier.isNewTag()) {
                     ColumnConfig cc = CommonUtils.findColumnConfigByName(columnConfigList,
                             dataPurifier.getNewTagColumnName());
@@ -133,7 +133,8 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
         if(input.get(tagColumnNum) == null) {
             log.error("tagColumnNum is " + tagColumnNum + "; input size is " + input.size()
                     + "; columnConfigList.size() is " + columnConfigList.size() + "; tuple is"
-                    + input.toDelimitedString("|") + "; tag is " + input.get(tagColumnNum));
+                    + (System.currentTimeMillis() % 100 == 0 ? "" : input.toDelimitedString("|")) + "; tag is "
+                    + input.get(tagColumnNum));
             if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
                 PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1);
             }
@@ -193,7 +194,7 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
                             String newTag = input.get(this.newTagIndexes.get(j)).toString();
                             Set<String> newPosTags = dataPurifier.getNewPosTags();
                             Set<String> newNegTags = dataPurifier.getNewNegTags();
-                            if(newTag == null || (!newPosTags.contains(tag) && !newNegTags.contains(tag))) {
+                            if(newTag == null || (!newPosTags.contains(newTag) && !newNegTags.contains(newTag))) {
                                 if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_EXTENSION_TAG")) {
                                     PigStatusReporter.getInstance()
                                             .getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_EXTENSION_TAG")

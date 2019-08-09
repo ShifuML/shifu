@@ -46,8 +46,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Created on 11/24/2014.
  */
-public class VarSelWorker
-        extends
+public class VarSelWorker extends
         AbstractWorkerComputable<VarSelMasterResult, VarSelWorkerResult, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
     private static final Logger LOG = LoggerFactory.getLogger(VarSelWorker.class);
 
@@ -79,14 +78,14 @@ public class VarSelWorker
         Properties props = workerContext.getProps();
 
         try {
-            RawSourceData.SourceType sourceType = RawSourceData.SourceType.valueOf(props.getProperty(
-                    CommonConstants.MODELSET_SOURCE_TYPE, RawSourceData.SourceType.HDFS.toString()));
+            RawSourceData.SourceType sourceType = RawSourceData.SourceType.valueOf(
+                    props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, RawSourceData.SourceType.HDFS.toString()));
 
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
 
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
 
             String conductorClsName = props.getProperty(Constants.VAR_SEL_WORKER_CONDUCTOR);
             this.workerConductor = (AbstractWorkerConductor) Class.forName(conductorClsName)
@@ -112,7 +111,7 @@ public class VarSelWorker
 
         trainingDataSet = new TrainingDataSet(normalizedColumnIdList);
         try {
-            dataPurifier = new DataPurifier(modelConfig, false);
+            dataPurifier = new DataPurifier(modelConfig, this.columnConfigList, false);
         } catch (IOException e) {
             throw new RuntimeException("Fail to create DataPurifier", e);
         }
@@ -186,7 +185,7 @@ public class VarSelWorker
             int i = 0;
             for(Integer columnId: this.trainingDataSet.getDataColumnIdList()) {
                 List<Double> normalizedData = Normalizer.normalize(columnConfigList.get(columnId), fields[columnId]);
-                for ( Double normalValue : normalizedData ) {
+                for(Double normalValue: normalizedData) {
                     inputs[i++] = normalValue;
                 }
             }

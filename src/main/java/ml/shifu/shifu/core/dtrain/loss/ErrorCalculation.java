@@ -46,6 +46,7 @@ public interface ErrorCalculation {
      *            The actual value.
      * @param ideal
      *            The ideal value.
+     * @return updated error
      */
     public double updateError(final double actual, final double ideal);
 
