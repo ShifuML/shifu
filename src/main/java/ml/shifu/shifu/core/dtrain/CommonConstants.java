@@ -114,6 +114,8 @@ public interface CommonConstants {
 
     public static final String ENABLE_EARLY_STOP = "EnableEarlyStop";
 
+    public static final String EARLY_STOP_IGNORE_VALUE = "early.stop.ignore.value";
+
     public static final String VALIDATION_TOLERANCE = "ValidationTolerance";
 
     public static final String REG_LEVEL_KEY = "L1orL2";
