@@ -281,7 +281,8 @@
             }, {
                 "name": "filterNum",
                 "type": "integer",
-                "directive": "input"
+                "directive": "input",
+                "notNull": true
             }, {
                 "name": "filterOutRatio",
                 "type": "number",
