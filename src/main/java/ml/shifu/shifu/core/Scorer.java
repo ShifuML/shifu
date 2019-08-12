@@ -431,7 +431,7 @@ public class Scorer {
             } else if (model instanceof MTNNModel){
                 final MTNNModel mtnn = (MTNNModel) model;
                 if(mtnn.getInputCount() != pair.getInput().size()) {
-                    throw new RuntimeException("MTL and input size mismatch: wdl input Size = " + mtnn.getInputCount()
+                    throw new RuntimeException("MTL and input size mismatch: mtl input Size = " + mtnn.getInputCount()
                             + "; data input Size = " + pair.getInput().size());
                 }
 
@@ -546,6 +546,8 @@ public class Scorer {
                 } else if(model instanceof GenericModel) {
                     scores.add(toScore(score.getData(0)));
                 } else if(model instanceof WDLModel) {
+                    scores.add(toScore(score.getData(0)));
+                } else if (model instanceof MTNNModel){
                     scores.add(toScore(score.getData(0)));
                 } else {
                     throw new RuntimeException("unsupport models");
