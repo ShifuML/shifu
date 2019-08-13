@@ -1,4 +1,4 @@
-package ml.shifu.shifu.core.dtrain.multitask;
+package ml.shifu.shifu.core.dtrain.mtl;
 
 import ml.shifu.guagua.io.Bytable;
 import ml.shifu.guagua.io.Combinable;
@@ -23,9 +23,9 @@ import java.util.stream.Collectors;
 
 import static ml.shifu.shifu.core.dtrain.wdl.SerializationUtil.NULL;
 
-public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Combinable<MultiTaskNN>, PropOptimizer<MultiTaskNN> {
+public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, Bytable, Combinable<MultiTaskLearning>, PropOptimizer<MultiTaskLearning> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MultiTaskNN.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MultiTaskLearning.class);
 
     private DenseInputLayer dil;
 
@@ -48,10 +48,10 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
 
     private SerializationType serializationType = SerializationType.MODEL_SPEC;
 
-    public MultiTaskNN() {
+    public MultiTaskLearning() {
     }
 
-    public MultiTaskNN(int inputSize, List<Integer> hiddenNodes, List<String> HiddenActiFuncs, int taskNumber, double l2reg) {
+    public MultiTaskLearning(int inputSize, List<Integer> hiddenNodes, List<String> HiddenActiFuncs, int taskNumber, double l2reg) {
         this.inputSize = inputSize;
         this.hiddenNodes = hiddenNodes;
         this.hiddenActiFuncs = HiddenActiFuncs;
@@ -135,18 +135,18 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
     }
 
 
-    public void updateWeights(MultiTaskNN multiTask) {
+    public void updateWeights(MultiTaskLearning multiTask) {
         this.initWeight(multiTask);
     }
 
-    public void updateWeights(MTNNParams params) {
-        updateWeights(params.getMtnn());
+    public void updateWeights(MTLParams params) {
+        updateWeights(params.getMtl());
         // after update weights, gradients should be re newed.
         this.initGrads();
     }
 
     /**
-     * Init the weights in MultiTaskNN Model and it's sub module
+     * Init the weights in MultiTaskLearning Model and it's sub module
      */
     public void initWeights() {
         InitMethod defaultMode = InitMethod.ZERO_ONE_RANGE_RANDOM;
@@ -165,7 +165,7 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
     }
 
     @Override
-    public void initWeight(MultiTaskNN updateModel) {
+    public void initWeight(MultiTaskLearning updateModel) {
         AssertUtils.assertListNotNullAndSizeEqual(this.hiddenLayers, updateModel.getHiddenLayers());
         for (int i = 0; i < this.hiddenLayers.size(); i++) {
             Layer layer = this.hiddenLayers.get(i);
@@ -314,7 +314,7 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
 
 
     @Override
-    public MultiTaskNN combine(MultiTaskNN from) {
+    public MultiTaskLearning combine(MultiTaskLearning from) {
         // combine input layers.
         this.dil = this.dil.combine(from.getDil());
 
@@ -327,7 +327,7 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
                 Layer nLayer = ((DenseLayer) hiddenLayers.get(i)).combine((DenseLayer) fhl.get(i));
                 combinedLayers.add(nLayer);
             }
-            // just copy activation layers from mtnn before.
+            // just copy activation layers from mtl before.
             else {
                 combinedLayers.add(hiddenLayers.get(i));
             }
@@ -351,7 +351,7 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
     }
 
     @Override
-    public void optimizeWeight(double numTrainSize, int iteration, MultiTaskNN model) {
+    public void optimizeWeight(double numTrainSize, int iteration, MultiTaskLearning model) {
         List<Layer> gradHLs = model.getHiddenLayers();
         for (int i = 0; i < this.hiddenLayers.size(); i++) {
             Layer tmpLayer = this.hiddenLayers.get(i);
@@ -364,7 +364,7 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
 
     // clone by serialization
     @Override
-    public MultiTaskNN clone() {
+    public MultiTaskLearning clone() {
         // Set the initial buffer size to 1M
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(1024 * 1024);
         DataOutputStream dos = new DataOutputStream(byteArrayOutputStream);
@@ -373,13 +373,13 @@ public class MultiTaskNN implements WeightInitializer<MultiTaskNN>, Bytable, Com
             write(dos, SerializationType.MODEL_SPEC);
             dos.flush();
             ByteArrayInputStream dataInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
-            MultiTaskNN mtnn = new MultiTaskNN();
+            MultiTaskLearning mtl = new MultiTaskLearning();
             dis = new DataInputStream(dataInputStream);
-            mtnn.readFields(dis);
-            mtnn.initGrads();
-            return mtnn;
+            mtl.readFields(dis);
+            mtl.initGrads();
+            return mtl;
         } catch (IOException e) {
-            LOG.error("IOException happen when clone mtnn model", e);
+            LOG.error("IOException happen when clone mtl model", e);
         } finally {
             IOUtils.closeStream(dos);
             if (dis !=null){

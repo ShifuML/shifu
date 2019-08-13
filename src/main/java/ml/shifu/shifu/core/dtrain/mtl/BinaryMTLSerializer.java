@@ -1,4 +1,4 @@
-package ml.shifu.shifu.core.dtrain.multitask;
+package ml.shifu.shifu.core.dtrain.mtl;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -24,14 +24,14 @@ import java.util.zip.GZIPOutputStream;
 /**
  * @author haillu
  */
-public class BinaryMTNNSerializer {
-    public static void save(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, MultiTaskNN mtnn, FileSystem fs, Path output) throws IOException {
+public class BinaryMTLSerializer {
+    public static void save(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, MultiTaskLearning mtl, FileSystem fs, Path output) throws IOException {
         DataOutputStream fos = null;
         try {
             fos = new DataOutputStream(new GZIPOutputStream(fs.create(output)));
 
             // version
-            fos.writeInt(CommonConstants.WDL_FORMAT_VERSION);
+            fos.writeInt(CommonConstants.MTL_FORMAT_VERSION);
             // Reserved two double field, one double field and one string field
             fos.writeDouble(0.0f);
             fos.writeDouble(0.0f);
@@ -87,7 +87,7 @@ public class BinaryMTNNSerializer {
             }
 
             // persist WideAndDeep Model
-            mtnn.write(fos, SerializationType.MODEL_SPEC);
+            mtl.write(fos, SerializationType.MODEL_SPEC);
         } finally {
             IOUtils.closeStream(fos);
         }

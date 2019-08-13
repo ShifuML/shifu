@@ -41,10 +41,10 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 
-import ml.shifu.shifu.core.dtrain.multitask.MTNNMaster;
-import ml.shifu.shifu.core.dtrain.multitask.MTNNOutput;
-import ml.shifu.shifu.core.dtrain.multitask.MTNNParams;
-import ml.shifu.shifu.core.dtrain.multitask.MTNNWorker;
+import ml.shifu.shifu.core.dtrain.mtl.MTLMaster;
+import ml.shifu.shifu.core.dtrain.mtl.MTLOutput;
+import ml.shifu.shifu.core.dtrain.mtl.MTLParams;
+import ml.shifu.shifu.core.dtrain.mtl.MTLWorker;
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
@@ -1558,20 +1558,20 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private void prepareMTLParams(List<String> args, SourceType sourceType) {
         args.add("-w");
-        args.add(MTNNWorker.class.getName());
+        args.add(MTLWorker.class.getName());
 
         args.add("-m");
-        args.add(MTNNMaster.class.getName());
+        args.add(MTLMaster.class.getName());
 
         args.add("-mr");
-        args.add(MTNNParams.class.getName());
+        args.add(MTLParams.class.getName());
 
         args.add("-wr");
-        args.add(MTNNParams.class.getName());
+        args.add(MTLParams.class.getName());
 
-        // TODO, add MTNNOutput here
+        // TODO, add MTLOutput here
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
-                MTNNOutput.class.getName()));
+                MTLOutput.class.getName()));
     }
 
     private int vcoresSetting() {

@@ -1,4 +1,4 @@
-package ml.shifu.shifu.core.dtrain.multitask;
+package ml.shifu.shifu.core.dtrain.mtl;
 
 import ml.shifu.guagua.io.Combinable;
 import ml.shifu.guagua.io.HaltBytable;
@@ -11,15 +11,15 @@ import java.io.IOException;
 /**
  * @author haillu
  */
-public class MTNNParams extends HaltBytable implements Combinable<MTNNParams> {
-    private static final boolean MTNN_IS_NULL = true;
+public class MTLParams extends HaltBytable implements Combinable<MTLParams> {
+    private static final boolean MTL_IS_NULL = true;
 
     private double trainSize;
 
     private double validationSize;
 
     /**
-     * # of training records per such worker.(Now, we don't use it in MTNN.)
+     * # of training records per such worker.(Now, we don't use it in MTL.)
      */
     private double trainCount;
 
@@ -31,11 +31,11 @@ public class MTNNParams extends HaltBytable implements Combinable<MTNNParams> {
 
     private SerializationType serializationType = SerializationType.MODEL_SPEC;
 
-    private MultiTaskNN mtnn;
+    private MultiTaskLearning mtl;
 
 
     @Override
-    public MTNNParams combine(MTNNParams from) {
+    public MTLParams combine(MTLParams from) {
         this.trainCount += from.trainCount;
         for (int i = 0; i < trainErrors.length; i++) {
             this.trainErrors[i] += from.trainErrors[i];
@@ -47,8 +47,8 @@ public class MTNNParams extends HaltBytable implements Combinable<MTNNParams> {
         this.trainSize += from.trainSize;
         this.validationSize += from.validationSize;
         // In the first iteration, the worker may send a empty WDLParams without WideAndDeep Init
-        if (from.getMtnn() != null) {
-            this.mtnn = this.mtnn.combine(from.getMtnn());
+        if (from.getMtl() != null) {
+            this.mtl = this.mtl.combine(from.getMtl());
         }
         return this;
     }
@@ -56,12 +56,12 @@ public class MTNNParams extends HaltBytable implements Combinable<MTNNParams> {
 
     @Override
     public void doWrite(DataOutput out) throws IOException {
-        if (this.mtnn == null) {
-            out.writeBoolean(MTNN_IS_NULL);
+        if (this.mtl == null) {
+            out.writeBoolean(MTL_IS_NULL);
         } else {
-            out.writeBoolean(!MTNN_IS_NULL);
-            this.mtnn.setSerializationType(serializationType);
-            this.mtnn.write(out);
+            out.writeBoolean(!MTL_IS_NULL);
+            this.mtl.setSerializationType(serializationType);
+            this.mtl.write(out);
         }
         out.writeDouble(this.trainCount);
         out.writeDouble(this.validationCount);
@@ -77,12 +77,12 @@ public class MTNNParams extends HaltBytable implements Combinable<MTNNParams> {
 
     @Override
     public void doReadFields(DataInput in) throws IOException {
-        boolean mtnnIsNull = in.readBoolean();
-        if (!mtnnIsNull) {
-            if (this.mtnn == null) {
-                this.mtnn = new MultiTaskNN();
+        boolean mtlIsNull = in.readBoolean();
+        if (!mtlIsNull) {
+            if (this.mtl == null) {
+                this.mtl = new MultiTaskLearning();
             }
-            this.mtnn.readFields(in);
+            this.mtl.readFields(in);
         }
         this.trainCount = in.readDouble();
         this.validationCount = in.readDouble();
@@ -152,11 +152,11 @@ public class MTNNParams extends HaltBytable implements Combinable<MTNNParams> {
         this.serializationType = serializationType;
     }
 
-    public MultiTaskNN getMtnn() {
-        return mtnn;
+    public MultiTaskLearning getMtl() {
+        return mtl;
     }
 
-    public void setMtnn(MultiTaskNN mtnn) {
-        this.mtnn = mtnn;
+    public void setMtl(MultiTaskLearning mtl) {
+        this.mtl = mtl;
     }
 }

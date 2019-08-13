@@ -1,4 +1,4 @@
-package ml.shifu.shifu.core.dtrain.multitask;
+package ml.shifu.shifu.core.dtrain.mtl;
 
 
 import ml.shifu.guagua.master.AbstractMasterComputable;
@@ -13,7 +13,6 @@ import ml.shifu.shifu.core.dtrain.SerializationType;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.math.NumberUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
@@ -28,9 +27,9 @@ import java.util.Properties;
 /**
  * @author haillu
  */
-public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams> {
+public class MTLMaster extends AbstractMasterComputable<MTLParams, MTLParams> {
 
-    protected static final Logger LOG = LoggerFactory.getLogger(MTNNMaster.class);
+    protected static final Logger LOG = LoggerFactory.getLogger(MTLMaster.class);
 
     private ModelConfig modelConfig;
 
@@ -46,11 +45,11 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
 
     private Map<String, Object> validParams;
 
-    private MultiTaskNN mtnn;
+    private MultiTaskLearning mtl;
 
 
     @Override
-    public void init(MasterContext<MTNNParams, MTNNParams> context) {
+    public void init(MasterContext<MTLParams, MTLParams> context) {
         LOG.debug("master init:");
         Properties props = context.getProps();
         SourceType sourceType = SourceType.
@@ -67,7 +66,7 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
         this.isAfterVarSelect = (inputOutputIndex[3] == 1);
         this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(props.getProperty(CommonConstants.CONTINUOUS_TRAINING));
 
-        //build multi-task nn model:
+        //build multi-task learning model:
         this.validParams = this.modelConfig.getTrain().getParams();
         double learningRate = (double) validParams.get(CommonConstants.LEARNING_RATE);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
@@ -81,28 +80,28 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
 //                taskNumber++;
 //            }
 //        }
-        // todo:check if MTNN need regression function
+        // todo:check if MTL need regression function
         //double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0);
         double l2reg = 0;
         Object pObject = this.validParams.get(CommonConstants.PROPAGATION);
         String propagation = (pObject == null) ? DTrainUtils.RESILIENTPROPAGATION : pObject.toString();
 
-        LOG.debug("params of constructor of MTNN: inputCount: {},hiddenNodes: {},hiddenActiFuncs: {}" +
+        LOG.debug("params of constructor of MTL: inputCount: {},hiddenNodes: {},hiddenActiFuncs: {}" +
                 "taskNumber: {},l2reg: {}", inputCount, hiddenNodes, hiddenActiFuncs, taskNumber, l2reg);
 
-        this.mtnn = new MultiTaskNN(inputCount, hiddenNodes, hiddenActiFuncs, taskNumber, l2reg);
-        this.mtnn.initOptimizer(learningRate, propagation, 0, RegulationLevel.NONE);
+        this.mtl = new MultiTaskLearning(inputCount, hiddenNodes, hiddenActiFuncs, taskNumber, l2reg);
+        this.mtl.initOptimizer(learningRate, propagation, 0, RegulationLevel.NONE);
     }
 
     @Override
-    public MTNNParams doCompute(MasterContext<MTNNParams, MTNNParams> context) {
+    public MTLParams doCompute(MasterContext<MTLParams, MTLParams> context) {
         if (context.isFirstIteration()) {
             return initOrRecoverModelWeights(context);
         }
 
-        MTNNParams aggregation = aggregateWorkerGradients(context);
-        this.mtnn.optimizeWeight(aggregation.getTrainSize(), context.getCurrentIteration() - 1, aggregation.getMtnn());
-        MTNNParams params = new MTNNParams();
+        MTLParams aggregation = aggregateWorkerGradients(context);
+        this.mtl.optimizeWeight(aggregation.getTrainSize(), context.getCurrentIteration() - 1, aggregation.getMtl());
+        MTLParams params = new MTLParams();
 
         LOG.debug("params will be sent to worker: trainSize:{},validationSize:{}," +
                         "trainCount:{},validationCount:{},trainError:{},validationErrors:{}", aggregation.getTrainSize(),
@@ -116,14 +115,14 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
         params.setTrainErrors(aggregation.getTrainErrors());
         params.setValidationErrors(aggregation.getValidationErrors());
         params.setSerializationType(SerializationType.WEIGHTS);
-        this.mtnn.setSerializationType(SerializationType.WEIGHTS);
-        params.setMtnn(this.mtnn);
+        this.mtl.setSerializationType(SerializationType.WEIGHTS);
+        params.setMtl(this.mtl);
         return params;
     }
 
-    public MTNNParams aggregateWorkerGradients(MasterContext<MTNNParams, MTNNParams> context) {
-        MTNNParams aggregation = null;
-        for (MTNNParams params : context.getWorkerResults()) {
+    public MTLParams aggregateWorkerGradients(MasterContext<MTLParams, MTLParams> context) {
+        MTLParams aggregation = null;
+        for (MTLParams params : context.getWorkerResults()) {
             if (aggregation == null) {
                 aggregation = params;
             } else {
@@ -133,32 +132,32 @@ public class MTNNMaster extends AbstractMasterComputable<MTNNParams, MTNNParams>
         return aggregation;
     }
 
-    public MTNNParams initOrRecoverModelWeights(MasterContext<MTNNParams, MTNNParams> context) {
-        MTNNParams params = new MTNNParams();
+    public MTLParams initOrRecoverModelWeights(MasterContext<MTLParams, MTLParams> context) {
+        MTLParams params = new MTLParams();
         if (this.isContinuousEnabled) {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-            MultiTaskNN existingModel = loadModel(modelPath);
+            MultiTaskLearning existingModel = loadModel(modelPath);
             if (existingModel != null) {
-                this.mtnn.updateWeights(existingModel);
+                this.mtl.updateWeights(existingModel);
             } else {
                 LOG.warn("Continuous training enabled but existing model load failed, do random initialization.");
-                this.mtnn.initWeights();
+                this.mtl.initWeights();
             }
         } else {
-            this.mtnn.initWeights();
+            this.mtl.initWeights();
         }
-        params.setMtnn(this.mtnn);
+        params.setMtl(this.mtl);
         return params;
     }
 
-    public MultiTaskNN loadModel(Path modelPath) {
+    public MultiTaskLearning loadModel(Path modelPath) {
         FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS);
         InputStream inputStream = null;
         try {
             inputStream = fileSystem.open(modelPath);
-            return IndependentMTNNModel.loadFromStream(inputStream).getMtnn();
+            return IndependentMTLModel.loadFromStream(inputStream).getMtl();
         } catch (IOException e) {
-            LOG.error("IOException happen when load MultiTaskNN from HDFS", e);
+            LOG.error("IOException happen when load MultiTaskLearning from HDFS", e);
         } finally {
             IOUtils.closeQuietly(inputStream);
         }

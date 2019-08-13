@@ -1,4 +1,4 @@
-package ml.shifu.shifu.core.dtrain.multitask;
+package ml.shifu.shifu.core.dtrain.mtl;
 
 import ml.shifu.guagua.master.BasicMasterInterceptor;
 import ml.shifu.guagua.master.MasterContext;
@@ -33,8 +33,8 @@ import java.util.zip.GZIPOutputStream;
 /**
  * @author haillu
  */
-public class MTNNOutput extends BasicMasterInterceptor<MTNNParams, MTNNParams> {
-    private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(MTNNOutput.class);
+public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
+    private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(MTLOutput.class);
 
     /**
      * Model Config read from HDFS
@@ -84,12 +84,12 @@ public class MTNNOutput extends BasicMasterInterceptor<MTNNParams, MTNNParams> {
 
 
     @Override
-    public void preApplication(MasterContext<MTNNParams, MTNNParams> context) {
+    public void preApplication(MasterContext<MTLParams, MTLParams> context) {
         init(context);
     }
 
     @Override
-    public void postIteration(MasterContext<MTNNParams, MTNNParams> context) {
+    public void postIteration(MasterContext<MTLParams, MTLParams> context) {
         long start = System.currentTimeMillis();
         // save tmp to hdfs according to raw trainer logic
         final int tmpModelFactor = DTrainUtils.tmpModelFactor(context.getTotalIteration());
@@ -122,10 +122,10 @@ public class MTNNOutput extends BasicMasterInterceptor<MTNNParams, MTNNParams> {
                         LOG.info("Copy checkpointed model to tmp folder: {}", tmpModelPath.toString());
                         try {
                             DataOutputStream outputStream = new DataOutputStream(
-                                    new GZIPOutputStream(FileSystem.get(MTNNOutput.this.conf).create(tmpModelPath)));
-                            FSDataInputStream inputStream = FileSystem.get(MTNNOutput.this.conf).open(out);
+                                    new GZIPOutputStream(FileSystem.get(MTLOutput.this.conf).create(tmpModelPath)));
+                            FSDataInputStream inputStream = FileSystem.get(MTLOutput.this.conf).open(out);
                             DataInputStream dis = new DataInputStream(new GZIPInputStream(inputStream));
-                            IOUtils.copyBytes(dis, outputStream, MTNNOutput.this.conf);
+                            IOUtils.copyBytes(dis, outputStream, MTLOutput.this.conf);
                         } catch (IOException e) {
                             LOG.warn("Error in copy models to tmp", e);
                         }
@@ -143,7 +143,7 @@ public class MTNNOutput extends BasicMasterInterceptor<MTNNParams, MTNNParams> {
         LOG.debug("Write output model in post iteration time is {}ms", (System.currentTimeMillis() - start));
     }
 
-    private void updateProgressLog(final MasterContext<MTNNParams, MTNNParams> context) {
+    private void updateProgressLog(final MasterContext<MTLParams, MTLParams> context) {
         int currentIteration = context.getCurrentIteration();
         if (context.isFirstIteration()) {
             // first iteration is used for training preparation
@@ -197,7 +197,7 @@ public class MTNNOutput extends BasicMasterInterceptor<MTNNParams, MTNNParams> {
     /**
      * Save tmp model to HDFS.
      */
-    private void saveTmpModelToHDFS(int iteration, MTNNParams params) {
+    private void saveTmpModelToHDFS(int iteration, MTLParams params) {
         Path out = getTmpModelPath(iteration);
         writeModelToFileSystem(params, out);
     }
@@ -208,7 +208,7 @@ public class MTNNOutput extends BasicMasterInterceptor<MTNNParams, MTNNParams> {
     }
 
     @Override
-    public void postApplication(MasterContext<MTNNParams, MTNNParams> context) {
+    public void postApplication(MasterContext<MTLParams, MTLParams> context) {
         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
         writeModelToFileSystem(context.getMasterResult(), out);
         if (this.isGsMode || this.isKFoldCV) {
@@ -238,16 +238,16 @@ public class MTNNOutput extends BasicMasterInterceptor<MTNNParams, MTNNParams> {
         }
     }
 
-    private void writeModelToFileSystem(MTNNParams params, Path out) {
+    private void writeModelToFileSystem(MTLParams params, Path out) {
         try {
-            BinaryMTNNSerializer.save(this.modelConfig, this.columnConfigList, params.getMtnn(),
+            BinaryMTLSerializer.save(this.modelConfig, this.columnConfigList, params.getMtl(),
                     FileSystem.get(new Configuration()), out);
         } catch (IOException e) {
-            LOG.error("Error in writing MultiTask model", e);
+            LOG.error("Error in writing MultiTaskLearning model", e);
         }
     }
 
-    private void init(MasterContext<MTNNParams, MTNNParams> context) {
+    private void init(MasterContext<MTLParams, MTLParams> context) {
         if (isInit.compareAndSet(false, true)) {
             this.conf = new Configuration();
             loadConfigFiles(context.getProps());

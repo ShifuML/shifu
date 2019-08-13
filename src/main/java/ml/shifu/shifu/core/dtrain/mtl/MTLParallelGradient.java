@@ -1,8 +1,7 @@
-package ml.shifu.shifu.core.dtrain.multitask;
+package ml.shifu.shifu.core.dtrain.mtl;
 
 import ml.shifu.guagua.util.MemoryLimitedList;
 import ml.shifu.shifu.core.dtrain.AssertUtils;
-import org.encog.mathutil.BoundMath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,23 +13,23 @@ import java.util.concurrent.ExecutionException;
 /**
  * @author haillu
  */
-public class MTNNParallelGradient {
-    private final Logger LOG = LoggerFactory.getLogger(MTNNParallelGradient.class);
+public class MTLParallelGradient {
+    private final Logger LOG = LoggerFactory.getLogger(MTLParallelGradient.class);
 
     private int threadNumber;
-    private MultiTaskNN mtnn;
-    private MemoryLimitedList<MTNNWorker.Data> trainData;
-    private MemoryLimitedList<MTNNWorker.Data> testData;
-    private CompletionService<MTNNParams> completionService;
+    private MultiTaskLearning mtl;
+    private MemoryLimitedList<MTLWorker.Data> trainData;
+    private MemoryLimitedList<MTLWorker.Data> testData;
+    private CompletionService<MTLParams> completionService;
 
     private int[] trainLows;
     private int[] trainHighs;
     private int[] testLows;
     private int[] testHighs;
 
-    public MTNNParallelGradient(int threadNumber, MultiTaskNN mtnn, MemoryLimitedList<MTNNWorker.Data> trainData, MemoryLimitedList<MTNNWorker.Data> testData, CompletionService<MTNNParams> completionService) {
+    public MTLParallelGradient(int threadNumber, MultiTaskLearning mtl, MemoryLimitedList<MTLWorker.Data> trainData, MemoryLimitedList<MTLWorker.Data> testData, CompletionService<MTLParams> completionService) {
         this.threadNumber = threadNumber;
-        this.mtnn = mtnn;
+        this.mtl = mtl;
         this.trainData = trainData;
         this.testData = testData;
         this.completionService = completionService;
@@ -78,22 +77,22 @@ public class MTNNParallelGradient {
         }
     }
 
-    public MTNNParams doCompute() {
+    public MTLParams doCompute() {
         long start = System.currentTimeMillis();
         for (int i = 0; i < this.threadNumber; i++) {
             if (trainData != null && testData != null) {
-                this.completionService.submit(new GradientTask(this.mtnn, this.trainData, this.testData,
+                this.completionService.submit(new GradientTask(this.mtl, this.trainData, this.testData,
                         this.trainLows[i], this.trainHighs[i], this.testLows[i], this.testHighs[i]));
             } else if (trainData != null) {
-                this.completionService.submit(new GradientTask(this.mtnn, this.trainData, null,
+                this.completionService.submit(new GradientTask(this.mtl, this.trainData, null,
                         -1, -1, -1, -1));
             }
 
         }
-        MTNNParams params = null;
+        MTLParams params = null;
         for (int i = 0; i < this.threadNumber; i++) {
             try {
-                MTNNParams paramsTmp = this.completionService.take().get();
+                MTLParams paramsTmp = this.completionService.take().get();
                 if (paramsTmp != null) {
                     if (params != null) {
                         params.combine(paramsTmp);
@@ -111,18 +110,18 @@ public class MTNNParallelGradient {
         return params;
     }
 
-    class GradientTask implements Callable<MTNNParams> {
+    class GradientTask implements Callable<MTLParams> {
         private final Logger TASK_LOG = LoggerFactory.getLogger(GradientTask.class);
-        private MultiTaskNN mtnn;
-        private MemoryLimitedList<MTNNWorker.Data> trainData;
-        private MemoryLimitedList<MTNNWorker.Data> testData;
+        private MultiTaskLearning mtl;
+        private MemoryLimitedList<MTLWorker.Data> trainData;
+        private MemoryLimitedList<MTLWorker.Data> testData;
         private int trainLow;
         private int trainHigh;
         private int testLow;
         private int testHigh;
 
-        public GradientTask(MultiTaskNN mtnn, MemoryLimitedList<MTNNWorker.Data> trainData, MemoryLimitedList<MTNNWorker.Data> testData, int trainLow, int trainHigh, int testLow, int testHigh) {
-            this.mtnn = mtnn.clone();
+        public GradientTask(MultiTaskLearning mtl, MemoryLimitedList<MTLWorker.Data> trainData, MemoryLimitedList<MTLWorker.Data> testData, int trainLow, int trainHigh, int testLow, int testHigh) {
+            this.mtl = mtl.clone();
             this.trainData = trainData;
             this.testData = testData;
             this.trainLow = trainLow;
@@ -133,16 +132,16 @@ public class MTNNParallelGradient {
 
 
         @Override
-        public MTNNParams call() throws Exception {
-            if (this.mtnn == null || testHigh < testLow || trainHigh < trainLow) {
+        public MTLParams call() throws Exception {
+            if (this.mtl == null || testHigh < testLow || trainHigh < trainLow) {
                 TASK_LOG.error("input parameters not correct, testHigh={}, testLow={}, trainHigh={}, trainLow={}",
                         testHigh, testLow, trainHigh, trainLow);
                 return null;
             }
-            MTNNParams mtnnParams = new MTNNParams();
+            MTLParams MTLParams = new MTLParams();
             if (this.trainData.size() == 0) {
                 // All field will be 0
-                return mtnnParams;
+                return MTLParams;
             }
 
             long start = System.currentTimeMillis();
@@ -154,9 +153,9 @@ public class MTNNParallelGradient {
 
             int index = 0;
             for (int i = trainLow; i < trainHigh; i++) {
-                MTNNWorker.Data data = trainData.get(i);
+                MTLWorker.Data data = trainData.get(i);
                 trainSize += data.getWeight();
-                double[] predicts = this.mtnn.forward(data.getInputs());
+                double[] predicts = this.mtl.forward(data.getInputs());
                 double[] actuals = data.getLabels();
 
                 AssertUtils.assertEquals(predicts.length, actuals.length);
@@ -168,7 +167,7 @@ public class MTNNParallelGradient {
                     errors[j] = predicts[j] - actuals[j];
                     trainSumError[j] += (errors[j] * errors[j] * data.getWeight());
                 }
-                this.mtnn.backward(predicts, data.getLabels(), data.getWeight());
+                this.mtl.backward(predicts, data.getLabels(), data.getWeight());
                 index += 1;
             }
             TASK_LOG.info("Worker with training time {} ms.", (System.currentTimeMillis() - start));
@@ -180,9 +179,9 @@ public class MTNNParallelGradient {
             // compute validation error
             if (testData != null) {
                 for (int i = testLow; i < testHigh; i++) {
-                    MTNNWorker.Data data = testData.get(i);
+                    MTLWorker.Data data = testData.get(i);
                     validationSize += data.getWeight();
-                    double[] predicts = this.mtnn.forward(data.getInputs());
+                    double[] predicts = this.mtl.forward(data.getInputs());
                     double[] actuals = data.getLabels();
 
                     AssertUtils.assertEquals(predicts.length, actuals.length);
@@ -204,16 +203,16 @@ public class MTNNParallelGradient {
 
             TASK_LOG.info("trainSumError is {}, validSumError is {}", trainSumError, validSumError);
             // set cnt, error to params and return to master
-            mtnnParams.setTrainCount(trainCnt);
-            mtnnParams.setValidationCount(validCnt);
-            mtnnParams.setTrainSize(trainSize);
-            mtnnParams.setValidationSize(validationSize);
-            mtnnParams.setTrainErrors(trainSumError);
-            mtnnParams.setValidationErrors(validSumError);
-            mtnnParams.setMtnn(this.mtnn);
+            MTLParams.setTrainCount(trainCnt);
+            MTLParams.setValidationCount(validCnt);
+            MTLParams.setTrainSize(trainSize);
+            MTLParams.setValidationSize(validationSize);
+            MTLParams.setTrainErrors(trainSumError);
+            MTLParams.setValidationErrors(validSumError);
+            MTLParams.setMtl(this.mtl);
 
             TASK_LOG.info("Worker with validation run time {} ms.", (System.currentTimeMillis() - start));
-            return mtnnParams;
+            return MTLParams;
         }
     }
 }

@@ -1,4 +1,4 @@
-package ml.shifu.shifu.core.dtrain.multitask;
+package ml.shifu.shifu.core.dtrain.mtl;
 
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.core.Normalizer;
@@ -21,11 +21,11 @@ import java.util.zip.GZIPInputStream;
 /**
  * @author haillu
  */
-public class IndependentMTNNModel {
+public class IndependentMTLModel {
     /**
      * MTL graph definition network.
      */
-    private MultiTaskNN mtnn;
+    private MultiTaskLearning mtl;
 
     /**
      * Normalization type
@@ -92,12 +92,12 @@ public class IndependentMTNNModel {
      */
     private Map<Integer, Integer> columnNumIndexMapping;
 
-    private IndependentMTNNModel(MultiTaskNN mtnn, ModelNormalizeConf.NormType normType, Map<Integer, Map<String, Integer>> cateIndexMap,
-                                 Map<Integer, Double> cutOffMap, Map<Integer, String> numNameMap, Map<Integer, List<Double>> numerBinBoundaries,
-                                 Map<Integer, List<Double>> numerWoes, Map<Integer, List<Double>> numerWgtWoes, Map<Integer, Double> numerMeanMap,
-                                 Map<Integer, Double> numerStddevMap, Map<Integer, Double> woeMeanMap, Map<Integer, Double> woeStddevMap,
-                                 Map<Integer, Double> wgtWoeMeanMap, Map<Integer, Double> wgtWoeStddevMap, Map<Integer, Integer> columnNumIndexMapping) {
-        this.mtnn = mtnn;
+    private IndependentMTLModel(MultiTaskLearning mtnn, ModelNormalizeConf.NormType normType, Map<Integer, Map<String, Integer>> cateIndexMap,
+                                Map<Integer, Double> cutOffMap, Map<Integer, String> numNameMap, Map<Integer, List<Double>> numerBinBoundaries,
+                                Map<Integer, List<Double>> numerWoes, Map<Integer, List<Double>> numerWgtWoes, Map<Integer, Double> numerMeanMap,
+                                Map<Integer, Double> numerStddevMap, Map<Integer, Double> woeMeanMap, Map<Integer, Double> woeStddevMap,
+                                Map<Integer, Double> wgtWoeMeanMap, Map<Integer, Double> wgtWoeStddevMap, Map<Integer, Integer> columnNumIndexMapping) {
+        this.mtl = mtnn;
         this.normType = normType;
         this.cateIndexMap = cateIndexMap;
         this.cutOffMap = cutOffMap;
@@ -120,7 +120,7 @@ public class IndependentMTNNModel {
      * @param denseInputs, the dense inputs
      */
     public double[] realCompute(double[] denseInputs) {
-        return (this.mtnn.forward(denseInputs));
+        return (this.mtl.forward(denseInputs));
     }
 
 
@@ -278,18 +278,18 @@ public class IndependentMTNNModel {
     }
 
     /**
-     * Load model instance from input stream which is saved in MTNNOutput for specified binary format.
+     * Load model instance from input stream which is saved in MTLOutput for specified binary format.
      *
      * @param input the input stream, flat input stream or gzip input stream both OK
      * @return the mtl model instance
      * @throws IOException any IOException in de-serialization.
      */
-    public static IndependentMTNNModel loadFromStream(InputStream input) throws IOException {
+    public static IndependentMTLModel loadFromStream(InputStream input) throws IOException {
         return loadFromStream(input, true);
     }
 
     /**
-     * Load model instance from input stream which is saved in MTNNOutput for specified binary format.
+     * Load model instance from input stream which is saved in MTLOutput for specified binary format.
      *
      * @param input              the input stream, flat input stream or gzip input stream both OK
      * @param isRemoveNameSpace, is remove name space or not
@@ -297,7 +297,7 @@ public class IndependentMTNNModel {
      * @throws IOException any IOException in de-serialization.
      */
 
-    public static IndependentMTNNModel loadFromStream(InputStream input, boolean isRemoveNameSpace) throws IOException {
+    public static IndependentMTLModel loadFromStream(InputStream input, boolean isRemoveNameSpace) throws IOException {
         DataInputStream dis;
         // check if gzip or not
         try {
@@ -317,7 +317,7 @@ public class IndependentMTNNModel {
         }
 
         int version = dis.readInt();
-        IndependentMTNNModel.setVersion(version);
+        IndependentMTLModel.setVersion(version);
         // Reserved two double field, one double field and one string field
         dis.readDouble();
         dis.readDouble();
@@ -360,6 +360,7 @@ public class IndependentMTNNModel {
             }
 
             // for categorical features
+            //todo: remove unused parameter:cateIndexMap
             Map<String, Integer> cateIndexMap = new HashMap<>(cs.getBinCategories().size());
 
             if (cs.isCategorical() || cs.isHybrid()) {
@@ -402,9 +403,9 @@ public class IndependentMTNNModel {
             columnMapping.put(dis.readInt(), dis.readInt());
         }
 
-        MultiTaskNN mtnn = new MultiTaskNN();
+        MultiTaskLearning mtnn = new MultiTaskLearning();
         mtnn.readFields(dis);
-        return new IndependentMTNNModel(mtnn, normType, cateIndexMapping, cutoffMap, numNameMap,
+        return new IndependentMTLModel(mtnn, normType, cateIndexMapping, cutoffMap, numNameMap,
                 numerBinBoundaries, numerWoes, numerWgtWoes, numerMeanMap, numerStddevMap, woeMeanMap, woeStddevMap,
                 wgtWoeMeanMap, wgtWoeStddevMap, columnMapping);
     }
@@ -415,14 +416,14 @@ public class IndependentMTNNModel {
     }
 
     public static void setVersion(int version) {
-        IndependentMTNNModel.version = version;
+        IndependentMTLModel.version = version;
     }
 
-    public MultiTaskNN getMtnn() {
-        return mtnn;
+    public MultiTaskLearning getMtl() {
+        return mtl;
     }
 
-    public void setMtnn(MultiTaskNN mtnn) {
-        this.mtnn = mtnn;
+    public void setMtl(MultiTaskLearning mtl) {
+        this.mtl = mtl;
     }
 }

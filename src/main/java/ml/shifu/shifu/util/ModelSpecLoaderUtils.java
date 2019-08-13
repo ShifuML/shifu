@@ -422,11 +422,7 @@ public class ModelSpecLoaderUtils {
             } else if(modelPath.getName().endsWith(Constants.WDL_ALG_NAME.toLowerCase())) {
                 return WDLModel.loadFromStream(stream);
             } else if(modelPath.getName().endsWith(Constants.MTL_ALG_NAME.toLowerCase())) {
-                return MTNNModel.loadFromStream(stream);
-            }
-            else if (modelPath.getName().endsWith(Constants.MTL_ALG_NAME.toLowerCase())) {
-                // todo: MTNNModel.loadFromStream
-                return null;
+                return MTLModel.loadFromStream(stream);
             } else {
                 GzipStreamPair pair = GzipStreamPair.isGZipFormat(stream);
                 if(pair.isGzip()) {

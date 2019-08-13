@@ -1,4 +1,4 @@
-package ml.shifu.shifu.core.dtrain.multitask;
+package ml.shifu.shifu.core.dtrain.mtl;
 
 import com.google.common.base.Splitter;
 import ml.shifu.guagua.ComputableMonitor;
@@ -20,7 +20,6 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.MapReduceUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -35,10 +34,10 @@ import java.util.concurrent.*;
  * @author haillu
  */
 @ComputableMonitor(timeUnit = TimeUnit.SECONDS, duration = 3600)
-public class MTNNWorker extends
-        AbstractWorkerComputable<MTNNParams, MTNNParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
+public class MTLWorker extends
+        AbstractWorkerComputable<MTLParams, MTLParams, GuaguaWritableAdapter<LongWritable>, GuaguaWritableAdapter<Text>> {
 
-    protected static final Logger LOG = LoggerFactory.getLogger(MTNNWorker.class);
+    protected static final Logger LOG = LoggerFactory.getLogger(MTLWorker.class);
 
     private ModelConfig modelConfig;
 
@@ -61,13 +60,13 @@ public class MTNNWorker extends
 
     private Splitter splitter;
 
-    private MultiTaskNN mtnn;
+    private MultiTaskLearning mtl;
 
     private int trainerId = 0;
 
     private int workerThreadCount;
 
-    CompletionService<MTNNParams> completionService;
+    CompletionService<MTLParams> completionService;
 
     private boolean hasCandidates;
 
@@ -122,7 +121,7 @@ public class MTNNWorker extends
     }
 
     @Override
-    public void init(WorkerContext<MTNNParams, MTNNParams> context) {
+    public void init(WorkerContext<MTLParams, MTLParams> context) {
         LOG.debug("worker init:");
         Properties props = context.getProps();
         try {
@@ -199,40 +198,40 @@ public class MTNNWorker extends
 
         this.isStratifiedSampling = this.modelConfig.getTrain().getStratifiedSample();
 
-        //build multi-task nn model:
+        //build multi-task learning model:
         this.validParams = this.modelConfig.getTrain().getParams();
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
         List<String> hiddenActiFuncs = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         //we have counted it in DTrainUtils.getNumericAndCategoricalInputAndOutputCounts.
         taskNumber = inputOutputIndex[2];
-        // todo:check if MTNN need regression function
+        // todo:check if MTL need regression function
         //double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0);
 
-        LOG.debug("params of constructor of MTNN:inputCount:{},hiddenNodes:{},hiddenActiFuncs:{}" +
+        LOG.debug("params of constructor of MTL:inputCount:{},hiddenNodes:{},hiddenActiFuncs:{}" +
                 "taskNumber:{}", inputCount, hiddenNodes, hiddenActiFuncs, taskNumber);
 
-        this.mtnn = new MultiTaskNN(inputCount, hiddenNodes, hiddenActiFuncs, taskNumber, 0d);
+        this.mtl = new MultiTaskLearning(inputCount, hiddenNodes, hiddenActiFuncs, taskNumber, 0d);
 
     }
 
     @Override
-    public MTNNParams doCompute(WorkerContext<MTNNParams, MTNNParams> context) {
+    public MTLParams doCompute(WorkerContext<MTLParams, MTLParams> context) {
         if (context.isFirstIteration()) {
-            return new MTNNParams();
+            return new MTLParams();
         }
 
-        this.mtnn.updateWeights(context.getLastMasterResult());
-        MTNNParallelGradient parallelGradient = new MTNNParallelGradient(this.workerThreadCount, this.mtnn,
+        this.mtl.updateWeights(context.getLastMasterResult());
+        MTLParallelGradient parallelGradient = new MTLParallelGradient(this.workerThreadCount, this.mtl,
                 this.trainingData, this.validationData, this.completionService);
-        MTNNParams mtnnParams = parallelGradient.doCompute();
+        MTLParams MTLParams = parallelGradient.doCompute();
 
-        mtnnParams.setSerializationType(SerializationType.GRADIENTS);
-        this.mtnn.setSerializationType(SerializationType.GRADIENTS);
-        return mtnnParams;
+        MTLParams.setSerializationType(SerializationType.GRADIENTS);
+        this.mtl.setSerializationType(SerializationType.GRADIENTS);
+        return MTLParams;
     }
 
     @Override
-    public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue, WorkerContext<MTNNParams, MTNNParams> context) {
+    public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue, WorkerContext<MTLParams, MTLParams> context) {
         if (++this.count % 5000 == 0) {
             LOG.info("Read {} records.", this.count);
         }
@@ -487,7 +486,7 @@ public class MTNNWorker extends
     }
 
     @Override
-    protected void postLoad(WorkerContext<MTNNParams, MTNNParams> context) {
+    protected void postLoad(WorkerContext<MTLParams, MTLParams> context) {
         this.trainingData.switchState();
         if (validationData != null) {
             this.validationData.switchState();
