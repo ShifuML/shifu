@@ -23,7 +23,8 @@ import java.util.stream.Collectors;
 
 import static ml.shifu.shifu.core.dtrain.wdl.SerializationUtil.NULL;
 
-public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, Bytable, Combinable<MultiTaskLearning>, PropOptimizer<MultiTaskLearning> {
+public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, Bytable, Combinable<MultiTaskLearning>,
+        PropOptimizer<MultiTaskLearning> {
 
     private static final Logger LOG = LoggerFactory.getLogger(MultiTaskLearning.class);
 
@@ -41,7 +42,7 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
 
     private int taskNumber;
 
-    //    private List<String> finalActiFuncs;
+    // private List<String> finalActiFuncs;
     private Activation finalActiFunc;
 
     private double l2reg;
@@ -51,12 +52,13 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
     public MultiTaskLearning() {
     }
 
-    public MultiTaskLearning(int inputSize, List<Integer> hiddenNodes, List<String> HiddenActiFuncs, int taskNumber, double l2reg) {
+    public MultiTaskLearning(int inputSize, List<Integer> hiddenNodes, List<String> HiddenActiFuncs, int taskNumber,
+            double l2reg) {
         this.inputSize = inputSize;
         this.hiddenNodes = hiddenNodes;
         this.hiddenActiFuncs = HiddenActiFuncs;
         this.taskNumber = taskNumber;
-//        this.finalActiFuncs = finalActiFuncs;
+        // this.finalActiFuncs = finalActiFuncs;
         this.l2reg = l2reg;
 
         // build the structure of NN graph.
@@ -65,7 +67,7 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
 
         AssertUtils.assertListNotNullAndSizeEqual(hiddenNodes, HiddenActiFuncs);
         this.hiddenLayers = new ArrayList<>(hiddenNodes.size() * 2);
-        for (int i = 0; i < hiddenNodes.size(); i++) {
+        for(int i = 0; i < hiddenNodes.size(); i++) {
             int hiddenOutputs = hiddenNodes.get(i);
             DenseLayer denseLayer = new DenseLayer(hiddenOutputs, preHiddenInputs, l2reg);
             this.hiddenLayers.add(denseLayer);
@@ -73,7 +75,7 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
             preHiddenInputs = hiddenOutputs;
         }
 
-//        AssertUtils.assertEquals(taskNumber, finalActiFuncs.size());
+        // AssertUtils.assertEquals(taskNumber, finalActiFuncs.size());
         this.finalLayer = new DenseLayer(taskNumber, preHiddenInputs, l2reg);
         this.finalActiFunc = new Sigmoid();
     }
@@ -83,18 +85,18 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
         double[] dilOuts = this.dil.forward(denseInputs);
         double[] inputs = dilOuts;
         // hidden layers forward
-        for (Layer layer : this.hiddenLayers) {
-            if (layer instanceof DenseLayer) {
+        for(Layer layer: this.hiddenLayers) {
+            if(layer instanceof DenseLayer) {
                 DenseLayer denseLayer = (DenseLayer) layer;
                 inputs = denseLayer.forward(inputs);
-            } else if (layer instanceof Activation) {
+            } else if(layer instanceof Activation) {
                 Activation acti = (Activation) layer;
                 inputs = acti.forward(inputs);
             }
         }
-        //final layer forward
+        // final layer forward
         inputs = this.finalLayer.forward(inputs);
-        //TODO:final Activation list.
+        // TODO:final Activation list.
         double[] resluts = this.finalActiFunc.forward(inputs);
         return resluts;
     }
@@ -103,17 +105,17 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
         // it's just replace the finalActiFunc layer.
         double[] grad2Logits = new double[predicts.length];
 
-        for (int i = 0; i < grad2Logits.length; i++) {
+        for(int i = 0; i < grad2Logits.length; i++) {
             grad2Logits[i] = (predicts[i] - actuals[i]) * (predicts[i] * (1 - predicts[i])) * sig;
             // error * sigmoid derivertive * weight
         }
 
         double[] backInputs = this.finalLayer.backward(grad2Logits);
-        for (int i = 0; i < this.hiddenLayers.size(); i++) {
+        for(int i = 0; i < this.hiddenLayers.size(); i++) {
             Layer layer = this.hiddenLayers.get(this.hiddenLayers.size() - 1 - i);
-            if (layer instanceof DenseLayer) {
+            if(layer instanceof DenseLayer) {
                 backInputs = ((DenseLayer) layer).backward(backInputs);
-            } else if (layer instanceof Activation) {
+            } else if(layer instanceof Activation) {
                 backInputs = ((Activation) layer).backward(backInputs);
             }
         }
@@ -126,14 +128,13 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
      * Initialize gradients for training of each epoch
      */
     public void initGrads() {
-        for (Layer layer : hiddenLayers) {
-            if (layer instanceof DenseLayer) {
+        for(Layer layer: hiddenLayers) {
+            if(layer instanceof DenseLayer) {
                 ((DenseLayer) layer).initGrads();
             }
         }
         this.finalLayer.initGrads();
     }
-
 
     public void updateWeights(MultiTaskLearning multiTask) {
         this.initWeight(multiTask);
@@ -156,8 +157,8 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
 
     @Override
     public void initWeight(InitMethod method) {
-        for (Layer layer : this.hiddenLayers) {
-            if (layer instanceof DenseLayer) {
+        for(Layer layer: this.hiddenLayers) {
+            if(layer instanceof DenseLayer) {
                 ((DenseLayer) layer).initWeight(method);
             }
         }
@@ -167,10 +168,10 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
     @Override
     public void initWeight(MultiTaskLearning updateModel) {
         AssertUtils.assertListNotNullAndSizeEqual(this.hiddenLayers, updateModel.getHiddenLayers());
-        for (int i = 0; i < this.hiddenLayers.size(); i++) {
+        for(int i = 0; i < this.hiddenLayers.size(); i++) {
             Layer layer = this.hiddenLayers.get(i);
             // There are two type of layer: DenseLayer, Activation. We only need to init DenseLayer
-            if (layer instanceof DenseLayer) {
+            if(layer instanceof DenseLayer) {
                 ((DenseLayer) layer).initWeight((DenseLayer) updateModel.getHiddenLayers().get(i));
             }
             this.finalLayer.initWeight(updateModel.getFinalLayer());
@@ -186,10 +187,9 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
     public void write(DataOutput out) throws IOException {
         out.writeInt(this.serializationType.getValue());
         writeLayerWithNuLLCheck(out, this.dil);
-        if (this.hiddenLayers == null){
+        if(this.hiddenLayers == null) {
             out.writeInt(NULL);
-        }
-        else{
+        } else {
             List<DenseLayer> denseLayers = this.hiddenLayers.stream().filter(layer -> layer instanceof DenseLayer)
                     .map(layer -> (DenseLayer) layer).collect(Collectors.toList());
             out.writeInt(denseLayers.size());
@@ -216,14 +216,15 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
             });
         }
 
-        writeLayerWithNuLLCheck(out,finalLayer);
+        writeLayerWithNuLLCheck(out, finalLayer);
         out.writeUTF(this.finalActiFunc.getClass().getSimpleName());
-        if (this.serializationType == SerializationType.MODEL_SPEC){
+        if(this.serializationType == SerializationType.MODEL_SPEC) {
             out.writeInt(inputSize);
             out.writeDouble(l2reg);
         }
     }
-    public  int findPos(Object dis) throws NoSuchFieldException, IllegalAccessException {
+
+    public int findPos(Object dis) throws NoSuchFieldException, IllegalAccessException {
         Class clazz = dis.getClass().getSuperclass();
         Field field = clazz.getDeclaredField("in");
         field.setAccessible(true);
@@ -233,7 +234,7 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
         field = clazz.getDeclaredField("pos");
         field.setAccessible(true);
         int pos = (int) field.get(byteIS);
-        System.out.println("pos:"+pos);
+        System.out.println("pos:" + pos);
         return pos;
     }
 
@@ -241,33 +242,33 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
     public void readFields(DataInput in) throws IOException {
 
         // test the pos of inputStream
-//        try {
-//            findPos(in);
-//        } catch (NoSuchFieldException e) {
-//            e.printStackTrace();
-//        } catch (IllegalAccessException e) {
-//            e.printStackTrace();
-//        }
+        // try {
+        // findPos(in);
+        // } catch (NoSuchFieldException e) {
+        // e.printStackTrace();
+        // } catch (IllegalAccessException e) {
+        // e.printStackTrace();
+        // }
 
         this.serializationType = SerializationType.getSerializationType(in.readInt());
-        this.dil = (DenseInputLayer) readLayerWithNullCheck(in,new DenseInputLayer());
+        this.dil = (DenseInputLayer) readLayerWithNullCheck(in, new DenseInputLayer());
         List<DenseLayer> hiddenDenseLayer = new ArrayList<>();
         int size = in.readInt();
-        for (int i=0;i<size;i++){
+        for(int i = 0; i < size; i++) {
             DenseLayer denseLayer = new DenseLayer();
-            denseLayer.readFields(in,this.serializationType);
+            denseLayer.readFields(in, this.serializationType);
             hiddenDenseLayer.add(denseLayer);
         }
 
         this.hiddenActiFuncs = new ArrayList<>();
         size = in.readInt();
-        for (int i=0;i<size;i++){
+        for(int i = 0; i < size; i++) {
             this.hiddenActiFuncs.add(in.readUTF());
         }
         this.finalLayer = (DenseLayer) readLayerWithNullCheck(in, new DenseLayer());
         this.finalActiFunc = ActivationFactory.getInstance().getActivation(in.readUTF());
 
-        //build hiddenLayers including activations:
+        // build hiddenLayers including activations:
         AssertUtils.assertListNotNullAndSizeEqual(this.hiddenActiFuncs, hiddenDenseLayer);
         this.hiddenLayers = new ArrayList<>(this.hiddenActiFuncs.size() * 2);
         for(int i = 0; i < hiddenDenseLayer.size(); i++) {
@@ -275,7 +276,7 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
             this.hiddenLayers.add(ActivationFactory.getInstance().getActivation(this.hiddenActiFuncs.get(i)));
         }
 
-        if (serializationType == SerializationType.MODEL_SPEC){
+        if(serializationType == SerializationType.MODEL_SPEC) {
             this.inputSize = in.readInt();
             this.l2reg = in.readDouble();
         }
@@ -286,14 +287,13 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
      */
     @SuppressWarnings("rawtypes")
     private void writeLayerWithNuLLCheck(DataOutput out, AbstractLayer layer) throws IOException {
-        if (layer == null) {
+        if(layer == null) {
             out.writeBoolean(false);
         } else {
             out.writeBoolean(true);
             layer.write(out, this.serializationType);
         }
     }
-
 
     /**
      * Read layer with null check.
@@ -312,7 +312,6 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
         return layer;
     }
 
-
     @Override
     public MultiTaskLearning combine(MultiTaskLearning from) {
         // combine input layers.
@@ -322,8 +321,8 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
         List<Layer> fhl = from.hiddenLayers;
         int hlSize = hiddenLayers.size();
         List<Layer> combinedLayers = new ArrayList<Layer>(hlSize);
-        for (int i = 0; i < hlSize; i++) {
-            if (hiddenLayers.get(i) instanceof DenseLayer) {
+        for(int i = 0; i < hlSize; i++) {
+            if(hiddenLayers.get(i) instanceof DenseLayer) {
                 Layer nLayer = ((DenseLayer) hiddenLayers.get(i)).combine((DenseLayer) fhl.get(i));
                 combinedLayers.add(nLayer);
             }
@@ -342,8 +341,8 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
 
     @Override
     public void initOptimizer(double learningRate, String algorithm, double reg, RegulationLevel rl) {
-        for (Layer layer : this.hiddenLayers) {
-            if (layer instanceof DenseLayer) {
+        for(Layer layer: this.hiddenLayers) {
+            if(layer instanceof DenseLayer) {
                 ((DenseLayer) layer).initOptimizer(learningRate, algorithm, reg, rl);
             }
         }
@@ -353,9 +352,9 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
     @Override
     public void optimizeWeight(double numTrainSize, int iteration, MultiTaskLearning model) {
         List<Layer> gradHLs = model.getHiddenLayers();
-        for (int i = 0; i < this.hiddenLayers.size(); i++) {
+        for(int i = 0; i < this.hiddenLayers.size(); i++) {
             Layer tmpLayer = this.hiddenLayers.get(i);
-            if (tmpLayer instanceof DenseLayer) {
+            if(tmpLayer instanceof DenseLayer) {
                 ((DenseLayer) tmpLayer).optimizeWeight(numTrainSize, iteration, (DenseLayer) gradHLs.get(i));
             }
         }
@@ -382,7 +381,7 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
             LOG.error("IOException happen when clone mtl model", e);
         } finally {
             IOUtils.closeStream(dos);
-            if (dis !=null){
+            if(dis != null) {
                 IOUtils.closeStream(dis);
             }
         }
@@ -412,7 +411,6 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
     public void setFinalLayer(DenseLayer finalLayer) {
         this.finalLayer = finalLayer;
     }
-
 
     public int getInputSize() {
         return inputSize;

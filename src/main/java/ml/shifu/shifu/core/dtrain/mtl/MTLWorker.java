@@ -16,6 +16,7 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.SerializationType;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.MapReduceUtils;
@@ -41,11 +42,11 @@ public class MTLWorker extends
 
     private ModelConfig modelConfig;
 
-    private List<ColumnConfig> columnConfigList;
+    private List<List<ColumnConfig>> mtlColumnConfigLists = new ArrayList<>();
 
     protected int inputCount;
 
-    private boolean isAfterVarSelect = true;
+    private boolean[] isAfterVarSelect;
 
     /**
      * input record size, inc one by one.
@@ -68,7 +69,7 @@ public class MTLWorker extends
 
     CompletionService<MTLParams> completionService;
 
-    private boolean hasCandidates;
+    private boolean[] hasCandidates;
 
     protected boolean isManualValidation = false;
 
@@ -112,7 +113,6 @@ public class MTLWorker extends
     private long negativeValidationCount;
     private int taskNumber;
 
-
     // todo:for eval.
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
@@ -124,24 +124,15 @@ public class MTLWorker extends
     public void init(WorkerContext<MTLParams, MTLParams> context) {
         LOG.debug("worker init:");
         Properties props = context.getProps();
-        try {
-            RawSourceData.SourceType sourceType = RawSourceData.SourceType
-                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, RawSourceData.SourceType.HDFS.toString()));
-            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
-                    sourceType);
-            this.columnConfigList = CommonUtils
-                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        LOG.info("props: {}", props);
 
-        this.hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
+        loadConfigs(props);
 
         String delimiter = context.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
         this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
 
         Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
-        if (kCrossValidation != null && kCrossValidation > 0) {
+        if(kCrossValidation != null && kCrossValidation > 0) {
             isKFoldCV = true;
             LOG.info("Cross validation is enabled by kCrossValidation: {}.", kCrossValidation);
         }
@@ -154,7 +145,7 @@ public class MTLWorker extends
         this.rng = new PoissonDistribution(1d);
 
         Double upSampleWeight = modelConfig.getTrain().getUpSampleWeight();
-        if (upSampleWeight != 1d && (modelConfig.isRegression()
+        if(upSampleWeight != 1d && (modelConfig.isRegression()
                 || (modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()))) {
             // set mean to upSampleWeight -1 and get sample + 1to make sure no zero sample value
             LOG.info("Enable up sampling with weight {}.", upSampleWeight);
@@ -167,56 +158,83 @@ public class MTLWorker extends
         LOG.info("Max heap memory: {}, fraction: {}", Runtime.getRuntime().maxMemory(), memoryFraction);
 
         double validationRate = this.modelConfig.getValidSetRate();
-        if (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
+        if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
             // fixed 0.6 and 0.4 of max memory for trainingData and validationData
             this.trainingData = new MemoryLimitedList<>(
                     (long) (Runtime.getRuntime().maxMemory() * memoryFraction * 0.6), new ArrayList<>());
             this.validationData = new MemoryLimitedList<>(
                     (long) (Runtime.getRuntime().maxMemory() * memoryFraction * 0.4), new ArrayList<>());
         } else {
-            if (validationRate != 0d) {
+            if(validationRate != 0d) {
                 this.trainingData = new MemoryLimitedList<>(
                         (long) (Runtime.getRuntime().maxMemory() * memoryFraction * (1 - validationRate)),
                         new ArrayList<>());
                 this.validationData = new MemoryLimitedList<>(
-                        (long) (Runtime.getRuntime().maxMemory() * memoryFraction * validationRate),
-                        new ArrayList<>());
+                        (long) (Runtime.getRuntime().maxMemory() * memoryFraction * validationRate), new ArrayList<>());
             } else {
-                this.trainingData = new MemoryLimitedList<>(
-                        (long) (Runtime.getRuntime().maxMemory() * memoryFraction), new ArrayList<>());
+                this.trainingData = new MemoryLimitedList<>((long) (Runtime.getRuntime().maxMemory() * memoryFraction),
+                        new ArrayList<>());
             }
         }
 
-        int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
-        // numerical + categorical = # of all input
-        this.inputCount = inputOutputIndex[0] + inputOutputIndex[1];
-        // regression outputNodeCount is 1, binaryClassfication, it is 1, OneVsAll it is 1, Native classification it is
-        // 1, with index of 0,1,2,3 denotes different classes
-        this.isAfterVarSelect = (inputOutputIndex[3] == 1);
+        this.isAfterVarSelect = new boolean[taskNumber];
+        this.hasCandidates = new boolean[taskNumber];
+        for(int i = 0; i < taskNumber; i++) {
+            List<ColumnConfig> ccs = this.mtlColumnConfigLists.get(i);
+            int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(ccs);
+            // numerical + categorical = # of all input
+            this.inputCount += inputOutputIndex[0] + inputOutputIndex[1];
+            // regression outputNodeCount is 1, binaryClassfication, it is 1, OneVsAll it is 1, Native classification it
+            // is
+            // 1, with index of 0,1,2,3 denotes different classes
+            this.isAfterVarSelect[i] = (inputOutputIndex[3] == 1);
+            this.hasCandidates[i] = CommonUtils.hasCandidateColumns(ccs);
+
+        }
+
         this.isManualValidation = (modelConfig.getValidationDataSetRawPath() != null
                 && !"".equals(modelConfig.getValidationDataSetRawPath()));
 
         this.isStratifiedSampling = this.modelConfig.getTrain().getStratifiedSample();
 
-        //build multi-task learning model:
+        // build multi-task learning model:
         this.validParams = this.modelConfig.getTrain().getParams();
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
         List<String> hiddenActiFuncs = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
-        //we have counted it in DTrainUtils.getNumericAndCategoricalInputAndOutputCounts.
-        taskNumber = inputOutputIndex[2];
         // todo:check if MTL need regression function
-        //double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0);
+        // double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0);
 
-        LOG.debug("params of constructor of MTL:inputCount:{},hiddenNodes:{},hiddenActiFuncs:{}" +
-                "taskNumber:{}", inputCount, hiddenNodes, hiddenActiFuncs, taskNumber);
+        LOG.debug("params of constructor of MTL:inputCount:{},hiddenNodes:{},hiddenActiFuncs:{}" + "taskNumber:{}",
+                inputCount, hiddenNodes, hiddenActiFuncs, taskNumber);
 
         this.mtl = new MultiTaskLearning(inputCount, hiddenNodes, hiddenActiFuncs, taskNumber, 0d);
 
     }
 
+    private void loadConfigs(Properties props) {
+        try {
+            RawSourceData.SourceType sourceType = RawSourceData.SourceType.valueOf(
+                    props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, RawSourceData.SourceType.HDFS.toString()));
+            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
+                    sourceType);
+
+            // build mtlColumnConfigLists.
+            List<String> tagColumns = this.modelConfig.getMultiTaskTargetColumnNames();
+            taskNumber = tagColumns.size();
+            for(int i = 0; i < taskNumber; i++) {
+                List<ColumnConfig> ccs = CommonUtils.loadColumnConfigList(props.getProperty(
+                        new PathFinder(this.modelConfig).getMTLColumnConfigPath(RawSourceData.SourceType.HDFS, i)),
+                        sourceType);
+                mtlColumnConfigLists.add(ccs);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @Override
     public MTLParams doCompute(WorkerContext<MTLParams, MTLParams> context) {
-        if (context.isFirstIteration()) {
+        if(context.isFirstIteration()) {
             return new MTLParams();
         }
 
@@ -231,8 +249,9 @@ public class MTLWorker extends
     }
 
     @Override
-    public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue, WorkerContext<MTLParams, MTLParams> context) {
-        if (++this.count % 5000 == 0) {
+    public void load(GuaguaWritableAdapter<LongWritable> currentKey, GuaguaWritableAdapter<Text> currentValue,
+            WorkerContext<MTLParams, MTLParams> context) {
+        if(++this.count % 5000 == 0) {
             LOG.info("Read {} records.", this.count);
         }
 
@@ -241,18 +260,32 @@ public class MTLWorker extends
         double[] ideal = new double[this.taskNumber];
         double significance = 1d;
         int index = 0, targetIndex = 0;
+        int totalSize = 0;
+        for(List<ColumnConfig> ccs: this.mtlColumnConfigLists) {
+            totalSize += ccs.size();
+        }
         // use guava Splitter to iterate only once
-        for (String input : this.splitter.split(currentValue.getWritable().toString())) {
-            if (index == this.columnConfigList.size()) {
+        for(String input: this.splitter.split(currentValue.getWritable().toString())) {
+            LOG.info("input in worker: {}", input);
+            int tmpIndex = 0;
+            int i = 0;
+            for(; i < taskNumber; i++) {
+                tmpIndex += mtlColumnConfigLists.get(i).size();
+                if(tmpIndex > index) {
+                    break;
+                }
+            }
+
+            if(index == totalSize) {
                 significance = getWeightValue(input);
                 break;
             } else {
-                ColumnConfig config = this.columnConfigList.get(index);
-                if (config != null && config.isTarget()) {
+                ColumnConfig config = mtlColumnConfigLists.get(i).get(index);
+                if(config != null && config.isTarget()) {
                     ideal[targetIndex] = getDoubleValue(input);
                     targetIndex++;
                 } else {
-                    if (validColumn(config)) {
+                    if(validColumn(config, i)) {
                         hashcode = hashcode * 31 + input.hashCode();
                     }
                 }
@@ -260,18 +293,19 @@ public class MTLWorker extends
             index++;
         }
 
-        //todo:logic of sampling.
-//        // sample negative only logic here, sample negative out, no need continue
-//        if(sampleNegOnly(hashcode, ideal)) {
-//            return;
-//        }
-//        // up sampling logic, just add more weights while bagging sampling rate is still not changed
-//        if(modelConfig.isRegression() && isUpSampleEnabled() && Double.compare(ideal, 1d) == 0) {
-//            // ideal == 1 means positive tags; sample + 1 to avoid sample count to 0
-//            significance = significance * (this.upSampleRng.sample() + 1);
-//        }
+        // todo:logic of sampling.
+        // // sample negative only logic here, sample negative out, no need continue
+        // if(sampleNegOnly(hashcode, ideal)) {
+        // return;
+        // }
+        // // up sampling logic, just add more weights while bagging sampling rate is still not changed
+        // if(modelConfig.isRegression() && isUpSampleEnabled() && Double.compare(ideal, 1d) == 0) {
+        // // ideal == 1 means positive tags; sample + 1 to avoid sample count to 0
+        // significance = significance * (this.upSampleRng.sample() + 1);
+        // }
 
-        //todo: some fileds like 'positiveSelectedTrainCount','negativeSelectedTrainCount' should be an array rather than a number.
+        // todo: some fileds like 'positiveSelectedTrainCount','negativeSelectedTrainCount' should be an array rather
+        // than a number.
         Data data = new Data(inputs, significance, ideal);
         // split into validation and training data set according to validation rate
         boolean isInTraining = this.addDataPairToDataSet(hashcode, data, context.getAttachment());
@@ -281,9 +315,9 @@ public class MTLWorker extends
 
     private void updateMetrics(Data data, boolean isInTraining) {
         // do bagging sampling only for training data
-        if (isInTraining) {
+        if(isInTraining) {
             // for training data, compute real selected training data according to baggingSampleRate
-            if (isPositive(data.labels)) {
+            if(isPositive(data.labels)) {
                 this.positiveSelectedTrainCount += 1L;
             } else {
                 this.negativeSelectedTrainCount += 1L;
@@ -297,20 +331,23 @@ public class MTLWorker extends
     /**
      * Add to training set or validation set according to validation rate.
      *
-     * @param hashcode   the hash code of the data
-     * @param data       data instance
-     * @param attachment if it is validation
+     * @param hashcode
+     *            the hash code of the data
+     * @param data
+     *            data instance
+     * @param attachment
+     *            if it is validation
      * @return if in training, training is true, others are false.
      */
     protected boolean addDataPairToDataSet(long hashcode, Data data, Object attachment) {
         // if validation data from configured validation data set
         boolean isValidation = (attachment != null && attachment instanceof Boolean) ? (Boolean) attachment : false;
 
-        if (this.isKFoldCV) {
+        if(this.isKFoldCV) {
             return addKFoldDataPairToDataSet(hashcode, data);
         }
 
-        if (this.isManualValidation) { // validation data set is set by users in ModelConfig:dataSet:validationDataPath
+        if(this.isManualValidation) { // validation data set is set by users in ModelConfig:dataSet:validationDataPath
             return addManualValidationDataPairToDataSet(data, isValidation);
         } else { // normal case, according to validSetRate, split dataset into training and validation data set
             return splitDataPairToDataSet(hashcode, data);
@@ -318,7 +355,7 @@ public class MTLWorker extends
     }
 
     private boolean addManualValidationDataPairToDataSet(Data data, boolean isValidation) {
-        if (isValidation) {
+        if(isValidation) {
             this.validationData.append(data);
             updateValidationPosNegMetrics(data);
             return false;
@@ -330,17 +367,17 @@ public class MTLWorker extends
     }
 
     private boolean splitDataPairToDataSet(long hashcode, Data data) {
-        if (Double.compare(this.modelConfig.getValidSetRate(), 0d) != 0) {
-            //todo: we just use first label to generate random.
+        if(Double.compare(this.modelConfig.getValidSetRate(), 0d) != 0) {
+            // todo: we just use first label to generate random.
             Random random = updateRandom((int) (data.labels[0] + 0.01d));
-            if (this.modelConfig.isFixInitialInput()) {
+            if(this.modelConfig.isFixInitialInput()) {
                 // for fix initial input, if hashcode%100 is in [start-hashcode, end-hashcode), validation,
                 // otherwise training. start hashcode in different job is different to make sure bagging jobs have
                 // different data. if end-hashcode is over 100, then check if hashcode is in [start-hashcode, 100]
                 // or [0, end-hashcode]
                 int startHashCode = (100 / this.modelConfig.getBaggingNum()) * this.trainerId;
                 int endHashCode = startHashCode + (int) (this.modelConfig.getValidSetRate() * 100);
-                if (isInRange(hashcode, startHashCode, endHashCode)) {
+                if(isInRange(hashcode, startHashCode, endHashCode)) {
                     this.validationData.append(data);
                     updateValidationPosNegMetrics(data);
                     return false;
@@ -351,7 +388,7 @@ public class MTLWorker extends
                 }
             } else {
                 // not fixed initial input, if random value >= validRate, training, otherwise validation.
-                if (random.nextDouble() >= this.modelConfig.getValidSetRate()) {
+                if(random.nextDouble() >= this.modelConfig.getValidSetRate()) {
                     this.trainingData.append(data);
                     updateTrainPosNegMetrics(data);
                     return true;
@@ -370,17 +407,17 @@ public class MTLWorker extends
 
     private Random updateRandom(int classValue) {
         Random random = null;
-        if (this.isStratifiedSampling) {
+        if(this.isStratifiedSampling) {
             // each class use one random instance
             random = validationRandomMap.get(classValue);
-            if (random == null) {
+            if(random == null) {
                 random = new Random();
                 this.validationRandomMap.put(classValue, random);
             }
         } else {
             // all data use one random instance
             random = validationRandomMap.get(0);
-            if (random == null) {
+            if(random == null) {
                 random = new Random();
                 this.validationRandomMap.put(0, random);
             }
@@ -390,7 +427,7 @@ public class MTLWorker extends
 
     private boolean addKFoldDataPairToDataSet(long hashcode, Data data) {
         int k = this.modelConfig.getTrain().getNumKFold();
-        if (hashcode % k == this.trainerId) {
+        if(hashcode % k == this.trainerId) {
             this.validationData.append(data);
             updateValidationPosNegMetrics(data);
             return false;
@@ -403,7 +440,7 @@ public class MTLWorker extends
 
     private void updateTrainPosNegMetrics(Data data) {
 
-        if (isPositive(data.labels)) {
+        if(isPositive(data.labels)) {
             this.positiveTrainCount += 1L;
         } else {
             this.negativeTrainCount += 1L;
@@ -412,7 +449,7 @@ public class MTLWorker extends
 
     private void updateValidationPosNegMetrics(Data data) {
 
-        if (isPositive(data.labels)) {
+        if(isPositive(data.labels)) {
             this.positiveValidationCount += 1L;
         } else {
             this.negativeValidationCount += 1L;
@@ -421,8 +458,8 @@ public class MTLWorker extends
 
     private boolean isPositive(double[] value) {
         boolean ret = true;
-        for (int i = 0; i < value.length; i++) {
-            if (Double.compare(1d, value[i]) != 0) {
+        for(int i = 0; i < value.length; i++) {
+            if(Double.compare(1d, value[i]) != 0) {
                 ret = false;
                 break;
             }
@@ -442,8 +479,6 @@ public class MTLWorker extends
         }
     }
 
-
-
     protected boolean isUpSampleEnabled() {
         // only enabled in regression
         return this.upSampleRng != null && (modelConfig.isRegression()
@@ -452,17 +487,22 @@ public class MTLWorker extends
 
     /**
      * If column is valid and be selected in model training
+     * 
+     * @param columnConfig
+     *            specific column
+     * @param index
+     *            index of tasks.
+     * @return if it is valid ,return true, others are false.
      */
-    private boolean validColumn(ColumnConfig columnConfig) {
-        if (isAfterVarSelect) {
+    private boolean validColumn(ColumnConfig columnConfig, int index) {
+        if(isAfterVarSelect[index]) {
             return columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
                     && columnConfig.isFinalSelect();
         } else {
             return !columnConfig.isMeta() && !columnConfig.isTarget()
-                    && CommonUtils.isGoodCandidate(columnConfig, this.hasCandidates);
+                    && CommonUtils.isGoodCandidate(columnConfig, this.hasCandidates[index]);
         }
     }
-
 
     private double getDoubleValue(String input) {
         // check here to avoid bad performance in failed NumberFormatUtils.getDouble(input, 0d)
@@ -473,11 +513,11 @@ public class MTLWorker extends
 
     private double getWeightValue(String input) {
         double significance = 1d;
-        if (StringUtils.isNotBlank(modelConfig.getWeightColumnName())) {
+        if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())) {
             // check here to avoid bad performance in failed NumberFormatUtils.getDouble(input, 1d)
             significance = input.length() == 0 ? 1d : NumberFormatUtils.getDouble(input, 1d);
             // if invalid weight, set it to 1d and warning in log
-            if (significance < 0d) {
+            if(significance < 0d) {
                 LOG.warn("Record {} with weight {} is less than 0 and invalid, set it to 1.", count, significance);
                 significance = 1d;
             }
@@ -488,19 +528,19 @@ public class MTLWorker extends
     @Override
     protected void postLoad(WorkerContext<MTLParams, MTLParams> context) {
         this.trainingData.switchState();
-        if (validationData != null) {
+        if(validationData != null) {
             this.validationData.switchState();
         }
         LOG.info("    - # Records of the Total Data Set: {}.", this.count);
         LOG.info("    - Bagging Sample Rate: {}.", this.modelConfig.getBaggingSampleRate());
         LOG.info("    - Bagging With Replacement: {}.", this.modelConfig.isBaggingWithReplacement());
-        if (this.isKFoldCV) {
+        if(this.isKFoldCV) {
             LOG.info("        - Validation Rate(kFold): {}.", 1d / this.modelConfig.getTrain().getNumKFold());
         } else {
             LOG.info("        - Validation Rate: {}.", this.modelConfig.getValidSetRate());
         }
         LOG.info("        - # Records of the Training Set: {}.", this.trainingData.size());
-        if (modelConfig.isRegression() || modelConfig.getTrain().isOneVsAll()) {
+        if(modelConfig.isRegression() || modelConfig.getTrain().isOneVsAll()) {
             LOG.info("        - # Positive Bagging Selected Records of the Training Set: {}.",
                     this.positiveSelectedTrainCount);
             LOG.info("        - # Negative Bagging Selected Records of the Training Set: {}.",
@@ -509,9 +549,9 @@ public class MTLWorker extends
             LOG.info("        - # Negative Raw Records of the Training Set: {}.", this.negativeTrainCount);
         }
 
-        if (validationData != null) {
+        if(validationData != null) {
             LOG.info("        - # Records of the Validation Set: {}.", this.validationData.size());
-            if (modelConfig.isRegression() || modelConfig.getTrain().isOneVsAll()) {
+            if(modelConfig.isRegression() || modelConfig.getTrain().isOneVsAll()) {
                 LOG.info("        - # Positive Records of the Validation Set: {}.", this.positiveValidationCount);
                 LOG.info("        - # Negative Records of the Validation Set: {}.", this.negativeValidationCount);
             }

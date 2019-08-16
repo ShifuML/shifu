@@ -783,16 +783,26 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 .booleanValue();
         GuaguaMapReduceClient guaguaClient;
 
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
-                this.columnConfigList);
-        int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        int candidateCount = inputOutputIndex[2];
-
-        boolean isAfterVarSelect = (inputOutputIndex[0] != 0);
+        int[] inputOutputIndex;
+        int inputNodeCount = 0;
+        int candidateCount = 0;
+        boolean isAfterVarSelect = true;
         // cache all feature list for sampling features
-        List<Integer> allFeatures = NormalUtils.getAllFeatureList(this.columnConfigList, isAfterVarSelect);
+        List<Integer> allFeatures = null;
+
+        if (!modelConfig.isMultiTask()){
+            inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                    this.columnConfigList);
+            inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
+            candidateCount = inputOutputIndex[2];
+            isAfterVarSelect = (inputOutputIndex[0] != 0);
+            allFeatures = NormalUtils.getAllFeatureList(this.columnConfigList, isAfterVarSelect);
+        }
 
         if(modelConfig.getNormalize().getIsParquet()) {
+            if (modelConfig.isMultiTask()){
+                throw new IllegalArgumentException("don't support parquet in mtl.");
+            }
             guaguaClient = new GuaguaParquetMapReduceClient();
 
             // set required field list to make sure we only load selected columns.
@@ -1569,9 +1579,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add("-wr");
         args.add(MTLParams.class.getName());
 
-        // TODO, add MTLOutput here
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
                 MTLOutput.class.getName()));
+
+//        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.MTL_COLUMN_CONFIG_FOLDER,
+//                ShifuFileUtils.getFileSystemBySourceType(sourceType)
+//                        .makeQualified(new Path(super.getPathFinder().getMTLColumnConfigFolder(sourceType)))));
     }
 
     private int vcoresSetting() {
@@ -1661,13 +1674,17 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         } else {
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
                     Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, "true")));
-            long maxCombineSize = computeDynamicCombineSize();
-            LOG.info(
-                    "Dynamic worker size is tuned to {}. If not good for # of workers, configure it in SHIFU_HOME/conf/shifuconfig::guagua.split.maxCombinedSplitSize",
-                    maxCombineSize);
-            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                    GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, Environment
-                            .getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, maxCombineSize + "")));
+
+            // TODO: support mtl.
+            if (!modelConfig.isMultiTask()){
+                long maxCombineSize = computeDynamicCombineSize();
+                LOG.info(
+                        "Dynamic worker size is tuned to {}. If not good for # of workers, configure it in SHIFU_HOME/conf/shifuconfig::guagua.split.maxCombinedSplitSize",
+                        maxCombineSize);
+                args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
+                        GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, Environment
+                                .getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, maxCombineSize + "")));
+            }
         }
         // special tuning parameters for shifu, 0.97 means each iteation master wait for 97% workers and then can go to
         // next iteration.

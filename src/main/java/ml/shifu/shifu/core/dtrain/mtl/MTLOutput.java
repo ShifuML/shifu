@@ -9,6 +9,7 @@ import ml.shifu.shifu.core.dtrain.AssertUtils;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
+import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -68,9 +69,9 @@ public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
     private boolean isGsMode;
 
     /**
-     * ColumnConfig list reference
+     * ColumnConfig lists reference
      */
-    private List<ColumnConfig> columnConfigList;
+    private List<List<ColumnConfig>> mtlColumnConfigLists = new ArrayList<>();
 
     /**
      * If k-fold cross validation
@@ -240,7 +241,7 @@ public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
 
     private void writeModelToFileSystem(MTLParams params, Path out) {
         try {
-            BinaryMTLSerializer.save(this.modelConfig, this.columnConfigList, params.getMtl(),
+            BinaryMTLSerializer.save(this.modelConfig, this.mtlColumnConfigLists, params.getMtl(),
                     FileSystem.get(new Configuration()), out);
         } catch (IOException e) {
             LOG.error("Error in writing MultiTaskLearning model", e);
@@ -250,7 +251,7 @@ public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
     private void init(MasterContext<MTLParams, MTLParams> context) {
         if (isInit.compareAndSet(false, true)) {
             this.conf = new Configuration();
-            loadConfigFiles(context.getProps());
+            loadConfigs(context.getProps());
             this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
             GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(),
                     modelConfig.getTrain().getGridConfigFileContent());
@@ -279,19 +280,27 @@ public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
     }
 
     /**
-     * Load all configurations for modelConfig and columnConfigList from source type. Use null check to make sure model
+     * Load all configurations for modelConfig and columnConfigLists from source type. Use null check to make sure model
      * config and column config loaded once.
      */
-    private void loadConfigFiles(final Properties props) {
+    private void loadConfigs(Properties props) {
         try {
             SourceType sourceType = SourceType
                     .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
-            this.columnConfigList = CommonUtils
-                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+
+            // build mtlColumnConfigLists.
+            List<String> tagColumns = this.modelConfig.getMultiTaskTargetColumnNames();
+            int taskNumber = tagColumns.size();
+            for(int i = 0; i < taskNumber; i++) {
+                List<ColumnConfig> ccs = CommonUtils.loadColumnConfigList(
+                        props.getProperty(new PathFinder(this.modelConfig).getMTLColumnConfigPath(SourceType.HDFS, i)),
+                        sourceType);
+                mtlColumnConfigLists.add(ccs);
+            }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException();
         }
     }
 

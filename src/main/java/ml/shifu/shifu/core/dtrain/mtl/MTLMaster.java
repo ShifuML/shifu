@@ -1,15 +1,12 @@
 package ml.shifu.shifu.core.dtrain.mtl;
 
-
 import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.core.dtrain.RegulationLevel;
-import ml.shifu.shifu.core.dtrain.SerializationType;
+import ml.shifu.shifu.core.dtrain.*;
+import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import org.apache.commons.io.IOUtils;
@@ -20,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -33,11 +31,7 @@ public class MTLMaster extends AbstractMasterComputable<MTLParams, MTLParams> {
 
     private ModelConfig modelConfig;
 
-    private List<ColumnConfig> columnConfigList;
-
-    private boolean isAfterVarSelect;
-
-    private double learningRate;
+    private List<List<ColumnConfig>> mtlColumnConfigLists = new ArrayList<>();
 
     private boolean isContinuousEnabled = false;
 
@@ -46,56 +40,65 @@ public class MTLMaster extends AbstractMasterComputable<MTLParams, MTLParams> {
     private Map<String, Object> validParams;
 
     private MultiTaskLearning mtl;
-
+    private int taskNumber;
 
     @Override
     public void init(MasterContext<MTLParams, MTLParams> context) {
         LOG.debug("master init:");
         Properties props = context.getProps();
-        SourceType sourceType = SourceType.
-                valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
-        try {
-            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG), sourceType);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
-        } catch (IOException e) {
-            throw new RuntimeException();
+        SourceType sourceType = SourceType
+                .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
+
+        loadConfigs(props, sourceType);
+
+        for(List<ColumnConfig> ccs: mtlColumnConfigLists) {
+            int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(ccs);
+            this.inputCount += inputOutputIndex[0] + inputOutputIndex[1];
         }
+        this.isContinuousEnabled = Boolean.TRUE.toString()
+                .equalsIgnoreCase(props.getProperty(CommonConstants.CONTINUOUS_TRAINING));
 
-        int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
-        this.inputCount = inputOutputIndex[0] + inputOutputIndex[1];
-        this.isAfterVarSelect = (inputOutputIndex[3] == 1);
-        this.isContinuousEnabled = Boolean.TRUE.toString().equalsIgnoreCase(props.getProperty(CommonConstants.CONTINUOUS_TRAINING));
-
-        //build multi-task learning model:
+        // build multi-task learning model:
         this.validParams = this.modelConfig.getTrain().getParams();
         double learningRate = (double) validParams.get(CommonConstants.LEARNING_RATE);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
         List<String> hiddenActiFuncs = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
 
-        //we have counted it in DTrainUtils.getNumericAndCategoricalInputAndOutputCounts.
-        int taskNumber = inputOutputIndex[2];
-//        for (ColumnConfig cConfig : this.columnConfigList) {
-//            ColumnConfig.ColumnFlag flag = ColumnConfig.ColumnFlag.Target;
-//            if (cConfig.getColumnFlag().equals(flag)) {
-//                taskNumber++;
-//            }
-//        }
         // todo:check if MTL need regression function
-        //double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0);
+        // double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0);
         double l2reg = 0;
         Object pObject = this.validParams.get(CommonConstants.PROPAGATION);
         String propagation = (pObject == null) ? DTrainUtils.RESILIENTPROPAGATION : pObject.toString();
 
-        LOG.debug("params of constructor of MTL: inputCount: {},hiddenNodes: {},hiddenActiFuncs: {}" +
-                "taskNumber: {},l2reg: {}", inputCount, hiddenNodes, hiddenActiFuncs, taskNumber, l2reg);
+        LOG.debug("params of constructor of MTL: inputCount: {},hiddenNodes: {},hiddenActiFuncs: {}"
+                + "taskNumber: {},l2reg: {}", inputCount, hiddenNodes, hiddenActiFuncs, taskNumber, l2reg);
 
         this.mtl = new MultiTaskLearning(inputCount, hiddenNodes, hiddenActiFuncs, taskNumber, l2reg);
         this.mtl.initOptimizer(learningRate, propagation, 0, RegulationLevel.NONE);
     }
 
+    private void loadConfigs(Properties props, SourceType sourceType) {
+        try {
+            this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
+                    sourceType);
+
+            // build mtlColumnConfigLists.
+            List<String> tagColumns = this.modelConfig.getMultiTaskTargetColumnNames();
+            taskNumber = tagColumns.size();
+            for(int i = 0; i < taskNumber; i++) {
+                List<ColumnConfig> ccs = CommonUtils.loadColumnConfigList(
+                        props.getProperty(new PathFinder(this.modelConfig).getMTLColumnConfigPath(SourceType.HDFS, i)),
+                        sourceType);
+                mtlColumnConfigLists.add(ccs);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException();
+        }
+    }
+
     @Override
     public MTLParams doCompute(MasterContext<MTLParams, MTLParams> context) {
-        if (context.isFirstIteration()) {
+        if(context.isFirstIteration()) {
             return initOrRecoverModelWeights(context);
         }
 
@@ -103,10 +106,11 @@ public class MTLMaster extends AbstractMasterComputable<MTLParams, MTLParams> {
         this.mtl.optimizeWeight(aggregation.getTrainSize(), context.getCurrentIteration() - 1, aggregation.getMtl());
         MTLParams params = new MTLParams();
 
-        LOG.debug("params will be sent to worker: trainSize:{},validationSize:{}," +
-                        "trainCount:{},validationCount:{},trainError:{},validationErrors:{}", aggregation.getTrainSize(),
-                aggregation.getValidationSize(), aggregation.getTrainCount(), aggregation.getValidationCount(),
-                aggregation.getTrainErrors(), aggregation.getValidationErrors());
+        LOG.debug(
+                "params will be sent to worker: trainSize:{},validationSize:{},"
+                        + "trainCount:{},validationCount:{},trainError:{},validationErrors:{}",
+                aggregation.getTrainSize(), aggregation.getValidationSize(), aggregation.getTrainCount(),
+                aggregation.getValidationCount(), aggregation.getTrainErrors(), aggregation.getValidationErrors());
 
         params.setTrainSize(aggregation.getTrainSize());
         params.setValidationSize(aggregation.getValidationSize());
@@ -122,8 +126,8 @@ public class MTLMaster extends AbstractMasterComputable<MTLParams, MTLParams> {
 
     public MTLParams aggregateWorkerGradients(MasterContext<MTLParams, MTLParams> context) {
         MTLParams aggregation = null;
-        for (MTLParams params : context.getWorkerResults()) {
-            if (aggregation == null) {
+        for(MTLParams params: context.getWorkerResults()) {
+            if(aggregation == null) {
                 aggregation = params;
             } else {
                 aggregation.combine(params);
@@ -134,10 +138,10 @@ public class MTLMaster extends AbstractMasterComputable<MTLParams, MTLParams> {
 
     public MTLParams initOrRecoverModelWeights(MasterContext<MTLParams, MTLParams> context) {
         MTLParams params = new MTLParams();
-        if (this.isContinuousEnabled) {
+        if(this.isContinuousEnabled) {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             MultiTaskLearning existingModel = loadModel(modelPath);
-            if (existingModel != null) {
+            if(existingModel != null) {
                 this.mtl.updateWeights(existingModel);
             } else {
                 LOG.warn("Continuous training enabled but existing model load failed, do random initialization.");

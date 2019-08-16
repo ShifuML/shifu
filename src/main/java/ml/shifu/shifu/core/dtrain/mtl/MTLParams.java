@@ -33,30 +33,28 @@ public class MTLParams extends HaltBytable implements Combinable<MTLParams> {
 
     private MultiTaskLearning mtl;
 
-
     @Override
     public MTLParams combine(MTLParams from) {
         this.trainCount += from.trainCount;
-        for (int i = 0; i < trainErrors.length; i++) {
+        for(int i = 0; i < trainErrors.length; i++) {
             this.trainErrors[i] += from.trainErrors[i];
         }
         this.validationCount += from.validationCount;
-        for (int i = 0; i < validationErrors.length; i++) {
+        for(int i = 0; i < validationErrors.length; i++) {
             this.validationErrors[i] += from.validationErrors[i];
         }
         this.trainSize += from.trainSize;
         this.validationSize += from.validationSize;
         // In the first iteration, the worker may send a empty WDLParams without WideAndDeep Init
-        if (from.getMtl() != null) {
+        if(from.getMtl() != null) {
             this.mtl = this.mtl.combine(from.getMtl());
         }
         return this;
     }
 
-
     @Override
     public void doWrite(DataOutput out) throws IOException {
-        if (this.mtl == null) {
+        if(this.mtl == null) {
             out.writeBoolean(MTL_IS_NULL);
         } else {
             out.writeBoolean(!MTL_IS_NULL);
@@ -65,10 +63,10 @@ public class MTLParams extends HaltBytable implements Combinable<MTLParams> {
         }
         out.writeDouble(this.trainCount);
         out.writeDouble(this.validationCount);
-        for (int i = 0; i < trainErrors.length; i++) {
+        for(int i = 0; i < trainErrors.length; i++) {
             out.writeDouble(trainErrors[i]);
         }
-        for (int i = 0; i < validationErrors.length; i++) {
+        for(int i = 0; i < validationErrors.length; i++) {
             out.writeDouble(validationErrors[i]);
         }
         out.writeInt(this.serializationType.getValue());
@@ -78,23 +76,22 @@ public class MTLParams extends HaltBytable implements Combinable<MTLParams> {
     @Override
     public void doReadFields(DataInput in) throws IOException {
         boolean mtlIsNull = in.readBoolean();
-        if (!mtlIsNull) {
-            if (this.mtl == null) {
+        if(!mtlIsNull) {
+            if(this.mtl == null) {
                 this.mtl = new MultiTaskLearning();
             }
             this.mtl.readFields(in);
         }
         this.trainCount = in.readDouble();
         this.validationCount = in.readDouble();
-        for (int i = 0; i < trainErrors.length; i++) {
+        for(int i = 0; i < trainErrors.length; i++) {
             this.trainErrors[i] = in.readDouble();
         }
-        for (int i = 0; i < validationErrors.length; i++) {
+        for(int i = 0; i < validationErrors.length; i++) {
             this.validationErrors[i] = in.readDouble();
         }
         this.serializationType = SerializationType.getSerializationType(in.readInt());
     }
-
 
     public double getTrainCount() {
         return trainCount;
