@@ -93,7 +93,7 @@ public class BinaryMTLSerializer {
 
             }
 
-            // persist WideAndDeep Model
+            // persist multi task learning Model
             mtl.write(fos, SerializationType.MODEL_SPEC);
         } finally {
             IOUtils.closeStream(fos);

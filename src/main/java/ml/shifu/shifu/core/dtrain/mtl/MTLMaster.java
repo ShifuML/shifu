@@ -4,6 +4,7 @@ import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.*;
 import ml.shifu.shifu.fs.PathFinder;
@@ -79,20 +80,22 @@ public class MTLMaster extends AbstractMasterComputable<MTLParams, MTLParams> {
 
     private void loadConfigs(Properties props, SourceType sourceType) {
         try {
+
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
 
             // build mtlColumnConfigLists.
             List<String> tagColumns = this.modelConfig.getMultiTaskTargetColumnNames();
             taskNumber = tagColumns.size();
+            PathFinder pf = new PathFinder(this.modelConfig);
             for(int i = 0; i < taskNumber; i++) {
                 List<ColumnConfig> ccs = CommonUtils.loadColumnConfigList(
-                        props.getProperty(new PathFinder(this.modelConfig).getMTLColumnConfigPath(SourceType.HDFS, i)),
+                        pf.getMTLColumnConfigPath(RawSourceData.SourceType.LOCAL, i),
                         sourceType);
                 mtlColumnConfigLists.add(ccs);
             }
         } catch (IOException e) {
-            throw new RuntimeException();
+            throw new RuntimeException(e);
         }
     }
 

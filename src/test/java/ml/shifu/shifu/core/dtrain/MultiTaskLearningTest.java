@@ -28,10 +28,10 @@ public class MultiTaskLearningTest {
         String modelConfigJson = getClass().getResource("/model/MultiTaskNN/ModelConfig.json").toString();
         props.setProperty(CommonConstants.SHIFU_MODEL_CONFIG, modelConfigJson
                 );
-        props.setProperty(CommonConstants.SHIFU_COLUMN_CONFIG,
-                getClass().getResource("/model/MultiTaskNN/ColumnConfig.json").toString());
+//        props.setProperty(CommonConstants.SHIFU_COLUMN_CONFIG,
+//                getClass().getResource("/model/MultiTaskNN/ColumnConfig.json").toString());
         props.setProperty(GuaguaConstants.GUAGUA_INPUT_DIR,
-                getClass().getResource("/data/part-00").toString());
+                getClass().getResource("data/part-m-00000-mtl-afterNormalized").toString());
 
         GuaguaUnitDriver<MTLParams, MTLParams> driver = new GuaguaMRUnitDriver<MTLParams, MTLParams>(props);
         driver.run();

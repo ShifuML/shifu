@@ -101,12 +101,12 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
         return resluts;
     }
 
-    public float[] backward(double[] predicts, double[] actuals, double sig) {
+    public float[] backward(double[] predicts, double[] actuals, double[] sig) {
         // it's just replace the finalActiFunc layer.
         double[] grad2Logits = new double[predicts.length];
 
         for(int i = 0; i < grad2Logits.length; i++) {
-            grad2Logits[i] = (predicts[i] - actuals[i]) * (predicts[i] * (1 - predicts[i])) * sig;
+            grad2Logits[i] = (predicts[i] - actuals[i]) * (predicts[i] * (1 - predicts[i])) * sig[i];
             // error * sigmoid derivertive * weight
         }
 

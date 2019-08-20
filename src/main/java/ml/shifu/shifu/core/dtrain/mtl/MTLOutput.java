@@ -295,7 +295,7 @@ public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
             int taskNumber = tagColumns.size();
             for(int i = 0; i < taskNumber; i++) {
                 List<ColumnConfig> ccs = CommonUtils.loadColumnConfigList(
-                        props.getProperty(new PathFinder(this.modelConfig).getMTLColumnConfigPath(SourceType.HDFS, i)),
+                        new PathFinder(this.modelConfig).getMTLColumnConfigPath(SourceType.LOCAL, i),
                         sourceType);
                 mtlColumnConfigLists.add(ccs);
             }

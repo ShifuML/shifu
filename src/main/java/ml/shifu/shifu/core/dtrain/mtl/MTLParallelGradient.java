@@ -153,7 +153,6 @@ public class MTLParallelGradient {
             double[] trainSumError = {};
             double[] validSumError = {};
 
-            int index = 0;
             for(int i = trainLow; i < trainHigh; i++) {
                 MTLWorker.Data data = trainData.get(i);
                 trainSize += data.getWeight();
@@ -167,15 +166,14 @@ public class MTLParallelGradient {
                 double[] errors = new double[predicts.length];
                 for(int j = 0; j < predicts.length; j++) {
                     errors[j] = predicts[j] - actuals[j];
-                    trainSumError[j] += (errors[j] * errors[j] * data.getWeight());
+                    trainSumError[j] += (errors[j] * errors[j] * data.getWeight()[i]);
                 }
                 this.mtl.backward(predicts, data.getLabels(), data.getWeight());
-                index += 1;
             }
             TASK_LOG.info("Worker with training time {} ms.", (System.currentTimeMillis() - start));
 
             start = System.currentTimeMillis();
-            index = 0;
+
             TASK_LOG.info("Start validation computation.");
 
             // compute validation error
@@ -197,7 +195,7 @@ public class MTLParallelGradient {
                     double[] errors = new double[predicts.length];
                     for(int j = 0; j < predicts.length; j++) {
                         errors[j] = predicts[j] - actuals[j];
-                        validSumError[j] += (errors[j] * errors[j] * data.getWeight());
+                        validSumError[j] += (errors[j] * errors[j] * data.getWeight()[j]);
                     }
 
                 }

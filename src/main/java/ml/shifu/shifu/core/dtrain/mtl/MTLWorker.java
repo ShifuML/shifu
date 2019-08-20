@@ -11,7 +11,7 @@ import ml.shifu.guagua.worker.AbstractWorkerComputable;
 import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.RawSourceData;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.SerializationType;
@@ -126,7 +126,9 @@ public class MTLWorker extends
         Properties props = context.getProps();
         LOG.info("props: {}", props);
 
-        loadConfigs(props);
+        SourceType sourceType = SourceType
+                .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
+        loadConfigs(props, sourceType);
 
         String delimiter = context.getProps().getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
         this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
@@ -211,20 +213,21 @@ public class MTLWorker extends
 
     }
 
-    private void loadConfigs(Properties props) {
+    private void loadConfigs(Properties props, SourceType sourceType) {
         try {
-            RawSourceData.SourceType sourceType = RawSourceData.SourceType.valueOf(
-                    props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, RawSourceData.SourceType.HDFS.toString()));
+
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
 
             // build mtlColumnConfigLists.
             List<String> tagColumns = this.modelConfig.getMultiTaskTargetColumnNames();
             taskNumber = tagColumns.size();
+            PathFinder pf = new PathFinder(this.modelConfig);
+            LOG.info("mtl folder:{}", pf.getMTLColumnConfigFolder(sourceType));
+
             for(int i = 0; i < taskNumber; i++) {
-                List<ColumnConfig> ccs = CommonUtils.loadColumnConfigList(props.getProperty(
-                        new PathFinder(this.modelConfig).getMTLColumnConfigPath(RawSourceData.SourceType.HDFS, i)),
-                        sourceType);
+                List<ColumnConfig> ccs = CommonUtils
+                        .loadColumnConfigList(pf.getMTLColumnConfigPath(SourceType.LOCAL, i), sourceType);
                 mtlColumnConfigLists.add(ccs);
             }
         } catch (IOException e) {
@@ -241,11 +244,11 @@ public class MTLWorker extends
         this.mtl.updateWeights(context.getLastMasterResult());
         MTLParallelGradient parallelGradient = new MTLParallelGradient(this.workerThreadCount, this.mtl,
                 this.trainingData, this.validationData, this.completionService);
-        MTLParams MTLParams = parallelGradient.doCompute();
+        MTLParams mtlParams = parallelGradient.doCompute();
 
-        MTLParams.setSerializationType(SerializationType.GRADIENTS);
+        mtlParams.setSerializationType(SerializationType.GRADIENTS);
         this.mtl.setSerializationType(SerializationType.GRADIENTS);
-        return MTLParams;
+        return mtlParams;
     }
 
     @Override
@@ -258,29 +261,27 @@ public class MTLWorker extends
         long hashcode = 0; // hashcode for fixed input split in train and validation
         double[] inputs = new double[this.inputCount];
         double[] ideal = new double[this.taskNumber];
-        double significance = 1d;
+        double[] weights = new double[this.taskNumber];
         int index = 0, targetIndex = 0;
-        int totalSize = 0;
-        for(List<ColumnConfig> ccs: this.mtlColumnConfigLists) {
-            totalSize += ccs.size();
-        }
+
         // use guava Splitter to iterate only once
         for(String input: this.splitter.split(currentValue.getWritable().toString())) {
             LOG.info("input in worker: {}", input);
-            int tmpIndex = 0;
+            int accumulativeSum = 0;
             int i = 0;
             for(; i < taskNumber; i++) {
-                tmpIndex += mtlColumnConfigLists.get(i).size();
-                if(tmpIndex > index) {
+                accumulativeSum += mtlColumnConfigLists.get(i).size();
+                if(accumulativeSum > index) {
                     break;
                 }
             }
 
-            if(index == totalSize) {
-                significance = getWeightValue(input);
+            if(index == accumulativeSum) {
+                weights[i] = getWeightValue(input);
                 break;
             } else {
-                ColumnConfig config = mtlColumnConfigLists.get(i).get(index);
+                int beginPos = accumulativeSum - mtlColumnConfigLists.get(i).size();
+                ColumnConfig config = mtlColumnConfigLists.get(i).get(beginPos);
                 if(config != null && config.isTarget()) {
                     ideal[targetIndex] = getDoubleValue(input);
                     targetIndex++;
@@ -306,7 +307,7 @@ public class MTLWorker extends
 
         // todo: some fileds like 'positiveSelectedTrainCount','negativeSelectedTrainCount' should be an array rather
         // than a number.
-        Data data = new Data(inputs, significance, ideal);
+        Data data = new Data(inputs, weights, ideal);
         // split into validation and training data set according to validation rate
         boolean isInTraining = this.addDataPairToDataSet(hashcode, data, context.getAttachment());
         // update some positive or negative selected count in metrics
@@ -566,18 +567,18 @@ public class MTLWorker extends
         private double[] inputs;
 
         /**
-         * The weight of one training record like dollar amount in one txn
+         * The weights of one training record for different tasks like dollar amounts in one txn
          */
-        private double weight;
+        private double[] weights;
 
         /**
          * Target value of one record
          */
         private double labels[];
 
-        public Data(double[] inputs, double weight, double[] labels) {
+        public Data(double[] inputs, double[] weights, double[] labels) {
             this.inputs = inputs;
-            this.weight = weight;
+            this.weights = weights;
             this.labels = labels;
         }
 
@@ -589,12 +590,12 @@ public class MTLWorker extends
             this.inputs = inputs;
         }
 
-        public double getWeight() {
-            return weight;
+        public double[] getWeight() {
+            return weights;
         }
 
-        public void setWeight(double weight) {
-            this.weight = weight;
+        public void setWeight(double[] weights) {
+            this.weights = weights;
         }
 
         public double[] getLabels() {
