@@ -841,7 +841,7 @@ public class ShifuCLI {
         System.out.println(
                 "\tstats -correlation(c)                   Calculate correlation values between column pairs.");
         System.out.println("\tstats -psi(p)                           Calculate psi values if psi column is provided.");
-        System.out.println("\tstats -rebin [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
+        System.out.println("\tstats -rebin [-vars var1,var1] [-ivr <ratio>] [-bic <bic>] [-n <expectBinCnt>]");
         System.out.println("\t                                        Do the variable Re-bin.");
         System.out.println(
                 "\tvarselect/varsel                        Variable selection, will update finalSelect in ColumnConfig.json.");
