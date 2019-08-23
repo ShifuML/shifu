@@ -30,7 +30,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-
 /**
  * @author haillu
  */
@@ -83,7 +82,6 @@ public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
      */
     private Configuration conf;
 
-
     @Override
     public void preApplication(MasterContext<MTLParams, MTLParams> context) {
         init(context);
@@ -98,7 +96,7 @@ public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
         final int totalIteration = context.getTotalIteration();
         final boolean isHalt = context.getMasterResult().isHalt();
 
-        if (currentIteration % tmpModelFactor == 0) {
+        if(currentIteration % tmpModelFactor == 0) {
             Thread modePersistThread = new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -110,7 +108,7 @@ public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
                     // need to save checkpoint model here as it is replicated with postApplicaiton.
                     // There is issue here if saving the same model in this thread and another thread in
                     // postApplication, sometimes this conflict will cause model writing failed.
-                    if (!isHalt && currentIteration != totalIteration) {
+                    if(!isHalt && currentIteration != totalIteration) {
                         Path tmpModelPath = getTmpModelPath(currentIteration);
                         writeModelToFileSystem(context.getMasterResult(), out);
                         // a bug in new version to write last model, wait 1s for model flush hdfs successfully.
@@ -146,7 +144,7 @@ public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
 
     private void updateProgressLog(final MasterContext<MTLParams, MTLParams> context) {
         int currentIteration = context.getCurrentIteration();
-        if (context.isFirstIteration()) {
+        if(context.isFirstIteration()) {
             // first iteration is used for training preparation
             return;
         }
@@ -154,14 +152,14 @@ public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
         // compute trainErrors
         double[] trainErrors = context.getMasterResult().getTrainErrors();
         double trainSize = context.getMasterResult().getTrainSize();
-        for (int i = 0; i < trainErrors.length; i++) {
+        for(int i = 0; i < trainErrors.length; i++) {
             trainErrors[i] /= trainSize;
         }
 
         // compute validationErrors
         double[] validationErrors = context.getMasterResult().getValidationErrors();
         double validationSize = context.getMasterResult().getValidationSize();
-        for (int i = 0; i < validationErrors.length; i++) {
+        for(int i = 0; i < validationErrors.length; i++) {
             validationErrors[i] /= validationSize;
         }
 
@@ -169,26 +167,27 @@ public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
         AssertUtils.assertDoubleArrayNotNullAndLengthEqual(trainErrors, validationErrors);
         int taskNumber = trainErrors.length;
         ArrayList<String> infos = new ArrayList<>();
-        for (int i = 0; i < taskNumber; i++) {
-            if (trainErrors[i] != 0) {
+        for(int i = 0; i < taskNumber; i++) {
+            if(trainErrors[i] != 0) {
                 String info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
                         .append(currentIteration - 1).append(" Training Error: ")
-                        .append(trainErrors[i] == 0d ? "N/A" : String.format("%.10f", trainErrors[i])).append(" Validation Error: ")
-                        .append(validationErrors[i] == 0d ? "N/A" : String.format("%.10f", validationErrors[i])).append("\n")
-                        .toString();
+                        .append(trainErrors[i] == 0d ? "N/A" : String.format("%.10f", trainErrors[i]))
+                        .append(" Validation Error: ")
+                        .append(validationErrors[i] == 0d ? "N/A" : String.format("%.10f", validationErrors[i]))
+                        .append("\n").toString();
                 infos.add(info);
             }
         }
 
-        if (infos.size() > 0) {
+        if(infos.size() > 0) {
             try {
-                for (String info : infos){
+                for(String info: infos) {
                     LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), info);
                     this.progressOutput.write(info.getBytes("UTF-8"));
                 }
                 this.progressOutput.flush();
                 this.progressOutput.sync();
-            } catch(IOException e){
+            } catch (IOException e) {
                 LOG.error("Error in write progress log", e);
             }
         }
@@ -212,11 +211,11 @@ public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
     public void postApplication(MasterContext<MTLParams, MTLParams> context) {
         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
         writeModelToFileSystem(context.getMasterResult(), out);
-        if (this.isGsMode || this.isKFoldCV) {
+        if(this.isGsMode || this.isKFoldCV) {
             Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
             double[] valErrs = context.getMasterResult().getValidationErrors();
             double valSize = context.getMasterResult().getValidationSize();
-            for (int i = 0; i < valErrs.length; i++) {
+            for(int i = 0; i < valErrs.length; i++) {
                 valErrs[i] /= valSize;
             }
             writeValErrorToFileSystem(valErrs, valErrOutput);
@@ -229,7 +228,7 @@ public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
         try {
             fos = FileSystem.get(new Configuration()).create(out);
             LOG.info("Writing valErrors to {}", out);
-            for (int i = 0; i < valErrors.length; i++) {
+            for(int i = 0; i < valErrors.length; i++) {
                 fos.write((valErrors[i] + "").getBytes("UTF-8"));
             }
         } catch (IOException e) {
@@ -249,7 +248,7 @@ public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
     }
 
     private void init(MasterContext<MTLParams, MTLParams> context) {
-        if (isInit.compareAndSet(false, true)) {
+        if(isInit.compareAndSet(false, true)) {
             this.conf = new Configuration();
             loadConfigs(context.getProps());
             this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
@@ -258,7 +257,7 @@ public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
             this.isGsMode = gs.hasHyperParam();
 
             Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
-            if (kCrossValidation != null && kCrossValidation > 0) {
+            if(kCrossValidation != null && kCrossValidation > 0) {
                 isKFoldCV = true;
             }
 
@@ -267,7 +266,7 @@ public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
                 Path progressLog = new Path(context.getProps().getProperty(CommonConstants.SHIFU_DTRAIN_PROGRESS_FILE));
                 // if the progressLog already exists, that because the master failed, and fail-over
                 // we need to append the log, so that client console can get refreshed. Or console will appear stuck.
-                if (ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
+                if(ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
                     this.progressOutput = FileSystem.get(new Configuration()).append(progressLog);
                 } else {
                     this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
@@ -292,17 +291,21 @@ public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
 
             // build mtlColumnConfigLists.
             List<String> tagColumns = this.modelConfig.getMultiTaskTargetColumnNames();
+            PathFinder pf = new PathFinder(this.modelConfig);
             int taskNumber = tagColumns.size();
             for(int i = 0; i < taskNumber; i++) {
-                List<ColumnConfig> ccs = CommonUtils.loadColumnConfigList(
-                        new PathFinder(this.modelConfig).getMTLColumnConfigPath(SourceType.LOCAL, i),
-                        sourceType);
+                List<ColumnConfig> ccs;
+                ccs = CommonUtils.loadColumnConfigList(pf.getMTLColumnConfigPath(sourceType, i), sourceType);
+                // for local test
+                // ccs = CommonUtils.loadColumnConfigList(
+                // "/C:/Users/haillu/Documents/gitRepo/shifu/target/test-classes/model/MultiTaskNN/mtl/ColumnConfig.json."+i,
+                // sourceType);
+
                 mtlColumnConfigLists.add(ccs);
             }
         } catch (IOException e) {
             throw new RuntimeException();
         }
     }
-
 
 }

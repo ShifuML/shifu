@@ -43,8 +43,10 @@ public class MTLParams extends HaltBytable implements Combinable<MTLParams> {
         for(int i = 0; i < validationErrors.length; i++) {
             this.validationErrors[i] += from.validationErrors[i];
         }
+
         this.trainSize += from.trainSize;
         this.validationSize += from.validationSize;
+
         // In the first iteration, the worker may send a empty WDLParams without WideAndDeep Init
         if(from.getMtl() != null) {
             this.mtl = this.mtl.combine(from.getMtl());

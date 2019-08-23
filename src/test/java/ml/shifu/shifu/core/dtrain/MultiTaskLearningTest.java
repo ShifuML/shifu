@@ -7,8 +7,11 @@ import ml.shifu.guagua.unit.GuaguaUnitDriver;
 import ml.shifu.shifu.core.dtrain.mtl.MTLMaster;
 import ml.shifu.shifu.core.dtrain.mtl.MTLParams;
 import ml.shifu.shifu.core.dtrain.mtl.MTLWorker;
+import org.apache.commons.collections.map.HashedMap;
 import org.testng.annotations.Test;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -31,7 +34,7 @@ public class MultiTaskLearningTest {
 //        props.setProperty(CommonConstants.SHIFU_COLUMN_CONFIG,
 //                getClass().getResource("/model/MultiTaskNN/ColumnConfig.json").toString());
         props.setProperty(GuaguaConstants.GUAGUA_INPUT_DIR,
-                getClass().getResource("data/part-m-00000-mtl-afterNormalized").toString());
+                getClass().getResource("/data/part-m-00000-mtl-afterNormalized").toString());
 
         GuaguaUnitDriver<MTLParams, MTLParams> driver = new GuaguaMRUnitDriver<MTLParams, MTLParams>(props);
         driver.run();

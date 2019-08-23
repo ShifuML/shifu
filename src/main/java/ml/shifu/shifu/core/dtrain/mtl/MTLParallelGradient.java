@@ -140,16 +140,16 @@ public class MTLParallelGradient {
                         testHigh, testLow, trainHigh, trainLow);
                 return null;
             }
-            MTLParams MTLParams = new MTLParams();
+            MTLParams mtlParams = new MTLParams();
             if(this.trainData.size() == 0) {
                 // All field will be 0
-                return MTLParams;
+                return mtlParams;
             }
 
             long start = System.currentTimeMillis();
             // forward and backward compute gradients for each iteration
             double trainCnt = trainHigh - trainLow, validCnt = testHigh - testLow;
-            double trainSize = 0, validationSize = 0;
+            double trainSize = 0,validationSize = 0;
             double[] trainSumError = {};
             double[] validSumError = {};
 
@@ -159,15 +159,17 @@ public class MTLParallelGradient {
                 double[] predicts = this.mtl.forward(data.getInputs());
                 double[] actuals = data.getLabels();
 
-                AssertUtils.assertEquals(predicts.length, actuals.length);
+                int taskNumber = predicts.length;
+                AssertUtils.assertEquals(taskNumber, actuals.length);
                 if(i == trainLow) {
-                    trainSumError = new double[predicts.length];
+                    trainSumError = new double[taskNumber];
                 }
-                double[] errors = new double[predicts.length];
-                for(int j = 0; j < predicts.length; j++) {
+                double[] errors = new double[taskNumber];
+                for(int j = 0; j < taskNumber; j++) {
                     errors[j] = predicts[j] - actuals[j];
-                    trainSumError[j] += (errors[j] * errors[j] * data.getWeight()[i]);
+                    trainSumError[j] += (errors[j] * errors[j] * data.getWeight());
                 }
+
                 this.mtl.backward(predicts, data.getLabels(), data.getWeight());
             }
             TASK_LOG.info("Worker with training time {} ms.", (System.currentTimeMillis() - start));
@@ -184,18 +186,19 @@ public class MTLParallelGradient {
                     double[] predicts = this.mtl.forward(data.getInputs());
                     double[] actuals = data.getLabels();
 
-                    AssertUtils.assertEquals(predicts.length, actuals.length);
+                    int taskNumber = predicts.length;
+                    AssertUtils.assertEquals(taskNumber, actuals.length);
                     // if (index++ <= 0) {
                     // TASK_LOG.info("Index {}, logit {}, sigmoid {}, label {}.", index, logits[0], sigmoid,
                     // data.getLabels());
                     // }
                     if(i == testLow) {
-                        validSumError = new double[predicts.length];
+                        validSumError = new double[taskNumber];
                     }
-                    double[] errors = new double[predicts.length];
-                    for(int j = 0; j < predicts.length; j++) {
+                    double[] errors = new double[taskNumber];
+                    for(int j = 0; j < taskNumber; j++) {
                         errors[j] = predicts[j] - actuals[j];
-                        validSumError[j] += (errors[j] * errors[j] * data.getWeight()[j]);
+                        validSumError[j] += (errors[j] * errors[j] * data.getWeight());
                     }
 
                 }
@@ -203,16 +206,16 @@ public class MTLParallelGradient {
 
             TASK_LOG.info("trainSumError is {}, validSumError is {}", trainSumError, validSumError);
             // set cnt, error to params and return to master
-            MTLParams.setTrainCount(trainCnt);
-            MTLParams.setValidationCount(validCnt);
-            MTLParams.setTrainSize(trainSize);
-            MTLParams.setValidationSize(validationSize);
-            MTLParams.setTrainErrors(trainSumError);
-            MTLParams.setValidationErrors(validSumError);
-            MTLParams.setMtl(this.mtl);
+            mtlParams.setTrainCount(trainCnt);
+            mtlParams.setValidationCount(validCnt);
+            mtlParams.setTrainSize(trainSize);
+            mtlParams.setValidationSize(validationSize);
+            mtlParams.setTrainErrors(trainSumError);
+            mtlParams.setValidationErrors(validSumError);
+            mtlParams.setMtl(this.mtl);
 
             TASK_LOG.info("Worker with validation run time {} ms.", (System.currentTimeMillis() - start));
-            return MTLParams;
+            return mtlParams;
         }
     }
 }
