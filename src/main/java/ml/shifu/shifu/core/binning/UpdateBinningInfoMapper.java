@@ -162,7 +162,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             throw new RuntimeException(e);
         }
     }
-
+    
     /**
      * Initialization for column statistics in mapper.
      */

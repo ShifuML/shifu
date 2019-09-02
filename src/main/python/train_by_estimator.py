@@ -403,6 +403,7 @@ if __name__ == "__main__":
     parser.add_argument("-actfuncs", action='store', dest='actfuncs', help="act funcs of each hidden layers",
                         nargs='+', type=str)
     parser.add_argument("-minibatch", action='store', dest='minibatch', help="batch size of each iteration", type=int)
+    parser.add_argument("-iscontinuous", action='store', dest='iscontinuous', help="continuous training or not", default=False)
 
     args, unknown = parser.parse_known_args()
 
@@ -421,8 +422,8 @@ if __name__ == "__main__":
     weight_initalizer = args.weightinitalizer
     act_funcs = args.actfuncs
     batch_size = args.minibatch
+    is_continuous = args.iscontinuous.upper()
 
-    RESUME_TRAINING = False
     TIME_INTERVAL_TO_DO_VALIDATION = 3  # seconds
 
     context = {"feature_column_nums": feature_column_nums, "layers": hidden_layers, "batch_size": batch_size,
@@ -433,7 +434,7 @@ if __name__ == "__main__":
     if not os.path.exists("./models"):
         os.makedirs("./models", 0777)
 
-    if not RESUME_TRAINING:
+    if is_continuous == "TRUE":
         print("Removing previous artifacts...")
         shutil.rmtree('./models/tmp', ignore_errors=True)
     else:

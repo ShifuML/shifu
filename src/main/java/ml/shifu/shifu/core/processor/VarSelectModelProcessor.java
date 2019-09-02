@@ -947,8 +947,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 log.info("Variable {} is selected.", columnConfig.getColumnName());
             }
         }
-        log.info("{} variables are selected, while {} are force-selected, and others from {} candidates.",
-                selectCnt, forceCnt, candidateCount);
+        log.info("{} variables are selected, while {} are force-selected, and others from {} candidates.", selectCnt,
+                forceCnt, candidateCount);
     }
 
     private void postProcess4SEVarSelect(SourceType source, String varSelectMSEOutputPath) throws IOException {
