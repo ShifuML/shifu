@@ -167,5 +167,4 @@ public interface CommonConstants {
 
     public static final String MTL_INDEX = "shifu_mtl_index";
 
-    public static final String MTL_COLUMN_CONFIG_FOLDER = "shifu_mtl_column_config_folder";
 }
