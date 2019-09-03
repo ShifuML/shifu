@@ -1,3 +1,18 @@
+/*
+ * Copyright [2013-2019] PayPal Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package ml.shifu.shifu.core.dtrain.mtl;
 
 import ml.shifu.guagua.io.Bytable;
@@ -23,6 +38,9 @@ import java.util.stream.Collectors;
 
 import static ml.shifu.shifu.core.dtrain.wdl.SerializationUtil.NULL;
 
+/**
+ * @author haillu
+ */
 public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, Bytable, Combinable<MultiTaskLearning>,
         PropOptimizer<MultiTaskLearning> {
 
@@ -42,6 +60,7 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
 
     private int taskNumber;
 
+    // todo: different tasks should have the activation func respectively.
     // private List<String> finalActiFuncs;
     private Activation finalActiFunc;
 
@@ -77,6 +96,7 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
 
         // AssertUtils.assertEquals(taskNumber, finalActiFuncs.size());
         this.finalLayer = new DenseLayer(taskNumber, preHiddenInputs, l2reg);
+        // Use Sigmoid as final actiFunc of all tasks.
         this.finalActiFunc = new Sigmoid();
     }
 
@@ -102,7 +122,7 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
     }
 
     public float[] backward(double[] predicts, double[] actuals, double sig) {
-        // it's just replace the finalActiFunc layer.
+        // replace the finalActiFunc layer.
         double[] grad2Logits = new double[predicts.length];
 
         for(int i = 0; i < grad2Logits.length; i++) {
@@ -224,6 +244,7 @@ public class MultiTaskLearning implements WeightInitializer<MultiTaskLearning>, 
         }
     }
 
+    // used in method 'readFields' for local tests .
     public int findPos(Object dis) throws NoSuchFieldException, IllegalAccessException {
         Class clazz = dis.getClass().getSuperclass();
         Field field = clazz.getDeclaredField("in");

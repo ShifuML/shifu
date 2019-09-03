@@ -1,3 +1,18 @@
+/*
+ * Copyright [2013-2019] PayPal Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package ml.shifu.shifu.core.dtrain.mtl;
 
 import com.google.common.base.Splitter;
@@ -122,7 +137,7 @@ public class MTLWorker extends
 
     @Override
     public void init(WorkerContext<MTLParams, MTLParams> context) {
-        LOG.debug("worker init:");
+        LOG.info("worker init:");
         Properties props = context.getProps();
         LOG.info("props: {}", props);
 
@@ -203,8 +218,7 @@ public class MTLWorker extends
         this.validParams = this.modelConfig.getTrain().getParams();
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
         List<String> hiddenActiFuncs = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
-        // todo:check if MTL need regression function
-        // double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0);
+        // todo:check whether MTL need regression function and how to add it.
 
         LOG.debug("params of constructor of MTL:inputCount:{},hiddenNodes:{},hiddenActiFuncs:{}" + "taskNumber:{}",
                 inputCount, hiddenNodes, hiddenActiFuncs, taskNumber);
@@ -578,12 +592,12 @@ public class MTLWorker extends
         private double[] inputs;
 
         /**
-         * The weight of one training recordlike dollar amounts in one txn
+         * The weight of one training record like dollar amounts in one txn.
          */
         private double weight;
 
         /**
-         * Target value of one record
+         * Target values of one record
          */
         private double labels[];
 

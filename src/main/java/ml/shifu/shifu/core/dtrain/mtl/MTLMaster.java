@@ -1,10 +1,24 @@
+/*
+ * Copyright [2013-2019] PayPal Software Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package ml.shifu.shifu.core.dtrain.mtl;
 
 import ml.shifu.guagua.master.AbstractMasterComputable;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.*;
 import ml.shifu.shifu.fs.PathFinder;
@@ -45,7 +59,7 @@ public class MTLMaster extends AbstractMasterComputable<MTLParams, MTLParams> {
 
     @Override
     public void init(MasterContext<MTLParams, MTLParams> context) {
-        LOG.debug("master init:");
+        LOG.info("master init:");
         Properties props = context.getProps();
         SourceType sourceType = SourceType
                 .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
@@ -65,13 +79,12 @@ public class MTLMaster extends AbstractMasterComputable<MTLParams, MTLParams> {
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
         List<String> hiddenActiFuncs = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
 
-        // todo:check if MTL need regression function
-        // double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0);
+        // todo:check whether MTL need regression function and decide how to add it.
         double l2reg = 0;
         Object pObject = this.validParams.get(CommonConstants.PROPAGATION);
         String propagation = (pObject == null) ? DTrainUtils.RESILIENTPROPAGATION : pObject.toString();
 
-        LOG.debug("params of constructor of MTL: inputCount: {},hiddenNodes: {},hiddenActiFuncs: {}"
+        LOG.info("params of constructor of MTL: inputCount: {},hiddenNodes: {},hiddenActiFuncs: {}"
                 + "taskNumber: {},l2reg: {}", inputCount, hiddenNodes, hiddenActiFuncs, taskNumber, l2reg);
 
         this.mtl = new MultiTaskLearning(inputCount, hiddenNodes, hiddenActiFuncs, taskNumber, l2reg);
@@ -111,7 +124,7 @@ public class MTLMaster extends AbstractMasterComputable<MTLParams, MTLParams> {
         this.mtl.optimizeWeight(aggregation.getTrainSize(), context.getCurrentIteration() - 1, aggregation.getMtl());
         MTLParams params = new MTLParams();
 
-        LOG.debug(
+        LOG.info(
                 "params will be sent to worker: trainSize:{},validationSize:{},"
                         + "trainCount:{},validationCount:{},trainError:{},validationErrors:{}",
                 aggregation.getTrainSize(), aggregation.getValidationSize(), aggregation.getTrainCount(),
