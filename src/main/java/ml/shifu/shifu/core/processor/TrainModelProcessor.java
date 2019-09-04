@@ -41,6 +41,10 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 
+import ml.shifu.shifu.core.dtrain.mtl.MTLMaster;
+import ml.shifu.shifu.core.dtrain.mtl.MTLOutput;
+import ml.shifu.shifu.core.dtrain.mtl.MTLParams;
+import ml.shifu.shifu.core.dtrain.mtl.MTLWorker;
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
@@ -381,9 +385,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) // NN algorithm
                 || LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) // LR algorithm
                 || CommonUtils.isTreeModel(alg) // RF or GBT algortihm
-                || Constants.TF_ALG_NAME.equalsIgnoreCase(alg) || Constants.WDL.equalsIgnoreCase(alg))) {
+                || Constants.TF_ALG_NAME.equalsIgnoreCase(alg) || Constants.WDL.equalsIgnoreCase(alg)||Constants.MTL.equalsIgnoreCase(alg))) {
             throw new IllegalArgumentException(
-                    "Currently we only support NN, LR, RF(RandomForest), WDL and GBDT(Gradient Boost Desicion Tree) distributed training.");
+                    "Currently we only support NN, LR, RF(RandomForest), WDL , MTL and GBDT(Gradient Boost Desicion Tree) distributed training.");
         }
 
         if((LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)
@@ -779,16 +783,26 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 .booleanValue();
         GuaguaMapReduceClient guaguaClient;
 
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
-                this.columnConfigList);
-        int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        int candidateCount = inputOutputIndex[2];
-
-        boolean isAfterVarSelect = (inputOutputIndex[0] != 0);
+        int[] inputOutputIndex;
+        int inputNodeCount = 0;
+        int candidateCount = 0;
+        boolean isAfterVarSelect = true;
         // cache all feature list for sampling features
-        List<Integer> allFeatures = NormalUtils.getAllFeatureList(this.columnConfigList, isAfterVarSelect);
+        List<Integer> allFeatures = null;
+
+        if (!modelConfig.isMultiTask()){
+            inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                    this.columnConfigList);
+            inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
+            candidateCount = inputOutputIndex[2];
+            isAfterVarSelect = (inputOutputIndex[0] != 0);
+            allFeatures = NormalUtils.getAllFeatureList(this.columnConfigList, isAfterVarSelect);
+        }
 
         if(modelConfig.getNormalize().getIsParquet()) {
+            if (modelConfig.isMultiTask()){
+                throw new IllegalArgumentException("don't support parquet in mtl.");
+            }
             guaguaClient = new GuaguaParquetMapReduceClient();
 
             // set required field list to make sure we only load selected columns.
@@ -1453,6 +1467,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             this.prepareDTParams(args, sourceType);
         } else if(Constants.WDL_ALG_NAME.equalsIgnoreCase(alg)) {
             this.prepareWDLParams(args, sourceType);
+        } else if (Constants.MTL_ALG_NAME.equalsIgnoreCase(alg)){
+            this.prepareMTLParams(args,sourceType);
         }
 
         args.add("-c");
@@ -1550,6 +1566,27 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     }
 
+    private void prepareMTLParams(List<String> args, SourceType sourceType) {
+        args.add("-w");
+        args.add(MTLWorker.class.getName());
+
+        args.add("-m");
+        args.add(MTLMaster.class.getName());
+
+        args.add("-mr");
+        args.add(MTLParams.class.getName());
+
+        args.add("-wr");
+        args.add(MTLParams.class.getName());
+
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
+                MTLOutput.class.getName()));
+
+//        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.MTL_COLUMN_CONFIG_FOLDER,
+//                ShifuFileUtils.getFileSystemBySourceType(sourceType)
+//                        .makeQualified(new Path(super.getPathFinder().getMTLColumnConfigFolder(sourceType)))));
+    }
+
     private int vcoresSetting() {
         // if set in shifuconfig with keyvalue, such value will be used, otherwise, thread number will be used
         String vcoreStr = Environment.getProperty(CommonConstants.MAPREDUCE_MAP_CPU_VCORES);
@@ -1637,13 +1674,17 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         } else {
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
                     Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, "true")));
-            long maxCombineSize = computeDynamicCombineSize();
-            LOG.info(
-                    "Dynamic worker size is tuned to {}. If not good for # of workers, configure it in SHIFU_HOME/conf/shifuconfig::guagua.split.maxCombinedSplitSize",
-                    maxCombineSize);
-            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                    GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, Environment
-                            .getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, maxCombineSize + "")));
+
+            // TODO: support mtl.
+            if (!modelConfig.isMultiTask()){
+                long maxCombineSize = computeDynamicCombineSize();
+                LOG.info(
+                        "Dynamic worker size is tuned to {}. If not good for # of workers, configure it in SHIFU_HOME/conf/shifuconfig::guagua.split.maxCombinedSplitSize",
+                        maxCombineSize);
+                args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
+                        GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, Environment
+                                .getProperty(GuaguaConstants.GUAGUA_SPLIT_MAX_COMBINED_SPLIT_SIZE, maxCombineSize + "")));
+            }
         }
         // special tuning parameters for shifu, 0.97 means each iteation master wait for 97% workers and then can go to
         // next iteration.

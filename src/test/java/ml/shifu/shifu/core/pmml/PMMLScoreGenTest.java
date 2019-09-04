@@ -34,6 +34,7 @@ public class PMMLScoreGenTest {
     public static final double EPS = 1e-6;
 
 //    @Test
+
     public void testBaggingPmml() throws Exception {
         verifyPmml("TestNN", "src/test/resources/example/bagging-pmml/ModelConfig.json",
                 "src/test/resources/example/bagging-pmml/ColumnConfig.json",

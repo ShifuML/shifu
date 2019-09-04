@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain.wdl;
+package ml.shifu.shifu.core.dtrain.mtl;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -34,24 +34,20 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.zip.GZIPOutputStream;
 
 /**
- * Binary IndependentWDLModel serializer.
- *
- * @author Wu Devin (haifwu@paypal.com)
+ * @author haillu
  */
-public class BinaryWDLSerializer {
-
-    public static void save(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, WideAndDeep wideAndDeep,
-            FileSystem fs, Path output) throws IOException {
+public class BinaryMTLSerializer {
+    public static void save(ModelConfig modelConfig, List<List<ColumnConfig>> mtlColumnConfigLists,
+            MultiTaskLearning mtl, FileSystem fs, Path output) throws IOException {
         DataOutputStream fos = null;
         try {
             fos = new DataOutputStream(new GZIPOutputStream(fs.create(output)));
 
             // version
-            fos.writeInt(CommonConstants.WDL_FORMAT_VERSION);
+            fos.writeInt(CommonConstants.MTL_FORMAT_VERSION);
             // Reserved two double field, one double field and one string field
             fos.writeDouble(0.0f);
             fos.writeDouble(0.0f);
@@ -62,52 +58,58 @@ public class BinaryWDLSerializer {
             String normStr = modelConfig.getNormalize().getNormType().toString();
             StringUtils.writeString(fos, normStr);
 
-            // compute columns needed
-            Map<Integer, String> columnIndexNameMapping = getIndexNameMapping(columnConfigList);
+            // write task number.
+            fos.writeInt(mtlColumnConfigLists.size());
 
-            // write column stats to output
-            List<NNColumnStats> csList = new ArrayList<>();
-            for(ColumnConfig cc: columnConfigList) {
-                if(columnIndexNameMapping.containsKey(cc.getColumnNum())) {
-                    NNColumnStats cs = new NNColumnStats();
-                    cs.setCutoff(modelConfig.getNormalizeStdDevCutOff());
-                    cs.setColumnType(cc.getColumnType());
-                    cs.setMean(cc.getMean());
-                    cs.setStddev(cc.getStdDev());
-                    cs.setColumnNum(cc.getColumnNum());
-                    cs.setColumnName(cc.getColumnName());
-                    cs.setBinCategories(cc.getBinCategory());
-                    cs.setBinBoundaries(cc.getBinBoundary());
-                    cs.setBinPosRates(cc.getBinPosRate());
-                    cs.setBinCountWoes(cc.getBinCountWoe());
-                    cs.setBinWeightWoes(cc.getBinWeightedWoe());
+            for(List<ColumnConfig> ccs: mtlColumnConfigLists) {
+                // compute columns needed
+                Map<Integer, String> columnIndexNameMapping = getIndexNameMapping(ccs);
 
-                    // TODO cache such computation
-                    double[] meanAndStdDev = Normalizer.calculateWoeMeanAndStdDev(cc, false);
-                    cs.setWoeMean(meanAndStdDev[0]);
-                    cs.setWoeStddev(meanAndStdDev[1]);
-                    double[] weightMeanAndStdDev = Normalizer.calculateWoeMeanAndStdDev(cc, true);
-                    cs.setWoeWgtMean(weightMeanAndStdDev[0]);
-                    cs.setWoeWgtStddev(weightMeanAndStdDev[1]);
+                // write column stats to output
+                List<NNColumnStats> csList = new ArrayList<>();
+                for(ColumnConfig cc: ccs) {
+                    if(columnIndexNameMapping.containsKey(cc.getColumnNum())) {
+                        NNColumnStats cs = new NNColumnStats();
+                        cs.setCutoff(modelConfig.getNormalizeStdDevCutOff());
+                        cs.setColumnType(cc.getColumnType());
+                        cs.setMean(cc.getMean());
+                        cs.setStddev(cc.getStdDev());
+                        cs.setColumnNum(cc.getColumnNum());
+                        cs.setColumnName(cc.getColumnName());
+                        cs.setBinCategories(cc.getBinCategory());
+                        cs.setBinBoundaries(cc.getBinBoundary());
+                        cs.setBinPosRates(cc.getBinPosRate());
+                        cs.setBinCountWoes(cc.getBinCountWoe());
+                        cs.setBinWeightWoes(cc.getBinWeightedWoe());
 
-                    csList.add(cs);
+                        // TODO cache such computation
+                        double[] meanAndStdDev = Normalizer.calculateWoeMeanAndStdDev(cc, false);
+                        cs.setWoeMean(meanAndStdDev[0]);
+                        cs.setWoeStddev(meanAndStdDev[1]);
+                        double[] weightMeanAndStdDev = Normalizer.calculateWoeMeanAndStdDev(cc, true);
+                        cs.setWoeWgtMean(weightMeanAndStdDev[0]);
+                        cs.setWoeWgtStddev(weightMeanAndStdDev[1]);
+
+                        csList.add(cs);
+                    }
                 }
+
+                fos.writeInt(csList.size());
+                for(NNColumnStats cs: csList) {
+                    cs.write(fos);
+                }
+
+                Map<Integer, Integer> columnMapping = DTrainUtils.getColumnMapping(ccs);
+                fos.writeInt(columnMapping.size());
+                for(Map.Entry<Integer, Integer> entry: columnMapping.entrySet()) {
+                    fos.writeInt(entry.getKey());
+                    fos.writeInt(entry.getValue());
+                }
+
             }
 
-            fos.writeInt(csList.size());
-            for(NNColumnStats cs: csList) {
-                cs.write(fos);
-            }
-
-            Map<Integer, Integer> columnMapping = DTrainUtils.getColumnMapping(columnConfigList);
-            fos.writeInt(columnMapping.size());
-            for(Entry<Integer, Integer> entry: columnMapping.entrySet()) {
-                fos.writeInt(entry.getKey());
-                fos.writeInt(entry.getValue());
-            }
-
-            // persist WideAndDeep Model
-            wideAndDeep.write(fos, SerializationType.MODEL_SPEC);
+            // persist multi task learning Model
+            mtl.write(fos, SerializationType.MODEL_SPEC);
         } finally {
             IOUtils.closeStream(fos);
         }
@@ -131,5 +133,4 @@ public class BinaryWDLSerializer {
         }
         return columnIndexNameMapping;
     }
-
 }

@@ -421,6 +421,8 @@ public class ModelSpecLoaderUtils {
                 return TreeModel.loadFromStream(stream, gbtConvertToProb, gbtScoreConvertStrategy);
             } else if(modelPath.getName().endsWith(Constants.WDL_ALG_NAME.toLowerCase())) {
                 return WDLModel.loadFromStream(stream);
+            } else if(modelPath.getName().endsWith(Constants.MTL_ALG_NAME.toLowerCase())) {
+                return MTLModel.loadFromStream(stream);
             } else {
                 GzipStreamPair pair = GzipStreamPair.isGZipFormat(stream);
                 if(pair.isGzip()) {

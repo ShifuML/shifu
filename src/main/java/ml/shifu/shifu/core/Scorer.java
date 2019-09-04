@@ -428,6 +428,28 @@ public class Scorer {
                         log.error("error in model evaluation", e);
                     }
                 }
+            } else if (model instanceof MTLModel){
+                final MTLModel mtl = (MTLModel) model;
+                if(mtl.getInputCount() != pair.getInput().size()) {
+                    throw new RuntimeException("MTL and input size mismatch: mtl input Size = " + mtl.getInputCount()
+                            + "; data input Size = " + pair.getInput().size());
+                }
+
+                Callable<MLData> callable = new Callable<MLData>() {
+                    @Override
+                    public MLData call() {
+                        return new BasicMLData(mtl.compute(pair.getInput()));
+                    }
+                };
+                if(multiThread) {
+                    tasks.add(callable);
+                } else {
+                    try {
+                        modelResults.add(callable.call());
+                    } catch (Exception e) {
+                        log.error("error in MTL model evaluation", e);
+                    }
+                }
             } else {
                 throw new RuntimeException("unsupport models");
             }
@@ -524,6 +546,8 @@ public class Scorer {
                 } else if(model instanceof GenericModel) {
                     scores.add(toScore(score.getData(0)));
                 } else if(model instanceof WDLModel) {
+                    scores.add(toScore(score.getData(0)));
+                } else if (model instanceof MTLModel){
                     scores.add(toScore(score.getData(0)));
                 } else {
                     throw new RuntimeException("unsupport models");

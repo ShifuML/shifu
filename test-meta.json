@@ -1,0 +1,17 @@
+[ {
+  "group" : "basic",
+  "metaList" : [ {
+    "name" : "author",
+    "type" : "text",
+    "directive" : "input",
+    "minLength" : 1
+  } ]
+}, {
+  "group" : "sourceData",
+  "metaList" : [ {
+    "name" : "dataPath",
+    "type" : "text",
+    "directive" : "input",
+    "minLength" : 1
+  } ]
+} ]

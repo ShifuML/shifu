@@ -1,0 +1,100 @@
+{
+  "basic" : {
+    "name" : "ut",
+    "author" : "website",
+    "description" : "Created at 2019-07-24 23:12:07",
+    "version" : "0.12.0",
+    "runMode" : "DIST",
+    "postTrainOn" : false,
+    "customPaths" : { }
+  },
+  "dataSet" : {
+    "source" : "HDFS",
+    "dataPath" : "/user/website/cancer-judgement/DataSet1",
+    "dataDelimiter" : "|",
+    "headerPath" : "/user/website/cancer-judgement/DataSet1/.pig_header",
+    "headerDelimiter" : "|",
+    "filterExpressions" : "",
+    "weightColumnName" : "",
+    "targetColumnName" : "diagnosis|||diagnosis|||diagnosis",
+    "posTags" : [ "M|||M|||M" ],
+    "negTags" : [ "B|||B|||B" ],
+    "metaColumnNameFile" : "columns/meta.column.names",
+    "categoricalColumnNameFile" : "columns/categorical.column.names",
+    "validationDataPath" : null,
+    "validationFilterExpressions" : "",
+    "missingOrInvalidValues" : [ "", "*", "#", "?", "null", "~" ]
+  },
+  "stats" : {
+    "maxNumBin" : 10,
+    "cateMaxNumBin" : 0,
+    "binningMethod" : "EqualPositive",
+    "sampleRate" : 1.0,
+    "sampleNegOnly" : false,
+    "binningAlgorithm" : "SPDTI",
+    "psiColumnName" : ""
+  },
+  "varSelect" : {
+    "forceEnable" : true,
+    "candidateColumnNameFile" : null,
+    "forceSelectColumnNameFile" : "columns/forceselect.column.names",
+    "forceRemoveColumnNameFile" : "columns/forceremove.column.names",
+    "filterEnable" : true,
+    "filterNum" : 200,
+    "filterBy" : "KS",
+    "filterOutRatio" : 0.05,
+    "autoFilterEnable" : true,
+    "missingRateThreshold" : 0.98,
+    "correlationThreshold" : 1.0,
+    "minIvThreshold" : 0.0,
+    "minKsThreshold" : 0.0,
+    "postCorrelationMetric" : "IV",
+    "params" : null
+  },
+  "normalize" : {
+    "stdDevCutOff" : 6.0,
+    "sampleRate" : 1.0,
+    "sampleNegOnly" : false,
+    "normType" : "ZSCALE"
+  },
+  "train" : {
+    "baggingNum" : 1,
+    "baggingWithReplacement" : false,
+    "baggingSampleRate" : 1.0,
+    "validSetRate" : 0.2,
+    "numTrainEpochs" : 200,
+    "isContinuous" : false,
+    "workerThreadCount" : 4,
+    "algorithm" : "MTL",
+    "params" : {
+      "Propagation" : "R",
+      "LearningRate" : 0.1,
+      "NumHiddenNodes" : [ 50 ],
+      "NumHiddenLayers" : 1,
+      "RegularizedConstant" : 0.0,
+      "ActivationFunc" : [ "tanh" ]
+    },
+    "customPaths" : { }
+  },
+  "evals" : [ {
+    "name" : "Eval1",
+    "dataSet" : {
+      "source" : "HDFS",
+      "dataPath" : "/user/website/cancer-judgement/EvalSet1",
+      "dataDelimiter" : "|",
+      "headerPath" : "/user/website/cancer-judgement/EvalSet1/.pig_header",
+      "headerDelimiter" : "|",
+      "filterExpressions" : "",
+      "weightColumnName" : "",
+      "targetColumnName" : "diagnosis",
+      "posTags" : [ "M" ],
+      "negTags" : [ "B" ],
+      "metaColumnNameFile" : "columns/Eval1.meta.column.names"
+    },
+    "performanceBucketNum" : 10,
+    "performanceScoreSelector" : "mean",
+    "scoreMetaColumnNameFile" : "columns/Eval1champion.score.column.names",
+    "customPaths" : { },
+    "normAllColumns" : false
+  } ]
+}

@@ -15,6 +15,11 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
+import ml.shifu.guagua.util.MemoryLimitedList;
+import org.encog.mathutil.BoundMath;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -22,12 +27,6 @@ import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
-
-import org.encog.mathutil.BoundMath;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import ml.shifu.guagua.util.MemoryLimitedList;
 
 /**
  * To running gradient update in parallel.
@@ -50,8 +49,8 @@ public class WDLParallelGradient {
     private int[] testHighs;
 
     public WDLParallelGradient(final WideAndDeep wnd, int threadNumber, ConcurrentMap<Integer, Integer> inputIndexMap,
-            final MemoryLimitedList<WDLWorker.Data> trainData, final MemoryLimitedList<WDLWorker.Data> testData,
-            CompletionService<WDLParams> completionService) {
+                               final MemoryLimitedList<WDLWorker.Data> trainData, final MemoryLimitedList<WDLWorker.Data> testData,
+                               CompletionService<WDLParams> completionService) {
         this.threadNumber = threadNumber;
         this.wdl = wnd;
         this.inputIndexMap = inputIndexMap;
@@ -60,53 +59,57 @@ public class WDLParallelGradient {
         this.completionService = completionService;
 
         assert threadNumber > 0 && threadNumber < 33;
-        int recordCount = this.trainData.size();
-        this.trainLows = new int[threadNumber];
-        this.trainHighs = new int[threadNumber];
+        if(this.trainData != null && this.trainData.size() > 0) {
+            int recordCount = this.trainData.size();
+            this.trainLows = new int[threadNumber];
+            this.trainHighs = new int[threadNumber];
 
-        int stepCount = recordCount / threadNumber;
-        if(recordCount % threadNumber != 0) {
-            stepCount += (recordCount % threadNumber) / stepCount;
-        }
-        for(int i = 0; i < threadNumber; i++) {
-            this.trainLows[i] = i * stepCount;
-            if(i != threadNumber - 1) {
-                this.trainHighs[i] = this.trainLows[i] + stepCount - 1;
-            } else {
-                this.trainHighs[i] = recordCount - 1;
+            int stepCount = Math.max(recordCount / threadNumber, 1);
+            if(recordCount % threadNumber != 0) {
+                stepCount += (recordCount % threadNumber) / stepCount;
             }
-        }
-        LOG.info("Train record count: {}", recordCount);
-        LOG.info("Train lows: {}", Arrays.toString(trainLows));
-        LOG.info("Train highs: {}", Arrays.toString(trainHighs));
-
-        int testRecordCount = this.testData.size();
-        this.testLows = new int[threadNumber];
-        this.testHighs = new int[threadNumber];
-        int testStepCount = testRecordCount / threadNumber;
-        if(testRecordCount % threadNumber != 0) {
-            // move step count to append last gap to avoid last thread worse 2*testStepCount-1
-            testStepCount += (testRecordCount % threadNumber) / testStepCount;
-        }
-        for(int i = 0; i < threadNumber; i++) {
-            this.testLows[i] = i * testStepCount;
-            if(i != threadNumber - 1) {
-                this.testHighs[i] = this.testLows[i] + testStepCount - 1;
-            } else {
-                this.testHighs[i] = testRecordCount - 1;
+            for(int i = 0; i < threadNumber; i++) {
+                this.trainLows[i] = i * stepCount < recordCount ? i * stepCount: recordCount -1;
+                this.trainHighs[i] = this.trainLows[i] + stepCount - 1 < recordCount ?
+                        this.trainLows[i] + stepCount - 1 : recordCount - 1;
             }
+            LOG.info("Train record count: {}", recordCount);
+            LOG.info("Train lows: {}", Arrays.toString(trainLows));
+            LOG.info("Train highs: {}", Arrays.toString(trainHighs));
         }
 
-        LOG.info("Test record count: {}", testRecordCount);
-        LOG.info("Test lows: {}", Arrays.toString(testLows));
-        LOG.info("Test highs: {}", Arrays.toString(testHighs));
+        if(this.testData != null && this.testData.size() > 0) {
+            int testRecordCount = this.testData.size();
+            this.testLows = new int[threadNumber];
+            this.testHighs = new int[threadNumber];
+            int testStepCount = Math.max(testRecordCount / threadNumber, 1);
+            if(testRecordCount % threadNumber != 0) {
+                // move step count to append last gap to avoid last thread worse 2*testStepCount-1
+                testStepCount += (testRecordCount % threadNumber) / testStepCount;
+            }
+            for(int i = 0; i < threadNumber; i++) {
+                this.testLows[i] = i * testStepCount < testRecordCount ? i * testStepCount: testRecordCount - 1;
+                this.testHighs[i] = this.testLows[i] + testStepCount - 1 < testRecordCount ?
+                        this.testLows[i] + testStepCount - 1  : testRecordCount - 1;
+            }
+
+            LOG.info("Test record count: {}", testRecordCount);
+            LOG.info("Test lows: {}", Arrays.toString(testLows));
+            LOG.info("Test highs: {}", Arrays.toString(testHighs));
+        }
     }
 
     public WDLParams doCompute() {
         long start = System.currentTimeMillis();
         for(int i = 0; i < this.threadNumber; i++) {
-            this.completionService.submit(new GradientTask(this.wdl, this.inputIndexMap, this.trainData, this.testData,
-                    this.trainLows[i], this.trainHighs[i], this.testLows[i], this.testHighs[i]));
+            if(this.trainData != null && this.testData != null) {
+                this.completionService.submit(new GradientTask(this.wdl, this.inputIndexMap, this.trainData, this.testData,
+                        this.trainLows[i], this.trainHighs[i], this.testLows[i], this.testHighs[i]));
+            } else if(this.trainData != null) {
+                this.completionService.submit(new GradientTask(this.wdl, this.inputIndexMap, this.trainData, null,
+                        -1, -1, -1, -1));
+            }
+
         }
         WDLParams params = null;
         for(int i = 0; i < this.threadNumber; i++) {
@@ -141,8 +144,8 @@ public class WDLParallelGradient {
         private int testHigh;
 
         public GradientTask(final WideAndDeep wdl, ConcurrentMap<Integer, Integer> inputIndexMap,
-                final MemoryLimitedList<WDLWorker.Data> trainData, final MemoryLimitedList<WDLWorker.Data> testData,
-                int trainLow, int trainHigh, int testLow, int testHigh) {
+                            final MemoryLimitedList<WDLWorker.Data> trainData, final MemoryLimitedList<WDLWorker.Data> testData,
+                            int trainLow, int trainHigh, int testLow, int testHigh) {
             this.wnd = wdl.clone();
             this.inputIndexMap = inputIndexMap;
             this.trainData = trainData;
@@ -205,18 +208,20 @@ public class WDLParallelGradient {
             TASK_LOG.info("Start validation computation.");
             this.wnd.setIndex(0);
             // compute validation error
-            for(int i = testLow; i < testHigh; i++) {
-                WDLWorker.Data data = testData.get(i);
-                double[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data),
-                        getWideInputs(data));
-                double sigmoid = sigmoid(logits[0]);
-                if(index++ <= 0) {
-                    TASK_LOG.info("Index {}, logit {}, sigmoid {}, label {}.", index, logits[0], sigmoid,
-                            data.getLabel());
+            if(testData != null) {
+                for(int i = testLow; i < testHigh; i++) {
+                    WDLWorker.Data data = testData.get(i);
+                    double[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data),
+                            getWideInputs(data));
+                    double sigmoid = sigmoid(logits[0]);
+                    if(index++ <= 0) {
+                        TASK_LOG.info("Index {}, logit {}, sigmoid {}, label {}.", index, logits[0], sigmoid,
+                                data.getLabel());
+                    }
+                    validationSize += data.getWeight();
+                    double error = sigmoid - data.getLabel();
+                    validSumError += (error * error * data.getWeight());
                 }
-                validationSize += data.getWeight();
-                double error = sigmoid - data.getLabel();
-                validSumError += (error * error * data.getWeight());
             }
 
             TASK_LOG.info("training error is {} {}", trainSumError, validSumError);

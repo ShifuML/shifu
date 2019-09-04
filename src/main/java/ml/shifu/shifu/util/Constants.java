@@ -93,6 +93,7 @@ public interface Constants {
     public static final String GENERIC = "generic";
     public static final String TENSORFLOW = "tensorflow";
     public static final String WDL = "WDL";
+    public static final String MTL = "MTL";
 
     public static final String BZ2_SUFFIX = ".bz2";
     public static final String GZ_SUFFIX = ".gz";
@@ -366,5 +367,11 @@ public interface Constants {
      * Wide and deep model name
      */
     public static final String WDL_ALG_NAME = "WDL";
+
+    /**
+     * multi-task learning model name
+     */
+    public static final String MTL_ALG_NAME = "MTL";
+
 
 }
