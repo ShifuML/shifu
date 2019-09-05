@@ -30,6 +30,7 @@ from tensorflow.python.saved_model import builder
 from tensorflow.python.saved_model import signature_constants
 from tensorflow.python.saved_model import signature_def_utils
 from tensorflow.python.saved_model import tag_constants
+from tensorflow.python.estimator import model_fn as model_fn_lib
 import tensorflow as tf
 import numpy as np
 import sys
@@ -76,7 +77,6 @@ def get_loss_func(name):
         return tf.losses.log_loss
     else:
         return tf.losses.mean_squared_error
-
 
 def get_optimizer(name):
     if name == None:
@@ -403,7 +403,7 @@ if __name__ == "__main__":
     parser.add_argument("-actfuncs", action='store', dest='actfuncs', help="act funcs of each hidden layers",
                         nargs='+', type=str)
     parser.add_argument("-minibatch", action='store', dest='minibatch', help="batch size of each iteration", type=int)
-    parser.add_argument("-iscontinuous", action='store', dest='iscontinuous', help="continuous training or not", default=False)
+    parser.add_argument("-iscontinuous", action='store', dest='i43scontinuous', help="continuous training or not", default=False)
 
     args, unknown = parser.parse_known_args()
 
@@ -475,6 +475,17 @@ if __name__ == "__main__":
                                         model_dir='./models/tmp',
                                         save_checkpoints_secs=TIME_INTERVAL_TO_DO_VALIDATION)
     dnn = tf.estimator.Estimator(model_fn=dnn_model_fn, params={'shifu_context': context}, config=run_config)
+
+    tprint("DEBUG DEBUG DEBUG START")
+    
+    features, target = train_input_fn();
+    estimator_spec = dnn.model_fn(features, target, model_fn_lib.ModeKeys.TRAIN, dnn.config)
+    tprint("DEBUG: loss: "+str(estimator_spec.loss))
+    tprint("DEBUG: train_op: "+str(estimator_spec.train_op))
+
+    tprint(str(estimator_spec))
+    
+    tprint("DEBUG DEBUG DEBUG end")
 
     # dnn.train(input_fn=train_input_fn, steps=context['epoch'])
     tf.estimator.train_and_evaluate(dnn, train_spec, eval_spec)
