@@ -32,6 +32,7 @@ from tensorflow.python.saved_model import signature_def_utils
 from tensorflow.python.saved_model import tag_constants
 from tensorflow.python.estimator import model_fn as model_fn_lib
 import tensorflow as tf
+from tensorflow import keras
 import numpy as np
 import sys
 import os
@@ -372,6 +373,13 @@ def dnn_model_fn(features, labels, mode, params):
             loss=average_loss,
             eval_metric_ops=eval_metrics)
 
+def get_model(optimizer_name, learning_rate, feature_count):
+    model = keras.Sequential()
+    model.add(keras.layers.Dense(units=40, activation='relu', input_shape=(feature_count,)))
+    model.add(keras.layers.Dense(units=1, activation='sigmoid'))
+    
+    model.compile(loss='binary_crossentropy', optimizer=get_optimizer(optimizer_name)(learning_rate=learning_rate), metrics=['mse'])
+    return model
 
 if __name__ == "__main__":
     print("Training input arguments: " + str(sys.argv))
@@ -403,7 +411,7 @@ if __name__ == "__main__":
     parser.add_argument("-actfuncs", action='store', dest='actfuncs', help="act funcs of each hidden layers",
                         nargs='+', type=str)
     parser.add_argument("-minibatch", action='store', dest='minibatch', help="batch size of each iteration", type=int)
-    parser.add_argument("-iscontinuous", action='store', dest='i43scontinuous', help="continuous training or not", default=False)
+    parser.add_argument("-iscontinuous", action='store', dest='iscontinuous', help="continuous training or not", default=False)
 
     args, unknown = parser.parse_known_args()
 
@@ -474,18 +482,20 @@ if __name__ == "__main__":
     run_config = tf.estimator.RunConfig(tf_random_seed=19830610,
                                         model_dir='./models/tmp',
                                         save_checkpoints_secs=TIME_INTERVAL_TO_DO_VALIDATION)
-    dnn = tf.estimator.Estimator(model_fn=dnn_model_fn, params={'shifu_context': context}, config=run_config)
+    new_model = get_model("adam", learning_rate, len(feature_column_nums))
+            
+    dnn = tf.keras.estimator.model_to_estimator(keras_model=new_model)
 
-    tprint("DEBUG DEBUG DEBUG START")
+    #tprint("DEBUG DEBUG DEBUG START")
     
-    features, target = train_input_fn();
-    estimator_spec = dnn.model_fn(features, target, model_fn_lib.ModeKeys.TRAIN, dnn.config)
-    tprint("DEBUG: loss: "+str(estimator_spec.loss))
-    tprint("DEBUG: train_op: "+str(estimator_spec.train_op))
+    #features, target = train_input_fn();
+    #estimator_spec = dnn.model_fn(features, target, model_fn_lib.ModeKeys.TRAIN, dnn.config)
+    #tprint("DEBUG: loss: "+str(estimator_spec.loss))
+    #tprint("DEBUG: train_op: "+str(estimator_spec.train_op))
 
-    tprint(str(estimator_spec))
+    #tprint(str(estimator_spec))
     
-    tprint("DEBUG DEBUG DEBUG end")
+    #tprint("DEBUG DEBUG DEBUG end")
 
     # dnn.train(input_fn=train_input_fn, steps=context['epoch'])
     tf.estimator.train_and_evaluate(dnn, train_spec, eval_spec)

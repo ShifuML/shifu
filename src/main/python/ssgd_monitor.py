@@ -217,7 +217,7 @@ def main(_):
         # import data
         context = load_data(training_data_path)
 
-        # split data into batch
+        # split data into batch TODO check below memory cost
         total_batch = int(len(context["train_data"]) / BATCH_SIZE)
         x_batch = np.array_split(context["train_data"], total_batch)
         y_batch = np.array_split(context["train_target"], total_batch)
