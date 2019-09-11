@@ -119,12 +119,12 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
     @Override
     public boolean doStats() throws Exception {
         log.info("delete historical pre-train data");
-
         ShifuFileUtils.deleteFile(pathFinder.getPreTrainingStatsPath(), modelConfig.getDataSet().getSource());
         Map<String, String> paramsMap = new HashMap<String, String>();
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
         int columnParallel = 0;
         if(columnConfigList.size() <= 100) {
+            // FIXME , could be checked with # of mappers
             columnParallel = columnConfigList.size() * 2;
         }  else if ( columnConfigList.size() <= 500 ) {
             columnParallel = columnConfigList.size();

@@ -40,7 +40,7 @@ n_workers = int(os.environ["WORKER_CNT"])  # the number of worker nodes
 job_name = os.environ["JOB_NAME"]
 task_index = int(os.environ["TASK_ID"])
 socket_server_port = int(os.environ["SOCKET_SERVER_PORT"])  # The port of local java socket server listening, to sync worker training intermediate information with master
-total_training_data_number = int(os.environ["TOTAL_TRAINING_DATA_NUMBER"]) # total data
+total_training_data_number = int(os.environ["TOTAL_TRAINING_DATA_NUMBER"]) # total data 200468 #
 feature_column_nums = [int(s) for s in str(os.environ["SELECTED_COLUMN_NUMS"]).split(' ')]  # selected column numbers
 FEATURE_COUNT = len(feature_column_nums)
 
@@ -295,9 +295,9 @@ def main(_):
         if is_chief and not is_continue_train:
             sess.run(init_tokens_op)
             #start_tensorboard(tmp_model_path)
-            logging.info("chief start waiting 40 sec")
-            time.sleep(40)  # grace period to wait on other workers before starting training
-            logging.info("chief finish waiting 40 sec")
+            logging.info("Chief worker start waiting 30 sec")
+            time.sleep(30)  # grace period to wait on other workers before starting training
+            logging.info("Chief worker finish waiting 30 sec")
 
         # Train until hook stops session
         logging.info('Starting training on worker %d' % task_index)
@@ -362,7 +362,7 @@ def main(_):
             saver = tf.train.Saver()
             with tf.Session() as sess:
                 ckpt = tf.train.get_checkpoint_state(tmp_model_path)
-                logging.info("ckpt: {}".format(ckpt))
+                logging.info("Ckpt: {}".format(ckpt))
                 assert ckpt, "Invalid model checkpoint path: {}".format(tmp_model_path)
                 saver.restore(sess, ckpt.model_checkpoint_path)
 
@@ -384,7 +384,7 @@ def main(_):
 
             f = tf.gfile.GFile(tmp_model_path + "/timeline.json", mode="w+")
             f.write(ctf)
-            time.sleep(40) # grace period to wait before closing session
+            time.sleep(30) # grace period to wait before closing session
 
         #sess.close()
         logging.info('Session from worker %d closed cleanly' % task_index)

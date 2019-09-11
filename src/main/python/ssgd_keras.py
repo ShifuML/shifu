@@ -42,7 +42,7 @@ n_workers = int(os.environ["WORKER_CNT"])  # the number of worker nodes
 job_name = os.environ["JOB_NAME"]
 task_index = int(os.environ["TASK_ID"])
 socket_server_port = int(os.environ["SOCKET_SERVER_PORT"])  # The port of local java socket server listening, to sync worker training intermediate information with master
-total_training_data_number = int(os.environ["TOTAL_TRAINING_DATA_NUMBER"]) # total data
+total_training_data_number = 200468 # int(os.environ["TOTAL_TRAINING_DATA_NUMBER"]) # total data
 feature_column_nums = [int(s) for s in str(os.environ["SELECTED_COLUMN_NUMS"]).split(' ')]  # selected column numbers
 FEATURE_COUNT = len(feature_column_nums)
 
@@ -190,10 +190,18 @@ def get_loss_func(name):
         return tf.losses.mean_squared_error
 
 def get_model(model_conf, learning_rate):
-    model = keras.Sequential()
-    model.add(keras.layers.Dense(units=40, activation='relu', input_shape=(FEATURE_COUNT,)))
-    model.add(keras.layers.Dense(units=1, activation='sigmoid'))
-    
+    inputs = keras.Input(shape=(FEATURE_COUNT,), name='shifu_input_0')  # Returns a placeholder tensor
+
+    # A layer instance is callable on a tensor, and returns a tensor.
+    x = keras.layers.Dense(40, activation='relu', name='hidden_layer_1')(inputs)
+    predictions = keras.layers.Dense(1, activation='sigmoid', name='shifu_output_0')(x)
+
+    model = tf.keras.models.Model(inputs, predictions)
+
+    #model = keras.Sequential()
+    #model.add(keras.layers.Dense(units=40, activation='relu', input_shape=(FEATURE_COUNT,)))
+    #model.add(keras.layers.Dense(units=1, activation='sigmoid'))
+
     model.compile(loss='binary_crossentropy', optimizer=get_optimizer(model_conf['train']['params']['Propagation'])(learning_rate=learning_rate), metrics=['mse'])
     return model
 
@@ -342,8 +350,8 @@ def main(_):
                                                       cluster=cluster,
                                                       worker_device=worker_device
                                                       )):
-            input_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, FEATURE_COUNT),
-                                               name="shifu_input_0")
+            #input_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, FEATURE_COUNT),
+            #                       name="shifu_input_0")
             label_placeholder = tf.placeholder(dtype=tf.int32, shape=(None, 1))
             sample_weight_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, 1))
 
@@ -358,17 +366,27 @@ def main(_):
             #    model_fn_lib.ModeKeys.TRAIN, 
             #    {'shifu_context': shifu_context})
             #logging.info("spec: "+str(estimator_spec))
-            
+            keras.backend.set_learning_phase(1)
+            keras.backend.manual_variable_initialization(True)
             new_model = get_model(model_conf, learning_rate)
+            logging.info("Model inputs: " + str(new_model.inputs) + "; Model outputs: " + str(new_model.output) + "; Loss: " + new_model.loss + "; optimizer: " + new_model.optimizer)
+            #estimator = tf.keras.estimator.model_to_estimator(keras_model=new_model)
+            #logging.info("new esti: "+str(estimator))
             
-            estimator = tf.keras.estimator.model_to_estimator(keras_model=new_model)
-            logging.info("new esti: "+str(estimator))
+                # Train the model
+            train_input_fn = tf.estimator.inputs.numpy_input_fn(
+                x={'input_feature': np.asarray(context["train_data"], dtype=np.float32),
+                   'sample_weight': np.asarray(context["train_data_sample_weight"], dtype=np.float32)},
+                y=np.asarray(context["train_target"], dtype=np.float32),
+                batch_size=shifu_context["batch_size"],
+                num_epochs=shifu_context['epoch'],
+                shuffle=False)
 
-            loss = estimator_spec.loss
+            loss = get_loss_func(shifu_context["loss_func"])(predictions=new_model.output, labels=label_placeholder, weights=sample_weight_placeholder)
             opt = tf.train.SyncReplicasOptimizer(
                 #tf.train.GradientDescentOptimizer(learning_rate),
                 #tf.train.AdamOptimizer(learning_rate=learning_rate),
-                get_optimizer(model_conf['train']['params']['Propagation'])(learning_rate=learning_rate),
+                new_model.optimizer,
                 replicas_to_aggregate=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE * REPLICAS_TO_AGGREGATE_RATIO),
                 total_num_replicas=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE),
                 name="shifu_sync_replicas")
@@ -378,7 +396,7 @@ def main(_):
                                   trainable=False,
                                   dtype=tf.int32)
 
-            train_step = opt.minimize(loss, global_step=global_step)
+            train_step = opt.minimize(new_model.loss, global_step=global_step)
             logging.info("train_step: "+str(train_step))
             # init ops
             init_tokens_op = opt.get_init_tokens_op()
@@ -429,9 +447,9 @@ def main(_):
         if is_chief and not is_continue_train:
             sess.run(init_tokens_op)
             #start_tensorboard(tmp_model_path)
-            logging.info("chief start waiting 40 sec")
-            time.sleep(40)  # grace period to wait on other workers before starting training
-            logging.info("chief finish waiting 40 sec")
+            logging.info("chief start waiting 20 seconds")
+            time.sleep(20)  # grace period to wait on other workers before starting training
+            logging.info("chief finish waiting 20 seconds")
 
         # Train until hook stops session
         logging.info('Starting training on worker %d' % task_index)
@@ -442,7 +460,7 @@ def main(_):
             try:
                 start = time.time()
                 for i in range(total_batch):
-                    train_feed = {input_placeholder: x_batch[i],
+                    train_feed = {new_model.inputs[0]: x_batch[i],
                                   label_placeholder: y_batch[i],
                                   sample_weight_placeholder: sample_w_batch[i]}
 
@@ -451,7 +469,7 @@ def main(_):
                 
                 valid_start = time.time()
                 # compute validation loss TODO, check if batch compute
-                valid_loss, gs = sess.run([loss, global_step], feed_dict={input_placeholder: valid_x,
+                valid_loss, gs = sess.run([loss, global_step], feed_dict={new_model.inputs[0]: valid_x,
                                                                           label_placeholder: valid_y,
                                                                           sample_weight_placeholder: valid_sample_w}
                                           )
@@ -477,22 +495,11 @@ def main(_):
         # We just need to make sure chief worker exit with success status is enough
         if is_chief:
             tf.reset_default_graph()
-
-            # add placeholders for input images (and optional labels)
-            x = tf.placeholder(dtype=tf.float32, shape=(None, FEATURE_COUNT),
-                               name="shifu_input_0")
-            with tf.get_default_graph().as_default():
-                if BUILD_MODEL_BY_CONF_ENABLE and model_conf is not None:
-                    output_digits, output_nodes = generate_from_modelconf(x, model_conf)
-                else:
-                    output_digits = nn_layer(x, FEATURE_COUNT, HIDDEN_NODES_COUNT, act_op_name="hidden_layer_1")
-                    output_nodes = HIDDEN_NODES_COUNT
-
-                logging.info("output_nodes : " + str(output_nodes))
-                prediction = nn_layer(output_digits, output_nodes, 1, act=tf.nn.sigmoid,
-                                      act_op_name="shifu_output_0")
-
             # restore from last checkpoint
+            with tf.get_default_graph().as_default():
+                new_model = get_model(model_conf, learning_rate)
+                logging.info("Model inputs: " + str(new_model.inputs) + "; Model outputs: " + str(new_model.output))
+                
             saver = tf.train.Saver()
             with tf.Session() as sess:
                 ckpt = tf.train.get_checkpoint_state(tmp_model_path)
@@ -505,10 +512,10 @@ def main(_):
                 # exported signatures defined in code
                 simple_save(session=sess, export_dir=final_model_path,
                             inputs={
-                                "shifu_input_0": x
+                                "shifu_input_0": new_model.inputs[0]
                             },
                             outputs={
-                                "shifu_output_0": prediction
+                                "shifu_output_0": new_model.output
                             })
                 logging.info("Exported saved_model")
 
@@ -518,7 +525,7 @@ def main(_):
 
             f = tf.gfile.GFile(tmp_model_path + "/timeline.json", mode="w+")
             f.write(ctf)
-            time.sleep(40) # grace period to wait before closing session
+            time.sleep(20) # grace period to wait before closing session
 
         #sess.close()
         logging.info('Session from worker %d closed cleanly' % task_index)

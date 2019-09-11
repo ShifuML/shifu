@@ -255,6 +255,20 @@ def dnn_model_fn(features, labels, mode, params):
             total_num_replicas=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE),
             name="shifu_sync_replicas")
         train_op = opt.minimize(average_loss, global_step=tf.train.get_global_step())
+                    # init ops
+        init_tokens_op = opt.get_init_tokens_op()
+        # initialize local step
+        local_init = opt.local_step_init_op
+        if shifu_context["is_chief"]:
+            # initializes token queue
+            local_init = opt.chief_init_op
+
+        # checks if global vars are init
+        ready_for_local_init = opt.ready_for_local_init_op
+
+        # Initializing the variables
+        init_op = tf.initialize_all_variables()
+        logging.info("---Variables initialized---")
         return tf.estimator.EstimatorSpec(mode=mode, loss=average_loss, train_op=train_op)
 
     eval_metrics = {"a-loss": tf.metrics.mean_squared_error(predictions=prediction, labels=labels,
@@ -338,14 +352,27 @@ def main(_):
     logging.info("job_name:%s, task_index:%d" % (job_name, task_index))
 
     ps_hosts = cluster_spec['ps']
-    worker_hosts = cluster_spec['worker']a
-    cluster = {'chief': [worker_hosts[0]],
-               'ps': ps_hosts,s
+    worker_hosts = cluster_spec['worker']
+    
+    myaddr = socket.gethostbyname(socket.getfqdn(socket.gethostname()))
+    logging.info("myaddr = %s" % myaddr)
+    
+    chief = worker_hosts[0]
+    new_workers = worker_hosts[1:len(worker_hosts)]
+
+    cluster = {'chief': [chief],
+               'ps': ps_hosts,
                'worker': worker_hosts}
+    new_job_name = 'chief' if (task_index == 0 and job_name == 'worker') else job_name
+    
+    cluster_task_index = task_index
+    if job_name == 'worker' and task_index != 0:  # checks if parameter server
+        cluster_task_index -= 1;
+
     os.environ['TF_CONFIG'] = json.dumps(
                                 {'cluster': cluster,
-                                 'task': {'type': job_name, 'index': task_index}})
-    logging.info("OF_CONFIG = %s" % os.environ['TF_CONFIG'])
+                                 'task': {'type': new_job_name, 'index': task_index}})
+    logging.info("TF_CONFIG = %s" % os.environ['TF_CONFIG'])
     if job_name == 'ps':  # checks if parameter server
         server = tf.train.Server(cluster,
                                  job_name="ps",
@@ -389,7 +416,7 @@ def main(_):
         learning_rate = 0.003
 
     shifu_context = {
-            "feature_column_nums": feature_column_nums, "layers": model_conf['train']['params']['NumHiddenNodes'], "batch_size": BATCH_SIZE, "feature_count": FEATURE_COUNT, "model_name": model_conf['basic']['name'],
+            "feature_column_nums": feature_column_nums, "layers": model_conf['train']['params']['NumHiddenNodes'], "batch_size": BATCH_SIZE, "feature_count": FEATURE_COUNT, "model_name": model_conf['basic']['name'], "is_chief": is_chief, 
             "export_dir": final_model_path, "epoch": EPOCH, "sample_weight_column_num": sample_weight_column_num,
             "learning_rate": learning_rate, "loss_func": model_conf['train']['params']['Loss'], "optimizer": "adam",
             "weight_initalizer": "xavier", "act_funcs": model_conf['train']['params']['ActivationFunc']}
