@@ -369,7 +369,7 @@ def main(_):
             keras.backend.set_learning_phase(1)
             keras.backend.manual_variable_initialization(True)
             new_model = get_model(model_conf, learning_rate)
-            logging.info("Model inputs: " + str(new_model.inputs) + "; Model outputs: " + str(new_model.output) + "; Loss: " + new_model.loss + "; optimizer: " + new_model.optimizer)
+            logging.info("Model inputs: " + str(new_model.inputs) + "; Model outputs: " + str(new_model.output) + "; Loss: " + str(new_model.loss) + "; optimizer: " + str(new_model.optimizer))
             #estimator = tf.keras.estimator.model_to_estimator(keras_model=new_model)
             #logging.info("new esti: "+str(estimator))
             
