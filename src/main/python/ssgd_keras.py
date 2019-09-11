@@ -42,7 +42,7 @@ n_workers = int(os.environ["WORKER_CNT"])  # the number of worker nodes
 job_name = os.environ["JOB_NAME"]
 task_index = int(os.environ["TASK_ID"])
 socket_server_port = int(os.environ["SOCKET_SERVER_PORT"])  # The port of local java socket server listening, to sync worker training intermediate information with master
-total_training_data_number = 200468 # int(os.environ["TOTAL_TRAINING_DATA_NUMBER"]) # total data
+total_training_data_number = int(os.environ["TOTAL_TRAINING_DATA_NUMBER"]) # total data 200468
 feature_column_nums = [int(s) for s in str(os.environ["SELECTED_COLUMN_NUMS"]).split(' ')]  # selected column numbers
 FEATURE_COUNT = len(feature_column_nums)
 
@@ -177,14 +177,17 @@ def get_initalizer(name):
 
 def get_loss_func(name):
     if name == None:
+        logging.warn("Loss 'name' is not specidied, set to mean_squared_error.")
         return tf.losses.mean_squared_error
     name = name.lower()
 
-    if 'squared' == name:
+    if 'squared' == name or 'mse' == name or 'mean_squared_error' == name:
         return tf.losses.mean_squared_error
     elif 'absolute' == name:
         return tf.losses.absolute_difference
     elif 'log' == name:
+        return tf.losses.log_loss
+    elif 'binary_crossentropy' == name:
         return tf.losses.log_loss
     else:
         return tf.losses.mean_squared_error
@@ -197,10 +200,6 @@ def get_model(model_conf, learning_rate):
     predictions = keras.layers.Dense(1, activation='sigmoid', name='shifu_output_0')(x)
 
     model = tf.keras.models.Model(inputs, predictions)
-
-    #model = keras.Sequential()
-    #model.add(keras.layers.Dense(units=40, activation='relu', input_shape=(FEATURE_COUNT,)))
-    #model.add(keras.layers.Dense(units=1, activation='sigmoid'))
 
     model.compile(loss='binary_crossentropy', optimizer=get_optimizer(model_conf['train']['params']['Propagation'])(learning_rate=learning_rate), metrics=['mse'])
     return model
@@ -382,11 +381,13 @@ def main(_):
                 num_epochs=shifu_context['epoch'],
                 shuffle=False)
 
-            loss = get_loss_func(shifu_context["loss_func"])(predictions=new_model.output, labels=label_placeholder, weights=sample_weight_placeholder)
+            loss = get_loss_func(new_model.loss)(predictions=new_model.output, labels=label_placeholder, weights=sample_weight_placeholder)
+            #loss = training_utils.get_loss_function(new_model.loss).fn(predictions=new_model.output, labels=label_placeholder, weights=sample_weight_placeholder)
+            
             opt = tf.train.SyncReplicasOptimizer(
                 #tf.train.GradientDescentOptimizer(learning_rate),
                 #tf.train.AdamOptimizer(learning_rate=learning_rate),
-                new_model.optimizer,
+                new_model.optimizer.optimizer,
                 replicas_to_aggregate=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE * REPLICAS_TO_AGGREGATE_RATIO),
                 total_num_replicas=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE),
                 name="shifu_sync_replicas")
@@ -396,7 +397,7 @@ def main(_):
                                   trainable=False,
                                   dtype=tf.int32)
 
-            train_step = opt.minimize(new_model.loss, global_step=global_step)
+            train_step = opt.minimize(loss, global_step=global_step)
             logging.info("train_step: "+str(train_step))
             # init ops
             init_tokens_op = opt.get_init_tokens_op()
