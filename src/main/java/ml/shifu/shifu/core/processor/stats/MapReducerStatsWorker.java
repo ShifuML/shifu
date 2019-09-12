@@ -122,42 +122,10 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         ShifuFileUtils.deleteFile(pathFinder.getPreTrainingStatsPath(), modelConfig.getDataSet().getSource());
         Map<String, String> paramsMap = new HashMap<String, String>();
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
-        int columnParallel = 0;
-        if(columnConfigList.size() <= 100) {
-            // FIXME , could be checked with # of mappers
-            columnParallel = columnConfigList.size() * 2;
-        }  else if ( columnConfigList.size() <= 500 ) {
-            columnParallel = columnConfigList.size();
-        } else if(columnConfigList.size() <= 1000) {
-            // 1000 => 200 reducers
-            columnParallel = columnConfigList.size() / 2;
-        } else if(columnConfigList.size() > 1000 && columnConfigList.size() <= 2000) {
-            // 2000 => 320 reducers
-            columnParallel = columnConfigList.size() / 4;
-        } else if(columnConfigList.size() > 2000 && columnConfigList.size() <= 3000) {
-            // 3000 => 420 reducers
-            columnParallel = columnConfigList.size() / 6;
-        } else if(columnConfigList.size() > 3000 && columnConfigList.size() <= 4000) {
-            // 4000 => 500
-            columnParallel = columnConfigList.size() / 8;
-        } else {
-            // 5000 => 500
-            columnParallel = columnConfigList.size() / 10;
-        }
-        // limit max reducer to 999
-        int parallelNumbByVolume = getParallelNumByDataVolume();
-        if(columnParallel < parallelNumbByVolume) {
-            columnParallel = parallelNumbByVolume;
-            log.info("Adjust parallel number to {} according data volume", columnParallel);
-        }
-        columnParallel = columnParallel > 999 ? 999 : columnParallel;
+        int columnParallel = getColumnParallelValue();
         paramsMap.put("column_parallel", Integer.toString(columnParallel));
 
         paramsMap.put("histo_scale_factor", Environment.getProperty("shifu.stats.histo.scale.factor", "100"));
-
-        // FIXME how to estimate mapper size then to estimate reducer size, in stats,
-        // reducer size is estimated by column_parallel is not a good
-        // new PigInputFormat().getSplits(jobcontext)
 
         try {
             runStatsPig(paramsMap);
@@ -182,10 +150,42 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         runPSI();
 
-        //run daily stat compute
+        // run daily stat compute
         updateDateStatWithMRJob();
 
         return true;
+    }
+
+    /**
+     * Logic to tune # of reducers in 1st MR job.
+     */
+    private int getColumnParallelValue() throws IOException {
+        int columnParallel = 0;
+        if(columnConfigList.size() <= 100) {
+            columnParallel = columnConfigList.size() * 2;
+        } else if(columnConfigList.size() <= 500) {
+            columnParallel = columnConfigList.size();
+        } else if(columnConfigList.size() <= 1000) {
+            // 1000 => 200 reducers
+            columnParallel = columnConfigList.size() / 2;
+        } else if(columnConfigList.size() > 1000 && columnConfigList.size() <= 2000) {
+            // 2000 => 320 reducers
+            columnParallel = columnConfigList.size() / 4;
+        } else if(columnConfigList.size() > 2000 && columnConfigList.size() <= 3000) {
+            // 3000 => 420 reducers
+            columnParallel = columnConfigList.size() / 6;
+        } else if(columnConfigList.size() > 3000 && columnConfigList.size() <= 4000) {
+            // 4000 => 500
+            columnParallel = columnConfigList.size() / 8;
+        } else {
+            // 5000 => 500
+            columnParallel = columnConfigList.size() / 10;
+        }
+        // limit max reducer to 999
+        int parallelNumbByVolume = getParallelNumByDataVolume();
+        columnParallel = Math.min(columnParallel, parallelNumbByVolume);
+        columnParallel = columnParallel > 999 ? 999 : columnParallel;
+        return columnParallel;
     }
 
     private int getParallelNumByDataVolume() throws IOException {
@@ -256,9 +256,9 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
     }
 
     protected void updateDateStatWithMRJob() throws IOException, InterruptedException, ClassNotFoundException {
-        if(StringUtils.isEmpty(this.modelConfig.getDateColumnName())){
+        if(StringUtils.isEmpty(this.modelConfig.getDateColumnName())) {
             log.info("ModelConfig#dataSet#dateColumnName is not set, skip updateDateStatWithMRJob.");
-            return ;
+            return;
         }
 
         RawSourceData.SourceType source = this.modelConfig.getDataSet().getSource();
@@ -343,7 +343,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         }
         Collections.sort(list, new Comparator<Path>() {
 
-            private Integer getDigitInPath(String path){
+            private Integer getDigitInPath(String path) {
                 String resultStr = StringUtils.substringBefore(StringUtils.substringAfterLast(path, "-"), ".");
                 if(StringUtils.isEmpty(resultStr)) {
                     return 0;
@@ -357,9 +357,10 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             }
         });
         String dateStatsOutputFileName = this.modelConfig.getStats().getDateStatsOutputFileName();
-        File file = new File(StringUtils.isEmpty(dateStatsOutputFileName)? LOCAL_DATE_STATS_CSV_FILE_NAME : dateStatsOutputFileName);
+        File file = new File(StringUtils.isEmpty(dateStatsOutputFileName) ? LOCAL_DATE_STATS_CSV_FILE_NAME
+                : dateStatsOutputFileName);
         OutputStream out = org.apache.commons.io.FileUtils.openOutputStream(file);
-        for(Path p : list){
+        for(Path p: list) {
             FSDataInputStream in = hdfs.open(p);
             GZIPInputStream gzin = new GZIPInputStream(in);
             IOUtils.copy(gzin, out);
@@ -368,7 +369,6 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         IOUtils.closeQuietly(out);
         log.info("Copy file to local:" + file.getAbsolutePath());
     }
-
 
     protected void updateBinningInfoWithMRJob() throws IOException, InterruptedException, ClassNotFoundException {
         RawSourceData.SourceType source = this.modelConfig.getDataSet().getSource();
@@ -461,10 +461,10 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
     private void prepareJobConf(RawSourceData.SourceType source, final Configuration conf, String filePath)
             throws IOException {
         // add jars to hadoop mapper and reducer
-        if(StringUtils.isNotEmpty(filePath)){
-            new GenericOptionsParser(conf, new String[]{"-libjars", addRuntimeJars(), "-files", filePath});
-        }else{
-            new GenericOptionsParser(conf, new String[]{"-libjars", addRuntimeJars()});
+        if(StringUtils.isNotEmpty(filePath)) {
+            new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars(), "-files", filePath });
+        } else {
+            new GenericOptionsParser(conf, new String[] { "-libjars", addRuntimeJars() });
         }
 
         conf.setBoolean(CombineInputFormat.SHIFU_VS_SPLIT_COMBINABLE, true);
@@ -714,23 +714,26 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
     }
 
     public void runPSI() throws IOException {
-        //check if could run PSI
+        // check if could run PSI
         boolean toRunPSIWithStats = Environment.getBoolean("shifu.stats.psi.together", true);
-        if(!toRunPSIWithStats){
+        if(!toRunPSIWithStats) {
             log.info("shifu.stats.psi.together is not set, skip PSI calculate.");
             return;
         }
-        if(StringUtils.isEmpty(modelConfig.getPsiColumnName())){
+        if(StringUtils.isEmpty(modelConfig.getPsiColumnName())) {
             log.info("ModelConfig#stats#psiColumnName is not set, skip PSI calculate.");
             return;
         }
         ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(columnConfigList,
                 modelConfig.getPsiColumnName());
         if(columnConfig == null || isBadPSIColumn(columnConfig.getColumnStats().getDistinctCount())) {
-            log.error("Unable compute PSI with ModelConfig#stats#psiColumnName \"{}\", the distinct count {} should be [2, 1000], not match ColumnConfig#columnBinning#binCategory count",
+            log.error(
+                    "Unable compute PSI with ModelConfig#stats#psiColumnName \"{}\", the distinct count {} should be [2, 1000], not match ColumnConfig#columnBinning#binCategory count",
                     columnConfig != null ? columnConfig.getColumnName() : "unknown",
-                    columnConfig != null ? (columnConfig.getColumnStats().getDistinctCount() == null ?
-                            "null" : columnConfig.getColumnStats().getDistinctCount()): "null");
+                    columnConfig != null
+                            ? (columnConfig.getColumnStats().getDistinctCount() == null ? "null"
+                                    : columnConfig.getColumnStats().getDistinctCount())
+                            : "null");
             return;
         }
         log.info("Start to use {} to compute the PSI ", columnConfig.getColumnName());
@@ -757,7 +760,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(),
                 modelConfig.getDataSet().getSource());
-        if ( CollectionUtils.isEmpty(scanners) ) {
+        if(CollectionUtils.isEmpty(scanners)) {
             log.info("The PSI got failure during the computation");
             return;
         }
@@ -768,19 +771,18 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         List<String> unitStats = new ArrayList<String>(this.columnConfigList.size());
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
-                //String[] output = scanner.nextLine().trim().split("\\|");
+                // String[] output = scanner.nextLine().trim().split("\\|");
                 String[] output = Lists.newArrayList(splitter.split(scanner.nextLine())).toArray(new String[0]);
                 try {
                     int columnNum = Integer.parseInt(output[0]);
                     ColumnConfig config = this.columnConfigList.get(columnNum);
                     config.setPSI(Double.parseDouble(output[1]));
-                    unitStats.add(output[0]
-                            + "|" + output[2] // PSI std
+                    unitStats.add(output[0] + "|" + output[2] // PSI std
                             + "|" + output[3] // cosine
                             + "|" + output[4] // cosine std
                             + "|" + output[5]);
                     // config.setUnitStats(
-                    //        Arrays.asList(StringUtils.split(output[2], CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
+                    // Arrays.asList(StringUtils.split(output[2], CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
                 } catch (Exception e) {
                     log.error("error in parsing", e);
                 }
