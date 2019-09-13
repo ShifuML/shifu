@@ -259,6 +259,7 @@ def dnn_model_fn(features, labels, mode, params):
         init_tokens_op = opt.get_init_tokens_op()
         # initialize local step
         local_init = opt.local_step_init_op
+        sync_replicas_hook = opt.make_session_run_hook(shifu_context["is_chief"])
         if shifu_context["is_chief"]:
             # initializes token queue
             local_init = opt.chief_init_op
@@ -269,7 +270,10 @@ def dnn_model_fn(features, labels, mode, params):
         # Initializing the variables
         init_op = tf.initialize_all_variables()
         logging.info("---Variables initialized---")
-        return tf.estimator.EstimatorSpec(mode=mode, loss=average_loss, train_op=train_op)
+        stop_hook = tf.train.StopAtStepHook(num_steps=shifu_context['epoch'])
+        chief_hooks = [sync_replicas_hook, stop_hook]
+
+        return tf.estimator.EstimatorSpec(mode=mode, loss=average_loss, train_op=train_op, training_chief_hooks=chief_hooks, training_hooks=[sync_replicas_hook])
 
     eval_metrics = {"a-loss": tf.metrics.mean_squared_error(predictions=prediction, labels=labels,
                                                             weights=features['sample_weight'])}
