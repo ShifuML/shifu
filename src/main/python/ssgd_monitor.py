@@ -455,14 +455,11 @@ def load_data(data_file):
                             logging.info("feature_column_num: " + str(feature_column_num))
                     train_data.append(single_train_data)
 
-                    if sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):
-                        weight = float(columns[sample_weight_column_num].strip('\n'))
-                        if weight < 0.0:
-                            logging.info("Warning: weight is below 0. example:" + line)
-                            weight = 1.0
-                        training_data_sample_weight.append([weight])
-                    else:
-                        training_data_sample_weight.append([1.0])
+                    weight = float(columns[len(columns)-1].strip('\n'))
+                    if weight < 0.0:
+                        logging.info("Warning: weight is below 0. example:" + line)
+                        weight = 1.0
+                    training_data_sample_weight.append([weight])
                 else:
                     # Append validation data
                     valid_target.append([float(columns[target_column_num])])
@@ -480,14 +477,11 @@ def load_data(data_file):
 
                     valid_data.append(single_valid_data)
 
-                    if  sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):
-                        weight = float(columns[sample_weight_column_num].strip('\n'))
-                        if weight < 0.0:
-                            logging.info("Warning: weight is below 0. example:" + line)
-                            weight = 1.0
-                        valid_data_sample_weight.append([weight])
-                    else:
-                        valid_data_sample_weight.append([1.0])
+                    weight = float(columns[len(columns)-1].strip('\n'))
+                    if weight < 0.0:
+                        logging.info("Warning: weight is below 0. example:" + line)
+                        weight = 1.0
+                    valid_data_sample_weight.append([weight])
 
     logging.info("Total data count: " + str(line_count) + ".")
     logging.info("Train pos count: " + str(train_pos_cnt) + ", neg count: " + str(train_neg_cnt) + ".")

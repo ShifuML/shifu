@@ -46,7 +46,7 @@ n_workers = int(os.environ["WORKER_CNT"])  # the number of worker nodes
 job_name = os.environ["JOB_NAME"]
 task_index = int(os.environ["TASK_ID"])
 socket_server_port = int(os.environ["SOCKET_SERVER_PORT"])  # The port of local java socket server listening, to sync worker training intermediate information with master
-total_training_data_number = int(os.environ["TOTAL_TRAINING_DATA_NUMBER"]) # total data
+total_training_data_number = 40578 #int(os.environ["TOTAL_TRAINING_DATA_NUMBER"]) # total data
 feature_column_nums = [int(s) for s in str(os.environ["SELECTED_COLUMN_NUMS"]).split(' ')]  # selected column numbers
 FEATURE_COUNT = len(feature_column_nums)
 
@@ -194,10 +194,11 @@ def get_loss_func(name):
         return tf.losses.mean_squared_error
 
 def dnn_model_fn(features, labels, mode, params):
+    logging.error("features:" + str(features))
     shifu_context = params['shifu_context']
     layers = shifu_context["layers"]
-    global FEATURE_CNT
-    FEATURE_CNT = shifu_context["feature_count"]
+    global FEATURE_COUNT
+    FEATURE_COUNT = shifu_context["feature_count"]
     learning_rate = shifu_context["learning_rate"]
 
     loss_func = shifu_context["loss_func"]
@@ -298,6 +299,10 @@ class TrainAndEvalErrorHook(tf.train.SessionRunHook):
         logging.info("*** " + self._mode_name + " Hook: - Created")
         logging.info("steps_per_epoch: " + str(self.steps_per_epoch))
         logging.info("")
+    def begin(self):
+        self._global_step_tensor = training_util._get_or_create_global_step_read()  # pylint: disable=protected-access
+        if self._global_step_tensor is None:
+            raise RuntimeError("Global step should be created to use StopAtStepHook.")
 
     def before_run(self, run_context):
         graph = run_context.session.graph
@@ -306,24 +311,28 @@ class TrainAndEvalErrorHook(tf.train.SessionRunHook):
         # loss_tensor = graph.get_tensor_by_name(tensor_name)
 
         loss_tensor = graph.get_collection(tf.GraphKeys.LOSSES)[0]
-        return tf.train.SessionRunArgs(loss_tensor)
+        return tf.train.SessionRunArgs(loss_tensor, self._global_step_tensor)
 
     def after_run(self, run_context, run_values):
-        current_loss = run_values.results
+        logging.info("Eval: " + str(run_values));
+        current_loss = run_values.results[0]
         self.total_loss += current_loss
+        
+        global_step = run_values.results[1] + 1
+
         
         if EVAL_MODE == self._mode_name:
             logging.info("Eval: " +self._mode_name + " Epoch " + str(
-                type(self)._current_epoch - 1) +  ": Loss :" + str(self.total_loss))
+                global_step - 1) +  ": Loss :" + str(self.total_loss))
         elif TRAINING_MODE == self._mode_name:
-            logging.info("Training" + self._mode_name + " Epoch " + str(self.current_step) + ": Loss :" + str(
+            logging.info("Training" + self._mode_name + " Epoch " + str(global_step-1) + ": Loss :" + str(
                 self.total_loss))
         else:
             logging.info("Invalid mode name: " + self._mode_name)
         
         # Send intermediate result to master
         message = "worker_index:{},time:{},current_epoch:{},training_loss:{},valid_loss:{},valid_time:{}\n".format(
-            str(task_index), "1", str(self.current_step), str(self.total_loss), "0", "1")
+            str(task_index), "1", str(global_step), str(self.total_loss), "0", "1")
         if sys.version_info < (3, 0):
             socket_client.send(bytes(message))
         else:
@@ -435,8 +444,7 @@ def main(_):
         shuffle=False)
     train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn,
                                         max_steps=EPOCH,
-                                        hooks=[TrainAndEvalErrorHook(TRAINING_MODE, len(context['train_data']),
-                                                                     shifu_context["batch_size"])])
+                                        hooks=[])
 
     eval_input_fn = tf.estimator.inputs.numpy_input_fn(
         x={'input_feature': np.asarray(context['valid_data'], dtype=np.float32),
@@ -451,16 +459,16 @@ def main(_):
 
     run_config = tf.estimator.RunConfig(tf_random_seed=19830610,
                                         model_dir=tmp_model_path,
-                                        save_checkpoints_secs=600,
-                                        log_step_count_steps=100)
+                                        save_checkpoints_steps=10,
+                                        log_step_count_steps=1)
     #train_distribute=tf.contrib.distribute.ParameterServerStrategy)
     dnn = tf.estimator.Estimator(model_fn=dnn_model_fn, params={'shifu_context': shifu_context}, config=run_config)
     tf.estimator.train_and_evaluate(dnn, train_spec, eval_spec)
 
-    export_dir = shifu_context["export_dir"]
-    dnn.export_savedmodel(export_dir, serving_input_receiver_fn)
-
-    export_generic_config(export_dir=export_dir)
+    if shifu_context['is_chief']:
+        export_dir = shifu_context["export_dir"]
+        dnn.export_savedmodel(export_dir, serving_input_receiver_fn)
+        export_generic_config(export_dir=export_dir)
 
 
 def load_data(data_file):
@@ -527,14 +535,11 @@ def load_data(data_file):
                             logging.info("feature_column_num: " + str(feature_column_num))
                     train_data.append(single_train_data)
 
-                    if sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):
-                        weight = float(columns[sample_weight_column_num].strip('\n'))
-                        if weight < 0.0:
-                            logging.info("Warning: weight is below 0. example:" + line)
-                            weight = 1.0
-                        training_data_sample_weight.append([weight])
-                    else:
-                        training_data_sample_weight.append([1.0])
+                    weight = float(columns[len(columns)-1].strip('\n'))
+                    if weight < 0.0:
+                        logging.info("Warning: weight is below 0. example:" + line)
+                        weight = 1.0
+                    training_data_sample_weight.append([weight])
                 else:
                     # Append validation data
                     valid_target.append([float(columns[target_column_num])])
@@ -552,14 +557,11 @@ def load_data(data_file):
 
                     valid_data.append(single_valid_data)
 
-                    if  sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):
-                        weight = float(columns[sample_weight_column_num].strip('\n'))
-                        if weight < 0.0:
-                            logging.info("Warning: weight is below 0. example:" + line)
-                            weight = 1.0
-                        valid_data_sample_weight.append([weight])
-                    else:
-                        valid_data_sample_weight.append([1.0])
+                    weight = float(columns[len(columns)-1].strip('\n'))
+                    if weight < 0.0:
+                        logging.info("Warning: weight is below 0. example:" + line)
+                        weight = 1.0
+                    valid_data_sample_weight.append([weight])
 
     logging.info("Total data count: " + str(line_count) + ".")
     logging.info("Train pos count: " + str(train_pos_cnt) + ", neg count: " + str(train_neg_cnt) + ".")
@@ -591,9 +593,10 @@ def simple_save(session, export_dir, inputs, outputs, legacy_init_op=None):
     export_generic_config(export_dir=export_dir)
 
 def serving_input_receiver_fn():
-    global FEATURE_CNT
+    global FEATURE_COUNT
     inputs = {
-        'input_feature': tf.placeholder(tf.float32, [None, FEATURE_CNT], name='shifu_input_0')
+        'input_feature': tf.placeholder(tf.float32, [None, FEATURE_COUNT], name='shifu_input_0'),
+        'sample_weight': tf.placeholder(tf.float32, [None, 1], name='shifu_input_wgt_0')
     }
     return tf.estimator.export.ServingInputReceiver(inputs, inputs)
 

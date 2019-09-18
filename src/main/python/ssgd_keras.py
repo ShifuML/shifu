@@ -315,8 +315,6 @@ def main(_):
 
             logging.info("Batch size: " + str(BATCH_SIZE) + ", VALID_TRAINING_DATA_RATIO: " + str(VALID_TRAINING_DATA_RATIO))
 
-        # import data
-        context = load_data(training_data_path)
 
         if model_conf is not None:
             learning_rate = model_conf['train']['params']['LearningRate']
@@ -328,6 +326,10 @@ def main(_):
                 "export_dir": final_model_path, "epoch": EPOCH, "sample_weight_column_num": sample_weight_column_num,
                 "learning_rate": learning_rate, "loss_func": model_conf['train']['params']['Loss'], "optimizer": "adam",
                 "weight_initalizer": "xavier", "act_funcs": model_conf['train']['params']['ActivationFunc']}
+        logging.info("shifu_context: "+str(shifu_context))
+
+        # import data
+        context = load_data(training_data_path)
 
         # split data into batch
         total_batch = int(len(context["train_data"]) / BATCH_SIZE)
@@ -349,8 +351,6 @@ def main(_):
                                                       cluster=cluster,
                                                       worker_device=worker_device
                                                       )):
-            #input_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, FEATURE_COUNT),
-            #                       name="shifu_input_0")
             label_placeholder = tf.placeholder(dtype=tf.int32, shape=(None, 1))
             sample_weight_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, 1))
 
@@ -358,28 +358,11 @@ def main(_):
             #                                              label_placeholder,
             #                                              sample_weight_placeholder,
             #                                              model_conf)
-            
-            #estimator_spec = dnn_model_fn(
-            #    {'input_feature': input_placeholder, 'sample_weight': sample_weight_placeholder}, 
-            #    label_placeholder, 
-            #    model_fn_lib.ModeKeys.TRAIN, 
-            #    {'shifu_context': shifu_context})
-            #logging.info("spec: "+str(estimator_spec))
+
             keras.backend.set_learning_phase(1)
             keras.backend.manual_variable_initialization(True)
             new_model = get_model(model_conf, learning_rate)
             logging.info("Model inputs: " + str(new_model.inputs) + "; Model outputs: " + str(new_model.output) + "; Loss: " + str(new_model.loss) + "; optimizer: " + str(new_model.optimizer))
-            #estimator = tf.keras.estimator.model_to_estimator(keras_model=new_model)
-            #logging.info("new esti: "+str(estimator))
-            
-                # Train the model
-            train_input_fn = tf.estimator.inputs.numpy_input_fn(
-                x={'input_feature': np.asarray(context["train_data"], dtype=np.float32),
-                   'sample_weight': np.asarray(context["train_data_sample_weight"], dtype=np.float32)},
-                y=np.asarray(context["train_target"], dtype=np.float32),
-                batch_size=shifu_context["batch_size"],
-                num_epochs=shifu_context['epoch'],
-                shuffle=False)
 
             loss = get_loss_func(new_model.loss)(predictions=new_model.output, labels=label_placeholder, weights=sample_weight_placeholder)
             #loss = training_utils.get_loss_function(new_model.loss).fn(predictions=new_model.output, labels=label_placeholder, weights=sample_weight_placeholder)
@@ -475,7 +458,7 @@ def main(_):
                                                                           sample_weight_placeholder: valid_sample_w}
                                           )
                 valid_time = time.time() - valid_start
-                logging.info('total_batch=' + str(total_batch) + 'Index:' + str(i) + 'Step: ' + str(gs) + ' worker: ' + str(task_index) + " training loss:" + str(l) + " training time:" + str(training_time) + " valid loss:" + str(valid_loss) + " valid time:" + str(valid_time))
+                logging.info('total_batch=' + str(total_batch) + ' Index:' + str(i) + 'Step: ' + str(gs) + ' worker: ' + str(task_index) + " training loss:" + str(l) + " training time:" + str(training_time) + " valid loss:" + str(valid_loss) + " valid time:" + str(valid_time))
 
                 # Send intermediate result to master
                 message = "worker_index:{},time:{},current_epoch:{},training_loss:{},valid_loss:{},valid_time:{}\n".format(
@@ -597,14 +580,11 @@ def load_data(data_file):
                             logging.info("feature_column_num: " + str(feature_column_num))
                     train_data.append(single_train_data)
 
-                    if sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):
-                        weight = float(columns[sample_weight_column_num].strip('\n'))
-                        if weight < 0.0:
-                            logging.info("Warning: weight is below 0. example:" + line)
-                            weight = 1.0
-                        training_data_sample_weight.append([weight])
-                    else:
-                        training_data_sample_weight.append([1.0])
+                    weight = float(columns[len(columns)-1].strip('\n'))
+                    if weight < 0.0:
+                        logging.info("Warning: weight is below 0. example:" + line)
+                        weight = 1.0
+                    training_data_sample_weight.append([weight])
                 else:
                     # Append validation data
                     valid_target.append([float(columns[target_column_num])])
@@ -622,14 +602,12 @@ def load_data(data_file):
 
                     valid_data.append(single_valid_data)
 
-                    if  sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):
-                        weight = float(columns[sample_weight_column_num].strip('\n'))
-                        if weight < 0.0:
-                            logging.info("Warning: weight is below 0. example:" + line)
-                            weight = 1.0
-                        valid_data_sample_weight.append([weight])
-                    else:
-                        valid_data_sample_weight.append([1.0])
+                    weight = float(columns[len(columns)-1].strip('\n'))
+                    if weight < 0.0:
+                        logging.info("Warning: weight is below 0. example:" + line)
+                        weight = 1.0
+                    valid_data_sample_weight.append([weight])
+
 
     logging.info("Total data count: " + str(line_count) + ".")
     logging.info("Train pos count: " + str(train_pos_cnt) + ", neg count: " + str(train_neg_cnt) + ".")
