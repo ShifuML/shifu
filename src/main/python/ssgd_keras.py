@@ -636,19 +636,19 @@ def simple_save(session, export_dir, inputs, outputs, legacy_init_op=None):
         legacy_init_op=legacy_init_op,
         clear_devices=True)
     b.save()
-    export_generic_config(export_dir=export_dir)
+    export_generic_config(export_dir=export_dir, input=inputs['shifu_input_0'].name, output=outputs['shifu_output_0'].name)
 
 
-def export_generic_config(export_dir):
+def export_generic_config(export_dir, input, output):
     config_json_str = ""
     config_json_str += "{\n"
     config_json_str += "    \"inputnames\": [\n"
-    config_json_str += "        \"shifu_input_0\"\n"
+    config_json_str += "        \"" + input + "\"\n"
     config_json_str += "      ],\n"
     config_json_str += "    \"properties\": {\n"
     config_json_str += "         \"algorithm\": \"tensorflow\",\n"
     config_json_str += "         \"tags\": [\"serve\"],\n"
-    config_json_str += "         \"outputnames\": \"shifu_output_0\",\n"
+    config_json_str += "         \"outputnames\": \"" + output + "\",\n"
     config_json_str += "         \"normtype\": \"ZSCALE\"\n"
     config_json_str += "      }\n"
     config_json_str += "}"
