@@ -227,7 +227,7 @@ public class TensorflowTrainer {
         commands.add(System.getenv("LD_LIBRARY_PATH"));
         commands.add(System.getenv("JAVA_HOME"));
         commands.add(pythonHome);
-        commands.add(pathFinder.getScriptPath("scripts/train_by_estimator.py"));
+        commands.add(pathFinder.getScriptPath("scripts/local_tf_estimator.py"));
         commands.add("-learningRate");
         commands.add(String.valueOf(learningRate));
         commands.add("-epochnums");

@@ -1,7 +1,22 @@
-"""Synchronous SGD
-"""
+# -*- coding: utf-8 -*-
 
-# from __future__ import print_function
+# Copyright [2012-2018] PayPal Software Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+'''Distributed TF model Training class, model definition is keras model.'''
+
 import os
 import tensorflow as tf
 import argparse
@@ -23,19 +38,11 @@ from tensorflow import keras
 import json
 import socket
 from tensorflow.python.client import timeline
-#from threading import Thread
-#import tensorboard.main as tb_main
 
-HIDDEN_NODES_COUNT = 20
-VALID_TRAINING_DATA_RATIO = 0.1
+REPLICAS_TO_AGGREGATE_RATIO = 1 # Aggregation replica reatio, default is 1, setting to < 1 can accerlerate traning but accuracy may be dropped.
+DELIMITER = '|' # hard code TODO, should be set by shifu delimiter
 
-BUILD_MODEL_BY_CONF_ENABLE = True
-REPLICAS_TO_AGGREGATE_RATIO = 1
-
-DELIMITER = '|'
-BATCH_SIZE = 128
-
-# read from env
+# Read properties from ENV
 cluster_spec = json.loads(os.environ["CLUSTER_SPEC"])
 n_pss = len(cluster_spec['ps'])  # the number of parameter servers
 n_workers = int(os.environ["WORKER_CNT"])  # the number of worker nodes
@@ -44,7 +51,7 @@ task_index = int(os.environ["TASK_ID"])
 socket_server_port = int(os.environ["SOCKET_SERVER_PORT"])  # The port of local java socket server listening, to sync worker training intermediate information with master
 total_training_data_number = int(os.environ["TOTAL_TRAINING_DATA_NUMBER"]) # total data 200468
 feature_column_nums = [int(s) for s in str(os.environ["SELECTED_COLUMN_NUMS"]).split(' ')]  # selected column numbers
-FEATURE_COUNT = len(feature_column_nums)
+FEATURE_COUNT = len(feature_column_nums) # number of input columns
 
 sample_weight_column_num = int(os.environ["WEIGHT_COLUMN_NUM"])  # weight column number, default is -1
 target_column_num = int(os.environ["TARGET_COLUMN_NUM"])  # target column number, default is -1
@@ -54,126 +61,52 @@ final_model_path = os.environ["FINAL_MODEL_PATH"]
 
 # This client is used for sync worker training intermediate information with master
 socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-socket_client.connect(("127.0.0.1", socket_server_port))
+socket_client.connect(("127.0.0.1", socket_server_port)) # sync to local one and logic processed in local TaskExecutor
 
 #######################################################################################################################
-#### Start of Define TF Graph: User can change below graph but make sure tf.train.SyncReplicasOptimizer not changed
+#### Start: Define TF Graph: User can change below keras models, make sure Inputs and predictions are not changed.
 #######################################################################################################################
-def model(x, y_, sample_weight, model_conf):
-    logging.info("worker_num:%d" % n_workers)
-    logging.info("total_training_data_number:%d" % total_training_data_number)
+def get_model(model_conf, learning_rate):
+    inputs = keras.Input(shape=(FEATURE_COUNT,), name='shifu_input_0')  # Returns a placeholder tensor
 
-    if BUILD_MODEL_BY_CONF_ENABLE and model_conf is not None:
-        output_digits, output_nodes = generate_from_modelconf(x, model_conf)
-    else:
-        output_digits = nn_layer(x, FEATURE_COUNT, HIDDEN_NODES_COUNT, act_op_name="hidden_layer_1")
-        output_nodes = HIDDEN_NODES_COUNT
-
-    logging.info("output_nodes : " + str(output_nodes))
-    y = nn_layer(output_digits, output_nodes, 1, act=tf.nn.sigmoid, act_op_name="shifu_output_0")
-
-    # count the number of updates
-    global_step = tf.get_variable('global_step', [],
-                                  initializer=tf.constant_initializer(0),
-                                  trainable=False,
-                                  dtype=tf.int32)
-
-    loss = tf.losses.mean_squared_error(predictions=y, labels=y_, weights=sample_weight)
-
-    # we suppose every worker has same batch_size
-    if model_conf is not None:
-        learning_rate = model_conf['train']['params']['LearningRate']
-    else:
-        learning_rate = 0.003
-    opt = tf.train.SyncReplicasOptimizer(
-        #tf.train.GradientDescentOptimizer(learning_rate),
-        #tf.train.AdamOptimizer(learning_rate=learning_rate),
-        get_optimizer(model_conf['train']['params']['Propagation'])(learning_rate=learning_rate),
-        replicas_to_aggregate=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE * REPLICAS_TO_AGGREGATE_RATIO),
-        total_num_replicas=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE),
-        name="shifu_sync_replicas")
-    train_step = opt.minimize(loss, global_step=global_step)
-
-    return opt, train_step, loss, global_step, y
-#######################################################################################################################
-#### END of Define TF Graph
-#######################################################################################################################
-
-def nn_layer(input_tensor, input_dim, output_dim, l2_scale=0.01, act=tf.nn.tanh, act_op_name=None):
-    l2_reg = tf.contrib.layers.l2_regularizer(scale=l2_scale)
-    weights = tf.get_variable(name="weight_"+str(act_op_name),
-                              shape=[input_dim, output_dim],
-                              regularizer=l2_reg,
-                              #initializer=tf.glorot_uniform_initializer())
-                              initializer=tf.contrib.layers.xavier_initializer())
-    biases = tf.get_variable(name="biases_"+str(act_op_name),
-                             shape=[output_dim],
-                             regularizer=l2_reg,
-                             #initializer=tf.glorot_uniform_initializer())
-                             initializer=tf.contrib.layers.xavier_initializer())
-
-    activations = act(tf.matmul(input_tensor, weights) + biases, name=act_op_name)
-    return activations
-
-
-def get_activation_fun(name):
-    if name is None:
-        return tf.nn.leaky_relu
-    name = name.lower()
-
-    if 'sigmoid' == name:
-        return tf.nn.sigmoid
-    elif 'tanh' == name:
-        return tf.nn.tanh
-    elif 'relu' == name:
-        return tf.nn.relu
-    elif 'leakyrelu' == name:
-        return tf.nn.leaky_relu
-    else:
-        return tf.nn.leaky_relu
-
-def get_optimizer(name):
-    if 'Adam' == name:
-        return tf.train.AdamOptimizer
-    elif 'B' == name:
-        return tf.train.GradientDescentOptimizer
-    elif 'AdaGrad' == name:
-        return tf.train.AdagradOptimizer
-    else:
-        return tf.train.AdamOptimizer
-
-def generate_from_modelconf(x, model_conf):
+    # such model arch in below can be defined manually rather than use configurations from ModelConfig.json
     train_params = model_conf['train']['params']
     num_hidden_layer = int(train_params['NumHiddenLayers'])
     num_hidden_nodes = [int(s) for s in train_params['NumHiddenNodes']]
     activation_func = [get_activation_fun(s) for s in train_params['ActivationFunc']]
+
+    # TODO add l2 regularization
     if "RegularizedConstant" in train_params:
         l2_scale = train_params["RegularizedConstant"]
     else:
         l2_scale = 0.01
 
-    global FEATURE_COUNT
-    logging.info("NN information: feature count: %s, hiddern layer: %s, hidden nodes: %s" % (FEATURE_COUNT, num_hidden_layer, str(num_hidden_nodes)))
-    
-    # first layer
-    previous_layer = nn_layer(x, FEATURE_COUNT, num_hidden_nodes[0], l2_scale=l2_scale,
-                     act=activation_func[0], act_op_name="hidden_layer_" + str(0))
-
-    for i in range(1, num_hidden_layer):
-        layer = nn_layer(previous_layer, num_hidden_nodes[i-1], num_hidden_nodes[i], l2_scale=l2_scale,
-                     act=activation_func[i], act_op_name="hidden_layer_" + str(i))
+    previous_layer = inputs
+    for i in range(0, num_hidden_layer):
+        acti = train_params['ActivationFunc'][i]
+        layer = keras.layers.Dense(num_hidden_nodes[i], activation=acti, name='hidden_layer_'+str(i+1))(previous_layer)
         previous_layer = layer
+    predictions = keras.layers.Dense(1, activation='sigmoid', name='shifu_output_0')(layer)
 
-    return previous_layer, num_hidden_nodes[num_hidden_layer-1]
+    model = tf.keras.models.Model(inputs, predictions)
 
+    opti = model_conf['train']['params']['Propagation']; # 'adam', 'sgd' and 'adagrad' are supported
+    model.compile(loss='binary_crossentropy', optimizer=get_optimizer(opti)(learning_rate=learning_rate), metrics=['mse'])
+    return model
+#######################################################################################################################
+#### END: Define TF Graph
+#######################################################################################################################
 
-def get_initalizer(name):
-    if 'gaussian' == name:
-        return tf.initializers.random_normal()
-    elif 'xavier' == name:
-        return tf.contrib.layers.xavier_initializer()
+def get_optimizer(name):
+    name = name.lower()
+    if 'adam' == name:
+        return tf.train.AdamOptimizer
+    elif 'b' == name or 'sgd' == name or 'gd' == name or 'gradientdescent' == name:
+        return tf.train.GradientDescentOptimizer
+    elif 'adagrad' == name:
+        return tf.train.AdagradOptimizer
     else:
-        return tf.contrib.layers.xavier_initializer()
+        return tf.train.AdamOptimizer
 
 def get_loss_func(name):
     if name == None:
@@ -192,89 +125,26 @@ def get_loss_func(name):
     else:
         return tf.losses.mean_squared_error
 
-def get_model(model_conf, learning_rate):
-    inputs = keras.Input(shape=(FEATURE_COUNT,), name='shifu_input_0')  # Returns a placeholder tensor
+def get_activation_fun(name):
+    if name is None:
+        return tf.nn.leaky_relu
+    name = name.lower()
 
-    # A layer instance is callable on a tensor, and returns a tensor.
-    x = keras.layers.Dense(40, activation='relu', name='hidden_layer_1')(inputs)
-    predictions = keras.layers.Dense(1, activation='sigmoid', name='shifu_output_0')(x)
-
-    model = tf.keras.models.Model(inputs, predictions)
-
-    model.compile(loss='binary_crossentropy', optimizer=get_optimizer(model_conf['train']['params']['Propagation'])(learning_rate=learning_rate), metrics=['mse'])
-    return model
-
-def dnn_model_fn(features, labels, mode, params):
-    shifu_context = params['shifu_context']
-    layers = shifu_context["layers"]
-    global FEATURE_CNT
-    FEATURE_CNT = shifu_context["feature_count"]
-    learning_rate = shifu_context["learning_rate"]
-
-    loss_func = shifu_context["loss_func"]
-    optimizer_name = shifu_context["optimizer"]
-    weight_initalizer = shifu_context["weight_initalizer"]
-    act_funcs = shifu_context["act_funcs"]
-
-    #input_layer = tf.convert_to_tensor(features['input_feature'], dtype=tf.float32)
-    input_layer = features['input_feature']
-    # sample_weight = tf.convert_to_tensor(features['sample_weight'], dtype=tf.float32)
-
-    # Start define model structure
-    model = [input_layer]
-    current_layer = input_layer
-
-    for i in range(len(layers)):
-        node_num = layers[i]
-        current_layer = tf.layers.dense(inputs=current_layer, units=node_num,
-                                        activation=get_activation_fun(act_funcs[i]),
-                                        kernel_initializer=get_initalizer(weight_initalizer),
-                                        kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=0.1)
-                                        )
-        model.append(current_layer)
-
-    logits = tf.layers.dense(inputs=current_layer, units=1,
-                             kernel_initializer=get_initalizer(weight_initalizer),
-                             kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=0.1)
-                             )
-
-    prediction = tf.nn.sigmoid(logits, name="shifu_output_0")
-
-    if mode == tf.estimator.ModeKeys.PREDICT:
-        predictions = {
-            'scores': prediction
-        }
-
-        export_outputs = {
-            'predictions': tf.estimator.export.PredictOutput(predictions)
-        }
-        # In `PREDICT` mode we only need to return predictions.
-        return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions, export_outputs=export_outputs)
-
-    average_loss = get_loss_func(loss_func)(predictions=prediction, labels=labels, weights=features['sample_weight'])
-    # Pre-made estimators use the total_loss instead of the average,
-    # so report total_loss for compatibility.
-    # batch_size = tf.shape(labels)[0]
-    # total_loss = tf.to_float(batch_size) * average_loss
-
-    if mode == tf.estimator.ModeKeys.TRAIN:
-        optimizer = get_optimizer(optimizer_name)(learning_rate=learning_rate)
-        train_op = optimizer.minimize(average_loss, global_step=tf.train.get_global_step())
-        return tf.estimator.EstimatorSpec(mode=mode, loss=average_loss, train_op=train_op)
-
-    eval_metrics = {"a-loss": tf.metrics.mean_squared_error(predictions=prediction, labels=labels,
-                                                            weights=features['sample_weight'])}
-    if mode == tf.estimator.ModeKeys.EVAL:
-        return tf.estimator.EstimatorSpec(
-            mode=mode,
-            # Report sum of error for compatibility with pre-made estimators
-            loss=average_loss,
-            eval_metric_ops=eval_metrics)
+    if 'sigmoid' == name:
+        return tf.nn.sigmoid
+    elif 'tanh' == name:
+        return tf.nn.tanh
+    elif 'relu' == name:
+        return tf.nn.relu
+    elif 'leakyrelu' == name:
+        return tf.nn.leaky_relu
+    else:
+        return tf.nn.leaky_relu
 
 def main(_):
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%y-%m-%d %H:%M:%S')
 
-    logging.info("job_name:%s, task_index:%d" % (job_name, task_index))
+    logging.info("Job info: job_name:%s, task_index:%d" % (job_name, task_index))
 
     ps_hosts = cluster_spec['ps']
     worker_hosts = cluster_spec['worker']
@@ -282,6 +152,7 @@ def main(_):
 
     # allows this node know about all other nodes
     if job_name == 'ps':  # checks if parameter server
+        logging.info("Join as ps role.")
         server = tf.train.Server(cluster,
                                  job_name="ps",
                                  task_index=task_index)
@@ -297,19 +168,18 @@ def main(_):
         if "TRAINING_DATA_PATH" in os.environ:
             logging.info("This is a normal worker..")
             training_data_path = os.environ["TRAINING_DATA_PATH"]
+            logging.info("Loading data from path = %s" % str(training_data_path))
         else:
             logging.info("This is a backup worker")
-            # watching certain file in hdfs which contains its training data
 
-        # Read model structure info from ModelConfig
+        # Read model structure info from ModelConfig.json which is downloaded in local folder.
         with open('./ModelConfig.json') as f:
             model_conf = json.load(f)
-            logging.info("model" + str(model_conf))
+            logging.info("Model conf: " + str(model_conf))
             EPOCH = int(model_conf['train']['numTrainEpochs'])
-            global VALID_TRAINING_DATA_RATIO
             VALID_TRAINING_DATA_RATIO = model_conf['train']['validSetRate']
             is_continue_train = model_conf['train']['isContinuous']
-            global BATCH_SIZE
+            BATCH_SIZE = 128
             if "MiniBatchs" in model_conf['train']['params']:
                 BATCH_SIZE = model_conf['train']['params']['MiniBatchs']
 
@@ -326,10 +196,10 @@ def main(_):
                 "export_dir": final_model_path, "epoch": EPOCH, "sample_weight_column_num": sample_weight_column_num,
                 "learning_rate": learning_rate, "loss_func": model_conf['train']['params']['Loss'], "optimizer": "adam",
                 "weight_initalizer": "xavier", "act_funcs": model_conf['train']['params']['ActivationFunc']}
-        logging.info("shifu_context: "+str(shifu_context))
+        logging.info("Shifu context: "+str(shifu_context))
 
         # import data
-        context = load_data(training_data_path)
+        context = load_data(training_data_path, model_conf)
 
         # split data into batch
         total_batch = int(len(context["train_data"]) / BATCH_SIZE)
@@ -354,22 +224,15 @@ def main(_):
             label_placeholder = tf.placeholder(dtype=tf.int32, shape=(None, 1))
             sample_weight_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, 1))
 
-            #opt, train_step, loss, global_step, y = model(input_placeholder,
-            #                                              label_placeholder,
-            #                                              sample_weight_placeholder,
-            #                                              model_conf)
-
             keras.backend.set_learning_phase(1)
             keras.backend.manual_variable_initialization(True)
             new_model = get_model(model_conf, learning_rate)
             logging.info("Model inputs: " + str(new_model.inputs) + "; Model outputs: " + str(new_model.output) + "; Loss: " + str(new_model.loss) + "; optimizer: " + str(new_model.optimizer))
 
             loss = get_loss_func(new_model.loss)(predictions=new_model.output, labels=label_placeholder, weights=sample_weight_placeholder)
-            #loss = training_utils.get_loss_function(new_model.loss).fn(predictions=new_model.output, labels=label_placeholder, weights=sample_weight_placeholder)
+
             
             opt = tf.train.SyncReplicasOptimizer(
-                #tf.train.GradientDescentOptimizer(learning_rate),
-                #tf.train.AdamOptimizer(learning_rate=learning_rate),
                 new_model.optimizer.optimizer,
                 replicas_to_aggregate=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE * REPLICAS_TO_AGGREGATE_RATIO),
                 total_num_replicas=int(total_training_data_number * (1-VALID_TRAINING_DATA_RATIO) / BATCH_SIZE),
@@ -381,7 +244,7 @@ def main(_):
                                   dtype=tf.int32)
 
             train_step = opt.minimize(loss, global_step=global_step)
-            logging.info("train_step: "+str(train_step))
+            logging.info("Train step: "+str(train_step))
             # init ops
             init_tokens_op = opt.get_init_tokens_op()
             # initialize local step
@@ -430,7 +293,6 @@ def main(_):
 
         if is_chief and not is_continue_train:
             sess.run(init_tokens_op)
-            #start_tensorboard(tmp_model_path)
             logging.info("chief start waiting 20 seconds")
             time.sleep(20)  # grace period to wait on other workers before starting training
             logging.info("chief finish waiting 20 seconds")
@@ -458,6 +320,7 @@ def main(_):
                                                                           sample_weight_placeholder: valid_sample_w}
                                           )
                 valid_time = time.time() - valid_start
+                # TODO, herer training loss is last index of loss, should be averaged
                 logging.info('total_batch=' + str(total_batch) + ' Index:' + str(i) + 'Step: ' + str(gs) + ' worker: ' + str(task_index) + " training loss:" + str(l) + " training time:" + str(training_time) + " valid loss:" + str(valid_loss) + " valid time:" + str(valid_time))
 
                 # Send intermediate result to master
@@ -474,7 +337,7 @@ def main(_):
                 else:
                     raise
 
-        logging.info('Done' + str(task_index))
+        logging.info('Done trainin task ' + str(task_index) + '.')
 
         # We just need to make sure chief worker exit with success status is enough
         if is_chief:
@@ -482,16 +345,16 @@ def main(_):
             # restore from last checkpoint
             with tf.get_default_graph().as_default():
                 new_model = get_model(model_conf, learning_rate)
-                logging.info("Model inputs: " + str(new_model.inputs) + "; Model outputs: " + str(new_model.output))
+                logging.info("Expose model inputs: " + str(new_model.inputs) + "; Model outputs: " + str(new_model.output))
                 
             saver = tf.train.Saver()
             with tf.Session() as sess:
                 ckpt = tf.train.get_checkpoint_state(tmp_model_path)
-                logging.info("ckpt: {}".format(ckpt))
-                assert ckpt, "Invalid model checkpoint path: {}".format(tmp_model_path)
+                logging.info("Checkpoint path: {}.".format(ckpt))
+                assert ckpt, "Invalid model checkpoint path: {}.".format(tmp_model_path)
                 saver.restore(sess, ckpt.model_checkpoint_path)
 
-                logging.info("Exporting saved_model to: {}".format(final_model_path))
+                logging.info("Exporting saved_model to: {}.".format(final_model_path))
 
                 # exported signatures defined in code
                 simple_save(session=sess, export_dir=final_model_path,
@@ -505,7 +368,7 @@ def main(_):
 
             tl = timeline.Timeline(run_metadata.step_stats)
             ctf = tl.generate_chrome_trace_format()
-            logging.info("ctf:" + str(ctf))
+            logging.info("DEBUG: ctf:" + str(ctf))
 
             f = tf.gfile.GFile(tmp_model_path + "/timeline.json", mode="w+")
             f.write(ctf)
@@ -516,7 +379,8 @@ def main(_):
         sys.exit()
 
 
-def load_data(data_file):
+def load_data(data_file, model_conf):
+    VALID_TRAINING_DATA_RATIO = model_conf['train']['validSetRate']
     data_file_list = data_file.split(",")
     global feature_column_nums
 
@@ -638,7 +502,6 @@ def simple_save(session, export_dir, inputs, outputs, legacy_init_op=None):
     b.save()
     export_generic_config(export_dir=export_dir, input=inputs['shifu_input_0'].name, output=outputs['shifu_output_0'].name)
 
-
 def export_generic_config(export_dir, input, output):
     config_json_str = ""
     config_json_str += "{\n"
@@ -664,7 +527,7 @@ def start_tensorboard(checkpoint_dir):
     tb_thread = Thread(target=tb_main.run_main)
     tb_thread.daemon = True
 
-    logging.info("Starting TensorBoard with --logdir=" + checkpoint_dir + " in daemon thread...")
+    logging.info("Starting TensorBoard with --logdir=" + checkpoint_dir + " in daemon thread ...")
     tb_thread.start()
 
 if __name__ == '__main__':

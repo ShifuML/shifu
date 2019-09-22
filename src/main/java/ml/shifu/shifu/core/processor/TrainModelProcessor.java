@@ -238,7 +238,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     syncDataToHdfs(super.modelConfig.getDataSet().getSource());
                     checkAndCleanDataForTreeModels(this.isToShuffle);
                     if(Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
-                        status = runTensorflowDistributedTrain();
+                        status = runDistributedTensorflowTrain();
                     } else {
                         status = runDistributedTrain();
                     }
@@ -268,14 +268,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private void runLocalTrain() throws IOException {
         if(Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
-            runTensorflowLocalTrain();
+            runLocalTensorflowTrain();
             return;
         } else {
             runAkkaTrain(isForVarSelect ? 1 : modelConfig.getBaggingNum());
         }
     }
 
-    private void runTensorflowLocalTrain() throws IOException {
+    private void runLocalTensorflowTrain() throws IOException {
         List<Scanner> scanners = null;
         TensorflowTrainer trainer = new TensorflowTrainer(modelConfig, columnConfigList);
         LOG.info("Normalized data for training {}.", pathFinder.getNormalizedDataPath());
@@ -292,11 +292,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
-     * run training process with number of bags
+     * Run training process with number of bags
      *
      * @param numBags
      *            number of bags, it decide how much trainer will start training
-     * @throws IOException
      */
     private void runAkkaTrain(int numBags) throws IOException {
         File models = new File("models");
@@ -449,12 +448,16 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
     }
 
-    protected int runTensorflowDistributedTrain() throws Exception {
+    protected int runDistributedTensorflowTrain() throws Exception {
         LOG.info("Started {} tensorflow distributed training.", isDryTrain ? "dry " : "");
         globalDefaultConfFile = new Path(
                 super.pathFinder.getAbsolutePath(new Path("conf" + File.separator + "global-default.xml").toString()));
         LOG.info("Shifu tensorflow on yarn global default file is found in: {}.", globalDefaultConfFile);
 
+        if(super.modelConfig.getTrain().getBaggingNum() != 1) {
+            LOG.warn("Bagging tmperally is not supported, only one model can be trained (baggingNum = {}).",
+                    super.modelConfig.getTrain().getBaggingNum());
+        }
         // if not continuous mode, remove tmp models to not load it in tf python, continuous mode here there is a bug
         cleanTmpModelPath();
 
@@ -647,13 +650,16 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(this.modelConfig.getNormalize().getNormType() == NormType.ZSCALE_INDEX) {
             // Running wide and deep
             globalConf.set("shifu.application.python-script-path",
-                    super.getPathFinder().getScriptPath("scripts/wnp_ssgd_not_embadding.py"));
+                    super.getPathFinder().getScriptPath("scripts/distributed_tf_wnd_estimator_not_embed.py"));
 
             setSelectedColumnForWideDeep(globalConf);
         } else {
             // Running normal NN
+
+            Object tfTypeObj = this.modelConfig.getTrain().getParams().get("TF_type");
+            String tyType = tfTypeObj == null ? "keras" : tfTypeObj.toString().toLowerCase();
             globalConf.set("shifu.application.python-script-path",
-                    super.getPathFinder().getScriptPath("scripts/ssgd_monitor.py"));
+                    super.getPathFinder().getScriptPath("scripts/distributed_tf_" + tyType + ".py"));
 
             // set selected column number; target column number; weight column number
             setSelectedTargetAndWeightColumnNumber(globalConf);
