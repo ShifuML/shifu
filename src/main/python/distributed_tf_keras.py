@@ -356,7 +356,7 @@ def main(_):
                 else:
                     raise
 
-        logging.info('Done training task %s.' % str(task_index))
+        logging.info('Done training task %s.' % str(shifu_context['task_index']))
 
         # We just need to make sure chief worker exit with success status is enough
         if shifu_context['is_chief']:
@@ -398,7 +398,6 @@ def main(_):
         #sess.close()
         logging.info('Session from worker %d closed cleanly.' % shifu_context['task_index'])
         sys.exit()
-
 
 def load_data(shifu_context):
     valid_ratio = shifu_context['valid_training_data_ratio']
@@ -514,7 +513,6 @@ def load_data(shifu_context):
             "valid_data_sample_weight": valid_data_sample_weight,
             "feature_count": len(feature_column_nums)}
 
-
 def simple_save(session, export_dir, inputs, outputs, legacy_init_op=None):
     if tf.gfile.Exists(export_dir):
         tf.gfile.DeleteRecursively(export_dir)
@@ -549,11 +547,10 @@ def export_generic_config(export_dir, input, output):
     f = tf.gfile.GFile(export_dir + "/GenericModelConfig.json", mode="w+")
     f.write(config_json_str)
 
-
 def start_tensorboard(checkpoint_dir):
     tf.flags.FLAGS.logdir = checkpoint_dir
     if TB_PORT_ENV_VAR in os.environ:
-        tf.flags.FLAGS.port = os.environ['TB_PORT']
+        tf.flags.FLAGS.port = os.environ['TB_PORT']f
 
     tb_thread = Thread(target=tb_main.run_main)
     tb_thread.daemon = True
