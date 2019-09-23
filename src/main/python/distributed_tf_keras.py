@@ -41,7 +41,7 @@ import socket
 from tensorflow.python.client import timeline
 
 #######################################################################################################################
-#### Start: Define TF Graph: User can change below keras models, make sure Inputs and predictions are not changed.
+#### Start: Define TF Keras Model: customize below keras model, make sure Inputs and predictions are not changed.
 #######################################################################################################################
 def get_model(shifu_context):
     inputs = keras.Input(shape=(shifu_context['feature_count'],), name='shifu_input_0')  # Returns a placeholder tensor
@@ -69,7 +69,7 @@ def get_model(shifu_context):
     model.compile(loss='binary_crossentropy', optimizer=get_optimizer(opti)(learning_rate=shifu_context['learning_rate']), metrics=['mse'])
     return model
 #######################################################################################################################
-#### END: Define TF Graph
+#### END: Define TF Keras Model
 #######################################################################################################################
 
 def get_optimizer(name):
@@ -550,7 +550,7 @@ def export_generic_config(export_dir, input, output):
 def start_tensorboard(checkpoint_dir):
     tf.flags.FLAGS.logdir = checkpoint_dir
     if TB_PORT_ENV_VAR in os.environ:
-        tf.flags.FLAGS.port = os.environ['TB_PORT']f
+        tf.flags.FLAGS.port = os.environ['TB_PORT']
 
     tb_thread = Thread(target=tb_main.run_main)
     tb_thread.daemon = True
