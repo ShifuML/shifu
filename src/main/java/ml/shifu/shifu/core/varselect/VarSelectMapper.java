@@ -16,14 +16,12 @@
 package ml.shifu.shifu.core.varselect;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 
+import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.util.*;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -153,6 +151,11 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     private Splitter splitter;
 
     /**
+     * The input values for each columns, if the input is missing
+     */
+    private double[] columnMissingInputValues;
+
+    /**
      * Load all configurations for modelConfig and columnConfigList from source type.
      */
     private synchronized static void loadConfigFiles(final Context context) {
@@ -279,6 +282,15 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         // create Splitter
         String delimiter = context.getConfiguration().get(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
         this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
+
+        this.columnMissingInputValues = new double[columnConfigList.size()];
+        for (ColumnConfig columnConfig : columnConfigList) {
+            List<Double> normValues = Normalizer.normalize(columnConfig, null,
+                    modelConfig.getNormalizeStdDevCutOff(), modelConfig.getNormalizeType());
+            if (CollectionUtils.isNotEmpty(normValues)) {
+                this.columnMissingInputValues[columnConfig.getColumnNum()] = normValues.get(0);
+            }
+        }
     }
 
     @Override
@@ -313,23 +325,27 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         if(CommonUtils.isTensorFlowModel(modelConfig.getAlgorithm())) {
             candidateModelScore = this.model.compute(inputsMLData).getData(0);
         } else {
-            candidateModelScore = cacheNetwork.compute(inputsMLData, true, -1).getData()[0];
+            candidateModelScore = cacheNetwork.compute(inputsMLData, true, -1, 0.0).getData()[0];
         }
 
         for(int i = 0; i < this.inputs.length; i++) {
             // cache flag is false to reuse cache sum of first layer of values.
             double currentModelScore;
+            int idx = (int)this.columnIndexes[i];
             if(CommonUtils.isTensorFlowModel(modelConfig.getAlgorithm())) {
                 double[] newInputs = new double[inputsMLData.getData().length];
                 for(int j = 0; j < newInputs.length; j++) {
                     if(j != i) {
                         newInputs[j] = inputsMLData.getData()[j];
+                    } else {
+                        newInputs[j] = this.columnMissingInputValues[idx];
                     }
                 }
                 currentModelScore = this.model.compute(new BasicMLData(newInputs)).getData(0);
                 // currentModelScore = 0;
             } else {
-                currentModelScore = cacheNetwork.compute(inputsMLData, false, i).getData()[0];
+                currentModelScore = cacheNetwork.compute(inputsMLData, false, i,
+                        this.columnMissingInputValues[idx]).getData()[0];
             }
 
             double diff = 0d;

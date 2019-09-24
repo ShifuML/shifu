@@ -36,7 +36,7 @@ public class CacheFlatNetwork extends FlatNetwork implements Cloneable {
 
     /**
      * Cache First layer of outputs. This array only is initialized in first call with cacheInputOutput set to true in
-     * {@link #compute(double[], double[], boolean, int)}.
+     * {@link #compute(double[], double[], boolean, int, double)}.
      */
     private double[] firstLayerCache;
 
@@ -80,7 +80,7 @@ public class CacheFlatNetwork extends FlatNetwork implements Cloneable {
      * @param resetInputIndex
      *            if cacheInputOutput is false, resetInputIndex is which item should be removed.
      */
-    public void compute(double[] input, double[] output, boolean cacheInputOutput, int resetInputIndex) {
+    public void compute(double[] input, double[] output, boolean cacheInputOutput, int resetInputIndex, double missingVal) {
         final int sourceIndex = getLayerOutput().length - getLayerCounts()[getLayerCounts().length - 1];
 
         for(int i = 0; i < getInputCount(); i++) {
@@ -88,7 +88,7 @@ public class CacheFlatNetwork extends FlatNetwork implements Cloneable {
         }
 
         for(int i = this.getLayerIndex().length - 1; i > 0; i--) {
-            computeLayer(i, cacheInputOutput, resetInputIndex);
+            computeLayer(i, cacheInputOutput, resetInputIndex, missingVal);
         }
 
         // update context values
@@ -114,7 +114,7 @@ public class CacheFlatNetwork extends FlatNetwork implements Cloneable {
      * @param resetInputIndex
      *            if cacheInputOutput is false, resetInputIndex is which item should be removed.
      */
-    protected void computeLayer(final int currentLayer, boolean cacheInputOutput, int resetInputIndex) {
+    protected void computeLayer(final int currentLayer, boolean cacheInputOutput, int resetInputIndex, double missingVal) {
         final int inputIndex = super.getLayerIndex()[currentLayer];
         final int outputIndex = super.getLayerIndex()[currentLayer - 1];
         final int inputSize = super.getLayerCounts()[currentLayer];
@@ -150,8 +150,9 @@ public class CacheFlatNetwork extends FlatNetwork implements Cloneable {
             } else {
                 if(currentLayer == this.getLayerIndex().length - 1) {
                     // to use the cache, use cache_sum - current item value to save computation to save computation
-                    double sum = this.firstLayerCache[x - outputIndex] - super.getWeights()[index + resetInputIndex]
-                            * super.getLayerOutput()[inputIndex + resetInputIndex];
+                    double sum = this.firstLayerCache[x - outputIndex]
+                            - super.getWeights()[index + resetInputIndex] * super.getLayerOutput()[inputIndex + resetInputIndex]
+                            + super.getWeights()[index + resetInputIndex] * missingVal;
                     index += inputSize;
                     super.getLayerSums()[x] = sum;
                     super.getLayerOutput()[x] = sum;

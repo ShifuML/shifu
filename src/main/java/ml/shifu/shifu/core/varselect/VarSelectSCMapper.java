@@ -6,6 +6,7 @@ import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.CacheBasicFloatNetwork;
@@ -117,6 +118,11 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
      * The splitter for normalization data set
      */
     private Splitter splitter;
+
+    /**
+     * The input values for each columns, if the input is missing
+     */
+    private double[] columnMissingInputValues;
 
     /**
      * Load all configurations for modelConfig and columnConfigList from source type.
@@ -241,6 +247,15 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
         // create Splitter
         String delimiter = context.getConfiguration().get(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
         this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
+
+        this.columnMissingInputValues = new double[columnConfigList.size()];
+        for (ColumnConfig columnConfig : columnConfigList) {
+            List<Double> normValues = Normalizer.normalize(columnConfig, null,
+                    modelConfig.getNormalizeStdDevCutOff(), modelConfig.getNormalizeType());
+            if (CollectionUtils.isNotEmpty(normValues)) {
+                this.columnMissingInputValues[columnConfig.getColumnNum()] = normValues.get(0);
+            }
+        }
     }
 
     @Override
@@ -270,7 +285,7 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
 
         this.inputsMLData.setData(this.inputs);
         // compute candidate model score , cache first layer of sum values in such call method, cache flag here is true
-        double candidateModelScore = cacheNetwork.compute(inputsMLData, true, -1).getData()[0];
+        double candidateModelScore = cacheNetwork.compute(inputsMLData, true, -1, 0.0).getData()[0];
         // output the actual score as column id -1, then user could know the actual catch rate
         // before dropping any variables
         ColumnScore actualScore = new ColumnScore();
@@ -281,7 +296,9 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
 
         for(int i = 0; i < this.inputs.length; i++) {
             // cache flag is false to reuse cache sum of first layer of values.
-            double currentModelScore = cacheNetwork.compute(inputsMLData, false, i).getData()[0];
+            int idx = (int)this.columnIndexes[i];
+            double currentModelScore = cacheNetwork.compute(inputsMLData, false, i,
+                    this.columnMissingInputValues[idx]).getData()[0];
             ColumnScore columnScore = new ColumnScore();
             columnScore.setColumnTag((int) this.outputs[0]);
             columnScore.setWeight(weight);

@@ -51,9 +51,9 @@ public class CacheBasicFloatNetwork extends BasicFloatNetwork {
      * @param resetInputIndex
      *            if cacheInputOutput is false, resetInputIndex is which item should be removed.
      */
-    public void compute(double[] input, double[] output, boolean cacheInputOutput, int resetInputIndex) {
+    public void compute(double[] input, double[] output, boolean cacheInputOutput, int resetInputIndex, double missingVal) {
         CacheFlatNetwork flat = (CacheFlatNetwork) getFlat();
-        flat.compute(input, output, cacheInputOutput, resetInputIndex);
+        flat.compute(input, output, cacheInputOutput, resetInputIndex, missingVal);
     }
 
     /**
@@ -69,10 +69,10 @@ public class CacheBasicFloatNetwork extends BasicFloatNetwork {
      *            if cacheInputOutput is false, resetInputIndex is which item should be removed.
      * @return output value as score.
      */
-    public final MLData compute(final MLData input, boolean cacheInputOutput, int resetInputIndex) {
+    public final MLData compute(final MLData input, boolean cacheInputOutput, int resetInputIndex, double missingVal) {
         try {
             final MLData result = new BasicMLData(this.network.getStructure().getFlat().getOutputCount());
-            compute(input.getData(), result.getData(), cacheInputOutput, resetInputIndex);
+            compute(input.getData(), result.getData(), cacheInputOutput, resetInputIndex, missingVal);
             return result;
         } catch (final ArrayIndexOutOfBoundsException ex) {
             throw new NeuralNetworkError(
