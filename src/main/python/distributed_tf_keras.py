@@ -15,7 +15,7 @@
 # limitations under the License.
 # ==============================================================================
 
-'''Distributed TF model Training class, model definition is keras model.'''
+'''Distributed TF model training class, model definition is keras model.'''
 
 import os
 import tensorflow as tf
@@ -43,7 +43,7 @@ from tensorflow.python.client import timeline
 #######################################################################################################################
 #### Start: Define TF Keras Model: customize below keras model, make sure Inputs and predictions are not changed.
 #######################################################################################################################
-def get_model(shifu_context):
+def model(shifu_context):
     inputs = keras.Input(shape=(shifu_context['feature_count'],), name='shifu_input_0')  # Returns a placeholder tensor
 
     # such model arch in below can be defined manually rather than use configurations from ModelConfig.json
@@ -55,10 +55,14 @@ def get_model(shifu_context):
     previous_layer = inputs
     for i in range(0, num_hidden_layer):
         acti = train_params['ActivationFunc'][i]
+        kernel_regularizer = None
         if "RegularizedConstant" in train_params:
-            layer = keras.layers.Dense(num_hidden_nodes[i], activation=acti, name='hidden_layer_'+str(i+1), kernel_regularizer=keras.regularizers.l2(l=train_params["RegularizedConstant"]))(previous_layer)
-        else:
-            layer = keras.layers.Dense(num_hidden_nodes[i], activation=acti, name='hidden_layer_'+str(i+1))(previous_layer)
+            kernel_regularizer = keras.regularizers.l2(l=train_params["RegularizedConstant"])
+        kernel_initializer = "glorot_uniform"
+        if "WeightInitializer" in train_params:
+            kernel_initializer = train_params["WeightInitializer"]
+
+        layer = keras.layers.Dense(num_hidden_nodes[i], activation=acti, name='hidden_layer_'+str(i+1), kernel_regularizer=kernel_regularizer, kernel_initializer=kernel_initializer)(previous_layer)
         previous_layer = layer
     predictions = keras.layers.Dense(1, activation='sigmoid', name='shifu_output_0')(layer)
 
@@ -158,6 +162,8 @@ def read_context_from_env_and_modelconf():
     if "TRAINING_DATA_PATH" in os.environ:
         training_data_path = os.environ["TRAINING_DATA_PATH"]
 
+    # TODO weight_initalizer should be set and enabled
+
     return {"model_conf": model_conf, "replicas_to_aggregate_ratio": replicas_to_aggregate_ratio, "delimiter": delimiter, 
             "cluster_spec": cluster_spec, "n_pss": n_pss, "n_workers": n_workers, "job_name": job_name, "task_index": task_index, 
             "socket_server_port": socket_server_port, "feature_column_nums": feature_column_nums, 
@@ -174,14 +180,14 @@ def main(_):
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%y-%m-%d %H:%M:%S')
 
     shifu_context = read_context_from_env_and_modelconf();
-    logging.info("Shifu context: "+str(shifu_context))
+    logging.info("Shifu context: %s" % str(shifu_context))
     
     # This client is used for sync worker training intermediate information with master
     socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     socket_client.connect(("127.0.0.1", shifu_context["socket_server_port"])) # sync to local one and logic processed in local TaskExecutor
 
 
-    logging.info("Job info: job_name:%s, task_index:%d" % (shifu_context['job_name'], shifu_context['task_index']))
+    logging.info("Job info: job_name:%s, task_index:%d." % (shifu_context['job_name'], shifu_context['task_index']))
 
     ps_hosts = shifu_context['cluster_spec']['ps']
     worker_hosts = shifu_context['cluster_spec']['worker']
@@ -204,7 +210,7 @@ def main(_):
         if "TRAINING_DATA_PATH" in os.environ:
             logging.info("This is a normal worker.")
             training_data_path = os.environ["TRAINING_DATA_PATH"]
-            logging.info("Loading data from path = %s" % str(training_data_path))
+            logging.info("Loading data from path = %s." % str(training_data_path))
         else:
             logging.info("This is a backup worker.")
 
@@ -217,8 +223,8 @@ def main(_):
         y_batch = np.array_split(context["train_target"], total_batch)
         sample_w_batch = np.array_split(context["train_data_sample_weight"], total_batch)
 
-        logging.info("Testing set size: %d" % len(context['valid_data']))
-        logging.info("Training set size: %d" % len(context['train_data']))
+        logging.info("Testing set size: %d." % len(context['valid_data']))
+        logging.info("Training set size: %d." % len(context['train_data']))
 
         valid_x = np.asarray(context["valid_data"])
         valid_y = np.asarray(context["valid_target"])
@@ -235,8 +241,10 @@ def main(_):
 
             keras.backend.set_learning_phase(1)
             keras.backend.manual_variable_initialization(True)
-            new_model = get_model(shifu_context)
-            logging.info("Model inputs: " + str(new_model.inputs) + "; Model outputs: " + str(new_model.output) + "; Loss: " + str(new_model.loss) + "; optimizer: " + str(new_model.optimizer))
+            new_model = model(shifu_context)
+
+            logging.info("Model inputs: %s; Model outputs: %s; Loss: %s; optimizer: %s."  % (str(new_model.inputs), str(new_model.output), str(new_model.loss), str(new_model.optimizer)))
+
 
             if new_model.optimizer.__class__.__name__ == "TFOptimizer":
                 de_optimizer = new_model.optimizer.optimizer
@@ -312,9 +320,9 @@ def main(_):
 
         if shifu_context['is_chief'] and not shifu_context['is_continue_train']:
             sess.run(init_tokens_op)
-            logging.info("Chief worker start waiting 20 seconds")
+            logging.info("Chief worker start waiting 20 seconds.")
             time.sleep(20)  # grace period to wait on other workers before starting training
-            logging.info("Chief worker finish waiting 20 seconds")
+            logging.info("Chief worker finish waiting 20 seconds.")
 
         # Train until hook stops session
         logging.info('Starting training on worker %d.' % shifu_context['task_index'])
@@ -339,8 +347,8 @@ def main(_):
                                                                           sample_weight_placeholder: valid_sample_w}
                                           )
                 valid_time = time.time() - valid_start
-                # TODO, herer training loss is last index of loss, should be averaged
-                logging.info('total_batch=' + str(total_batch) + ' Index:' + str(i) + 'Step: ' + str(gs) + ' worker: ' + str(shifu_context['task_index']) + " training loss:" + str(l) + " training time:" + str(training_time) + " valid loss:" + str(valid_loss) + " valid time:" + str(valid_time))
+                # TODO, here training loss is last index of loss, should be averaged
+                logging.info("DEBUG: total_batch=%s index:%s step: %s worker: %s training loss:%s training time:%s valid loss:%s valid time:%s." % (str(total_batch), str(i), str(gs), str(shifu_context['task_index']), str(l), str(training_time), str(valid_loss), str(valid_time)))
 
                 # Send intermediate result to master
                 message = "worker_index:{},time:{},current_epoch:{},training_loss:{},valid_loss:{},valid_time:{}\n".format(
@@ -356,26 +364,28 @@ def main(_):
                 else:
                     raise
 
+        # close session and log done
         logging.info('Done training task %s.' % str(shifu_context['task_index']))
+        sess.close()
 
         # We just need to make sure chief worker exit with success status is enough
         if shifu_context['is_chief']:
             tf.reset_default_graph()
             # restore from last checkpoint
             with tf.get_default_graph().as_default():
-                new_model = get_model(shifu_context)
-                logging.info("Expose model inputs: " + str(new_model.inputs) + "; Model outputs: " + str(new_model.output))
-                
+                new_model = model(shifu_context)
+                logging.info("Expose model inputs: %s; Model outputs: %s." % (str(new_model.inputs), str(new_model.output)))
+
             saver = tf.train.Saver()
             with tf.Session() as sess:
                 tmp_model_path= shifu_context['tmp_model_path']
                 ckpt = tf.train.get_checkpoint_state(tmp_model_path)
-                logging.info("Checkpoint path: {}.".format(ckpt))
+                logging.info("Checkpoint path: %s." % ckpt)
                 assert ckpt, "Invalid model checkpoint path: {}.".format(tmp_model_path)
                 saver.restore(sess, ckpt.model_checkpoint_path)
 
                 final_model_path = shifu_context['final_model_path']
-                logging.info("Exporting saved_model to: {}.".format(final_model_path))
+                logging.info("Exporting saved_model to: %s." % final_model_path)
 
                 # exported signatures defined in code
                 simple_save(session=sess, export_dir=final_model_path,
@@ -385,17 +395,16 @@ def main(_):
                             outputs={
                                 "shifu_output_0": new_model.output
                             })
-                logging.info("Exported saved_model")
+                logging.info("Export saved_model.")
 
             tl = timeline.Timeline(run_metadata.step_stats)
             ctf = tl.generate_chrome_trace_format()
-            logging.info("DEBUG: ctf:" + str(ctf))
+            logging.info("DEBUG: ctf: %s " % str(ctf))
 
             f = tf.gfile.GFile(tmp_model_path + "/timeline.json", mode="w+")
             f.write(ctf)
             time.sleep(20) # grace period to wait before closing session
 
-        #sess.close()
         logging.info('Session from worker %d closed cleanly.' % shifu_context['task_index'])
         sys.exit()
 
@@ -403,8 +412,8 @@ def load_data(shifu_context):
     valid_ratio = shifu_context['valid_training_data_ratio']
     data_file_list = shifu_context['training_data_path'].split(",")
 
-    logging.info("Input data %s" % data_file_list)
-    logging.info("SELECTED_COLUMN_NUMS: " + str(shifu_context['feature_column_nums']))
+    logging.info("Input data %s." % data_file_list)
+    logging.info("Select columns: %s." % str(shifu_context['feature_column_nums']))
 
     train_data = []
     train_target = []
@@ -427,7 +436,7 @@ def load_data(shifu_context):
 
     for currentFile in data_file_list:
         logging.info(
-            "Now loading " + currentFile + " Progress: " + str(file_count) + "/" + str(len(data_file_list)) + ".")
+            "Now loading %s Progress: %s/%s." % (currentFile, str(file_count), str(len(data_file_list)))
         file_count += 1
 
         with gfile.Open(currentFile, 'rb') as f:
@@ -439,7 +448,7 @@ def load_data(shifu_context):
 
                 line_count += 1
                 if line_count % 10000 == 0:
-                    logging.info("Total loading lines: " + str(line_count))
+                    logging.info("Total loading lines: %s." % str(line_count))
 
                 columns = line.split(shifu_context['delimiter'])
 
@@ -462,18 +471,18 @@ def load_data(shifu_context):
                         try:
                             f_val = float(columns[feature_column_num].strip('\n'))
                             if math.isnan(f_val):
-                                logging.info("Warning: value is NaN after parsing %s." % columns[feature_column_num].strip('\n'))
+                                logging.warn("Warning: value is NaN after parsing %s." % columns[feature_column_num].strip('\n'))
                                 f_val = 0.0
                             single_train_data.append(f_val)
                         except:
                             single_train_data.append(0.0) # default value 1
-                            logging.info("Could not convert " + str(columns[feature_column_num].strip('\n') + " to float"))
-                            logging.info("feature_column_num: " + str(feature_column_num))
+                            logging.warn("Could not convert %s to float." % str(columns[feature_column_num].strip('\n')))
+                            logging.info("DEBUG: feature_column_num is %s." % str(feature_column_num))
                     train_data.append(single_train_data)
 
                     weight = float(columns[len(columns)-1].strip('\n'))
                     if weight < 0.0:
-                        logging.info("Warning: weight is below 0, use default 1.0. weight : " + weight + "example:" + line)
+                        logging.warn("Warning: weight is below 0, use default 1.0. weight: %s example: %s." % (weight, line))
                         weight = 1.0
                     training_data_sample_weight.append([weight])
                 else:
@@ -488,24 +497,25 @@ def load_data(shifu_context):
                         try:
                             f_val = float(columns[feature_column_num].strip('\n'))
                             if math.isnan(f_val):
-                                logging.info("Warning: value is NaN after parsing %s." % columns[feature_column_num].strip('\n'))
+                                logging.warn("Warning: value is NaN after parsing %s." % columns[feature_column_num].strip('\n'))
                                 f_val = 0.0
                             single_valid_data.append(f_val)
                         except:
                             single_valid_data.append(0.0) # default value 1
-                            logging.info("Could not convert " + str(columns[feature_column_num].strip('\n') + " to float"))
-                            logging.info("'feature_column_num' is : " + str(feature_column_num))
+                            logging.warn("Could not convert %s to float." % str(columns[feature_column_num].strip('\n')))
+                            logging.info("DEBUG: feature_column_num is %s." % str(feature_column_num))
                     valid_data.append(single_valid_data)
 
                     weight = float(columns[len(columns)-1].strip('\n'))
                     if weight < 0.0:
-                        logging.info("Warning: weight is below 0, use default 1.0. weight : " + weight + "example:" + line)
+                        logging.warn("Warning: weight is below 0, use default 1.0. weight: %s example: %s." % (weight, line))
+
                         weight = 1.0
                     valid_data_sample_weight.append([weight])
 
-    logging.info("Total data count: " + str(line_count) + ".")
-    logging.info("Train pos count: " + str(train_pos_cnt) + ", neg count: " + str(train_neg_cnt) + ".")
-    logging.info("Valid pos count: " + str(valid_pos_cnt) + ", neg count: " + str(valid_neg_cnt) + ".")
+    logging.info("Total data count: %s." % str(line_count))
+    logging.info("Train pos count: %s, neg count: %s." % (str(train_pos_cnt), str(train_neg_cnt)))
+    logging.info("Valid pos count: %s, neg count: %s." % (str(valid_pos_cnt), str(valid_neg_cnt)))
 
     return {"train_data": train_data, "train_target": train_target,
             "valid_data": valid_data, "valid_target": valid_target,
@@ -555,7 +565,7 @@ def start_tensorboard(checkpoint_dir):
     tb_thread = Thread(target=tb_main.run_main)
     tb_thread.daemon = True
 
-    logging.info("Starting TensorBoard with --logdir=" + checkpoint_dir + " in daemon thread ...")
+    logging.info("Starting TensorBoard with --logdir= %s in daemon thread ..." % checkpoint_dir)
     tb_thread.start()
 
 if __name__ == '__main__':

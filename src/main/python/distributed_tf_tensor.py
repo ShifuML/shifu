@@ -338,7 +338,9 @@ def main(_):
                 else:
                     raise
 
-        logging.info('Done' + str(task_index))
+        # close session and log done.
+        logging.info('Done ' + str(task_index))
+        sess.close()
 
         # We just need to make sure chief worker exit with success status is enough
         if is_chief:
@@ -386,7 +388,6 @@ def main(_):
             f.write(ctf)
             time.sleep(30) # grace period to wait before closing session
 
-        #sess.close()
         logging.info('Session from worker %d closed cleanly' % task_index)
         sys.exit()
 

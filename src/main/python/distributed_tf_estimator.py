@@ -393,11 +393,11 @@ def main(_):
         server.join()
     else:  # it must be a worker server
         is_chief = (task_index == 0)  # checks if this is the chief node
-        logging.info("Loading data from worker index = %d" % task_index)
+        logging.info("Loading data from worker index = %d." % task_index)
     
     TIME_INTERVAL_TO_DO_VALIDATION = 3  # seconds
 
-    logging.info("Loading data from worker index = %d" % task_index)
+    logging.info("Loading data from worker index = %d." % task_index)
 
     training_data_path = os.environ["TRAINING_DATA_PATH"]
     if "TRAINING_DATA_PATH" in os.environ:
@@ -418,7 +418,7 @@ def main(_):
         if "MiniBatchs" in model_conf['train']['params']:
             BATCH_SIZE = model_conf['train']['params']['MiniBatchs']
 
-        logging.info("Batch size: " + str(BATCH_SIZE) + ", VALID_TRAINING_DATA_RATIO: " + str(VALID_TRAINING_DATA_RATIO))
+        logging.info("Batch size: %s, VALID_TRAINING_DATA_RATIO: %s." % (str(BATCH_SIZE), str(VALID_TRAINING_DATA_RATIO)))
 
     # import data
     context = load_data(training_data_path)
@@ -476,7 +476,7 @@ def load_data(data_file):
     global feature_column_nums
 
     logging.info("input data %s" % data_file_list)
-    logging.info("SELECTED_COLUMN_NUMS" + str(feature_column_nums))
+    logging.info("Selected columns: " + str(feature_column_nums))
 
     train_data = []
     train_target = []

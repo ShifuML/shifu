@@ -735,6 +735,22 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         Configuration conf = new Configuration();
 
         SourceType sourceType = super.getModelConfig().getDataSet().getSource();
+        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+        Path tmpModelsPath = fileSystem.makeQualified(new Path(super.getPathFinder()
+                .getPathBySourceType(new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType)));
+
+        if(!this.modelConfig.getTrain().getIsContinuous()) {
+            // delete all old models if not continuous
+            String srcModelPath = super.getPathFinder().getModelsPath(sourceType);
+            String mvModelPath = srcModelPath + "_" + System.currentTimeMillis();
+            LOG.info("Old model path has been moved to {}", mvModelPath);
+            fileSystem.rename(new Path(srcModelPath), new Path(mvModelPath));
+            fileSystem.mkdirs(new Path(srcModelPath));
+            FileSystem.getLocal(conf).delete(new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL)), true);
+            // delete tmp model folder
+            fileSystem.delete(tmpModelsPath, true);
+            fileSystem.mkdirs(tmpModelsPath);
+        }
 
         final List<String> args = new ArrayList<String>();
 
@@ -746,9 +762,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         String alg = super.getModelConfig().getTrain().getAlgorithm();
 
         // add tmp models folder to config
-        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(sourceType);
-        Path tmpModelsPath = fileSystem.makeQualified(new Path(super.getPathFinder()
-                .getPathBySourceType(new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType)));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_TMP_MODELS_FOLDER,
                 tmpModelsPath.toString()));
         int baggingNum = isForVarSelect ? 1 : super.getModelConfig().getBaggingNum();
