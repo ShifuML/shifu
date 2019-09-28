@@ -408,7 +408,7 @@ def main(_):
                             outputs={
                                 "shifu_output_0": new_model.output
                             },
-                            shifu_context['model_conf']['normalize']['normType'])
+                            norm_type=shifu_context['model_conf']['normalize']['normType'])
                 logging.info("Export saved_model.")
 
             tl = timeline.Timeline(run_metadata.step_stats)
