@@ -407,7 +407,8 @@ def main(_):
                             },
                             outputs={
                                 "shifu_output_0": new_model.output
-                            })
+                            },
+                            shifu_context['model_conf']['normalize']['normType'])
                 logging.info("Export saved_model.")
 
             tl = timeline.Timeline(run_metadata.step_stats)
@@ -536,7 +537,7 @@ def load_data(shifu_context):
             "valid_data_sample_weight": valid_data_sample_weight,
             "feature_count": len(feature_column_nums)}
 
-def simple_save(session, export_dir, inputs, outputs, legacy_init_op=None):
+def simple_save(session, export_dir, inputs, outputs, norm_type, legacy_init_op=None, ):
     if tf.gfile.Exists(export_dir):
         tf.gfile.DeleteRecursively(export_dir)
     signature_def_map = {
@@ -552,9 +553,9 @@ def simple_save(session, export_dir, inputs, outputs, legacy_init_op=None):
         legacy_init_op=legacy_init_op,
         clear_devices=True)
     b.save()
-    export_generic_config(export_dir=export_dir, input=inputs['shifu_input_0'].name, output=outputs['shifu_output_0'].name)
+    export_generic_config(export_dir=export_dir, input=inputs['shifu_input_0'].name, output=outputs['shifu_output_0'].name, norm_type=norm_type)
 
-def export_generic_config(export_dir, input, output):
+def export_generic_config(export_dir, input, output, norm_type):
     config_json_str = ""
     config_json_str += "{\n"
     config_json_str += "    \"inputnames\": [\n"
@@ -562,9 +563,9 @@ def export_generic_config(export_dir, input, output):
     config_json_str += "      ],\n"
     config_json_str += "    \"properties\": {\n"
     config_json_str += "         \"algorithm\": \"tensorflow\",\n"
-    config_json_str += "         \"tags\": [\"serve\"],\n"
+    config_json_str += "         \"tags\": [\"train\", \"serve\"],\n"
     config_json_str += "         \"outputnames\": \"" + output + "\",\n"
-    config_json_str += "         \"normtype\": \"ZSCALE\"\n"
+    config_json_str += "         \"normtype\": \"" + norm_type + "\"\n"
     config_json_str += "      }\n"
     config_json_str += "}"
     f = tf.gfile.GFile(export_dir + "/GenericModelConfig.json", mode="w+")
