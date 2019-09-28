@@ -176,17 +176,6 @@ def read_context_from_env_and_modelconf():
             "learning_rate": learning_rate, "loss_func": model_conf['train']['params']['Loss'], "optimizer": "adam",
             "weight_initalizer": "xavier", "act_funcs": model_conf['train']['params']['ActivationFunc']}
 
-class LoadPBModelHook(tf.train.SessionRunHook):
-
-    def __init__(self, model_path=None):
-        self.model_path = model_path
-
-    def after_create_session(self, session, coord):
-        logging.info("loading pb models ...")
-        tf.saved_model.loader.load(session, [tag_constants.TRAINING, tag_constants.SERVING], self.model_path)
-        logging.info("loading pb models done ...")
-
-
 def main(_):
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%y-%m-%d %H:%M:%S')
 
@@ -224,14 +213,18 @@ def main(_):
         else:
             logging.info("This is a backup worker.")
 
-        #if shifu_context['is_chief'] and shifu_context['is_continue_train']:
-        #    logging.info("Adding model loading hook.")
-        #    with tf.Session() as session:
-        #        logging.info("loading pb models ...")
-        #        tf.saved_model.loader.load(session, [tag_constants.TRAINING], shifu_context['final_model_path']+'/models/')
-        #        logging.info("loading pb models done and save to checkpoint ...")
-        #        save_path = tf.train.Saver().save(session, shifu_context['tmp_model_path'], global_step=10000)
-        #        logging.info("loading checkpoint model is done ...")
+        if shifu_context['is_chief'] and shifu_context['is_continue_train'] and ( gfile.Exists(os.path.join(shifu_context['final_model_path'], 'saved_model.pb')) or gfile.Exists(os.path.join(shifu_context['final_model_path'], 'saved_model.pbtxt')) ):
+            logging.info("Adding model loading hook.")
+            tf.reset_default_graph()
+            # restore from last checkpoint
+
+            with tf.Session() as session:
+                logging.info("loading pb models ...")
+                tf.saved_model.loader.load(session, [tag_constants.TRAINING, tag_constants.SERVING], shifu_context['final_model_path'])
+                logging.info("loading pb models done and saving to checkpoint ...")
+                save_path = tf.train.Saver().save(session, shifu_context['tmp_model_path'], global_step=100000)
+                logging.info("loading checkpoint model is done ..." + str(save_path))
+            tf.reset_default_graph()
 
         # import data
         context = load_data(shifu_context)

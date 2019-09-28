@@ -460,7 +460,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     super.modelConfig.getTrain().getBaggingNum());
         }
         // if not continuous mode, remove tmp models to not load it in tf python, continuous mode here there is a bug
-        cleanTmpModelPath();
+        cleanModelPath();
 
         final List<String> args = new ArrayList<String>();
 
@@ -509,7 +509,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         return 0;
     }
 
-    private void cleanTmpModelPath() {
+    private void cleanModelPath() {
         // if var select job and not continue model training
         if(this.isForVarSelect || !modelConfig.getTrain().getIsContinuous()) {
             try {
@@ -521,6 +521,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 LOG.info("Tmp tensorflow model path has been moved to folder: {}.", mvTmpModelPath);
                 fs.rename(srcTmpModelPath, mvTmpModelPath);
                 fs.mkdirs(srcTmpModelPath);
+                
+                // delete all old models if not continuous
+                String srcModelPath = super.getPathFinder().getModelsPath(SourceType.HDFS);
+                String mvModelPath = srcModelPath + "_" + System.currentTimeMillis();
+                LOG.info("Old model path has been moved to {}", mvModelPath);
+                fs.rename(new Path(srcModelPath), new Path(mvModelPath));
+                fs.mkdirs(new Path(srcModelPath));
+                FileSystem.getLocal(HDFSUtils.getConf()).delete(new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL)), true);
             } catch (Exception e) {
                 LOG.warn("Failed to move tmp HDFS path, such error can be ignored", e);
             }
