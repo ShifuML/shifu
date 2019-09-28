@@ -222,7 +222,8 @@ def main(_):
                 logging.info("loading pb models ...")
                 tf.saved_model.loader.load(session, [tag_constants.TRAINING, tag_constants.SERVING], shifu_context['final_model_path'])
                 logging.info("loading pb models done and saving to checkpoint ...")
-                save_path = tf.train.Saver().save(session, shifu_context['tmp_model_path'], global_step=100000)
+                # global step set to 1000000 to make sure last checkpoint, set to max int ?
+                save_path = tf.train.Saver().save(session, shifu_context['tmp_model_path'], global_step=1000000)
                 logging.info("loading checkpoint model is done ..." + str(save_path))
             tf.reset_default_graph()
 
