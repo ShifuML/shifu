@@ -176,6 +176,17 @@ def read_context_from_env_and_modelconf():
             "learning_rate": learning_rate, "loss_func": model_conf['train']['params']['Loss'], "optimizer": "adam",
             "weight_initalizer": "xavier", "act_funcs": model_conf['train']['params']['ActivationFunc']}
 
+class LoadPBModelHook(tf.train.SessionRunHook):
+
+    def __init__(self, model_path=None):
+        self.model_path = model_path
+
+    def after_create_session(self, session, coord):
+        logging.info("loading pb models ...")
+        tf.saved_model.loader.load(session, [tag_constants.TRAINING, tag_constants.SERVING], self.model_path)
+        logging.info("loading pb models done ...")
+
+
 def main(_):
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%y-%m-%d %H:%M:%S')
 
@@ -185,7 +196,6 @@ def main(_):
     # This client is used for sync worker training intermediate information with master
     socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     socket_client.connect(("127.0.0.1", shifu_context["socket_server_port"])) # sync to local one and logic processed in local TaskExecutor
-
 
     logging.info("Job info: job_name:%s, task_index:%d." % (shifu_context['job_name'], shifu_context['task_index']))
 
@@ -213,6 +223,15 @@ def main(_):
             logging.info("Loading data from path = %s." % str(training_data_path))
         else:
             logging.info("This is a backup worker.")
+
+        #if shifu_context['is_chief'] and shifu_context['is_continue_train']:
+        #    logging.info("Adding model loading hook.")
+        #    with tf.Session() as session:
+        #        logging.info("loading pb models ...")
+        #        tf.saved_model.loader.load(session, [tag_constants.TRAINING], shifu_context['final_model_path']+'/models/')
+        #        logging.info("loading pb models done and save to checkpoint ...")
+        #        save_path = tf.train.Saver().save(session, shifu_context['tmp_model_path'], global_step=10000)
+        #        logging.info("loading checkpoint model is done ...")
 
         # import data
         context = load_data(shifu_context)
@@ -436,7 +455,7 @@ def load_data(shifu_context):
 
     for currentFile in data_file_list:
         logging.info(
-            "Now loading %s Progress: %s/%s." % (currentFile, str(file_count), str(len(data_file_list)))
+            "Now loading %s Progress: %s/%s." % (currentFile, str(file_count), str(len(data_file_list))))
         file_count += 1
 
         with gfile.Open(currentFile, 'rb') as f:
@@ -533,7 +552,7 @@ def simple_save(session, export_dir, inputs, outputs, legacy_init_op=None):
     b = builder.SavedModelBuilder(export_dir)
     b.add_meta_graph_and_variables(
         session,
-        tags=[tag_constants.SERVING],
+        tags=[tag_constants.TRAINING, tag_constants.SERVING],
         signature_def_map=signature_def_map,
         assets_collection=ops.get_collection(ops.GraphKeys.ASSET_FILEPATHS),
         legacy_init_op=legacy_init_op,
