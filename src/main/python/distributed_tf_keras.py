@@ -216,8 +216,8 @@ def main(_):
         if shifu_context['is_chief'] and shifu_context['is_continue_train'] and ( gfile.Exists(os.path.join(shifu_context['final_model_path'], 'saved_model.pb')) or gfile.Exists(os.path.join(shifu_context['final_model_path'], 'saved_model.pbtxt')) ):
             logging.info("Adding model loading hook.")
             tf.reset_default_graph()
-            # restore from last checkpoint
 
+            # save continous model from user to last checkpoint and existing logic will load it before training in MonitoredTrainingSession
             with tf.Session() as session:
                 logging.info("loading pb models ...")
                 tf.saved_model.loader.load(session, [tag_constants.TRAINING, tag_constants.SERVING], shifu_context['final_model_path'])
@@ -255,9 +255,7 @@ def main(_):
             keras.backend.set_learning_phase(1)
             keras.backend.manual_variable_initialization(True)
             new_model = model(shifu_context)
-
             logging.info("Model inputs: %s; Model outputs: %s; Loss: %s; optimizer: %s."  % (str(new_model.inputs), str(new_model.output), str(new_model.loss), str(new_model.optimizer)))
-
 
             if new_model.optimizer.__class__.__name__ == "TFOptimizer":
                 de_optimizer = new_model.optimizer.optimizer
