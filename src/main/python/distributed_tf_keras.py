@@ -176,6 +176,28 @@ def read_context_from_env_and_modelconf():
             "learning_rate": learning_rate, "loss_func": model_conf['train']['params']['Loss'], "optimizer": "adam",
             "weight_initalizer": "xavier", "act_funcs": model_conf['train']['params']['ActivationFunc']}
 
+class GraphEditTestHook(tf.train.SessionRunHook):
+    """
+    Add a hook in begin to check if we can edit such graph, after MonitoredTrainingSession the graph is finalized cannot be changed,
+    The tensor read and added in begin method can be called in session.run.
+    """
+
+    def __init__(self, cluster, worker_device):
+        logging.info("test ... ")
+        self.cluster = cluster
+        self.worker_device = worker_device
+
+    def begin(self):
+        logging.info("test begin ... ")
+        with tf.device(tf.train.replica_device_setter(#ps_tasks=n_pss,
+                                              cluster=self.cluster,
+                                              worker_device=self.worker_device)):
+            graph = tf.get_default_graph()
+            output_tensor = graph.get_tensor_by_name('shifu_output_0/Sigmoid:0')
+            constant = tf.constant([1])
+            output_add_tensor =  tf.add_n([output_tensor, constant])
+            tf.add_to_collection("TestHook", output_add_tensor)
+
 def main(_):
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%y-%m-%d %H:%M:%S')
 
@@ -215,17 +237,15 @@ def main(_):
 
         if shifu_context['is_chief'] and shifu_context['is_continue_train'] and ( gfile.Exists(os.path.join(shifu_context['final_model_path'], 'saved_model.pb')) or gfile.Exists(os.path.join(shifu_context['final_model_path'], 'saved_model.pbtxt')) ):
             logging.info("Adding model loading hook.")
-            tf.reset_default_graph()
-
+            tf.reset_default_graph() # reset graph at first to avoid conflict in later graph loading
             # save continous model from user to last checkpoint and existing logic will load it before training in MonitoredTrainingSession
             with tf.Session() as session:
-                logging.info("loading pb models ...")
+                logging.info("Load eisting pb models for continuous training ...")
                 tf.saved_model.loader.load(session, [tag_constants.TRAINING, tag_constants.SERVING], shifu_context['final_model_path'])
-                logging.info("loading pb models done and saving to checkpoint ...")
-                # global step set to 1000000 to make sure last checkpoint, set to max int ?
-                save_path = tf.train.Saver().save(session, shifu_context['tmp_model_path'], global_step=1000000)
-                logging.info("loading checkpoint model is done ..." + str(save_path))
-            tf.reset_default_graph()
+                # global step set to sys.maxint to make sure last checkpoint
+                save_path = tf.train.Saver().save(session, shifu_context['tmp_model_path'], global_step=sys.maxint)
+                logging.info("Save checkpoint model is done: %s ... " % str(save_path))
+            tf.reset_default_graph() # reset again to make sure below model training not be impacted
 
         # import data
         context = load_data(shifu_context)
@@ -302,6 +322,7 @@ def main(_):
         # Session
         sync_replicas_hook = opt.make_session_run_hook(is_chief)
         stop_hook = tf.train.StopAtStepHook(num_steps=shifu_context['epochs'])
+        #chief_hooks = [sync_replicas_hook, stop_hook, GraphEditHook(cluster=cluster, worker_device=worker_device)]
         chief_hooks = [sync_replicas_hook, stop_hook]
         if shifu_context['is_continue_train']:
             scaff = None
@@ -347,7 +368,7 @@ def main(_):
                     train_feed = {new_model.inputs[0]: x_batch[i],
                                   label_placeholder: y_batch[i],
                                   sample_weight_placeholder: sample_w_batch[i]}
-
+                    #_, l, gs,opa = sess.run([train_step, loss, global_step, tf.get_collection("TestHook")[0]], feed_dict=train_feed, options=run_options,run_metadata=run_metadata)
                     _, l, gs = sess.run([train_step, loss, global_step], feed_dict=train_feed, options=run_options,run_metadata=run_metadata)
                 training_time = time.time() - start
                 
