@@ -15,6 +15,8 @@
  */
 package ml.shifu.shifu.core.datestat;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -33,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.util.*;
 
 /**
@@ -89,6 +92,11 @@ public class DateStatComputeMapper extends Mapper<LongWritable, Text, Text, Date
      * Column Config list read from HDFS
      */
     private List<ColumnConfig> columnConfigList;
+
+    /**
+     * Cache for column number and subcategoryIndexMap, refer getCategoryMap method
+     */
+    private Map<Integer, Map<String, Integer>> categoricalBinMap = new HashMap<>();
 
     /**
      * Tag column index
@@ -349,11 +357,15 @@ public class DateStatComputeMapper extends Mapper<LongWritable, Text, Text, Date
             int lastBinIndex = columnConfig.getBinCategory().size();
             variableStatInfo.init(lastBinIndex);
             int binNum = 0;
-            if(units[columnIndex] == null || missingOrInvalidValues.contains(variableName)) {
+            if(units[columnIndex] == null || missingOrInvalidValues.contains(units[columnIndex].toLowerCase())) {
                 isMissingValue = true;
             } else {
                 String str = units[columnIndex];
-                binNum = quickLocateCategoricalBin(columnConfig.getBinCategory(), str);
+                //keep the same with UpdateBinningInfoMapper
+                if (columnConfig.getHashSeed() > 0) {
+                    str = str.hashCode() % columnConfig.getHashSeed() + "";
+                }
+                binNum = quickLocateCategoricalBin(getCategoryMap(columnConfig), str);
                 if(binNum < 0) {
                     isInvalidValue = true;
                 }
@@ -456,13 +468,48 @@ public class DateStatComputeMapper extends Mapper<LongWritable, Text, Text, Date
         return BinUtils.getBinIndex(binBoundaryList, dVal);
     }
 
-    private int quickLocateCategoricalBin(List<String> list, String val) {
-        for (int i = 0; i < list.size(); i++){
-            if(StringUtils.equals(list.get(i), val)){
-                return i;
+    /**
+     * get category binNum from map
+     * @param map The column's all subCategory and SubCategory's index map
+     * @param val subCategory
+     * @return binNum for this val
+     */
+    private int quickLocateCategoricalBin(Map<String, Integer> map, String val) {
+        Integer binNum = map.get(val);
+        return ((binNum == null) ? -1 : binNum);
+    }
+
+    /**
+     * This method get all subCategory and SubCategory's index map for one column.
+     * Get map from cache, if exists, then return it directly, if not exists, then calculate if based on category.
+     * If column is not category column, return empty map.
+     *
+     * @param columnConfig column config that record basic information for column
+     * @return The column's all subCategory and SubCategory's index map
+     */
+    public Map<String, Integer> getCategoryMap(ColumnConfig columnConfig){
+        if(this.categoricalBinMap.containsKey(columnConfig.getColumnNum())){
+            return categoricalBinMap.get(columnConfig.getColumnNum());
+        }
+        List<String> binCategories = columnConfig.getBinCategory();
+        Map<String, Integer> categoryIndexMapping = new HashMap<String, Integer>();
+        if(binCategories == null){
+            return categoryIndexMapping;
+        }
+        for(int i = 0; i < binCategories.size(); i++) {
+            String category = binCategories.get(i);
+            if(category.contains(Constants.CATEGORICAL_GROUP_VAL_DELIMITER)) {
+                // merged category should be flatten, use split function this class to avoid depending on guava jar
+                String[] splits = ml.shifu.shifu.core.dtrain.StringUtils.split(category, Constants.CATEGORICAL_GROUP_VAL_DELIMITER);
+                for(String str: splits) {
+                    categoryIndexMapping.put(str, i);
+                }
+            } else {
+                categoryIndexMapping.put(category, i);
             }
         }
-        return -1;
+        this.categoricalBinMap.put(columnConfig.getColumnNum(), categoryIndexMapping);
+        return categoryIndexMapping;
     }
 
     /**
