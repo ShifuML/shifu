@@ -332,6 +332,16 @@ public class PathFinder {
     }
 
     /**
+     * Get the header path of normalized data
+     *
+     * @return header path of normalized data
+     */
+    public String getNormalizedDataHeaderPath() {
+        String normalizedDataPath = getNormalizedDataPath(modelConfig.getDataSet().getSource());
+        return new Path(normalizedDataPath, Constants.PIG_HEADER).toString();
+    }
+
+    /**
      * Get the path of normalized data
      *
      * @return path of normalized data
@@ -367,6 +377,21 @@ public class PathFinder {
         }
     }
 
+    /**
+     * Get the header path of Cleaned data
+     *
+     * @return header path of Cleaned data
+     */
+    public String getCleanedDataHeaderPath() {
+        String cleanedDataPath = getCleanedDataPath(modelConfig.getDataSet().getSource());
+        return new Path(cleanedDataPath, Constants.PIG_HEADER).toString();
+    }
+
+    /**
+     * Get the path of Cleaned data
+     *
+     * @return path of Cleaned data
+     */
     public String getCleanedDataPath() {
         return getCleanedDataPath(modelConfig.getDataSet().getSource());
     }

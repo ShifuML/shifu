@@ -18,6 +18,7 @@ package ml.shifu.shifu.udf;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
@@ -61,6 +62,8 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
 
     private List<DataPurifier> dataPurifiers;
 
+    private List<Integer> newTagIndexes;
+
     private boolean isForExpressions = false;
     private boolean isLinearTarget = false;
     private int mismatchCnt = 0;
@@ -70,8 +73,8 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
         this(source, pathModelConfig, pathColumnConfig, withScoreStr, "true");
     }
 
-    public AddColumnNumAndFilterUDF(String source, String pathModelConfig, String pathColumnConfig,
-            String withScoreStr, String isAppendRandom) throws Exception {
+    public AddColumnNumAndFilterUDF(String source, String pathModelConfig, String pathColumnConfig, String withScoreStr,
+            String isAppendRandom) throws Exception {
         super(source, pathModelConfig, pathColumnConfig, withScoreStr);
         this.isAppendRandom = Boolean.TRUE.toString().equalsIgnoreCase(isAppendRandom);
 
@@ -86,8 +89,17 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
             this.isForExpressions = true;
             String[] splits = CommonUtils.split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
             this.dataPurifiers = new ArrayList<>(splits.length);
+            this.newTagIndexes = new ArrayList<>(splits.length);
             for(String split: splits) {
-                this.dataPurifiers.add(new DataPurifier(modelConfig, split, false));
+                DataPurifier dataPurifier = new DataPurifier(modelConfig, this.columnConfigList, split, false);
+                if(dataPurifier.isNewTag()) {
+                    ColumnConfig cc = CommonUtils.findColumnConfigByName(columnConfigList,
+                            dataPurifier.getNewTagColumnName());
+                    this.newTagIndexes.add(cc == null ? -1 : cc.getColumnNum());
+                } else {
+                    this.newTagIndexes.add(-1);
+                }
+                this.dataPurifiers.add(dataPurifier);
             }
         }
 
@@ -121,7 +133,8 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
         if(input.get(tagColumnNum) == null) {
             log.error("tagColumnNum is " + tagColumnNum + "; input size is " + input.size()
                     + "; columnConfigList.size() is " + columnConfigList.size() + "; tuple is"
-                    + input.toDelimitedString("|") + "; tag is " + input.get(tagColumnNum));
+                    + (System.currentTimeMillis() % 100 == 0 ? "" : input.toDelimitedString("|")) + "; tag is "
+                    + input.get(tagColumnNum));
             if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
                 PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1);
             }
@@ -130,17 +143,16 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
 
         String tag = CommonUtils.trimTag(input.get(tagColumnNum).toString());
         if(this.isLinearTarget) {
-            if (!NumberUtils.isNumber(tag)) {
+            if(!NumberUtils.isNumber(tag)) {
                 if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
-                    PigStatusReporter.getInstance().
-                            getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1);
+                    PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")
+                            .increment(1);
                 }
                 return null;
             }
-        }else if(!super.tagSet.contains(tag)) {
+        } else if(!super.tagSet.contains(tag)) {
             if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
-                PigStatusReporter.getInstance().
-                        getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1);
+                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG").increment(1);
             }
             return null;
         }
@@ -172,12 +184,30 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
                 continue;
             }
 
-            bag.add(buildTuple(input, tupleFactory, tag, i, i));
+            bag.add(buildTuple(input, tupleFactory, this.posTagSet, this.negTagSet, tag, i, i));
             if(this.isForExpressions) {
                 for(int j = 0; j < this.dataPurifiers.size(); j++) {
+                    DataPurifier dataPurifier = this.dataPurifiers.get(j);
                     Boolean isFilter = filterResultList.get(j);
                     if(isFilter != null && isFilter) {
-                        bag.add(buildTuple(input, tupleFactory, tag, i, (j + 1) * size + i));
+                        if(dataPurifier.isNewTag()) {
+                            String newTag = input.get(this.newTagIndexes.get(j)).toString();
+                            Set<String> newPosTags = dataPurifier.getNewPosTags();
+                            Set<String> newNegTags = dataPurifier.getNewNegTags();
+                            if(newTag == null || (!newPosTags.contains(newTag) && !newNegTags.contains(newTag))) {
+                                if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_EXTENSION_TAG")) {
+                                    PigStatusReporter.getInstance()
+                                            .getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_EXTENSION_TAG")
+                                            .increment(1);
+                                }
+                            } else {
+                                bag.add(buildTuple(input, tupleFactory, newPosTags, newNegTags, newTag, i,
+                                        (j + 1) * size + i));
+                            }
+                        } else {
+                            bag.add(buildTuple(input, tupleFactory, this.posTagSet, this.negTagSet, tag, i,
+                                    (j + 1) * size + i));
+                        }
                     }
                 }
             }
@@ -185,29 +215,25 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
         return bag;
     }
 
-    private Tuple buildTuple(Tuple input, TupleFactory tupleFactory, String tag, int i, int finalIndex)
-            throws ExecException {
+    private Tuple buildTuple(Tuple input, TupleFactory tupleFactory, Set<String> posTags, Set<String> negTags,
+            String tag, int i, int finalIndex) throws ExecException {
         Tuple tuple = tupleFactory.newTuple(TOTAL_COLUMN_CNT);
         tuple.set(COLUMN_ID_INDX, finalIndex);
-        // Set Data
-        tuple.set(COLUMN_VAL_INDX, (input.get(i) == null ? null : input.get(i).toString()));
+        tuple.set(COLUMN_VAL_INDX, (input.get(i) == null ? null : input.get(i).toString())); // Set Data
 
         if(modelConfig.isRegression()) {
-            // Set Tag
-            if(super.posTagSet.contains(tag)) {
+            if(posTags.contains(tag)) { // Set Tag
                 tuple.set(COLUMN_TAG_INDX, true);
             }
 
-            if(super.negTagSet.contains(tag)) {
+            if(negTags.contains(tag)) {
                 tuple.set(COLUMN_TAG_INDX, false);
             }
         } else {
             // a mock for multiple classification and linear target
             tuple.set(COLUMN_TAG_INDX, true);
         }
-
-        // get weight value
-        tuple.set(COLUMN_WEIGHT_INDX, getWeightColumnVal(input));
+        tuple.set(COLUMN_WEIGHT_INDX, getWeightColumnVal(input)); // get weight value
 
         // add random seed for distribution for bigger mapper, 300 is not enough TODO
         if(this.isAppendRandom) {

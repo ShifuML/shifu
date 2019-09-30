@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain.nn;
+package ml.shifu.shifu.core.dtrain.loss;
 
 /**
  * Log error computation logic.
  */
-public class LogErrorCalculation implements ml.shifu.shifu.core.dtrain.nn.ErrorCalculation {
+public class LogErrorCalculation implements ml.shifu.shifu.core.dtrain.loss.ErrorCalculation {
 
     /**
      * The overall error.
@@ -36,10 +36,6 @@ public class LogErrorCalculation implements ml.shifu.shifu.core.dtrain.nn.ErrorC
      * @return The current error for the neural network.
      */
     public final double calculate() {
-//        if(this.setSize == 0) {
-//            return 0;
-//        }
-//        return this.globalError / this.setSize;
         return this.globalError;
     }
 
@@ -59,9 +55,11 @@ public class LogErrorCalculation implements ml.shifu.shifu.core.dtrain.nn.ErrorC
      * @param ideal
      *            The ideal value.
      */
-    public final void updateError(final double actual, final double ideal) {
-        this.globalError += -(Math.log(actual) * ideal);
+    public final double updateError(final double actual, final double ideal) {
+        double currentError = -(Math.log(actual) * ideal);
+        this.globalError += currentError;
         this.setSize += 1;
+        return currentError;
     }
 
     /**

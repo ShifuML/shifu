@@ -145,6 +145,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     private List<DataPurifier> expressionDataPurifiers;
     private boolean isForExpressions = false;
 
+    private List<Integer> newTagIndexes;
+
     /**
      * Load model config and column config files.
      */
@@ -160,7 +162,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             throw new RuntimeException(e);
         }
     }
-
+    
     /**
      * Initialization for column statistics in mapper.
      */
@@ -170,15 +172,24 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         this.dataSetDelimiter = this.modelConfig.getDataSetDelimiter();
 
-        this.dataPurifier = new DataPurifier(this.modelConfig, false);
+        this.dataPurifier = new DataPurifier(this.modelConfig, this.columnConfigList, false);
 
         String filterExpressions = context.getConfiguration().get(Constants.SHIFU_STATS_FILTER_EXPRESSIONS);
         if(StringUtils.isNotBlank(filterExpressions)) {
             this.isForExpressions = true;
             String[] splits = CommonUtils.split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
             this.expressionDataPurifiers = new ArrayList<DataPurifier>(splits.length);
+            this.newTagIndexes = new ArrayList<>();
             for(String split: splits) {
-                this.expressionDataPurifiers.add(new DataPurifier(modelConfig, split, false));
+                DataPurifier dataPurifier = new DataPurifier(modelConfig, this.columnConfigList, split, false);
+                if(dataPurifier.isNewTag()) {
+                    ColumnConfig cc = CommonUtils.findColumnConfigByName(columnConfigList,
+                            dataPurifier.getNewTagColumnName());
+                    this.newTagIndexes.add(cc == null ? -1 : cc.getColumnNum());
+                } else {
+                    this.newTagIndexes.add(-1);
+                }
+                this.expressionDataPurifiers.add(dataPurifier);
             }
         }
 
@@ -412,19 +423,36 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         // valid data process
         for(int i = 0; i < units.length; i++) {
-            populateStats(units, tag, weight, i, i);
+            populateStats(units, this.posTags, this.negTags, tag, weight, i, i);
             if(this.isForExpressions) {
                 for(int j = 0; j < this.expressionDataPurifiers.size(); j++) {
                     Boolean filter = filterResults.get(j);
+                    DataPurifier dataPurifier = this.expressionDataPurifiers.get(j);
                     if(filter != null && filter) {
-                        populateStats(units, tag, weight, i, (j + 1) * units.length + i);
+                        if(dataPurifier.isNewTag()) {
+                            Integer index = this.newTagIndexes.get(j);
+                            String newTag = units[index].trim();
+                            Set<String> newPosTags = dataPurifier.getNewPosTags();
+                            Set<String> newNegTags = dataPurifier.getNewNegTags();
+                            if(newTag == null || (!newPosTags.contains(newTag) && !newNegTags.contains(newTag))) {
+                                context.getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_EXTENSION_TAG")
+                                        .increment(1L);
+                            } else {
+                                populateStats(units, newPosTags, newNegTags, newTag, weight, i,
+                                        (j + 1) * units.length + i);
+                            }
+                        } else {
+                            populateStats(units, this.posTags, this.negTags, tag, weight, i,
+                                    (j + 1) * units.length + i);
+                        }
                     }
                 }
             }
         }
     }
 
-    private void populateStats(String[] units, String tag, Double weight, int columnIndex, int newCCIndex) {
+    private void populateStats(String[] units, Set<String> posTags, Set<String> negTags, String tag, Double weight,
+            int columnIndex, int newCCIndex) {
         ColumnConfig columnConfig = this.columnConfigList.get(columnIndex);
 
         CountAndFrequentItems countAndFrequentItems = this.variableCountMap.get(newCCIndex);
@@ -511,13 +539,13 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 isMissingValue = true;
             } else {
                 String str = units[columnIndex];
-				if (columnConfig.getHashSeed() > 0) {
-					str = str.hashCode() % columnConfig.getHashSeed() + "";
-				}
-				binNum = quickLocateCategoricalBin(this.categoricalBinMap.get(newCCIndex), str);
-				if (binNum < 0) {
-					isInvalidValue = true;
-				}
+                if(columnConfig.getHashSeed() > 0) {
+                    str = str.hashCode() % columnConfig.getHashSeed() + "";
+                }
+                binNum = quickLocateCategoricalBin(this.categoricalBinMap.get(newCCIndex), str);
+                if(binNum < 0) {
+                    isInvalidValue = true;
+                }
             }
 
             if(isInvalidValue || isMissingValue) {

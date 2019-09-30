@@ -133,6 +133,7 @@ import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.guagua.GuaguaParquetMapReduceClient;
 import ml.shifu.shifu.guagua.ShifuInputFormat;
+import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
@@ -238,7 +239,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     syncDataToHdfs(super.modelConfig.getDataSet().getSource());
                     checkAndCleanDataForTreeModels(this.isToShuffle);
                     if(Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
-                        status = runTensorflowDistributedTrain();
+                        status = runDistributedTensorflowTrain();
                     } else {
                         status = runDistributedTrain();
                     }
@@ -268,14 +269,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private void runLocalTrain() throws IOException {
         if(Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
-            runTensorflowLocalTrain();
+            runLocalTensorflowTrain();
             return;
         } else {
             runAkkaTrain(isForVarSelect ? 1 : modelConfig.getBaggingNum());
         }
     }
 
-    private void runTensorflowLocalTrain() throws IOException {
+    private void runLocalTensorflowTrain() throws IOException {
         List<Scanner> scanners = null;
         TensorflowTrainer trainer = new TensorflowTrainer(modelConfig, columnConfigList);
         LOG.info("Normalized data for training {}.", pathFinder.getNormalizedDataPath());
@@ -292,11 +293,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
-     * run training process with number of bags
+     * Run training process with number of bags
      *
      * @param numBags
      *            number of bags, it decide how much trainer will start training
-     * @throws IOException
      */
     private void runAkkaTrain(int numBags) throws IOException {
         File models = new File("models");
@@ -449,14 +449,18 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
     }
 
-    protected int runTensorflowDistributedTrain() throws Exception {
+    protected int runDistributedTensorflowTrain() throws Exception {
         LOG.info("Started {} tensorflow distributed training.", isDryTrain ? "dry " : "");
         globalDefaultConfFile = new Path(
                 super.pathFinder.getAbsolutePath(new Path("conf" + File.separator + "global-default.xml").toString()));
         LOG.info("Shifu tensorflow on yarn global default file is found in: {}.", globalDefaultConfFile);
 
+        if(super.modelConfig.getTrain().getBaggingNum() != 1) {
+            LOG.warn("Bagging tmperally is not supported, only one model can be trained (baggingNum = {}).",
+                    super.modelConfig.getTrain().getBaggingNum());
+        }
         // if not continuous mode, remove tmp models to not load it in tf python, continuous mode here there is a bug
-        cleanTmpModelPath();
+        cleanModelPath();
 
         final List<String> args = new ArrayList<String>();
 
@@ -505,7 +509,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         return 0;
     }
 
-    private void cleanTmpModelPath() {
+    private void cleanModelPath() {
         // if var select job and not continue model training
         if(this.isForVarSelect || !modelConfig.getTrain().getIsContinuous()) {
             try {
@@ -517,6 +521,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 LOG.info("Tmp tensorflow model path has been moved to folder: {}.", mvTmpModelPath);
                 fs.rename(srcTmpModelPath, mvTmpModelPath);
                 fs.mkdirs(srcTmpModelPath);
+                
+                // delete all old models if not continuous
+                String srcModelPath = super.getPathFinder().getModelsPath(SourceType.HDFS);
+                String mvModelPath = srcModelPath + "_" + System.currentTimeMillis();
+                LOG.info("Old model path has been moved to {}", mvModelPath);
+                fs.rename(new Path(srcModelPath), new Path(mvModelPath));
+                fs.mkdirs(new Path(srcModelPath));
+                FileSystem.getLocal(HDFSUtils.getConf()).delete(new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL)), true);
             } catch (Exception e) {
                 LOG.warn("Failed to move tmp HDFS path, such error can be ignored", e);
             }
@@ -640,6 +652,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // set model conf
         globalConf.set("shifu.application.model-conf", super.getPathFinder().getModelConfigPath(SourceType.LOCAL));
 
+        String delimiter = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER);
+        globalConf.set(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Base64Utils.base64Encode(delimiter));
+
         // set column conf
         globalConf.set("shifu.application.column-conf", super.getPathFinder().getColumnConfigPath(SourceType.LOCAL));
 
@@ -647,13 +662,16 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(this.modelConfig.getNormalize().getNormType() == NormType.ZSCALE_INDEX) {
             // Running wide and deep
             globalConf.set("shifu.application.python-script-path",
-                    super.getPathFinder().getScriptPath("scripts/wnp_ssgd_not_embadding.py"));
+                    super.getPathFinder().getScriptPath("scripts/distributed_tf_wnd_estimator_not_embed.py"));
 
             setSelectedColumnForWideDeep(globalConf);
         } else {
             // Running normal NN
+
+            Object tfTypeObj = this.modelConfig.getTrain().getParams().get("TF_type");
+            String tyType = tfTypeObj == null ? "keras" : tfTypeObj.toString().toLowerCase();
             globalConf.set("shifu.application.python-script-path",
-                    super.getPathFinder().getScriptPath("scripts/ssgd_monitor.py"));
+                    super.getPathFinder().getScriptPath("scripts/distributed_tf_" + tyType + ".py"));
 
             // set selected column number; target column number; weight column number
             setSelectedTargetAndWeightColumnNumber(globalConf);
@@ -725,6 +743,22 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         Configuration conf = new Configuration();
 
         SourceType sourceType = super.getModelConfig().getDataSet().getSource();
+        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+        Path tmpModelsPath = fileSystem.makeQualified(new Path(super.getPathFinder()
+                .getPathBySourceType(new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType)));
+
+        if(!this.modelConfig.getTrain().getIsContinuous()) {
+            // delete all old models if not continuous
+            String srcModelPath = super.getPathFinder().getModelsPath(sourceType);
+            String mvModelPath = srcModelPath + "_" + System.currentTimeMillis();
+            LOG.info("Old model path has been moved to {}", mvModelPath);
+            fileSystem.rename(new Path(srcModelPath), new Path(mvModelPath));
+            fileSystem.mkdirs(new Path(srcModelPath));
+            FileSystem.getLocal(conf).delete(new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL)), true);
+            // delete tmp model folder
+            fileSystem.delete(tmpModelsPath, true);
+            fileSystem.mkdirs(tmpModelsPath);
+        }
 
         final List<String> args = new ArrayList<String>();
 
@@ -736,9 +770,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         String alg = super.getModelConfig().getTrain().getAlgorithm();
 
         // add tmp models folder to config
-        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(sourceType);
-        Path tmpModelsPath = fileSystem.makeQualified(new Path(super.getPathFinder()
-                .getPathBySourceType(new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType)));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_TMP_MODELS_FOLDER,
                 tmpModelsPath.toString()));
         int baggingNum = isForVarSelect ? 1 : super.getModelConfig().getBaggingNum();
@@ -1843,7 +1874,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 || !ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)
                 || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())
                         && !ShifuFileUtils.isFileExists(pathFinder.getCleanedValidationDataPath(), sourceType))) {
-            runDataClean(isToShuffle);
+            // -1.0 means no re-balance
+            runDataClean(isToShuffle, -1.0, false);
         } else {
             // no need regen data
             LOG.warn("For RF/GBT, training input in {} exists, no need to regenerate it.", cleanedDataPath);

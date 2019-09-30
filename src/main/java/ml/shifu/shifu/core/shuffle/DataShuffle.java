@@ -1,6 +1,7 @@
 package ml.shifu.shifu.core.shuffle;
 
-import ml.shifu.shifu.util.Constants;
+import java.io.IOException;
+
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -9,8 +10,8 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
 
-import java.io.IOException;
-import java.util.Random;
+import ml.shifu.shifu.util.Base64Utils;
+import ml.shifu.shifu.util.Constants;
 
 /**
  * Created by zhanhu on 12/31/16.
@@ -18,19 +19,38 @@ import java.util.Random;
 public class DataShuffle {
 
     public static class ShuffleMapper extends Mapper<LongWritable, Text, IntWritable, Text> {
+
         private int shuffleSize;
-        private Random rd;
+        private AbstractDataMapper dataMapper;
 
         @Override
-        public void setup(Context context) {
-            this.shuffleSize = context.getConfiguration().getInt(Constants.SHIFU_NORM_SHUFFLE_SIZE, 100);
-            this.rd = new Random(System.currentTimeMillis());
+        public void setup(Context context) throws IOException {
+            this.shuffleSize = context.getConfiguration()
+                    .getInt(Constants.SHIFU_NORM_SHUFFLE_SIZE, 100);
+            int targetIndex = context.getConfiguration()
+                    .getInt(Constants.SHIFU_NORM_SHUFFLE_RBL_TARGET_INDEX, -1);
+
+            if (targetIndex < 0) { // no duplicate
+                dataMapper = new RandomConstDataMapper();
+            } else {
+                double rblRatio = context.getConfiguration()
+                        .getDouble(Constants.SHIFU_NORM_SHUFFLE_RBL_RATIO, -1.0d);
+                boolean rblUpdateWeight = context.getConfiguration()
+                        .getBoolean(Constants.SHIFU_NORM_SHUFFLE_RBL_UPDATE_WEIGHT, false);
+                String delimiter = Base64Utils.base64Decode(context.getConfiguration()
+                        .get(Constants.SHIFU_OUTPUT_DATA_DELIMITER, "|"));
+
+                if (rblUpdateWeight) { // duplicate by update weight column
+                    dataMapper = new UpdateWeightDataMapper(rblRatio, targetIndex, delimiter);
+                } else { // duplicate by add duplicate records
+                    dataMapper = new DuplicateDataMapper(rblRatio, targetIndex, delimiter);
+                }
+            }
         }
 
         @Override
         public void map(LongWritable key, Text line, Context context) throws IOException, InterruptedException {
-            IntWritable shuffleIndex = new IntWritable(this.rd.nextInt(this.shuffleSize));
-            context.write(shuffleIndex, line);
+            dataMapper.mapData(context, line, this.shuffleSize);
         }
     }
 

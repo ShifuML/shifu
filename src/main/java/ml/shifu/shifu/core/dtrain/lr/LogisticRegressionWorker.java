@@ -201,8 +201,8 @@ public class LogisticRegressionWorker extends
 
     /**
      * The Column ID set that is used to build model
-     *      - if there are final selected variables, it is the set of all final selected variables
-     *      - if there is not final selected variables, it is the set of all *GOOD* variables (for SE)
+     * - if there are final selected variables, it is the set of all final selected variables
+     * - if there is not final selected variables, it is the set of all *GOOD* variables (for SE)
      */
     protected Set<Integer> modelFeatureSet;
 
@@ -229,8 +229,8 @@ public class LogisticRegressionWorker extends
 
     /**
      * The weight column is Meta column or not
-     *      if the weight column is meta column, use the raw value directly
-     *      else use the last column of the normalized data
+     * if the weight column is meta column, use the raw value directly
+     * else use the last column of the normalized data
      */
     protected boolean isWeightColumnMeta = false;
 
@@ -248,7 +248,8 @@ public class LogisticRegressionWorker extends
         loadConfigFiles(context.getProps());
 
         this.modelFeatureSet = DTrainUtils.getModelFeatureSet(this.columnConfigList, this.hasCandidates);
-        this.modelInputCnt = DTrainUtils.getFeatureInputsCnt(this.modelConfig, this.columnConfigList, this.modelFeatureSet);
+        this.modelInputCnt = DTrainUtils.getFeatureInputsCnt(this.modelConfig, this.columnConfigList,
+                this.modelFeatureSet);
         this.modelOutputCnt = DTrainUtils.getModelOutputCnt(this.columnConfigList);
 
         this.isSpecificValidation = StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath());
@@ -447,13 +448,13 @@ public class LogisticRegressionWorker extends
         long hashcode = 0;
         double significance = CommonConstants.DEFAULT_SIGNIFICANCE_VALUE;
 
-        for (ColumnConfig columnConfig : this.columnConfigList) {
+        for(ColumnConfig columnConfig: this.columnConfigList) {
             float fval = DTrainUtils.parseRawNormValue(fields, dataPos, 0.0f);
 
-            if (columnConfig.isTarget()) {
-                outputData[outputIndex ++] = fval;
-                dataPos ++;
-            } else if (this.weightColumnId > 0 // user set weight column
+            if(columnConfig.isTarget()) {
+                outputData[outputIndex++] = fval;
+                dataPos++;
+            } else if(this.weightColumnId > 0 // user set weight column
                     && this.weightColumnId == columnConfig.getColumnNum() // the weight column is current
                     && this.isWeightColumnMeta) { // the weight column is Meta
                 significance = DTrainUtils.parseRawNormValue(fields, dataPos, 1.0f);
@@ -463,7 +464,7 @@ public class LogisticRegressionWorker extends
                             count, significance);
                     significance = 1f;
                 }
-                dataPos ++;
+                dataPos++;
             } else { // other variables
                 if(this.modelFeatureSet.contains(columnConfig.getColumnNum())) {
                     if(columnConfig.isMeta() || columnConfig.isForceRemove()) {
@@ -478,7 +479,7 @@ public class LogisticRegressionWorker extends
                         }
                     } else if(columnConfig != null && columnConfig.isCategorical()
                             && (modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
-                            || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))) {
+                                    || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))) {
                         for(int k = 0; k < columnConfig.getBinCategory().size() + 1; k++) {
                             float tval = DTrainUtils.parseRawNormValue(fields, dataPos, 0.0f);
                             inputData[inputIndex++] = tval;
@@ -498,7 +499,7 @@ public class LogisticRegressionWorker extends
                         dataPos += (columnConfig.getBinBoundary().size() + 1);
                     } else if(columnConfig.isCategorical()
                             && (modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
-                            || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))
+                                    || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))
                             && columnConfig.getBinCategory().size() > 0) {
                         dataPos += (columnConfig.getBinCategory().size() + 1);
                     } else {
@@ -510,12 +511,13 @@ public class LogisticRegressionWorker extends
 
         // if (dataPos == fields.length -1), the last column is weight column
         // if (dataPos == fields.length), normalized data doesn't have weight column
-        if (dataPos != fields.length -1 && dataPos != fields.length) {
-            LOG.error("Normalization data has extra data. Expect {} or {}, actual is {}.", dataPos, dataPos + 1, fields.length);
+        if(dataPos != fields.length - 1 && dataPos != fields.length) {
+            LOG.error("Normalization data has extra data. Expect {} or {}, actual is {}.", dataPos, dataPos + 1,
+                    fields.length);
             throw new RuntimeException("Out of range Normalization data doesn't match with ColumnConfig.json.");
         }
 
-        if (this.weightColumnId > 0 && !this.isWeightColumnMeta && dataPos == fields.length - 1) {
+        if(this.weightColumnId > 0 && !this.isWeightColumnMeta && dataPos == fields.length - 1) {
             // user specified the weight column, it is not meta column and now point to last column of data
             significance = DTrainUtils.parseRawNormValue(fields, dataPos, 1.0f);
             // if invalid weight, set it to 1f and warning in log
@@ -659,10 +661,10 @@ public class LogisticRegressionWorker extends
             this.columnConfigList = CommonUtils
                     .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
             this.hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
-            if (StringUtils.isNotBlank(modelConfig.getWeightColumnName())) {
+            if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())) {
                 String weightColumnName = StringUtils.trimToEmpty(modelConfig.getWeightColumnName());
-                for (ColumnConfig config: this.columnConfigList) {
-                    if (StringUtils.equals(weightColumnName, config.getColumnName())) {
+                for(ColumnConfig config: this.columnConfigList) {
+                    if(StringUtils.equals(weightColumnName, config.getColumnName())) {
                         this.weightColumnId = config.getColumnNum();
                         this.isWeightColumnMeta = config.isMeta();
                         break;
@@ -675,7 +677,7 @@ public class LogisticRegressionWorker extends
     }
 
     protected boolean isPositive(float value) {
-        return Float.compare(1f, value) == 0 ? true : false;
+        return Float.compare(1f, value) == 0;
     }
 
     /**

@@ -45,7 +45,8 @@ import java.util.*;
  * Date stat compute is used to calculate all the statistic values like min, max, mean, woe, ks, skewness, kurtosis
  * by variable and date
  *
- * The DateStatComputeMapper job is used to calculate sum, count and accumulate value group by date in dailyStatInfo, while this
+ * The DateStatComputeMapper job is used to calculate sum, count and accumulate value group by date in dailyStatInfo,
+ * while this
  * dailyStatInfo passed to DateStatComputeReducer, it use variable name as key so the same variable name will always
  * passed to the same reducer
  *
@@ -154,7 +155,7 @@ public class DateStatComputeMapper extends Mapper<LongWritable, Text, Text, Date
 
         this.dataSetDelimiter = this.modelConfig.getDataSetDelimiter();
 
-        this.dataPurifier = new DataPurifier(this.modelConfig, false);
+        this.dataPurifier = new DataPurifier(this.modelConfig, this.columnConfigList, false);
 
         String filterExpressions = context.getConfiguration().get(Constants.SHIFU_STATS_FILTER_EXPRESSIONS);
         if(StringUtils.isNotBlank(filterExpressions)) {
@@ -162,7 +163,7 @@ public class DateStatComputeMapper extends Mapper<LongWritable, Text, Text, Date
             String[] splits = CommonUtils.split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
             this.expressionDataPurifiers = new ArrayList<DataPurifier>(splits.length);
             for(String split: splits) {
-                this.expressionDataPurifiers.add(new DataPurifier(modelConfig, split, false));
+                this.expressionDataPurifiers.add(new DataPurifier(modelConfig, this.columnConfigList, split, false));
             }
         }
 
@@ -173,7 +174,6 @@ public class DateStatComputeMapper extends Mapper<LongWritable, Text, Text, Date
         loadDateColumnNum();
 
         this.dailyStatInfo = new HashMap<String, DateStatInfoWritable>(this.columnConfigList.size(), 1f);
-
 
         this.outputKey = new Text();
 
@@ -306,7 +306,6 @@ public class DateStatComputeMapper extends Mapper<LongWritable, Text, Text, Date
             }
         }
 
-
         // valid data process
         for(int i = 0; i < units.length; i++) {
             populateStats(units, tag, weight, i, i);
@@ -335,12 +334,13 @@ public class DateStatComputeMapper extends Mapper<LongWritable, Text, Text, Date
         }
         Map<String, DateStatInfoWritable.VariableStatInfo> map = dateStatInfoWritable.getVariableDailyStatInfo();
         DateStatInfoWritable.VariableStatInfo variableStatInfo = map.get(dateVal);
-        if(variableStatInfo == null){
+        if(variableStatInfo == null) {
             variableStatInfo = new DateStatInfoWritable.VariableStatInfo();
             map.put(dateVal, variableStatInfo);
         }
 
-        AutoTypeDistinctCountMapper.CountAndFrequentItems countAndFrequentItems = variableStatInfo.getCountAndFrequentItems();
+        AutoTypeDistinctCountMapper.CountAndFrequentItems countAndFrequentItems = variableStatInfo
+                .getCountAndFrequentItems();
         if(countAndFrequentItems == null) {
             countAndFrequentItems = new AutoTypeDistinctCountMapper.CountAndFrequentItems();
             variableStatInfo.setCountAndFrequentItems(countAndFrequentItems);
@@ -520,11 +520,13 @@ public class DateStatComputeMapper extends Mapper<LongWritable, Text, Text, Date
 
         for(Map.Entry<String, DateStatInfoWritable> entry: this.dailyStatInfo.entrySet()) {
             this.outputKey.set(entry.getKey());
-            for(Map.Entry<String, DateStatInfoWritable.VariableStatInfo> inEntry : entry.getValue().getVariableDailyStatInfo().entrySet()){
+            for(Map.Entry<String, DateStatInfoWritable.VariableStatInfo> inEntry: entry.getValue()
+                    .getVariableDailyStatInfo().entrySet()) {
                 AutoTypeDistinctCountMapper.CountAndFrequentItems cfi = inEntry.getValue().getCountAndFrequentItems();
                 inEntry.getValue().setCfiw(new CountAndFrequentItemsWritable(cfi.getCount(), cfi.getInvalidCount(),
                         cfi.getValidNumCount(), cfi.getHyper().getBytes(), cfi.getFrequentItems()));
-                LOG.info("output. key = {}, inEntryKey = {}, inEntryValue = {}", entry.getKey(), inEntry.getKey(), inEntry.getValue());
+                LOG.info("output. key = {}, inEntryKey = {}, inEntryValue = {}", entry.getKey(), inEntry.getKey(),
+                        inEntry.getValue());
             }
             context.write(this.outputKey, entry.getValue());
         }

@@ -15,24 +15,21 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
-import com.google.common.base.Splitter;
-import ml.shifu.guagua.ComputableMonitor;
-import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
-import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
-import ml.shifu.guagua.io.GuaguaFileSplit;
-import ml.shifu.guagua.util.MemoryLimitedList;
-import ml.shifu.guagua.util.NumberFormatUtils;
-import ml.shifu.guagua.worker.AbstractWorkerComputable;
-import ml.shifu.guagua.worker.WorkerContext;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.MapReduceUtils;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Random;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
@@ -42,9 +39,27 @@ import org.encog.mathutil.BoundMath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.*;
+import com.google.common.base.Splitter;
+
+import ml.shifu.guagua.ComputableMonitor;
+import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
+import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
+import ml.shifu.guagua.io.GuaguaFileSplit;
+import ml.shifu.guagua.util.MemoryLimitedList;
+import ml.shifu.guagua.util.NumberFormatUtils;
+import ml.shifu.guagua.worker.AbstractWorkerComputable;
+import ml.shifu.guagua.worker.WorkerContext;
+import ml.shifu.guagua.worker.WorkerContext.WorkerCompletionCallBack;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.loss.LossType;
+import ml.shifu.shifu.core.dtrain.nn.NNConstants;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.MapReduceUtils;
 
 /**
  * {@link WDLWorker} is responsible for loading part of data into memory, do iteration gradients computation and send
@@ -246,6 +261,11 @@ public class WDLWorker extends
      * WideAndDeep graph definition network.
      */
     private WideAndDeep wnd;
+
+    /**
+     * Log(cross entropy) or squared loss definition.
+     */
+    private LossType lossType;
 
     /**
      * Logic to load data into memory list which includes double array for numerical features and sparse object array
@@ -597,7 +617,16 @@ public class WDLWorker extends
         }
 
         this.workerThreadCount = modelConfig.getTrain().getWorkerThreadCount();
-        this.completionService = new ExecutorCompletionService<>(Executors.newFixedThreadPool(workerThreadCount));
+        final ExecutorService fixedThreadPool = Executors.newFixedThreadPool(workerThreadCount);
+        this.completionService = new ExecutorCompletionService<>(fixedThreadPool);
+
+        // register call back for shut down thread pool.
+        context.addCompletionCallBack(new WorkerCompletionCallBack<WDLParams, WDLParams>() {
+            @Override
+            public void callback(WorkerContext<WDLParams, WDLParams> context) {
+                fixedThreadPool.shutdown();
+            }
+        });
 
         this.poissonSampler = Boolean.TRUE.toString()
                 .equalsIgnoreCase(context.getProps().getProperty(NNConstants.NN_POISON_SAMPLER));
@@ -650,6 +679,10 @@ public class WDLWorker extends
 
         this.validParams = this.modelConfig.getTrain().getParams();
 
+        Object lossObj = validParams.get("Loss");
+        this.lossType = LossType.of(lossObj != null ? lossObj.toString() : CommonConstants.SQUARED_LOSS);
+        LOG.info("Loss type is {}.", this.lossType);
+
         // Build wide and deep graph
         List<Integer> embedColumnIds = (List<Integer>) this.validParams.get(CommonConstants.NUM_EMBED_COLUMN_IDS);
         Integer embedOutputs = (Integer) this.validParams.get(CommonConstants.NUM_EMBED_OUTPUTS);
@@ -700,7 +733,7 @@ public class WDLWorker extends
         // update master global model into worker WideAndDeep graph
         this.wnd.updateWeights(context.getLastMasterResult());
         WDLParallelGradient parallelGradient = new WDLParallelGradient(this.wnd, this.workerThreadCount,
-                this.inputIndexMap, this.trainingData, this.validationData, this.completionService);
+                this.inputIndexMap, this.trainingData, this.validationData, this.completionService, this.lossType);
         WDLParams wdlParams = parallelGradient.doCompute();
         wdlParams.setSerializationType(SerializationType.GRADIENTS);
         this.wnd.setSerializationType(SerializationType.GRADIENTS);

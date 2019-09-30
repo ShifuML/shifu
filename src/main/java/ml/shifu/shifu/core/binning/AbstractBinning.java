@@ -167,7 +167,7 @@ public abstract class AbstractBinning<T> {
      * @return if it is missing value
      */
     public boolean isMissingVal(String val) {
-        return missingValSet.contains(val);
+        return missingValSet.contains(StringUtils.trimToEmpty(val));
     }
 
     /**

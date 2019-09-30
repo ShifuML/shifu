@@ -31,7 +31,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.List;
 
-
 /**
  * DataFilterWorker class is to filter data by setting.
  * It do filtering by the setting in @ModelConfig.dataSet.filterExpressions or
@@ -42,40 +41,35 @@ public class DataFilterWorker extends AbstractWorkerActor {
 
     private DataPurifier dataPurifier;
 
-    public DataFilterWorker(
-            ModelConfig modelConfig,
-            List<ColumnConfig> columnConfigList,
-            ActorRef parentActorRef,
+    public DataFilterWorker(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, ActorRef parentActorRef,
             ActorRef nextActorRef) throws IOException {
         super(modelConfig, columnConfigList, parentActorRef, nextActorRef);
-        dataPurifier = new DataPurifier(modelConfig, false);
+        dataPurifier = new DataPurifier(modelConfig, columnConfigList, false);
     }
 
-    public DataFilterWorker(
-            ModelConfig modelConfig,
-            List<ColumnConfig> columnConfigList,
-            ActorRef parentActorRef,
-            ActorRef nextActorRef,
-            EvalConfig evalConfig) throws IOException {
+    public DataFilterWorker(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, ActorRef parentActorRef,
+            ActorRef nextActorRef, EvalConfig evalConfig) throws IOException {
         super(modelConfig, columnConfigList, parentActorRef, nextActorRef);
-        dataPurifier = new DataPurifier(evalConfig);
+        dataPurifier = new DataPurifier(columnConfigList, evalConfig);
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see ml.shifu.shifu.actor.worker.AbstractWorkerActor#handleMsg(java.lang.Object)
-
+     * 
      */
     @Override
     public void handleMsg(Object message) throws Exception {
-        if (message instanceof StatsPartRawDataMessage) {
+        if(message instanceof StatsPartRawDataMessage) {
             StatsPartRawDataMessage msg = (StatsPartRawDataMessage) message;
             purifyData(msg.getRawDataList());
             nextActorRef.tell(msg, getSelf());
-        } else if (message instanceof NormPartRawDataMessage) {
+        } else if(message instanceof NormPartRawDataMessage) {
             NormPartRawDataMessage msg = (NormPartRawDataMessage) message;
             purifyData(msg.getRawDataList());
             nextActorRef.tell(msg, getSelf());
-        } else if (message instanceof RunModelDataMessage) {
+        } else if(message instanceof RunModelDataMessage) {
             RunModelDataMessage msg = (RunModelDataMessage) message;
             purifyData(msg.getEvalDataList());
             nextActorRef.tell(msg, getSelf());
@@ -87,7 +81,8 @@ public class DataFilterWorker extends AbstractWorkerActor {
     /**
      * Filter the data - it uses @dataPurifier to filter data
      *
-     * @param inputDataList - input data to filter
+     * @param inputDataList
+     *            - input data to filter
      */
     private void purifyData(List<String> inputDataList) {
         log.info("starting to filter data ... ");
