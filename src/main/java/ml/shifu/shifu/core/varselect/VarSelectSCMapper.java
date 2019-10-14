@@ -248,12 +248,15 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
         String delimiter = context.getConfiguration().get(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
         this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
 
+        boolean hasCandidate = CommonUtils.hasCandidateColumns(columnConfigList);
         this.columnMissingInputValues = new double[columnConfigList.size()];
         for (ColumnConfig columnConfig : columnConfigList) {
-            List<Double> normValues = Normalizer.normalize(columnConfig, null,
-                    modelConfig.getNormalizeStdDevCutOff(), modelConfig.getNormalizeType());
-            if (CollectionUtils.isNotEmpty(normValues)) {
-                this.columnMissingInputValues[columnConfig.getColumnNum()] = normValues.get(0);
+            if ( CommonUtils.isGoodCandidate(columnConfig, hasCandidate)) { // only normalize good candidate
+                List<Double> normValues = Normalizer
+                        .normalize(columnConfig, null, modelConfig.getNormalizeStdDevCutOff(), modelConfig.getNormalizeType());
+                if(CollectionUtils.isNotEmpty(normValues)) {
+                    this.columnMissingInputValues[columnConfig.getColumnNum()] = normValues.get(0);
+                }
             }
         }
     }

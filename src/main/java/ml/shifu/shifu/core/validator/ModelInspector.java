@@ -238,13 +238,14 @@ public class ModelInspector {
             }
 
             if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())) {
-                String columnColumn = CommonUtils.containsAny(metaColumns, forceRemoveColumns);
-                if(columnColumn != null) {
-                    result.addCause(
-                            "Column - " + columnColumn + " exists both in meta column conf and force remove conf.");
-                }
+                // It's fine, if user put both variables both in metaColumns and forceRemoveColumns
+                // String columnColumn = CommonUtils.containsAny(metaColumns, forceRemoveColumns);
+                //      if(columnColumn != null) {
+                //          result.addCause(
+                //          "Column - " + columnColumn + " exists both in meta column conf and force remove conf.");
+                // }
 
-                columnColumn = CommonUtils.containsAny(metaColumns, forceSelectColumns);
+                String columnColumn = CommonUtils.containsAny(metaColumns, forceSelectColumns);
                 if(columnColumn != null) {
                     result.addCause(
                             "Column - " + columnColumn + " exists both in meta column conf and force select conf.");

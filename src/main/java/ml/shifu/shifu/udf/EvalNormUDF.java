@@ -299,7 +299,7 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
             String name = this.featureNames.get(i);
             String raw = rawDataNsMap.get(new NSColumn(name));
             if(i == 0) {
-                tuple.append(raw);
+                tuple.append((raw == null) ? "" : raw);
             } else if(i == 1) {
                 tuple.append(StringUtils.isEmpty(raw) ? "1" : raw);
             } else if(i > 1 && i < 2 + validMetaSize) {
