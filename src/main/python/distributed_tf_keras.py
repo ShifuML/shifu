@@ -155,7 +155,10 @@ def read_context_from_env_and_modelconf():
         batch_size = 128
         if "MiniBatchs" in model_conf['train']['params']:
             batch_size = model_conf['train']['params']['MiniBatchs']
-
+        loss_func = 'binary_crossentropy'
+        if "Loss" in model_conf['train']['params']:
+            loss_func = model_conf['train']['params']['Loss']
+        
     learning_rate = model_conf['train']['params']['LearningRate']
 
     training_data_path = ''
@@ -173,8 +176,8 @@ def read_context_from_env_and_modelconf():
             "layers": model_conf['train']['params']['NumHiddenNodes'], "batch_size": batch_size, "feature_count": feature_count,
             "model_name": model_conf['basic']['name'], "is_chief": is_chief, "training_data_path": training_data_path,
             "export_dir": final_model_path, "epochs": epochs, "sample_weight_column_num": sample_weight_column_num,
-            "learning_rate": learning_rate, "loss_func": model_conf['train']['params']['Loss'], "optimizer": "adam",
-            "weight_initalizer": "xavier", "act_funcs": model_conf['train']['params']['ActivationFunc']}
+            "learning_rate": learning_rate, "loss_func": loss_func, "optimizer": "adam","weight_initalizer": "xavier",
+            "act_funcs": model_conf['train']['params']['ActivationFunc']}
 
 class GraphEditTestHook(tf.train.SessionRunHook):
     """
