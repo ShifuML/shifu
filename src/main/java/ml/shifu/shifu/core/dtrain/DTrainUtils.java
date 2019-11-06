@@ -694,7 +694,7 @@ public final class DTrainUtils {
         fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? defVal : fval;
         return fval;
     }
-
+    
     /**
      * Parse the field of normalized data
      * 

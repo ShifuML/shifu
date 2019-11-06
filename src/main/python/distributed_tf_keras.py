@@ -275,7 +275,7 @@ def main(_):
             label_placeholder = tf.placeholder(dtype=tf.int32, shape=(None, 1))
             sample_weight_placeholder = tf.placeholder(dtype=tf.float32, shape=(None, 1))
 
-            keras.backend.set_learning_phase(1)
+            keras.backend.set_learning_phase(True)
             keras.backend.manual_variable_initialization(True)
             new_model = model(shifu_context)
             logging.info("Model inputs: %s; Model outputs: %s; Loss: %s; optimizer: %s."  % (str(new_model.inputs), str(new_model.output), str(new_model.loss), str(new_model.optimizer)))

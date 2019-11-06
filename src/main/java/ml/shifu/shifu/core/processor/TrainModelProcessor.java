@@ -20,16 +20,22 @@ import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -521,14 +527,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 LOG.info("Tmp tensorflow model path has been moved to folder: {}.", mvTmpModelPath);
                 fs.rename(srcTmpModelPath, mvTmpModelPath);
                 fs.mkdirs(srcTmpModelPath);
-                
+
                 // delete all old models if not continuous
                 String srcModelPath = super.getPathFinder().getModelsPath(SourceType.HDFS);
                 String mvModelPath = srcModelPath + "_" + System.currentTimeMillis();
                 LOG.info("Old model path has been moved to {}", mvModelPath);
                 fs.rename(new Path(srcModelPath), new Path(mvModelPath));
                 fs.mkdirs(new Path(srcModelPath));
-                FileSystem.getLocal(HDFSUtils.getConf()).delete(new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL)), true);
+                FileSystem.getLocal(HDFSUtils.getConf())
+                        .delete(new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL)), true);
             } catch (Exception e) {
                 LOG.warn("Failed to move tmp HDFS path, such error can be ignored", e);
             }
@@ -667,55 +674,77 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             setSelectedColumnForWideDeep(globalConf);
         } else {
             // Running normal NN
-
             Object tfTypeObj = this.modelConfig.getTrain().getParams().get("TF_type");
             String tyType = tfTypeObj == null ? "keras" : tfTypeObj.toString().toLowerCase();
-            globalConf.set("shifu.application.python-script-path",
-                    super.getPathFinder().getScriptPath("scripts/distributed_tf_" + tyType + ".py"));
+            String scriptPath = "distributed_tf_" + tyType + ".py";
+            String currScriptPath = System.getProperty("user.dir") + File.separator + scriptPath;
+
+            String rawScriptPath = super.getPathFinder().getScriptPath("scripts" + File.separator + scriptPath);
+
+            if(!Files.exists(Paths.get(currScriptPath), LinkOption.NOFOLLOW_LINKS)) {
+                InputStream inputStream = null;
+                try {
+                    inputStream = new FileInputStream(rawScriptPath);
+                    Files.copy(inputStream, Paths.get(currScriptPath), StandardCopyOption.REPLACE_EXISTING);
+                } finally {
+                    if(inputStream != null) {
+                        inputStream.close();
+                    }
+                }
+                LOG.info(
+                        "After copying, using {} for user customization, please edit it if you would like to customize your model definition.",
+                        currScriptPath);
+            } else {
+                LOG.info(
+                        "Using existing {} for user customization, please edit it if you would like to customize your model definition.",
+                        currScriptPath);
+            }
+            globalConf.set("shifu.application.python-script-path", currScriptPath);
 
             // set selected column number; target column number; weight column number
             setSelectedTargetAndWeightColumnNumber(globalConf);
-        }
 
-        // set shell to lauch python
-        globalConf.set("shifu.application.python-shell-path",
-                super.getPathFinder().getScriptPath("bin/dist_pytrain.sh"));
+            // set shell to lauch python
+            globalConf.set("shifu.application.python-shell-path",
+                    super.getPathFinder().getScriptPath("bin/dist_pytrain.sh"));
 
-        // set application name
-        globalConf.set("shifu.application.name", "Shifu Tensorflow: " + modelConfig.getBasic().getName());
+            // set application name
+            globalConf.set("shifu.application.name", "Shifu Tensorflow: " + modelConfig.getBasic().getName());
 
-        // set yarn queue
-        globalConf.set("shifu.yarn.queue", Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
+            // set yarn queue
+            globalConf.set("shifu.yarn.queue", Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
 
-        // set data total count
-        globalConf.set("shifu.application.total-training-data-number",
-                Long.toString(columnConfigList.get(0).getTotalCount()));
+            // set data total count
+            globalConf.set("shifu.application.total-training-data-number",
+                    Long.toString(columnConfigList.get(0).getTotalCount()));
 
-        globalConf.set("shifu.application.epochs", this.modelConfig.getTrain().getNumTrainEpochs() + "");
+            globalConf.set("shifu.application.epochs", this.modelConfig.getTrain().getNumTrainEpochs() + "");
 
-        // set hdfs tmp model path
-        globalConf.set("shifu.application.tmp-model-path", super.getPathFinder().getTmpModelsPath(SourceType.HDFS));
+            // set hdfs tmp model path
+            globalConf.set("shifu.application.tmp-model-path", super.getPathFinder().getTmpModelsPath(SourceType.HDFS));
 
-        // set hdfs final model path
-        globalConf.set("shifu.application.final-model-path", super.getPathFinder().getModelsPath(SourceType.HDFS));
+            // set hdfs final model path
+            globalConf.set("shifu.application.final-model-path", super.getPathFinder().getModelsPath(SourceType.HDFS));
 
-        // add all shifuconf, this includes 'shifu train -Dk=v' <k,v> pairs and it will override default keys set above.
-        Properties shifuConfigMap = Environment.getProperties();
-        for(Map.Entry<Object, Object> entry: shifuConfigMap.entrySet()) {
-            globalConf.set(entry.getKey().toString(), entry.getValue().toString());
-        }
+            // add all shifuconf, this includes 'shifu train -Dk=v' <k,v> pairs and it will override default keys set
+            // above.
+            Properties shifuConfigMap = Environment.getProperties();
+            for(Map.Entry<Object, Object> entry: shifuConfigMap.entrySet()) {
+                globalConf.set(entry.getKey().toString(), entry.getValue().toString());
+            }
 
-        OutputStream os = null;
-        try {
-            // Write user's overridden conf to an xml to be localized.
-            os = new FileOutputStream(globalDefaultConfFile.getName());
-            globalConf.writeXml(os);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to create " + globalDefaultConfFile.getName() + " conf file. Exiting.",
-                    e);
-        } finally {
-            if(os != null) {
-                os.close();
+            OutputStream os = null;
+            try {
+                // Write user's overridden conf to an xml to be localized.
+                os = new FileOutputStream(globalDefaultConfFile.getName());
+                globalConf.writeXml(os);
+            } catch (IOException e) {
+                throw new RuntimeException(
+                        "Failed to create " + globalDefaultConfFile.getName() + " conf file. Exiting.", e);
+            } finally {
+                if(os != null) {
+                    os.close();
+                }
             }
         }
     }
