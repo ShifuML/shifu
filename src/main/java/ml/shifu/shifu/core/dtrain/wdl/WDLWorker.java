@@ -15,7 +15,31 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Random;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
+import org.apache.commons.math3.distribution.PoissonDistribution;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.encog.mathutil.BoundMath;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.Splitter;
+
 import ml.shifu.guagua.ComputableMonitor;
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
@@ -29,22 +53,12 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.layer.SerializationType;
+import ml.shifu.shifu.core.dtrain.layer.SparseInput;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.MapReduceUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.math.NumberUtils;
-import org.apache.commons.math3.distribution.PoissonDistribution;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.encog.mathutil.BoundMath;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.*;
 
 /**
  * {@link WDLWorker} is responsible for loading part of data into memory, do iteration gradients computation and send
@@ -293,7 +307,7 @@ public class WDLWorker extends
         }
 
         // output delimiter in norm can be set by user now and if user set a special one later changed, this exception
-        // is helped to quick find such issue., here only check numerical array
+        // is helped to quick find such issue, here only check numerical array
         validateInputLength(context, inputs, numIndex);
 
         // sample negative only logic here, sample negative out, no need continue

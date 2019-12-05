@@ -15,18 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.core.dtrain.StringUtils;
-import ml.shifu.shifu.core.dtrain.nn.NNColumnStats;
-import ml.shifu.shifu.util.CommonUtils;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
-
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,6 +23,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.zip.GZIPOutputStream;
+
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.StringUtils;
+import ml.shifu.shifu.core.dtrain.layer.SerializationType;
+import ml.shifu.shifu.core.dtrain.nn.NNColumnStats;
+import ml.shifu.shifu.util.CommonUtils;
 
 /**
  * Binary IndependentWDLModel serializer.

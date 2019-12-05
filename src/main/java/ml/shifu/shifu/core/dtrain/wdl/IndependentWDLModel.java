@@ -15,16 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
-import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
-import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.StringUtils;
-import ml.shifu.shifu.core.dtrain.nn.NNColumnStats;
-import ml.shifu.shifu.exception.ShifuErrorCode;
-import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.util.BinUtils;
-import ml.shifu.shifu.util.Constants;
-
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -36,6 +26,17 @@ import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 import org.encog.mathutil.BoundMath;
+
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
+import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.StringUtils;
+import ml.shifu.shifu.core.dtrain.layer.SparseInput;
+import ml.shifu.shifu.core.dtrain.nn.NNColumnStats;
+import ml.shifu.shifu.exception.ShifuErrorCode;
+import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.util.BinUtils;
+import ml.shifu.shifu.util.Constants;
 
 /**
  * {@link IndependentWDLModel} is a light WDL engine to predict WDL model, the only dependency is shifu, guagua.
@@ -194,17 +195,6 @@ public class IndependentWDLModel {
     public double[] compute(Map<String, Object> dataMap) {
         return compute(getDenseInputs(dataMap), getEmbedInputs(dataMap), getWideInputs(dataMap));
     }
-
-    // public double[] compute(double[] data) {
-    // if(data == null) {
-    // return null;
-    // }
-    // double[] fData = new double[data.length];
-    // for(int i = 0; i < data.length; i++) {
-    // fData[i] = (double) data[i];
-    // }
-    // return compute(fData);
-    // }
 
     public double[] compute(double[] data) {
         if(data == null) {

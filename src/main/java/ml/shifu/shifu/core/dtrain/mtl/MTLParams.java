@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ml.shifu.shifu.core.dtrain.wdl;
+package ml.shifu.shifu.core.dtrain.mtl;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -24,45 +24,53 @@ import ml.shifu.guagua.io.HaltBytable;
 import ml.shifu.shifu.core.dtrain.layer.SerializationType;
 
 /**
- * {@link WDLParams} is message sent between master and workers for wide and deep model training.
- *
+ * {@link MTLParams} is message transferred between {@link MTLMaster} and {@link MTLWorker}s in multi-task learning
+ * iterations.
+ * 
  * <p>
- * In worker, it will collect combined gradients and then send to master for merging. While in master when model weights
- * are updated, master will send model new weights to all works for next epoch iterations.
+ * {@link MTLWorker}s send out gradients through {@link MTLParams} to {@link MTLMaster} for master aggregation. Then
+ * {@link MTLMaster} updates latest model weights based on aggregated gradients and sends back through new
+ * {@link MTLParams} to all workers. This is typical one epoch (sync mode).
+ * 
+ * <p>
+ * {@link #mtm} is a delegation for both weights and gradients depending on type of {@link #serializationType}.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
-
-    private static final boolean WDL_IS_NULL = true;
+public class MTLParams extends HaltBytable implements Combinable<MTLParams> {
 
     /**
-     * # of weighted training records per such worker.
+     * If {@link #mtm} field is null or not.
+     */
+    private static final boolean MTM_IS_NULL = true;
+
+    /**
+     * # of weighted training records of such worker.
      */
     private double trainSize;
 
     /**
-     * # of weighted validation records per such worker.
+     * # of weighted validation records of such worker.
      */
     private double validationSize;
 
     /**
-     * # of training records per such worker.
+     * # of training records of such worker.
      */
     private double trainCount;
 
     /**
-     * # of weighted validation records per such worker.
+     * # of weighted validation records of such worker.
      */
     private double validationCount;
 
     /**
-     * Train error for such worker and such iteration.
+     * Train error of such worker and such iteration.
      */
     private double trainError;
 
     /**
-     * Validation error for such worker and such iteration.
+     * Validation error of such worker and such iteration.
      */
     private double validationError;
 
@@ -71,10 +79,66 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
      */
     private SerializationType serializationType = SerializationType.MODEL_SPEC;
 
-    private WideAndDeep wnd;
+    /**
+     * Multi-task memory model: weights are used to transfer from Master to workers; gradients are used to transfer from
+     * workers to master.
+     */
+    private MultiTaskModel mtm;
 
-    public void update(WideAndDeep wnd) {
-        this.getWnd().updateWeights(wnd);
+    public void update(MultiTaskModel mtm) {
+        this.getMtm().updateWeights(mtm);
+    }
+
+    @Override
+    public MTLParams combine(MTLParams from) {
+        this.trainCount += from.trainCount;
+        this.trainError += from.trainError;
+        this.validationCount += from.validationCount;
+        this.validationError += from.validationError;
+        this.trainSize += from.trainSize;
+        this.validationSize += from.validationSize;
+        // In the first iteration, the worker may send a empty MTLParams without MultiTaskModel Init
+        if(from.getMtm() != null) {
+            this.mtm = this.mtm.combine(from.getMtm());
+        }
+        return this;
+    }
+
+    @Override
+    public void doWrite(DataOutput out) throws IOException {
+        if(this.mtm == null) {
+            // for the first iteration, the wnd will be null
+            out.writeBoolean(MTM_IS_NULL);
+        } else {
+            out.writeBoolean(!MTM_IS_NULL);
+            this.mtm.setSerializationType(serializationType);
+            this.mtm.write(out);
+        }
+        out.writeDouble(this.trainCount);
+        out.writeDouble(this.validationCount);
+        out.writeDouble(this.trainError);
+        out.writeDouble(this.validationError);
+        out.writeDouble(this.trainSize);
+        out.writeDouble(this.validationSize);
+        out.writeInt(this.serializationType.getValue());
+    }
+
+    @Override
+    public void doReadFields(DataInput in) throws IOException {
+        boolean mtmIsNull = in.readBoolean();
+        if(!mtmIsNull) {
+            if(this.mtm == null) {
+                this.mtm = new MultiTaskModel();
+            }
+            this.mtm.readFields(in);
+        }
+        this.trainCount = in.readDouble();
+        this.validationCount = in.readDouble();
+        this.trainError = in.readDouble();
+        this.validationError = in.readDouble();
+        this.trainSize = in.readDouble();
+        this.validationSize = in.readDouble();
+        this.serializationType = SerializationType.getSerializationType(in.readInt());
     }
 
     /**
@@ -152,73 +216,6 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
         this.serializationType = serializationType;
     }
 
-    @Override
-    public WDLParams combine(WDLParams from) {
-        this.trainCount += from.trainCount;
-        this.trainError += from.trainError;
-        this.validationCount += from.validationCount;
-        this.validationError += from.validationError;
-        this.trainSize += from.trainSize;
-        this.validationSize += from.validationSize;
-        // In the first iteration, the worker may send a empty WDLParams without WideAndDeep Init
-        if(from.getWnd() != null) {
-            this.wnd = this.wnd.combine(from.getWnd());
-        }
-        return this;
-    }
-
-    @Override
-    public void doWrite(DataOutput out) throws IOException {
-        if(this.wnd == null) {
-            // for the first iteration, the wnd will be null
-            out.writeBoolean(WDL_IS_NULL);
-        } else {
-            out.writeBoolean(!WDL_IS_NULL);
-            this.wnd.setSerializationType(serializationType);
-            this.wnd.write(out);
-        }
-        out.writeDouble(this.trainCount);
-        out.writeDouble(this.validationCount);
-        out.writeDouble(this.trainError);
-        out.writeDouble(this.validationError);
-        out.writeDouble(this.trainSize);
-        out.writeDouble(this.validationSize);
-        out.writeInt(this.serializationType.getValue());
-    }
-
-    @Override
-    public void doReadFields(DataInput in) throws IOException {
-        boolean wdlIsNull = in.readBoolean();
-        if(!wdlIsNull) {
-            if(this.wnd == null) {
-                this.wnd = new WideAndDeep();
-            }
-            this.wnd.readFields(in);
-        }
-        this.trainCount = in.readDouble();
-        this.validationCount = in.readDouble();
-        this.trainError = in.readDouble();
-        this.validationError = in.readDouble();
-        this.trainSize = in.readDouble();
-        this.validationSize = in.readDouble();
-        this.serializationType = SerializationType.getSerializationType(in.readInt());
-    }
-
-    /**
-     * @return the wnd
-     */
-    public WideAndDeep getWnd() {
-        return wnd;
-    }
-
-    /**
-     * @param wnd
-     *            the wnd to set
-     */
-    public void setWnd(WideAndDeep wnd) {
-        this.wnd = wnd;
-    }
-
     /**
      * @return the trainSize
      */
@@ -247,6 +244,21 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
      */
     public void setValidationSize(double validationSize) {
         this.validationSize = validationSize;
+    }
+
+    /**
+     * @return the mtm
+     */
+    public MultiTaskModel getMtm() {
+        return mtm;
+    }
+
+    /**
+     * @param mtm
+     *            the mtm to set
+     */
+    public void setMtm(MultiTaskModel mtm) {
+        this.mtm = mtm;
     }
 
 }

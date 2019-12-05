@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
+import org.encog.mathutil.BoundMath;
 import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +57,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 
+import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -864,52 +866,52 @@ public final class CommonUtils {
         return rawDataMap;
     }
 
-//    /**
-//     * Return all parameters for pig execution.
-//     *
-//     * @param modelConfig
-//     *            model config
-//     * @param sourceType
-//     *            source type
-//     * @return map of configurations
-//     * @throws IOException
-//     *             any io exception
-//     * @throws IllegalArgumentException
-//     *             if modelConfig is null.
-//     */
-//    public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType)
-//            throws IOException {
-//        if(modelConfig == null) {
-//            throw new IllegalArgumentException("modelConfig should not be null.");
-//        }
-//        PathFinder pathFinder = new PathFinder(modelConfig);
-//
-//        Map<String, String> pigParamMap = new HashMap<String, String>();
-//        pigParamMap.put(Constants.NUM_PARALLEL, Environment.getInt(Environment.HADOOP_NUM_PARALLEL, 400).toString());
-//        log.info("jar path is {}", pathFinder.getJarPath());
-//        pigParamMap.put(Constants.PATH_JAR, pathFinder.getJarPath());
-//
-//        pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
-//        pigParamMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedDataPath(sourceType));
-//        // default norm is not for clean, so set it to false, this will be overrided in Train#Norm for tree models
-//        pigParamMap.put(Constants.IS_NORM_FOR_CLEAN, Boolean.FALSE.toString());
-//        pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS, pathFinder.getPreTrainingStatsPath(sourceType));
-//        pigParamMap.put(Constants.PATH_STATS_BINNING_INFO, pathFinder.getUpdatedBinningInfoPath(sourceType));
-//        pigParamMap.put(Constants.PATH_STATS_PSI_INFO, pathFinder.getPSIInfoPath(sourceType));
-//
-//        pigParamMap.put(Constants.WITH_SCORE, Boolean.FALSE.toString());
-//        pigParamMap.put(Constants.STATS_SAMPLE_RATE, modelConfig.getBinningSampleRate().toString());
-//        pigParamMap.put(Constants.PATH_MODEL_CONFIG, pathFinder.getModelConfigPath(sourceType));
-//        pigParamMap.put(Constants.PATH_COLUMN_CONFIG, pathFinder.getColumnConfigPath(sourceType));
-//        pigParamMap.put(Constants.PATH_SELECTED_RAW_DATA, pathFinder.getSelectedRawDataPath(sourceType));
-//        pigParamMap.put(Constants.PATH_BIN_AVG_SCORE, pathFinder.getBinAvgScorePath(sourceType));
-//        pigParamMap.put(Constants.PATH_TRAIN_SCORE, pathFinder.getTrainScoresPath(sourceType));
-//
-//        pigParamMap.put(Constants.SOURCE_TYPE, sourceType.toString());
-//        pigParamMap.put(Constants.JOB_QUEUE,
-//                Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE));
-//        return pigParamMap;
-//    }
+    // /**
+    // * Return all parameters for pig execution.
+    // *
+    // * @param modelConfig
+    // * model config
+    // * @param sourceType
+    // * source type
+    // * @return map of configurations
+    // * @throws IOException
+    // * any io exception
+    // * @throws IllegalArgumentException
+    // * if modelConfig is null.
+    // */
+    // public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType)
+    // throws IOException {
+    // if(modelConfig == null) {
+    // throw new IllegalArgumentException("modelConfig should not be null.");
+    // }
+    // PathFinder pathFinder = new PathFinder(modelConfig);
+    //
+    // Map<String, String> pigParamMap = new HashMap<String, String>();
+    // pigParamMap.put(Constants.NUM_PARALLEL, Environment.getInt(Environment.HADOOP_NUM_PARALLEL, 400).toString());
+    // log.info("jar path is {}", pathFinder.getJarPath());
+    // pigParamMap.put(Constants.PATH_JAR, pathFinder.getJarPath());
+    //
+    // pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
+    // pigParamMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedDataPath(sourceType));
+    // // default norm is not for clean, so set it to false, this will be overrided in Train#Norm for tree models
+    // pigParamMap.put(Constants.IS_NORM_FOR_CLEAN, Boolean.FALSE.toString());
+    // pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS, pathFinder.getPreTrainingStatsPath(sourceType));
+    // pigParamMap.put(Constants.PATH_STATS_BINNING_INFO, pathFinder.getUpdatedBinningInfoPath(sourceType));
+    // pigParamMap.put(Constants.PATH_STATS_PSI_INFO, pathFinder.getPSIInfoPath(sourceType));
+    //
+    // pigParamMap.put(Constants.WITH_SCORE, Boolean.FALSE.toString());
+    // pigParamMap.put(Constants.STATS_SAMPLE_RATE, modelConfig.getBinningSampleRate().toString());
+    // pigParamMap.put(Constants.PATH_MODEL_CONFIG, pathFinder.getModelConfigPath(sourceType));
+    // pigParamMap.put(Constants.PATH_COLUMN_CONFIG, pathFinder.getColumnConfigPath(sourceType));
+    // pigParamMap.put(Constants.PATH_SELECTED_RAW_DATA, pathFinder.getSelectedRawDataPath(sourceType));
+    // pigParamMap.put(Constants.PATH_BIN_AVG_SCORE, pathFinder.getBinAvgScorePath(sourceType));
+    // pigParamMap.put(Constants.PATH_TRAIN_SCORE, pathFinder.getTrainScoresPath(sourceType));
+    //
+    // pigParamMap.put(Constants.SOURCE_TYPE, sourceType.toString());
+    // pigParamMap.put(Constants.JOB_QUEUE,
+    // Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE));
+    // return pigParamMap;
+    // }
 
     public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType,
             PathFinder pathFinder) throws IOException {
@@ -1849,6 +1851,82 @@ public final class CommonUtils {
         return output;
     }
 
+    public static float[] doubleToFloat(double[] src) {
+        if(src == null) {
+            return null;
+        }
+
+        float[] output = new float[src.length];
+
+        for(int i = 0; i < src.length; i++) {
+            output[i] = (float) src[i];
+        }
+
+        return output;
+    }
+
+    public static double[] minus(double[] src, double[] target) {
+        if(src == null || target == null) {
+            return null;
+        }
+
+        assert src.length == target.length;
+
+        double[] output = new double[src.length];
+
+        for(int i = 0; i < src.length; i++) {
+            output[i] = src[i] - target[i];
+        }
+
+        return output;
+    }
+
+    public static double[] plus(double[] src, double[] target) {
+        if(src == null || target == null) {
+            return null;
+        }
+
+        assert src.length == target.length;
+
+        double[] output = new double[src.length];
+
+        for(int i = 0; i < src.length; i++) {
+            output[i] = src[i] + target[i];
+        }
+
+        return output;
+    }
+
+    public static double[] minus(double[] src, float[] target) {
+        if(src == null || target == null) {
+            return null;
+        }
+
+        assert src.length == target.length;
+
+        double[] output = new double[src.length];
+
+        for(int i = 0; i < src.length; i++) {
+            output[i] = src[i] - target[i];
+        }
+
+        return output;
+    }
+
+    public static double[] sigmoid(double[] src) {
+        if(src == null) {
+            return null;
+        }
+
+        double[] output = new double[src.length];
+
+        for(int i = 0; i < src.length; i++) {
+            output[i] = sigmoid(src[i]);
+        }
+
+        return output;
+    }
+
     /**
      * Inject Shifu or Hadoop parameters into MapReduce / Pig jobs, by using visitor.
      *
@@ -1888,4 +1966,35 @@ public final class CommonUtils {
         }
         return Boolean.TRUE.toString().equalsIgnoreCase(object.toString());
     }
+
+    /**
+     * Return float value parsed from input string, NaN by default changed to 0.
+     * 
+     * @param input
+     *            the input string
+     * @return parsed float value
+     */
+    public static float getFloatValue(String input) {
+        float floatValue = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(input, 0f);
+        return (Double.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
+    }
+
+    /**
+     * Sigmoid function definition.
+     * 
+     * @param logit
+     *            the logit value
+     * @return sigmoid value
+     */
+    public static double sigmoid(double logit) {
+        return 1.0d / (1.0d + BoundMath.exp(-1 * logit));
+    }
+
+    /**
+     * Derived function for sigmoid function.
+     */
+    public static double sigmoidDerivedFunction(double result) {
+        return result * (1d - result);
+    }
+
 }
