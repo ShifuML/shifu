@@ -16,12 +16,7 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import ml.shifu.shifu.util.NormalUtils;
@@ -368,7 +363,8 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
         boolean isAfterVarSelect = inputOutputIndex[0] != 0;
         // cache all feature list for sampling features
-        List<Integer> allFeatures = NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
+        List<Integer> allFeatures = new ArrayList<>(DTrainUtils.generateModelFeatureSet(modelConfig, columnConfigList));
+        // NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
         String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);
         if(StringUtils.isBlank(subsetStr)) {
             this.subFeatures = new HashSet<Integer>(allFeatures);

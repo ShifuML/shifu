@@ -1677,9 +1677,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         // in shifuconfig; by default it is 200M, consider in some cases user selects only a half of features, this
         // number should be 400m
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
-                this.columnConfigList);
-        int candidateCount = (inputOutputIndex[2] == 0 ? inputOutputIndex[0] : inputOutputIndex[2]);
+        // int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+        //        this.columnConfigList);
+        //int candidateCount = (inputOutputIndex[2] == 0 ? inputOutputIndex[0] : inputOutputIndex[2]);
+        int candidateCount = DTrainUtils.generateModelFeatureSet(modelConfig, columnConfigList).size();
         // 1. set benchmark
         long maxCombineSize = CommonUtils.isTreeModel(modelConfig.getAlgorithm()) ? 209715200L : 168435456L;
         if(modelConfig.isClassification()) {
