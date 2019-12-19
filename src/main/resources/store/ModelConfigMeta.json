@@ -281,7 +281,8 @@
             }, {
                 "name": "filterNum",
                 "type": "integer",
-                "directive": "input"
+                "directive": "input",
+                "notNull": true
             }, {
                 "name": "filterOutRatio",
                 "type": "number",
@@ -663,21 +664,21 @@
                         "directive": "input",
                         "defval" : 0.01
                     }, {
-                    	"name" : "TF.optimizer",
-                    	"type" : "text",
-                    	"directive" : "select",
-                    	"defval" : "adam",
-                    	"options": [
-                    		{"label": "Adam", "value":"adam"},
-                    		{"label": "GradientDescent", "value":"gradientDescent"},
-                    		{"label": "RMSProp ", "value":"RMSProp"}
-                    	]
+                        "name" : "TF.optimizer",
+                        "type" : "text",
+                        "directive" : "select",
+                        "defval" : "adam",
+                        "options": [
+                            {"label": "Adam", "value":"adam"},
+                            {"label": "GradientDescent", "value":"gradientDescent"},
+                            {"label": "RMSProp ", "value":"RMSProp"}
+                        ]
                     }, {
-                    	"name" : "TF.loss",
-                    	"type" : "text",
-                    	"directive" : "select",
-                    	"defval" : "squared",
-                    	"options": [
+                        "name" : "TF.loss",
+                        "type" : "text",
+                        "directive" : "select",
+                        "defval" : "squared",
+                        "options": [
                             {"label": "Squared", "value":"squared"},
                             {"label": "Absolute", "value":"absolute"},
                             {"label": "Log", "value":"log"}
@@ -871,11 +872,11 @@
                         "directive": "input",
                         "defval" : 0.1
                     }, {
-                    	"name" : "FixedLayers",
-                    	"type" : "list",
-                    	"directive": "input",
-                    	"elementType" : "integer",
-                    	"element": [
+                        "name" : "FixedLayers",
+                        "type" : "list",
+                        "directive": "input",
+                        "elementType" : "integer",
+                        "element": [
                             {
                                 "name": "dummy",
                                 "type": "integer",
@@ -897,6 +898,17 @@
                             {"label": "ReLU", "value":"ReLU"},
                             {"label": "LeakyReLU", "value":"LeakyReLU"},
                             {"label": "Swish", "value":"Swish"}
+                        ]
+                    }, {
+                        "name" : "TF_Type",
+                        "type" : "text",
+                        "directive": "select",
+                        "defval" : "Keras",
+                        "options": [
+                            {"label": "Keras", "value":"Keras"},
+                            {"label": "Estimator", "value":"Estimator"},
+                            {"label": "Tensor", "value":"Tensor"},
+                            {"label": "Keras_to_estimator", "value":"Keras_to_estimator"}
                         ]
                     }
                 ]

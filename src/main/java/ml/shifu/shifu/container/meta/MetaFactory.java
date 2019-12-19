@@ -369,6 +369,10 @@ public class MetaFactory {
             return itemKey + " - not found meta info.";
         }
 
+        if(itemValue == null && itemMeta.getNotNull()) {
+            return itemKey + " - the value couldn't be null.";
+        }
+
         if(itemMeta.getType().equals("text")) {
             String value = ((itemValue == null) ? null : itemValue.toString());
 

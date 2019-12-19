@@ -49,7 +49,7 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
 
     private String[] headers;
     // feature names maybe different from outputNames,
-    //  since one feature may generate multi output after normalization
+    // since one feature may generate multi output after normalization
     private List<String> featureNames;
     private List<String> outputNames;
 
@@ -125,8 +125,8 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
             filterExpressions = Environment.getProperty(Constants.SHIFU_SEGMENT_EXPRESSIONS);
         }
         if(StringUtils.isNotBlank(filterExpressions)) {
-            this.segFilterSize = CommonUtils
-                    .split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER).length;
+            this.segFilterSize = CommonUtils.split(filterExpressions,
+                    Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER).length;
         }
 
         String isAppendScoreStr = "false";
@@ -157,7 +157,7 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
 
         // 3. add meta columns
         List<String> allMetaColumns = evalConfig.getAllMetaColumns(modelConfig);
-        for(String meta : allMetaColumns) {
+        for(String meta: allMetaColumns) {
             if(evalNamesSet.contains(meta)) {
                 if(!outputNames.contains(meta)) {
                     outputNames.add(meta);
@@ -169,13 +169,13 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
         }
 
         // 4. build categorical index map
-        for(ColumnConfig config : columnConfigList) {
+        for(ColumnConfig config: columnConfigList) {
             if(config.isCategorical()) {
                 Map<String, Integer> map = new HashMap<String, Integer>();
                 if(config.getBinCategory() != null) {
                     for(int i = 0; i < config.getBinCategory().size(); i++) {
                         List<String> catValues = CommonUtils.flattenCatValGrp(config.getBinCategory().get(i));
-                        for(String cval : catValues) {
+                        for(String cval: catValues) {
                             map.put(cval, i);
                         }
                     }
@@ -185,17 +185,17 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
         }
 
         // 5. do populate columnConfigMap at first
-        for(ColumnConfig columnConfig : this.columnConfigList) {
+        for(ColumnConfig columnConfig: this.columnConfigList) {
             columnConfigMap.put(columnConfig.getColumnName(), columnConfig);
         }
 
         this.featureNames = new ArrayList<>(this.outputNames); // will be different from here
         // 6. append real valid features
         boolean hasSelectedVars = DTrainUtils.hasFinalSelectedVars(this.columnConfigList);
-        Set<Integer> modelFeatureSet = DTrainUtils
-                .getModelFeatureSet(this.columnConfigList, hasSelectedVars, hasCandidates);
+        Set<Integer> modelFeatureSet = DTrainUtils.getModelFeatureSet(this.columnConfigList, hasSelectedVars,
+                hasCandidates);
         appendModelFeatures(this.columnConfigList, modelFeatureSet, evalNamesSet, featureNames, outputNames,
-                ((hasSelectedVars) ? "FinalSelect variable" : "Variable"));
+                ((hasSelectedVars) ? "FinalSelect variable" : "Variable"), this.segFilterSize);
 
         this.scoreName = this.evalConfig.getPerformanceScoreSelector();
         if(StringUtils.isBlank(this.scoreName) || this.scoreName.equalsIgnoreCase("mean")) {
@@ -223,15 +223,42 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
     }
 
     private void appendModelFeatures(List<ColumnConfig> columnConfigList, Set<Integer> modelFeatureSet,
-            Set<String> evalNamesSet, List<String> featureNames, List<String> outputNames, String varDesc) {
-        for (ColumnConfig columnConfig : columnConfigList) {
-            if (modelFeatureSet.contains(columnConfig.getColumnNum())) {
-                if(evalNamesSet.contains(columnConfig.getColumnName())) {
-                    featureNames.add(columnConfig.getColumnName());
-                    outputNames.addAll(super.genNormColumnNames(columnConfig, this.modelConfig.getNormalizeType()));
+            Set<String> evalNamesSet, List<String> featureNames, List<String> outputNames, String varDesc,
+            int segFilterSize) {
+        boolean isSeg = segFilterSize > 0; // if appeneding segment expression variables
+        int rawCCSize = columnConfigList.size() / (segFilterSize + 1);
+        for(ColumnConfig columnConfig: columnConfigList) {
+            if(modelFeatureSet.contains(columnConfig.getColumnNum())) {
+                if(isSeg) {
+                    if(columnConfig.getColumnNum() < rawCCSize) { // raw varaibles
+                        if(evalNamesSet.contains(columnConfig.getColumnName())) {
+                            featureNames.add(columnConfig.getColumnName());
+                            outputNames.addAll(
+                                    super.genNormColumnNames(columnConfig, this.modelConfig.getNormalizeType()));
+                        } else {
+                            throw new RuntimeException(varDesc + " - " + columnConfig.getColumnName()
+                                    + " couldn't be found in eval dataset!");
+                        }
+                    } else { // expression appending variables, like abc_1, real column name is abc.
+                        String realColumnName = columnConfig.getColumnName().substring(0,
+                                columnConfig.getColumnName().lastIndexOf("_"));
+                        if(evalNamesSet.contains(realColumnName)) {
+                            featureNames.add(columnConfig.getColumnName());
+                            outputNames.addAll(
+                                    super.genNormColumnNames(columnConfig, this.modelConfig.getNormalizeType()));
+                        } else {
+                            throw new RuntimeException(varDesc + " - " + columnConfig.getColumnName()
+                                    + " couldn't be found in eval dataset!");
+                        }
+                    }
                 } else {
-                    throw new RuntimeException(
-                            varDesc + " - " + columnConfig.getColumnName() + " couldn't be found in eval dataset!");
+                    if(evalNamesSet.contains(columnConfig.getColumnName())) {
+                        featureNames.add(columnConfig.getColumnName());
+                        outputNames.addAll(super.genNormColumnNames(columnConfig, this.modelConfig.getNormalizeType()));
+                    } else {
+                        throw new RuntimeException(
+                                varDesc + " - " + columnConfig.getColumnName() + " couldn't be found in eval dataset!");
+                    }
                 }
             }
         }
@@ -307,14 +334,13 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
                 tuple.append(raw);
             } else {
                 ColumnConfig columnConfig = this.columnConfigMap.get(name);
-                List<Double> normVals = Normalizer
-                        .fullNormalize(columnConfig, raw, this.modelConfig.getNormalizeStdDevCutOff(),
-                                this.modelConfig.getNormalizeType(), this.categoryMissingNormType,
-                                this.categoricalIndexMap.get(columnConfig.getColumnNum()));
+                List<Double> normVals = Normalizer.fullNormalize(columnConfig, raw,
+                        this.modelConfig.getNormalizeStdDevCutOff(), this.modelConfig.getNormalizeType(),
+                        this.categoryMissingNormType, this.categoricalIndexMap.get(columnConfig.getColumnNum()));
                 if(this.isOutputRaw) { // add to raw list
                     outputRawList.add(raw);
                 }
-                for(Double normVal : normVals) {
+                for(Double normVal: normVals) {
                     tuple.append(getOutputValue(normVal, true));
                 }
             }
@@ -371,7 +397,8 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
 
             if(this.isAppendScore) {
                 tupleSchema.add(new FieldSchema(StringUtils.isBlank(this.scoreName) // no score
-                        ? "default_score" : this.scoreName, DataType.DOUBLE));
+                        ? "default_score"
+                        : this.scoreName, DataType.DOUBLE));
             }
             return new Schema(new FieldSchema("EvalNorm", tupleSchema, DataType.TUPLE));
         } catch (IOException e) {

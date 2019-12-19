@@ -43,7 +43,7 @@ public class ActivationFactory {
             Set<Class<? extends Activation>> classes = reflections.getSubTypesOf(Activation.class);
             for(Class<? extends Activation> activation: classes) {
                 try {
-                    put(activation.getName().toLowerCase(), activation.newInstance());
+                    put(activation.getSimpleName().toLowerCase(), activation.newInstance());
                 } catch (InstantiationException e) {
                     LOG.error("Don't have empty construction method for " + activation.getName(), e);
                 } catch (IllegalAccessException e) {

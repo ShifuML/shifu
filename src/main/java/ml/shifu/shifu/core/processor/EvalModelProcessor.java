@@ -550,6 +550,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         paramsMap.put("scale",
                 Environment.getProperty(Constants.SHIFU_SCORE_SCALE, Integer.toString(Scorer.DEFAULT_SCORE_SCALE)));
         paramsMap.put(Constants.STRICT_MODE, Boolean.toString(isStrict()));
+        
+        String expressionsAsString = super.modelConfig.getSegmentFilterExpressionsAsString();
+        Environment.getProperties().put("shifu.segment.expressions", expressionsAsString);
 
         String pigScript = "scripts/EvalNorm.pig";
 

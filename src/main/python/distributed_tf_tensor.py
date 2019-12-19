@@ -40,7 +40,7 @@ n_workers = int(os.environ["WORKER_CNT"])  # the number of worker nodes
 job_name = os.environ["JOB_NAME"]
 task_index = int(os.environ["TASK_ID"])
 socket_server_port = int(os.environ["SOCKET_SERVER_PORT"])  # The port of local java socket server listening, to sync worker training intermediate information with master
-total_training_data_number = int(os.environ["TOTAL_TRAINING_DATA_NUMBER"]) # total data
+total_training_data_number = int(os.environ["TOTAL_TRAINING_DATA_NUMBER"]) # total data 200468 #
 feature_column_nums = [int(s) for s in str(os.environ["SELECTED_COLUMN_NUMS"]).split(' ')]  # selected column numbers
 FEATURE_COUNT = len(feature_column_nums)
 
@@ -64,7 +64,7 @@ def model(x, y_, sample_weight, model_conf):
     if BUILD_MODEL_BY_CONF_ENABLE and model_conf is not None:
         output_digits, output_nodes = generate_from_modelconf(x, model_conf)
     else:
-        output_digits = nn_layer(x, FEATURE_COUNT, HIDDEN_NODES_COUNT, act_op_name="hidden_layer1")
+        output_digits = nn_layer(x, FEATURE_COUNT, HIDDEN_NODES_COUNT, act_op_name="hidden_layer_1")
         output_nodes = HIDDEN_NODES_COUNT
 
     logging.info("output_nodes : " + str(output_nodes))
@@ -160,11 +160,11 @@ def generate_from_modelconf(x, model_conf):
     
     # first layer
     previous_layer = nn_layer(x, FEATURE_COUNT, num_hidden_nodes[0], l2_scale=l2_scale,
-                     act=activation_func[0], act_op_name="hidden_layer" + str(0))
+                     act=activation_func[0], act_op_name="hidden_layer_" + str(0))
 
     for i in range(1, num_hidden_layer):
         layer = nn_layer(previous_layer, num_hidden_nodes[i-1], num_hidden_nodes[i], l2_scale=l2_scale,
-                     act=activation_func[i], act_op_name="hidden_layer" + str(i))
+                     act=activation_func[i], act_op_name="hidden_layer_" + str(i))
         previous_layer = layer
 
     return previous_layer, num_hidden_nodes[num_hidden_layer-1]
@@ -217,7 +217,7 @@ def main(_):
         # import data
         context = load_data(training_data_path)
 
-        # split data into batch
+        # split data into batch TODO check below memory cost
         total_batch = int(len(context["train_data"]) / BATCH_SIZE)
         x_batch = np.array_split(context["train_data"], total_batch)
         y_batch = np.array_split(context["train_target"], total_batch)
@@ -288,15 +288,16 @@ def main(_):
                                                  config=config,
                                                  scaffold=scaff,
                                                  hooks=chief_hooks,
+                                                 log_step_count_steps=0,
                                                  stop_grace_period_secs=10,
                                                  checkpoint_dir=tmp_model_path)
 
         if is_chief and not is_continue_train:
             sess.run(init_tokens_op)
             #start_tensorboard(tmp_model_path)
-            logging.info("chief start waiting 40 sec")
-            time.sleep(40)  # grace period to wait on other workers before starting training
-            logging.info("chief finish waiting 40 sec")
+            logging.info("Chief worker start waiting 30 sec")
+            time.sleep(30)  # grace period to wait on other workers before starting training
+            logging.info("Chief worker finish waiting 30 sec")
 
         # Train until hook stops session
         logging.info('Starting training on worker %d' % task_index)
@@ -321,7 +322,7 @@ def main(_):
                                                                           sample_weight_placeholder: valid_sample_w}
                                           )
                 valid_time = time.time() - valid_start
-                logging.info('Step: ' + str(gs) + ' worker: ' + str(task_index) + " training loss:" + str(l) + " training time:" + str(training_time) + " valid loss:" + str(valid_loss) + " valid time:" + str(valid_time))
+                logging.info('total_batch=' + str(total_batch) + 'Index:' + str(i) + 'Step: ' + str(gs) + ' worker: ' + str(task_index) + " training loss:" + str(l) + " training time:" + str(training_time) + " valid loss:" + str(valid_loss) + " valid time:" + str(valid_time))
 
                 # Send intermediate result to master
                 message = "worker_index:{},time:{},current_epoch:{},training_loss:{},valid_loss:{},valid_time:{}\n".format(
@@ -337,7 +338,9 @@ def main(_):
                 else:
                     raise
 
-        logging.info('Done' + str(task_index))
+        # close session and log done.
+        logging.info('Done ' + str(task_index))
+        sess.close()
 
         # We just need to make sure chief worker exit with success status is enough
         if is_chief:
@@ -350,7 +353,7 @@ def main(_):
                 if BUILD_MODEL_BY_CONF_ENABLE and model_conf is not None:
                     output_digits, output_nodes = generate_from_modelconf(x, model_conf)
                 else:
-                    output_digits = nn_layer(x, FEATURE_COUNT, HIDDEN_NODES_COUNT, act_op_name="hidden_layer1")
+                    output_digits = nn_layer(x, FEATURE_COUNT, HIDDEN_NODES_COUNT, act_op_name="hidden_layer_1")
                     output_nodes = HIDDEN_NODES_COUNT
 
                 logging.info("output_nodes : " + str(output_nodes))
@@ -361,7 +364,7 @@ def main(_):
             saver = tf.train.Saver()
             with tf.Session() as sess:
                 ckpt = tf.train.get_checkpoint_state(tmp_model_path)
-                logging.info("ckpt: {}".format(ckpt))
+                logging.info("Ckpt: {}".format(ckpt))
                 assert ckpt, "Invalid model checkpoint path: {}".format(tmp_model_path)
                 saver.restore(sess, ckpt.model_checkpoint_path)
 
@@ -383,9 +386,8 @@ def main(_):
 
             f = tf.gfile.GFile(tmp_model_path + "/timeline.json", mode="w+")
             f.write(ctf)
-            time.sleep(40) # grace period to wait before closing session
+            time.sleep(30) # grace period to wait before closing session
 
-        #sess.close()
         logging.info('Session from worker %d closed cleanly' % task_index)
         sys.exit()
 
@@ -454,14 +456,11 @@ def load_data(data_file):
                             logging.info("feature_column_num: " + str(feature_column_num))
                     train_data.append(single_train_data)
 
-                    if sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):
-                        weight = float(columns[sample_weight_column_num].strip('\n'))
-                        if weight < 0.0:
-                            logging.info("Warning: weight is below 0. example:" + line)
-                            weight = 1.0
-                        training_data_sample_weight.append([weight])
-                    else:
-                        training_data_sample_weight.append([1.0])
+                    weight = float(columns[len(columns)-1].strip('\n'))
+                    if weight < 0.0:
+                        logging.info("Warning: weight is below 0. example:" + line)
+                        weight = 1.0
+                    training_data_sample_weight.append([weight])
                 else:
                     # Append validation data
                     valid_target.append([float(columns[target_column_num])])
@@ -479,14 +478,11 @@ def load_data(data_file):
 
                     valid_data.append(single_valid_data)
 
-                    if  sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):
-                        weight = float(columns[sample_weight_column_num].strip('\n'))
-                        if weight < 0.0:
-                            logging.info("Warning: weight is below 0. example:" + line)
-                            weight = 1.0
-                        valid_data_sample_weight.append([weight])
-                    else:
-                        valid_data_sample_weight.append([1.0])
+                    weight = float(columns[len(columns)-1].strip('\n'))
+                    if weight < 0.0:
+                        logging.info("Warning: weight is below 0. example:" + line)
+                        weight = 1.0
+                    valid_data_sample_weight.append([weight])
 
     logging.info("Total data count: " + str(line_count) + ".")
     logging.info("Train pos count: " + str(train_pos_cnt) + ", neg count: " + str(train_neg_cnt) + ".")
