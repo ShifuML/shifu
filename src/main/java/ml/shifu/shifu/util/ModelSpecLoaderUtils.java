@@ -1,20 +1,21 @@
 package ml.shifu.shifu.util;
 
-import ml.shifu.shifu.container.obj.*;
-import ml.shifu.shifu.container.obj.GenericModelConfig.ComputeImplClass;
-import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.*;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
-import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
-import ml.shifu.shifu.core.dtrain.gs.GridSearch;
-import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
-import ml.shifu.shifu.core.model.ModelSpec;
-import ml.shifu.shifu.exception.ShifuErrorCode;
-import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.fs.PathFinder;
-import ml.shifu.shifu.fs.ShifuFileUtils;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.TreeMap;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
@@ -30,8 +31,32 @@ import org.encog.persist.PersistorRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.util.*;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.GenericModelConfig;
+import ml.shifu.shifu.container.obj.GenericModelConfig.ComputeImplClass;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
+import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
+import ml.shifu.shifu.container.obj.RawSourceData;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.Computable;
+import ml.shifu.shifu.core.GenericModel;
+import ml.shifu.shifu.core.LR;
+import ml.shifu.shifu.core.NNModel;
+import ml.shifu.shifu.core.TreeModel;
+import ml.shifu.shifu.core.WDLModel;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
+import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
+import ml.shifu.shifu.core.dtrain.mtl.MTLModel;
+import ml.shifu.shifu.core.model.ModelSpec;
+import ml.shifu.shifu.exception.ShifuErrorCode;
+import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.fs.ShifuFileUtils;
 
 /**
  * Copyright [2013-2018] PayPal Software Foundation
@@ -421,6 +446,8 @@ public class ModelSpecLoaderUtils {
                 return TreeModel.loadFromStream(stream, gbtConvertToProb, gbtScoreConvertStrategy);
             } else if(modelPath.getName().endsWith(Constants.WDL_ALG_NAME.toLowerCase())) {
                 return WDLModel.loadFromStream(stream);
+            } else if(modelPath.getName().endsWith(CommonConstants.MTL_ALG_NAME.toLowerCase())) {
+                return MTLModel.loadFromStream(stream);
             } else {
                 GzipStreamPair pair = GzipStreamPair.isGZipFormat(stream);
                 if(pair.isGzip()) {

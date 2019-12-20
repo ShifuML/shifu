@@ -143,6 +143,8 @@ public class ConfusionMatrix {
      */
     private String delimiter;
 
+    private String[] evalScoreHeaders;
+
     public ConfusionMatrix(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, EvalConfig evalConfig)
             throws IOException {
         this(modelConfig, columnConfigList, evalConfig, new Object());
@@ -158,8 +160,8 @@ public class ConfusionMatrix {
 
         this.delimiter = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER);
 
-        String[] evalScoreHeader = getEvalScoreHeader();
-        if(ArrayUtils.isEmpty(evalScoreHeader)) {
+        evalScoreHeaders = getEvalScoreHeader();
+        if(ArrayUtils.isEmpty(evalScoreHeaders)) {
             throw new ShifuException(ShifuErrorCode.ERROR_EVAL_NO_EVALSCORE_HEADER);
         }
 
@@ -168,7 +170,7 @@ public class ConfusionMatrix {
         }
 
         if(modelConfig.isRegression()) {
-            scoreColumnIndex = getColumnIndex(evalScoreHeader,
+            scoreColumnIndex = getColumnIndex(evalScoreHeaders,
                     StringUtils.trimToEmpty(evalConfig.getPerformanceScoreSelector()));
             if(scoreColumnIndex < 0) {
                 // the score column is not found in the header of EvalScore
@@ -176,14 +178,14 @@ public class ConfusionMatrix {
             }
         }
 
-        targetColumnIndex = getColumnIndex(evalScoreHeader,
+        targetColumnIndex = getColumnIndex(evalScoreHeaders,
                 StringUtils.trimToEmpty(modelConfig.getTargetColumnName(evalConfig)));
         if(targetColumnIndex < 0) {
             // the target column is not found in the header of EvalScore
             throw new ShifuException(ShifuErrorCode.ERROR_EVAL_TARGET_NOT_FOUND);
         }
 
-        weightColumnIndex = getColumnIndex(evalScoreHeader,
+        weightColumnIndex = getColumnIndex(evalScoreHeaders,
                 StringUtils.trimToEmpty(evalConfig.getDataSet().getWeightColumnName()));
 
         // only works for multi classification
@@ -248,10 +250,11 @@ public class ConfusionMatrix {
     public PerformanceResult bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags,
             double pigPosWeightTags, double pigNegWeightTags, long records, double maxScore, double minScore,
             String scoreDataPath, String evalPerformancePath, boolean isPrint, boolean isGenerateChart,
-            boolean isUseMaxMinScore) throws IOException {
+            boolean isUseMaxMinScore, boolean isMultiTask, int mtlIndex) throws IOException {
         return bufferedComputeConfusionMatrixAndPerformance(pigPosTags, pigNegTags, pigPosWeightTags, pigNegWeightTags,
                 records, maxScore, minScore, scoreDataPath, evalPerformancePath, isPrint, isGenerateChart,
-                this.targetColumnIndex, this.scoreColumnIndex, this.weightColumnIndex, isUseMaxMinScore);
+                this.targetColumnIndex, this.scoreColumnIndex, this.weightColumnIndex, isUseMaxMinScore, isMultiTask,
+                mtlIndex);
     }
 
     private boolean isGBTNeedConvertScore() {
@@ -276,8 +279,8 @@ public class ConfusionMatrix {
     public PerformanceResult bufferedComputeConfusionMatrixAndPerformance(long pigPosTags, long pigNegTags,
             double pigPosWeightTags, double pigNegWeightTags, long records, double maxPScore, double minPScore,
             String scoreDataPath, String evalPerformancePath, boolean isPrint, boolean isGenerateChart,
-            int targetColumnIndex, int scoreColumnIndex, int weightColumnIndex, boolean isUseMaxMinScore)
-            throws IOException {
+            int targetColumnIndex, int scoreColumnIndex, int weightColumnIndex, boolean isUseMaxMinScore,
+            boolean isMultiTask, int mtlIndex) throws IOException {
         // 1. compute maxScore and minScore in case some cases score are not in [0, 1]
         double maxScore = 1d * scoreScale, minScore = 0d;
 
@@ -292,9 +295,16 @@ public class ConfusionMatrix {
                 // otherwise, keep [0, 1]
             }
         }
-
         LOG.info("{} Transformed (scale included) max score is {}, transformed min score is {}",
                 evalConfig.getGbtScoreConvertStrategy(), maxScore, minScore);
+
+        if(isMultiTask) {
+            scoreColumnIndex = getColumnIndex(evalScoreHeaders, "model" + mtlIndex);
+            if(scoreColumnIndex < 0) {
+                // the score column is not found in the header of EvalScore
+                throw new ShifuException(ShifuErrorCode.ERROR_EVAL_SELECTOR_EMPTY);
+            }
+        }
 
         SourceType sourceType = evalConfig.getDataSet().getSource();
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(scoreDataPath, sourceType);

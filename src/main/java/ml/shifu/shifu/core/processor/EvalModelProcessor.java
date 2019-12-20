@@ -18,6 +18,7 @@ package ml.shifu.shifu.core.processor;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -395,8 +396,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * @throws IOException
      *             any io exception
      */
-    @SuppressWarnings("deprecation")
-    private ScoreStatus runDistScore(EvalConfig evalConfig) throws IOException {
+    private List<ScoreStatus> runDistScore(EvalConfig evalConfig) throws IOException {
         // clean up output directories
         SourceType sourceType = evalConfig.getDataSet().getSource();
 
@@ -417,6 +417,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         paramsMap.put("columnIndex", evalConfig.getPerformanceScoreSelector().trim());
         paramsMap.put("scale",
                 Environment.getProperty(Constants.SHIFU_SCORE_SCALE, Integer.toString(Scorer.DEFAULT_SCORE_SCALE)));
+        if(this.modelConfig.isMultiTask()) {
+            // hard code to the first one as in evaluation no need such index but just make sure no exception in UDF
+            paramsMap.put(CommonConstants.MTL_INDEX, 0 + "");
+        }
 
         String expressionsAsString = super.modelConfig.getSegmentFilterExpressionsAsString();
         Environment.getProperties().put("shifu.segment.expressions", expressionsAsString);
@@ -441,6 +445,12 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             throw new RuntimeException(e);
         }
 
+        return getScoreStatusFromJobStats(sourceType, maxMinScoreFolder);
+    }
+
+    @SuppressWarnings("deprecation")
+    private List<ScoreStatus> getScoreStatusFromJobStats(SourceType sourceType, String maxMinScoreFolder)
+            throws IOException {
         Iterator<JobStats> iter = PigStats.get().getJobGraph().iterator();
 
         while(iter.hasNext()) {
@@ -454,39 +464,59 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             }
             this.evalRecords = evalRecords;
 
-            long pigPosTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
-                    .getCounter(Constants.COUNTER_POSTAGS);
-            long pigNegTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
-                    .getCounter(Constants.COUNTER_NEGTAGS);
-            double pigPosWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
-                    .getCounter(Constants.COUNTER_WPOSTAGS) / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
-            double pigNegWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
-                    .getCounter(Constants.COUNTER_WNEGTAGS) / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
-
-            LOG.info("Total positive record count is : {}", pigPosTags);
-            LOG.info("Total negative record count is : {}", pigNegTags);
-            LOG.info("Total weighted positive record count is : {}", pigPosWeightTags);
-            LOG.info("Total weighted negative record count is : {}", pigNegWeightTags);
-
-            long totalRunTime = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
-                    .getCounter(Constants.TOTAL_MODEL_RUNTIME);
-
-            LOG.info("Avg SLA for eval model scoring is {} micro seconds", totalRunTime / evalRecords);
-
-            double maxScore = Integer.MIN_VALUE;
-            double minScore = Integer.MAX_VALUE;
-            if(modelConfig.isRegression()) {
-                double[] maxMinScores = locateMaxMinScoreFromFile(sourceType, maxMinScoreFolder);
-                maxScore = maxMinScores[0];
-                minScore = maxMinScores[1];
-                LOG.info("Raw max score is {}, raw min score is {}", maxScore, minScore);
-                ShifuFileUtils.deleteFile(maxMinScoreFolder, sourceType);
+            if(this.modelConfig.isMultiTask()) {
+                List<ScoreStatus> scoreStatus = new ArrayList<>();
+                for(int i = 0; i < this.mtlColumnConfigLists.size(); i++) {
+                    scoreStatus.add(getScoreStatus(sourceType, maxMinScoreFolder, jobStats, evalRecords, i));
+                }
+                return scoreStatus;
+            } else {
+                return Arrays.asList(getScoreStatus(sourceType, maxMinScoreFolder, jobStats, evalRecords, -1));
             }
-            // only one pig job with such counters, return
-            return new ScoreStatus(pigPosTags, pigNegTags, pigPosWeightTags, pigNegWeightTags, maxScore, minScore,
-                    evalRecords);
         }
         return null;
+    }
+
+    @SuppressWarnings("deprecation")
+    private ScoreStatus getScoreStatus(SourceType sourceType, String maxMinScoreFolder, JobStats jobStats,
+            long evalRecords, int postfix) throws IOException {
+        long pigPosTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                .getCounter(postfix == -1 ? Constants.COUNTER_POSTAGS : Constants.COUNTER_POSTAGS + "_" + postfix);
+        long pigNegTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                .getCounter(postfix == -1 ? Constants.COUNTER_NEGTAGS : Constants.COUNTER_NEGTAGS + "_" + postfix);
+
+        double pigPosWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                .getCounter(postfix == -1 ? Constants.COUNTER_WPOSTAGS : Constants.COUNTER_WPOSTAGS + "_" + postfix)
+                / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
+        double pigNegWeightTags = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                .getCounter(postfix == -1 ? Constants.COUNTER_WNEGTAGS : Constants.COUNTER_WNEGTAGS + "_" + postfix)
+                / (Constants.EVAL_COUNTER_WEIGHT_SCALE * 1.0d);
+
+        LOG.info("Total positive record count is : {}", pigPosTags);
+        LOG.info("Total negative record count is : {}", pigNegTags);
+        LOG.info("Total weighted positive record count is : {}", pigPosWeightTags);
+        LOG.info("Total weighted negative record count is : {}", pigNegWeightTags);
+
+        long totalRunTime = jobStats.getHadoopCounters().getGroup(Constants.SHIFU_GROUP_COUNTER)
+                .getCounter(Constants.TOTAL_MODEL_RUNTIME);
+
+        LOG.info("Avg SLA for eval model scoring is {} micro seconds", totalRunTime / evalRecords);
+
+        double maxScore = Integer.MIN_VALUE;
+        double minScore = Integer.MAX_VALUE;
+        if(modelConfig.isRegression()) {
+            double[] maxMinScores = locateMaxMinScoreFromFile(sourceType, maxMinScoreFolder);
+            maxScore = maxMinScores[0];
+            minScore = maxMinScores[1];
+            LOG.info("Raw max score is {}, raw min score is {}", maxScore, minScore);
+            if(postfix == -1
+                    || (this.mtlColumnConfigLists != null && postfix == this.mtlColumnConfigLists.size() - 1)) {
+                ShifuFileUtils.deleteFile(maxMinScoreFolder, sourceType);
+            }
+        }
+        // only one pig job with such counters, return
+        return new ScoreStatus(pigPosTags, pigNegTags, pigPosWeightTags, pigNegWeightTags, maxScore, minScore,
+                evalRecords);
     }
 
     private double[] locateMaxMinScoreFromFile(SourceType sourceType, String maxMinScoreFolder) throws IOException {
@@ -897,26 +927,38 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      *             when any exception in delete the old tmp files
      */
     private void runDistEval(EvalConfig evalConfig) throws IOException {
-        ScoreStatus ss = runDistScore(evalConfig);
+        List<ScoreStatus> ss = runDistScore(evalConfig);
 
         List<String> scoreMetaColumns = evalConfig.getScoreMetaColumns(modelConfig);
-        if(scoreMetaColumns == null || scoreMetaColumns.isEmpty() || !modelConfig.isRegression()) {
-            // if no any champion score column set, go to previous evaluation with only challendge model
-            runConfusionMatrix(evalConfig, ss, isGBTNotConvertToProb(evalConfig));
-            return;
+        if(!modelConfig.isMultiTask()) {
+            if(scoreMetaColumns == null || scoreMetaColumns.isEmpty() || !modelConfig.isRegression()) {
+                // if no any champion score column set, go to previous evaluation with only challendge model
+                runConfusionMatrix(evalConfig, ss.get(0), isGBTNotConvertToProb(evalConfig), false, -1);
+                return;
+            }
         }
 
         // 1. Get challenge model performance
-        PerformanceResult challengeModelPerformance = runConfusionMatrix(evalConfig, ss,
-                pathFinder.getEvalScorePath(evalConfig), pathFinder.getEvalPerformancePath(evalConfig), false, false,
-                isGBTNotConvertToProb(evalConfig));
-
         List<PerformanceResult> prList = new ArrayList<PerformanceResult>();
-        prList.add(challengeModelPerformance);
+        List<String> names = new ArrayList<String>();
+
+        if(this.modelConfig.isMultiTask()) {
+            for(int i = 0; i < this.mtlColumnConfigLists.size(); i++) {
+                PerformanceResult challengeModelPerformance = runConfusionMatrix(evalConfig, ss.get(i),
+                        pathFinder.getEvalScorePath(evalConfig), pathFinder.getEvalPerformancePath(evalConfig), true,
+                        false, isGBTNotConvertToProb(evalConfig), this.modelConfig.isMultiTask(), i);
+                prList.add(challengeModelPerformance);
+                names.add(modelConfig.getBasic().getName() + "-" + evalConfig.getName() + "-" + i);
+            }
+        } else {
+            PerformanceResult challengeModelPerformance = runConfusionMatrix(evalConfig, ss.get(0),
+                    pathFinder.getEvalScorePath(evalConfig), pathFinder.getEvalPerformancePath(evalConfig), false,
+                    false, isGBTNotConvertToProb(evalConfig), false, -1);
+            prList.add(challengeModelPerformance);
+            names.add(modelConfig.getBasic().getName() + "-" + evalConfig.getName());
+        }
 
         // 2. Get all champion model performance
-        List<String> names = new ArrayList<String>();
-        names.add(modelConfig.getBasic().getName() + "-" + evalConfig.getName());
         for(String metaScoreColumn: scoreMetaColumns) {
             if(StringUtils.isBlank(metaScoreColumn)) {
                 continue;
@@ -928,7 +970,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
             PerformanceResult championModelPerformance = runConfusionMatrix(evalConfig, newScoreStatus,
                     pathFinder.getEvalMetaScorePath(evalConfig, metaScoreColumn),
-                    pathFinder.getEvalMetaPerformancePath(evalConfig, metaScoreColumn), false, false, 0, 1, 2);
+                    pathFinder.getEvalMetaPerformancePath(evalConfig, metaScoreColumn), false, false, 0, 1, 2, false,
+                    -1);
             prList.add(championModelPerformance);
         }
 
@@ -1154,16 +1197,16 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * @throws IOException
      *             any io exception
      */
-    private PerformanceResult runConfusionMatrix(EvalConfig config, ScoreStatus ss, boolean isUseMaxMinScore)
-            throws IOException {
+    private PerformanceResult runConfusionMatrix(EvalConfig config, ScoreStatus ss, boolean isUseMaxMinScore,
+            boolean isMTL, int mtlIndex) throws IOException {
         return runConfusionMatrix(config, ss, pathFinder.getEvalScorePath(config),
                 pathFinder.getEvalPerformancePath(config, config.getDataSet().getSource()), true, true,
-                isUseMaxMinScore);
+                isUseMaxMinScore, isMTL, mtlIndex);
     }
 
     private PerformanceResult runConfusionMatrix(EvalConfig config, ScoreStatus ss, String scoreDataPath,
-            String evalPerformancePath, boolean isPrint, boolean isGenerateChart, boolean isUseMaxMinScore)
-            throws IOException {
+            String evalPerformancePath, boolean isPrint, boolean isGenerateChart, boolean isUseMaxMinScore,
+            boolean isMTL, int mtlIndex) throws IOException {
         ConfusionMatrix worker = new ConfusionMatrix(modelConfig, columnConfigList, config, this);
         switch(modelConfig.getBasic().getRunMode()) {
             case DIST:
@@ -1171,7 +1214,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 if(modelConfig.isRegression()) {
                     return worker.bufferedComputeConfusionMatrixAndPerformance(ss.pigPosTags, ss.pigNegTags,
                             ss.pigPosWeightTags, ss.pigNegWeightTags, ss.evalRecords, ss.maxScore, ss.minScore,
-                            scoreDataPath, evalPerformancePath, isPrint, isGenerateChart, isUseMaxMinScore);
+                            scoreDataPath, evalPerformancePath, isPrint, isGenerateChart, isUseMaxMinScore, isMTL,
+                            mtlIndex);
                 } else {
                     worker.computeConfusionMatixForMultipleClassification(this.evalRecords);
                     return null;
@@ -1184,7 +1228,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     private PerformanceResult runConfusionMatrix(EvalConfig config, ScoreStatus ss, String scoreDataPath,
             String evalPerformancePath, boolean isPrint, boolean isGenerateChart, int targetColumnIndex,
-            int scoreColumnIndex, int weightColumnIndex) throws IOException {
+            int scoreColumnIndex, int weightColumnIndex, boolean isMultiTask, int mtlIndex) throws IOException {
         ConfusionMatrix worker = new ConfusionMatrix(modelConfig, columnConfigList, config, this);
         switch(modelConfig.getBasic().getRunMode()) {
             case DIST:
@@ -1193,7 +1237,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                     return worker.bufferedComputeConfusionMatrixAndPerformance(ss.pigPosTags, ss.pigNegTags,
                             ss.pigPosWeightTags, ss.pigNegWeightTags, ss.evalRecords, ss.maxScore, ss.minScore,
                             scoreDataPath, evalPerformancePath, isPrint, isGenerateChart, targetColumnIndex,
-                            scoreColumnIndex, weightColumnIndex, true);
+                            scoreColumnIndex, weightColumnIndex, true, isMultiTask, mtlIndex);
                 } else {
                     worker.computeConfusionMatixForMultipleClassification(this.evalRecords);
                     return null;
@@ -1215,7 +1259,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      *             any io exception
      */
     private void runConfusionMatrix(EvalConfig config) throws IOException {
-        runConfusionMatrix(config, null, false);
+        runConfusionMatrix(config, null, false, false, -1);
     }
 
     /**

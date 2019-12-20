@@ -570,6 +570,7 @@
                     {"label": "Gradient Boost Decision Tree", "value":"GBT"},
                     {"label": "Tensorflow", "value":"Tensorflow"},
                     {"label": "Wide And Deep", "value":"WDL"},
+                    {"label": "Multi Task Model", "value":"MTL"},
                     {"label": "Generic", "value":"generic"}
                 ]
             }, {

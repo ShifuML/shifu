@@ -197,7 +197,7 @@ public class MTLMaster extends AbstractMasterComputable<MTLParams, MTLParams> {
      * 
      * @param context
      *            the work flow context
-     * @return the initial parameter
+     * @return the initial MTL parameter
      */
     private MTLParams initOrRecoverModelWeights(MasterContext<MTLParams, MTLParams> context) {
         MTLParams params = new MTLParams();

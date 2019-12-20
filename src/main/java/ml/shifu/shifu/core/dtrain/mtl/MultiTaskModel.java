@@ -56,8 +56,7 @@ import ml.shifu.shifu.util.CommonUtils;
  * <p>
  * The model architecture is a typical multiple task model includes input layer, fully connected hidden layers and
  * multiple final output layers. In this architecture, only last final output layers are independent layers for
- * different
- * tasks.Hidden layers are all shared and would be shared trained.
+ * different tasks. Hidden layers are all shared and would be shared trained.
  * 
  * <p>
  * {@link #serializationType} is used to denote if such model is for model spec loading from model file, if it is master
@@ -66,7 +65,7 @@ import ml.shifu.shifu.util.CommonUtils;
  * <P>
  * {@link Combinable} is implemented for better gradients aggregation in master which can improve memory consumption and
  * aggregation efficiency. {@link PropOptimizer} is to define gradient descent or adam like optimizer for final model
- * updates in each epoch
+ * updates in each epoch.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -171,6 +170,9 @@ public class MultiTaskModel implements WeightInitializer<MultiTaskModel>, Bytabl
 
     /**
      * Update model weights from extra {@link MultiTaskModel} instance.
+     * 
+     * @param mtm
+     *            the model to update local weights
      */
     public void updateWeights(MultiTaskModel mtm) {
         this.initWeight(mtm);
@@ -179,6 +181,9 @@ public class MultiTaskModel implements WeightInitializer<MultiTaskModel>, Bytabl
     /**
      * Update model weights from extra {@link MTLParams} instance, as weights are updated, gradients has been reset for
      * next epoch.
+     * 
+     * @param params
+     *            the params with weights to update local model
      */
     public void updateWeights(MTLParams params) {
         updateWeights(params.getMtm());
@@ -202,7 +207,8 @@ public class MultiTaskModel implements WeightInitializer<MultiTaskModel>, Bytabl
     }
 
     /**
-     * Logits forward computation from input layer -> hidden layers -> output layers. Output layers are not shared but
+     * Logits forward computation from input layer -&gt; hidden layers -&gt; output layers. Output layers are not shared
+     * but
      * others are shared in multiple tasks.
      * 
      * @param denseInputs
@@ -253,7 +259,7 @@ public class MultiTaskModel implements WeightInitializer<MultiTaskModel>, Bytabl
         }
 
         // 2. Final layers backward accumulation
-        double[] backInputs = new double[predicts.length];
+        double[] backInputs = new double[finalLayers.get(0).getIn()];
         for(int i = 0; i < this.finalLayers.size(); i++) {
             backInputs = CommonUtils.plus(backInputs,
                     this.finalLayers.get(i).backward(new double[] { grad2Logits[i] }));

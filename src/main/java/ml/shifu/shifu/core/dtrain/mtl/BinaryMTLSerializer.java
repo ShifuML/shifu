@@ -94,27 +94,7 @@ public class BinaryMTLSerializer {
                 List<NNColumnStats> csList = new ArrayList<>();
                 for(ColumnConfig cc: columnConfigList) {
                     if(columnIndexNameMapping.containsKey(cc.getColumnNum())) {
-                        NNColumnStats cs = new NNColumnStats();
-                        cs.setCutoff(modelConfig.getNormalizeStdDevCutOff());
-                        cs.setColumnType(cc.getColumnType());
-                        cs.setMean(cc.getMean());
-                        cs.setStddev(cc.getStdDev());
-                        cs.setColumnNum(cc.getColumnNum());
-                        cs.setColumnName(cc.getColumnName());
-                        cs.setBinCategories(cc.getBinCategory());
-                        cs.setBinBoundaries(cc.getBinBoundary());
-                        cs.setBinPosRates(cc.getBinPosRate());
-                        cs.setBinCountWoes(cc.getBinCountWoe());
-                        cs.setBinWeightWoes(cc.getBinWeightedWoe());
-
-                        // TODO cache such computation
-                        double[] meanAndStdDev = Normalizer.calculateWoeMeanAndStdDev(cc, false);
-                        cs.setWoeMean(meanAndStdDev[0]);
-                        cs.setWoeStddev(meanAndStdDev[1]);
-                        double[] weightMeanAndStdDev = Normalizer.calculateWoeMeanAndStdDev(cc, true);
-                        cs.setWoeWgtMean(weightMeanAndStdDev[0]);
-                        cs.setWoeWgtStddev(weightMeanAndStdDev[1]);
-                        csList.add(cs);
+                        csList.add(buildColumnStats(modelConfig, cc));
                     }
                 }
                 fos.writeInt(csList.size());
@@ -136,6 +116,30 @@ public class BinaryMTLSerializer {
         } finally {
             IOUtils.closeStream(fos);
         }
+    }
+
+    private static NNColumnStats buildColumnStats(ModelConfig modelConfig, ColumnConfig cc) {
+        NNColumnStats cs = new NNColumnStats();
+        cs.setCutoff(modelConfig.getNormalizeStdDevCutOff());
+        cs.setColumnType(cc.getColumnType());
+        cs.setMean(cc.getMean());
+        cs.setStddev(cc.getStdDev());
+        cs.setColumnNum(cc.getColumnNum());
+        cs.setColumnName(cc.getColumnName());
+        cs.setBinCategories(cc.getBinCategory());
+        cs.setBinBoundaries(cc.getBinBoundary());
+        cs.setBinPosRates(cc.getBinPosRate());
+        cs.setBinCountWoes(cc.getBinCountWoe());
+        cs.setBinWeightWoes(cc.getBinWeightedWoe());
+
+        // TODO cache such computation
+        double[] meanAndStdDev = Normalizer.calculateWoeMeanAndStdDev(cc, false);
+        cs.setWoeMean(meanAndStdDev[0]);
+        cs.setWoeStddev(meanAndStdDev[1]);
+        double[] weightMeanAndStdDev = Normalizer.calculateWoeMeanAndStdDev(cc, true);
+        cs.setWoeWgtMean(weightMeanAndStdDev[0]);
+        cs.setWoeWgtStddev(weightMeanAndStdDev[1]);
+        return cs;
     }
 
     private static Map<Integer, String> getIndexNameMapping(List<ColumnConfig> columnConfigList) {

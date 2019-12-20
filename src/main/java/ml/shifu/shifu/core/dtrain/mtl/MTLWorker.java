@@ -214,8 +214,7 @@ public class MTLWorker extends
             }
 
             // multiple norm outputs are appended one by one in the same line
-            int currCCListIndex = index / this.multiTagColumns.size();
-            int currCCIndex = index % this.multiTagColumns.size();
+            int currCCListIndex = index / columns, currCCIndex = index % columns;
             ColumnConfig config = this.mtlColumnConfigLists.get(currCCListIndex).get(currCCIndex);
             if(config != null && config.isTarget()) {
                 outputs[outputIndex++] = CommonUtils.getFloatValue(input);
@@ -502,14 +501,14 @@ public class MTLWorker extends
      */
     private void loadConfigs(Properties props) {
         this.mtlColumnConfigLists = new ArrayList<>();
-        this.multiTagColumns = this.modelConfig.getMultiTaskTargetColumnNames();
-        assert this.multiTagColumns != null && this.multiTagColumns.size() > 0;
 
         try {
             SourceType sourceType = SourceType
                     .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
+            this.multiTagColumns = this.modelConfig.getMultiTaskTargetColumnNames();
+            assert this.multiTagColumns != null && this.multiTagColumns.size() > 0;
 
             PathFinder pathFinder = new PathFinder(this.modelConfig);
             int ccSize = -1;

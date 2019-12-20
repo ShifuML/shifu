@@ -378,12 +378,11 @@ public class ModelConfig {
             return dataSet.getPosTags();
         }
     }
-    
+
     @JsonIgnore
     public List<String> getMTLPosTags(int mtlIndex) {
         if(this.isMultiTask()) {
-            String subTags = CommonUtils.split(dataSet.getPosTags().get(0),
-                    CommonConstants.MTL_DELIMITER)[mtlIndex];
+            String subTags = CommonUtils.split(dataSet.getPosTags().get(0), CommonConstants.MTL_DELIMITER)[mtlIndex];
             return CommonUtils.splitAndReturnList(subTags, CommonConstants.MTL_SUBTAG_DELIMITER);
         } else {
             return dataSet.getPosTags();
@@ -397,7 +396,7 @@ public class ModelConfig {
 
     @JsonIgnore
     public boolean isRegression() {
-        return (CollectionUtils.isNotEmpty(dataSet.getPosTags()) && CollectionUtils.isNotEmpty(dataSet.getNegTags()));
+        return CollectionUtils.isNotEmpty(dataSet.getPosTags()) && CollectionUtils.isNotEmpty(dataSet.getNegTags());
     }
 
     @JsonIgnore
@@ -474,7 +473,6 @@ public class ModelConfig {
     public List<String> getTags() {
         return getTags(getPosTags(), getNegTags());
     }
-    
 
     @JsonIgnore
     public List<String> getMTLTags(int mtlIndex) {
@@ -505,7 +503,7 @@ public class ModelConfig {
     public List<Set<String>> getSetTags() {
         return getSetTags(getPosTags(), getNegTags());
     }
-    
+
     @JsonIgnore
     public List<Set<String>> getMTLSetTags(int mtlIndex) {
         return getSetTags(getMTLPosTags(mtlIndex), getMTLNegTags(mtlIndex));
@@ -536,12 +534,11 @@ public class ModelConfig {
             return dataSet.getNegTags();
         }
     }
-    
+
     @JsonIgnore
     public List<String> getMTLNegTags(int mtlIndex) {
         if(this.isMultiTask()) {
-            String subTags = CommonUtils.split(dataSet.getNegTags().get(0),
-                    CommonConstants.MTL_DELIMITER)[mtlIndex];
+            String subTags = CommonUtils.split(dataSet.getNegTags().get(0), CommonConstants.MTL_DELIMITER)[mtlIndex];
             return CommonUtils.splitAndReturnList(subTags, CommonConstants.MTL_SUBTAG_DELIMITER);
         } else {
             return dataSet.getNegTags();
@@ -666,6 +663,9 @@ public class ModelConfig {
 
     @JsonIgnore
     public List<String> getMultiTaskTargetColumnNames() {
+        if(dataSet.getTargetColumnName() == null) {
+            return null;
+        }
         return CommonUtils.splitAndReturnList(dataSet.getTargetColumnName(), CommonConstants.MTL_DELIMITER);
     }
 
@@ -680,7 +680,7 @@ public class ModelConfig {
 
     @JsonIgnore
     public boolean isMultiTask(String targetColumnName) {
-        return targetColumnName.contains(CommonConstants.MTL_DELIMITER);
+        return targetColumnName != null && targetColumnName.contains(CommonConstants.MTL_DELIMITER);
     }
 
     @JsonIgnore

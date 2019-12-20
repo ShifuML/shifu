@@ -41,7 +41,12 @@ import ml.shifu.shifu.util.Constants;
  * {@link IndependentMTLModel} is a light MTL engine to predict MTL model, the only dependency is shifu, guagua.
  * 
  * <p>
- * {@link #compute(Map)} is the main predict method while need ensure columnName:rawValue as map entry.
+ * {@link #compute(Map)} is the main predict method from raw values. Normalization would be embedded and then do
+ * inference to get a list of scores.
+ * 
+ * <p>
+ * {@link #loadFromStream(InputStream)} and {@link #loadFromStream(InputStream, boolean)} are two utility methods to
+ * load MTL binary model spec as a {@link IndependentMTLModel} instance.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */

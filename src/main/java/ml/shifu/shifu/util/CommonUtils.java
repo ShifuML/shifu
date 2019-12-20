@@ -550,7 +550,16 @@ public final class CommonUtils {
                             : evalConfig.getDataSet().getHeaderDelimiter(),
                     evalConfig.getDataSet().getSource());
             // TODO - if there is no target column in eval, it may fail to check it is schema or not
-            if(StringUtils.join(fields, "").contains(evalConfig.getDataSet().getTargetColumnName())) {
+
+            if(evalConfig.isMultiTask()) {
+                List<String> tarColumns = evalConfig.getMultiTaskTargetColumnNames();
+                for(String column: tarColumns) {
+                    if(!StringUtils.join(fields, "").contains(column)) {
+                        isSchemaProvided = false;
+                        break;
+                    }
+                }
+            } else if(StringUtils.join(fields, "").contains(evalConfig.getDataSet().getTargetColumnName())) {
                 // if first line contains target column name, we guess it is csv format and first line is header.
                 isSchemaProvided = true;
                 log.warn("No header path is provided, we will try to read first line and detect schema.");
@@ -1992,6 +2001,10 @@ public final class CommonUtils {
 
     /**
      * Derived function for sigmoid function.
+     * 
+     * @param result
+     *            logit result
+     * @return sigmoid derived value
      */
     public static double sigmoidDerivedFunction(double result) {
         return result * (1d - result);

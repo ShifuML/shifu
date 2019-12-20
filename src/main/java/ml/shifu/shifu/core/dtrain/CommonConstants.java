@@ -159,12 +159,15 @@ public interface CommonConstants {
     public static final String WIDE_DENSE_ENABLE = "wideDenseEnable";
 
     /**
-     * Mult-Task Learning delimiter to split multiple target columns and
+     * Mult-Task Learning delimiter to split multiple target columns.
      */
     public static final String MTL_DELIMITER = "|||";
 
     public static final String MTL_SUBTAG_DELIMITER = "||";
 
     public static final String MTL_INDEX = "shifu_mtl_index";
+    
+    public static final String MTL_ALG_NAME = "MTL";
+
 
 }

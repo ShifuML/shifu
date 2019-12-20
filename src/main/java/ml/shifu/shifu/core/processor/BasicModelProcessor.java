@@ -442,7 +442,6 @@ public class BasicModelProcessor {
      *             modelConfig is not loaded or save ModelConfig.json file error
      */
     public void checkAlgorithmParam() throws Exception {
-
         String alg = modelConfig.getAlgorithm();
         Map<String, Object> param = modelConfig.getParams();
 
@@ -526,8 +525,10 @@ public class BasicModelProcessor {
             // do nothing
         } else if(Constants.WDL.equalsIgnoreCase(alg)) {
             // do nothing
+        } else if(CommonConstants.MTL_ALG_NAME.equalsIgnoreCase(alg)) {
+            // do nothing
         } else {
-            throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_ALG);
+            // do nothing
         }
 
         // log.info("Finished: check the algorithm parameter");

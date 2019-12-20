@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -48,7 +49,7 @@ public class EvalConfig {
     private String scoreMetaColumnNameFile;
     private Map<String, String> customPaths;
     private Long scoreScale = 1000L;
-    
+
     /**
      * if eval -norm need norm all columns or final selected columns(finalSelect=true), by default false
      */
@@ -142,8 +143,9 @@ public class EvalConfig {
                             path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
                         }
 
-                        String delimiter = StringUtils.isBlank(dataSet.getHeaderDelimiter()) ? dataSet
-                                .getDataDelimiter() : dataSet.getHeaderDelimiter();
+                        String delimiter = StringUtils.isBlank(dataSet.getHeaderDelimiter())
+                                ? dataSet.getDataDelimiter()
+                                : dataSet.getHeaderDelimiter();
                         scoreMetaColumns = CommonUtils.readConfNamesAsList(path, dataSet.getSource(), delimiter);
                     }
 
@@ -175,8 +177,9 @@ public class EvalConfig {
                             path = new Path(pathFinder.getEvalSetPath(this), file.getName()).toString();
                         }
 
-                        String delimiter = StringUtils.isBlank(dataSet.getHeaderDelimiter()) ? dataSet
-                                .getDataDelimiter() : dataSet.getHeaderDelimiter();
+                        String delimiter = StringUtils.isBlank(dataSet.getHeaderDelimiter())
+                                ? dataSet.getDataDelimiter()
+                                : dataSet.getHeaderDelimiter();
                         List<String> rawMetaColumns = CommonUtils.readConfNamesAsList(path, dataSet.getSource(),
                                 delimiter);
                         if(CollectionUtils.isNotEmpty(metaColumns)) {
@@ -209,6 +212,24 @@ public class EvalConfig {
 
     public synchronized RawSourceData getDataSet() {
         return dataSet;
+    }
+
+    @JsonIgnore
+    public boolean isMultiTask(String targetColumnName) {
+        return targetColumnName != null && targetColumnName.contains(CommonConstants.MTL_DELIMITER);
+    }
+
+    @JsonIgnore
+    public boolean isMultiTask() {
+        return isMultiTask(this.dataSet.getTargetColumnName());
+    }
+    
+    @JsonIgnore
+    public List<String> getMultiTaskTargetColumnNames() {
+        if(dataSet.getTargetColumnName() == null) {
+            return null;
+        }
+        return CommonUtils.splitAndReturnList(dataSet.getTargetColumnName(), CommonConstants.MTL_DELIMITER);
     }
 
     public synchronized void setDataSet(RawSourceData dataSet) {
@@ -322,7 +343,8 @@ public class EvalConfig {
     }
 
     /**
-     * @param normAllColumns the normAllColumns to set
+     * @param normAllColumns
+     *            the normAllColumns to set
      */
     public void setNormAllColumns(Boolean normAllColumns) {
         this.normAllColumns = normAllColumns;

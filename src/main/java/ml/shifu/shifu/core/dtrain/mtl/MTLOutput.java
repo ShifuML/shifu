@@ -296,14 +296,14 @@ public class MTLOutput extends BasicMasterInterceptor<MTLParams, MTLParams> {
      */
     private void loadConfigFiles(final Properties props) {
         this.mtlColumnConfigLists = new ArrayList<>();
-        List<String> tagColumns = this.modelConfig.getMultiTaskTargetColumnNames();
-        assert tagColumns != null && tagColumns.size() > 0;
-
         try {
             SourceType sourceType = SourceType
                     .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
+
+            List<String> tagColumns = this.modelConfig.getMultiTaskTargetColumnNames();
+            assert tagColumns != null && tagColumns.size() > 0;
 
             PathFinder pathFinder = new PathFinder(this.modelConfig);
             int ccSize = -1;

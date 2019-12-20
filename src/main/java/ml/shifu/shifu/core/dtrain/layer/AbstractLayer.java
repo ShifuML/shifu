@@ -31,7 +31,7 @@ public abstract class AbstractLayer<FIN, FOUT, BIN, BOUT, SELF extends Bytable>
     /**
      * Serialization type.
      * In convention, this field should only be serialized in {@link ml.shifu.shifu.core.dtrain.wdl.WideAndDeep}.
-     * {@link ml.shifu.shifu.core.dtrain.wdl.Layer} should not serialize this field so as to save space.
+     * {@link ml.shifu.shifu.core.dtrain.layer.Layer} should not serialize this field so as to save space.
      */
     protected SerializationType serializationType = SerializationType.MODEL_SPEC;
 

@@ -75,6 +75,7 @@ public class ModelRunner {
      */
     private CategoryMissingNormType categoryMissingNormType = CategoryMissingNormType.POSRATE;
 
+
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
             String dataDelimiter, List<BasicML> models) {
         this(modelConfig, columnConfigList, header, dataDelimiter, models, 0);
@@ -98,6 +99,19 @@ public class ModelRunner {
         this.categoryMissingNormType = categoryMissingNormType;
         this.scorer = new Scorer(models, columnConfigList, modelConfig.getAlgorithm(), modelConfig,
                 modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex, isMultiThread);
+        this.scorer.setCategoryMissingNormType(categoryMissingNormType);
+    }
+
+    public ModelRunner(ModelConfig modelConfig, List<List<ColumnConfig>> mtlColumnConfigList, String[] header,
+            String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex, boolean isMultiThread,
+            CategoryMissingNormType categoryMissingNormType, boolean isMultiTask) {
+        this.modelConfig = modelConfig;
+        this.header = header;
+        this.dataDelimiter = dataDelimiter;
+        this.isMultiThread = isMultiThread;
+        this.categoryMissingNormType = categoryMissingNormType;
+        this.scorer = new Scorer(models, mtlColumnConfigList, modelConfig.getAlgorithm(), modelConfig,
+                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex, isMultiThread, isMultiTask);
         this.scorer.setCategoryMissingNormType(categoryMissingNormType);
     }
 
