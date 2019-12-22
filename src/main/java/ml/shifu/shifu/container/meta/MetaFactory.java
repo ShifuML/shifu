@@ -15,16 +15,6 @@
  */
 package ml.shifu.shifu.container.meta;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.math.DoubleMath;
-import ml.shifu.shifu.container.obj.*;
-import ml.shifu.shifu.core.dtrain.gs.GridSearch;
-import ml.shifu.shifu.util.Constants;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
-
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -35,6 +25,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.math.DoubleMath;
+
+import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.ModelBasicConf;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf;
+import ml.shifu.shifu.container.obj.ModelSourceDataConf;
+import ml.shifu.shifu.container.obj.ModelStatsConf;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
+import ml.shifu.shifu.container.obj.ModelVarSelectConf;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
+import ml.shifu.shifu.util.Constants;
+
 /**
  * MetaFactory class
  * MetaFactory hosts all the meta for ModelConfig.
@@ -42,6 +53,9 @@ import java.util.Map.Entry;
  * It can also provide deep copy of all meta
  */
 public class MetaFactory {
+
+    private final static Logger LOG = LoggerFactory.getLogger(MetaFactory.class);
+
     // flag to indicate validate result
     public static final String VALIDATE_OK = "OK";
 
@@ -133,7 +147,8 @@ public class MetaFactory {
 
         for(Field field: fields) {
             // skip log instance
-            if(field.getName().equalsIgnoreCase("log") || field.getName().equalsIgnoreCase("logger")) {
+            if(field.getName().equalsIgnoreCase("log") || field.getName().equalsIgnoreCase("logger")
+                    || isJsonIgnoreField(field)) {
                 continue;
             }
             if(!field.isSynthetic()) {
@@ -311,18 +326,27 @@ public class MetaFactory {
         }
 
         for(Field field: fields) {
-            if(!field.isSynthetic() && !Modifier.isStatic(field.getModifiers()) && !isJsonIngoreField(field)) {
-                Method method = cls.getMethod("get" + getMethodName(field.getName()));
-                Object value = method.invoke(obj);
+            if(!field.isSynthetic() && !Modifier.isStatic(field.getModifiers()) && !isJsonIgnoreField(field)) {
+                Method method;
+                try {
+                    method = cls.getMethod("get" + getMethodName(field.getName()));
+                    Object value = method.invoke(obj);
 
-                encapsulateResult(result, validate(isGridSearch, ptag + ITEM_KEY_SEPERATOR + field.getName(), value));
+                    encapsulateResult(result,
+                            validate(isGridSearch, ptag + ITEM_KEY_SEPERATOR + field.getName(), value));
+                } catch (NoSuchMethodException e) {
+                    LOG.error(
+                            "No method get" + getMethodName(field.getName()) + " in class " + obj.getClass().getName(),
+                            e);
+                    throw e;
+                }
             }
         }
 
         return result;
     }
 
-    private static boolean isJsonIngoreField(Field field) {
+    private static boolean isJsonIgnoreField(Field field) {
         Annotation[] annotations = field.getAnnotations();
         for(Annotation annotation: annotations) {
             if(annotation.annotationType().getName().equals(JsonIgnore.class.getName())) {

@@ -20,6 +20,7 @@ import java.util.Map;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.processor.BasicModelProcessor;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.pig.PigExecutor;
@@ -45,15 +46,22 @@ public class SPDTIStatsExecutor extends MapReducerStatsWorker {
         log.info("Run SPDTI to stats ... ");
 
         paramsMap.put("group_binning_parallel", Integer.toString(columnConfigList.size() / (5 * 8)));
-        
+
         String expressionsAsString = super.modelConfig.getSegmentFilterExpressionsAsString();
         Environment.getProperties().put("shifu.segment.expressions", expressionsAsString);
-        
-        ShifuFileUtils.deleteFile(pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource()),
-                modelConfig.getDataSet().getSource());
 
-        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/StatsSpdtI.pig"),
-                paramsMap, modelConfig.getDataSet().getSource(), super.pathFinder);
+        if(this.modelConfig.isMultiTask()) {
+            ShifuFileUtils.deleteFile(
+                    pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource(), this.getMtlIndex()),
+                    modelConfig.getDataSet().getSource());
+            paramsMap.put(CommonConstants.MTL_INDEX, this.getMtlIndex() + "");
+        } else {
+            ShifuFileUtils.deleteFile(pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource()),
+                    modelConfig.getDataSet().getSource());
+        }
+
+        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/StatsSpdtI.pig"), paramsMap,
+                modelConfig.getDataSet().getSource(), super.pathFinder);
 
         // update
         log.info("Updating binning info ...");

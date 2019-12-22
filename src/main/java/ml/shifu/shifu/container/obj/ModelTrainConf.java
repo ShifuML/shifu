@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * {@link ModelTrainConf} is train part in ModelConfig.json.
+ * {@link ModelTrainConf} is training part in ModelConfig.json.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ModelTrainConf {
@@ -41,7 +41,7 @@ public class ModelTrainConf {
      * @author Zhang David (pengzhang@paypal.com)
      */
     public static enum ALGORITHM {
-        NN, LR, SVM, DT, RF, GBT, TENSORFLOW, WDL
+        NN, LR, SVM, DT, RF, GBT, TENSORFLOW, WDL, MTL
     }
 
     /**
@@ -588,16 +588,6 @@ public class ModelTrainConf {
         } else if(ALGORITHM.WDL.equals(alg)) {
             params.put(CommonConstants.LEARNING_RATE, 0.1);
             List<Integer> embedColumnIds = new ArrayList<>(30);
-            embedColumnIds.add(629);
-            embedColumnIds.add(627);
-            embedColumnIds.add(555);
-            embedColumnIds.add(554);
-            embedColumnIds.add(553);
-            embedColumnIds.add(552);
-            embedColumnIds.add(550);
-            embedColumnIds.add(549);
-            embedColumnIds.add(547);
-            embedColumnIds.add(441);
             params.put(CommonConstants.NUM_EMBED_COLUMN_IDS, embedColumnIds);
             List<Integer> nodes = new ArrayList<Integer>();
             nodes.add(50);
@@ -607,6 +597,19 @@ public class ModelTrainConf {
             params.put(CommonConstants.ACTIVATION_FUNC, func);
             params.put(CommonConstants.NUM_HIDDEN_NODES, 3);
             params.put(CommonConstants.WDL_L2_REG, 1e-8f);
+        } else if(ALGORITHM.MTL.equals(alg)) {
+            params.put(CommonConstants.PROPAGATION, "R");
+            params.put(CommonConstants.LEARNING_RATE, 0.1);
+            params.put(CommonConstants.NUM_HIDDEN_LAYERS, 1);
+
+            List<Integer> nodes = new ArrayList<Integer>();
+            nodes.add(50);
+            params.put(CommonConstants.NUM_HIDDEN_NODES, nodes);
+
+            List<String> func = new ArrayList<String>();
+            func.add("tanh");
+            params.put(CommonConstants.ACTIVATION_FUNC, func);
+            params.put(CommonConstants.REGULARIZED_CONSTANT, 0.0);
         }
         return params;
     }

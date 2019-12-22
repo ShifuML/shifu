@@ -46,6 +46,8 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper.CountAndFrequentItems;
 import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -145,6 +147,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     private List<DataPurifier> expressionDataPurifiers;
     private boolean isForExpressions = false;
 
+    private int mtlIndex = -1;
+
     private List<Integer> newTagIndexes;
 
     /**
@@ -156,8 +160,15 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     context.getConfiguration().get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
                     sourceType);
-            this.columnConfigList = CommonUtils
-                    .loadColumnConfigList(context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+            if(modelConfig.isMultiTask()) {
+                mtlIndex = context.getConfiguration().getInt(CommonConstants.MTL_INDEX, -1);
+                this.modelConfig.setMtlIndex(mtlIndex);
+                this.columnConfigList = CommonUtils.loadColumnConfigList(
+                        new PathFinder(this.modelConfig).getMTLColumnConfigPath(SourceType.HDFS, mtlIndex), sourceType);
+            } else {
+                this.columnConfigList = CommonUtils.loadColumnConfigList(
+                        context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -230,8 +241,12 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     private void loadColumnBinningInfo() throws FileNotFoundException, IOException {
         BufferedReader reader = null;
         try {
-            reader = new BufferedReader(new InputStreamReader(new FileInputStream(Constants.BINNING_INFO_FILE_NAME),
-                    Charset.forName("UTF-8")));
+            String fileName = Constants.BINNING_INFO_FILE_NAME;
+
+            if(this.modelConfig.isMultiTask()) {
+                fileName = Constants.BINNING_INFO_FILE_NAME + "." + this.mtlIndex;
+            }
+            reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName), Charset.forName("UTF-8")));
             String line = reader.readLine();
             while(line != null && line.length() != 0) {
                 LOG.debug("line is {}", line);

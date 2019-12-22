@@ -57,8 +57,9 @@ public class DataShuffle {
     public static class ShuffleReducer extends Reducer<IntWritable, Text, NullWritable, Text> {
 
         @Override
-        public void reduce(IntWritable key, Iterable<Text> iterable, Context context) throws IOException, InterruptedException {
-            for ( Text record : iterable ) {
+        public void reduce(IntWritable key, Iterable<Text> iterable, Context context)
+                throws IOException, InterruptedException {
+            for(Text record: iterable) {
                 context.write(NullWritable.get(), record);
             }
         }

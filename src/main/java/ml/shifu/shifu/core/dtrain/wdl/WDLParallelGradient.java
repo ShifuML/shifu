@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ml.shifu.guagua.util.MemoryLimitedList;
+import ml.shifu.shifu.core.dtrain.layer.SparseInput;
 import ml.shifu.shifu.core.dtrain.loss.ErrorCalculation;
 import ml.shifu.shifu.core.dtrain.loss.LogErrorCalculation;
 import ml.shifu.shifu.core.dtrain.loss.LossType;

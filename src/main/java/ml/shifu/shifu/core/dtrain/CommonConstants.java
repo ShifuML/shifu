@@ -147,6 +147,8 @@ public interface CommonConstants {
     public static final int NN_FORMAT_VERSION = 1;
 
     public static final int WDL_FORMAT_VERSION = 1;
+    
+    public static final int MTL_FORMAT_VERSION = 1;
 
     public static final int DEFAULT_EMBEDING_OUTPUT = 8;
 
@@ -158,6 +160,18 @@ public interface CommonConstants {
 
     public static final String WIDE_DENSE_ENABLE = "wideDenseEnable";
 
+    /**
+     * Mult-Task Learning delimiter to split multiple target columns.
+     */
+    public static final String MTL_DELIMITER = "|||";
+
+    public static final String MTL_SUBTAG_DELIMITER = "||";
+
+    public static final String MTL_INDEX = "shifu_mtl_index";
+    
     public static final String SQUARED_LOSS = "squared";
+
+    public static final String MTL_ALG_NAME = "MTL";
+
 
 }

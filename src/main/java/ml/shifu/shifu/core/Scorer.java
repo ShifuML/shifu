@@ -25,7 +25,6 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 
-import ml.shifu.shifu.util.NormalUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLData;
@@ -42,11 +41,13 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.mtl.MTLModel;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.executor.ExecutorManager;
 import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.NormalUtils;
 
 /**
  * Scorer, calculate the score for a specify input
@@ -97,6 +98,9 @@ public class Scorer {
      * Run model in parallel. Size is # of models.
      */
     private ExecutorManager<MLData> executorManager;
+    private List<List<ColumnConfig>> mtlColumnConfigLists;
+    private List<Map<Integer, Map<String, Integer>>> mtlBinCategoryMaps;
+    private List<List<ColumnConfig>> mtlSelectedColumnConfigList;
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm,
             ModelConfig modelConfig) {
@@ -116,6 +120,92 @@ public class Scorer {
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
             Double cutoff) {
         this(models, columnConfigList, algorithm, modelConfig, cutoff, 0, false);
+    }
+
+    public Scorer(List<BasicML> models, List<List<ColumnConfig>> mtlColumnConfigLists, String algorithm,
+            ModelConfig modelConfig, Double cutoff, int outputHiddenLayerIndex, boolean multiThread, boolean isMTL) {
+        if(modelConfig == null) {
+            throw new IllegalArgumentException("modelConfig should not be null");
+        }
+
+        this.multiThread = multiThread;
+        this.models = models;
+
+        this.mtlColumnConfigLists = mtlColumnConfigLists;
+        if(this.mtlColumnConfigLists == null) {
+            throw new IllegalArgumentException("mtlColumnConfigLists should not be null");
+        }
+
+        this.cutoff = cutoff;
+        this.alg = algorithm;
+        this.modelConfig = modelConfig;
+
+        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                this.mtlColumnConfigLists.get(0));
+        int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
+        int candidateCount = inputOutputIndex[2];
+        this.noVarSelect = (inputNodeCount == candidateCount);
+
+        mtlBinCategoryMaps = new ArrayList<>();
+        // compute binCategoryMap for all algorithm while only be used in
+        for(List<ColumnConfig> columnConfigList: mtlColumnConfigLists) {
+            Map<Integer, Map<String, Integer>> binCategoryMap = new HashMap<Integer, Map<String, Integer>>();
+            for(ColumnConfig columnConfig: columnConfigList) {
+                if(columnConfig.isCategorical()) {
+                    Map<String, Integer> map = new HashMap<String, Integer>();
+                    List<String> categories = columnConfig.getBinCategory();
+                    if(categories != null) {
+                        for(int i = 0; i < categories.size(); i++) {
+                            String categoricalVal = categories.get(i);
+                            if(categoricalVal == null) {
+                                map.put("", i);
+                            } else {
+                                List<String> cvals = CommonUtils.flattenCatValGrp(categoricalVal);
+                                for(String cval: cvals) {
+                                    map.put(cval, i);
+                                }
+                            }
+                            map.put(categories.get(i) == null ? "" : categories.get(i), i);
+                        }
+                    }
+                    binCategoryMap.put(columnConfig.getColumnNum(), map);
+                }
+            }
+            mtlBinCategoryMaps.add(binCategoryMap);
+        }
+
+        this.outputHiddenLayerIndex = outputHiddenLayerIndex;
+
+        cachedNormDataPair = new HashMap<String, MLDataPair>(models.size());
+
+        if(this.multiThread) {
+            int threadPoolSize = Math.min(Runtime.getRuntime().availableProcessors(),
+                    (models.size() == 0 ? 5 : models.size()));
+            this.executorManager = new ExecutorManager<MLData>(threadPoolSize);
+            // add a shutdown hook as a safe guard if some one not call close
+            Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    Scorer.this.executorManager.forceShutDown();
+                }
+            }));
+            log.info("MultiThread is enabled in Scorer, threadPoolSize = " + threadPoolSize);
+        }
+
+        mtlSelectedColumnConfigList = new ArrayList<>();
+        for(List<ColumnConfig> columnConfigList: mtlColumnConfigLists) {
+            List<ColumnConfig> selectedColumnConfigList = new ArrayList<ColumnConfig>();
+            for(ColumnConfig columnConfig: columnConfigList) {
+                if(columnConfig.isFinalSelect()) {
+                    selectedColumnConfigList.add(columnConfig);
+                }
+            }
+            if(CollectionUtils.isEmpty(selectedColumnConfigList)) {
+                // no final-selected ColumnConfigs, add all to check
+                selectedColumnConfigList.addAll(columnConfigList);
+            }
+            mtlSelectedColumnConfigList.add(selectedColumnConfigList);
+        }
     }
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
@@ -229,8 +319,13 @@ public class Scorer {
 
     public ScoreObject scoreNsData(MLDataPair inputPair, Map<NSColumn, String> rawNsDataMap) {
         if(inputPair == null && !this.alg.equalsIgnoreCase(NNConstants.NN_ALG_NAME)) {
-            inputPair = NormalUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig, selectedColumnConfigList,
-                    rawNsDataMap, cutoff, alg, categoryMissingNormType);
+            if(modelConfig.isMultiTask()) {
+                inputPair = NormalUtils.assembleNsDataPair(mtlBinCategoryMaps, noVarSelect, modelConfig,
+                        mtlSelectedColumnConfigList, rawNsDataMap, cutoff, alg, categoryMissingNormType);
+            } else {
+                inputPair = NormalUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
+                        selectedColumnConfigList, rawNsDataMap, cutoff, alg, categoryMissingNormType);
+            }
         }
 
         // clear cache
@@ -428,9 +523,32 @@ public class Scorer {
                         log.error("error in model evaluation", e);
                     }
                 }
+            } else if(model instanceof MTLModel) {
+                final MTLModel mtl = (MTLModel) model;
+                if(mtl.getInputCount() != pair.getInput().size()) {
+                    throw new RuntimeException("WDL and input size mismatch: wdl input Size = " + mtl.getInputCount()
+                            + "; data input Size = " + pair.getInput().size());
+                }
+
+                Callable<MLData> callable = new Callable<MLData>() {
+                    @Override
+                    public MLData call() {
+                        return new BasicMLData(mtl.compute(pair.getInput()));
+                    }
+                };
+                if(multiThread) {
+                    tasks.add(callable);
+                } else {
+                    try {
+                        modelResults.add(callable.call());
+                    } catch (Exception e) {
+                        log.error("error in model evaluation", e);
+                    }
+                }
             } else {
                 throw new RuntimeException("unsupport models");
             }
+
         }
 
         List<Double> scores = new ArrayList<Double>();
@@ -525,6 +643,11 @@ public class Scorer {
                     scores.add(toScore(score.getData(0)));
                 } else if(model instanceof WDLModel) {
                     scores.add(toScore(score.getData(0)));
+                } else if(model instanceof MTLModel) {
+                    double[] predicts = score.getData();
+                    for(double predict: predicts) {
+                        scores.add(toScore(predict));
+                    }
                 } else {
                     throw new RuntimeException("unsupport models");
                 }

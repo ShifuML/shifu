@@ -1,18 +1,23 @@
 package ml.shifu.shifu.util;
 
-import ml.shifu.shifu.column.NSColumn;
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.basic.BasicMLData;
 import org.encog.ml.data.basic.BasicMLDataPair;
 
-import java.util.*;
+import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
 
 /**
  * Copyright [2013-2018] PayPal Software Foundation
@@ -69,6 +74,23 @@ public class NormalUtils {
             double cutoff, String alg, CategoryMissingNormType categoryMissingNormType) {
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
 
+        List<Double> inputList = assembleNormDataIntoList(binCategoryMap, noVarSel, modelConfig, columnConfigList,
+                rawNsDataMap, cutoff, alg, categoryMissingNormType);
+
+        // god, Double [] cannot be casted to double[], toArray doesn't work
+        int size = inputList.size();
+        double[] input = new double[size];
+        for(int i = 0; i < size; i++) {
+            input[i] = inputList.get(i);
+        }
+
+        return new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
+    }
+
+    private static List<Double> assembleNormDataIntoList(Map<Integer, Map<String, Integer>> binCategoryMap,
+            boolean noVarSel, ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            Map<NSColumn, String> rawNsDataMap, double cutoff, String alg,
+            CategoryMissingNormType categoryMissingNormType) {
         List<Double> inputList = new ArrayList<Double>();
         boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for(ColumnConfig config: columnConfigList) {
@@ -79,7 +101,7 @@ public class NormalUtils {
             if(config.isFinalSelect() // check whole name
                     && !rawNsDataMap.containsKey(key) // and then check simple name, in case user use wrong namespace
                     && !rawNsDataMap.containsKey(new NSColumn(key.getSimpleName()))) {
-                throw new IllegalStateException(String.format("Variable Missing in Test Data: %s", key));
+                throw new IllegalStateException(String.format("Variable Missing in Test Data: %s %s", rawNsDataMap, key));
             }
 
             if(config.isTarget()) {
@@ -130,15 +152,7 @@ public class NormalUtils {
                 }
             }
         }
-
-        // god, Double [] cannot be casted to double[], toArray doesn't work
-        int size = inputList.size();
-        double[] input = new double[size];
-        for(int i = 0; i < size; i++) {
-            input[i] = inputList.get(i);
-        }
-
-        return new BasicMLDataPair(new BasicMLData(input), new BasicMLData(ideal));
+        return inputList;
     }
 
     /**
@@ -425,5 +439,52 @@ public class NormalUtils {
     public static double defaultMissingValue(ColumnConfig config) {
         // TODO return 0 when mean == null. Is it correct or reasonable?
         return config.getMean() == null ? 0 : config.getMean().doubleValue();
+    }
+
+    /**
+     * Assemble map data to Encog standard input format for MTL models (multi column config list). If no variable
+     * selected(noVarSel = true), all candidate variables will be selected.
+     *
+     * @param mtlBinCategoryMaps
+     *            multiple categorical maps
+     * @param noVarSelect
+     *            if after var select
+     * @param modelConfig
+     *            model config instance
+     * @param mtlSelectedColumnConfigList
+     *            multi column config list
+     * @param rawNsDataMap
+     *            raw NSColumn data
+     * @param cutoff
+     *            cut off value
+     * @param alg
+     *            algorithm used in model
+     * @param categoryMissingNormType
+     *            missing categorical value norm type, only used in WDL model
+     * @return data pair instance
+     * @throws NullPointerException
+     *             if input is null
+     * @throws NumberFormatException
+     *             if column value is not number format.
+     */
+    public static MLDataPair assembleNsDataPair(List<Map<Integer, Map<String, Integer>>> mtlBinCategoryMaps,
+            boolean noVarSelect, ModelConfig modelConfig, List<List<ColumnConfig>> mtlSelectedColumnConfigList,
+            Map<NSColumn, String> rawNsDataMap, double cutoff, String alg,
+            CategoryMissingNormType categoryMissingNormType) {
+        List<Double> finalList = new ArrayList<>();
+        for(int i = 0; i < mtlBinCategoryMaps.size(); i++) {
+            finalList.addAll(assembleNormDataIntoList(mtlBinCategoryMaps.get(i), noVarSelect, modelConfig,
+                    mtlSelectedColumnConfigList.get(i), rawNsDataMap, cutoff, alg, categoryMissingNormType));
+        }
+
+        // god, Double [] cannot be casted to double[], toArray doesn't work
+        int size = finalList.size();
+        double[] inputs = new double[size];
+        for(int i = 0; i < size; i++) {
+            inputs[i] = finalList.get(i);
+        }
+
+        double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
+        return new BasicMLDataPair(new BasicMLData(inputs), new BasicMLData(ideal));
     }
 }

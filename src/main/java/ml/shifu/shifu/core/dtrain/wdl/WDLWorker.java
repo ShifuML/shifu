@@ -55,6 +55,8 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.layer.SerializationType;
+import ml.shifu.shifu.core.dtrain.layer.SparseInput;
 import ml.shifu.shifu.core.dtrain.loss.LossType;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.util.CommonUtils;
@@ -313,7 +315,7 @@ public class WDLWorker extends
         }
 
         // output delimiter in norm can be set by user now and if user set a special one later changed, this exception
-        // is helped to quick find such issue., here only check numerical array
+        // is helped to quick find such issue, here only check numerical array
         validateInputLength(context, inputs, numIndex);
 
         // sample negative only logic here, sample negative out, no need continue

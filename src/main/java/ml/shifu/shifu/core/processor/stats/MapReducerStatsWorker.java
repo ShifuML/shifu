@@ -119,7 +119,12 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
     @Override
     public boolean doStats() throws Exception {
         log.info("delete historical pre-train data");
-        ShifuFileUtils.deleteFile(pathFinder.getPreTrainingStatsPath(), modelConfig.getDataSet().getSource());
+        if(this.modelConfig.isMultiTask()) {
+            ShifuFileUtils.deleteFile(pathFinder.getPreTrainingStatsPath(this.getMtlIndex()),
+                    modelConfig.getDataSet().getSource());
+        } else {
+            ShifuFileUtils.deleteFile(pathFinder.getPreTrainingStatsPath(), modelConfig.getDataSet().getSource());
+        }
         Map<String, String> paramsMap = new HashMap<String, String>();
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
         int columnParallel = getColumnParallelValue();
@@ -144,8 +149,8 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         checkNumericalAndCategoricalColumns();
 
         // save it to local/hdfs
+        // save it to local/hdfs
         processor.saveColumnConfigList();
-
         processor.syncDataToHdfs(modelConfig.getDataSet().getSource());
 
         runPSI();
@@ -244,8 +249,16 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
     protected void runStatsPig(Map<String, String> paramsMap) throws Exception {
         paramsMap.put("group_binning_parallel", Integer.toString(columnConfigList.size() / (5 * 8)));
-        ShifuFileUtils.deleteFile(pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource()),
-                modelConfig.getDataSet().getSource());
+
+        if(this.modelConfig.isMultiTask()) {
+            ShifuFileUtils.deleteFile(
+                    pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource(), this.getMtlIndex()),
+                    modelConfig.getDataSet().getSource());
+            paramsMap.put(CommonConstants.MTL_INDEX, this.getMtlIndex() + "");
+        } else {
+            ShifuFileUtils.deleteFile(pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource()),
+                    modelConfig.getDataSet().getSource());
+        }
 
         log.debug("this.pathFinder.getOtherConfigs() => " + this.pathFinder.getOtherConfigs());
         PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/StatsSpdtI.pig"), paramsMap,
@@ -286,12 +299,6 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         } else {
             // By average, each reducer handle 100 variables
             int newReducerSize = (this.columnConfigList.size() / 100) + 1;
-            // if(newReducerSize < 1) {
-            // newReducerSize = 1;
-            // }
-            // if(newReducerSize > 500) {
-            // newReducerSize = 500;
-            // }
             log.info("Adjust date stat info reducer size to {} ", newReducerSize);
             job.setNumReduceTasks(newReducerSize);
         }
@@ -377,7 +384,14 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         BufferedWriter writer = null;
         List<Scanner> scanners = null;
         try {
-            scanners = ShifuFileUtils.getDataScanners(pathFinder.getUpdatedBinningInfoPath(source), source);
+            if(this.modelConfig.isMultiTask()) {
+                scanners = ShifuFileUtils
+                        .getDataScanners(pathFinder.getUpdatedBinningInfoPath(source, this.getMtlIndex()), source);
+                filePath = Constants.BINNING_INFO_FILE_NAME + "." + this.getMtlIndex();
+            } else {
+                scanners = ShifuFileUtils.getDataScanners(pathFinder.getUpdatedBinningInfoPath(source), source);
+                filePath = Constants.BINNING_INFO_FILE_NAME;
+            }
             writer = new BufferedWriter(
                     new OutputStreamWriter(new FileOutputStream(new File(filePath)), Charset.forName("UTF-8")));
             for(Scanner scanner: scanners) {
@@ -394,6 +408,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         Configuration conf = new Configuration();
         prepareJobConf(source, conf, filePath);
+        conf.set(CommonConstants.MTL_INDEX, this.getMtlIndex() + "");
 
         @SuppressWarnings("deprecation")
         Job job = new Job(conf, "Shifu: Stats Updating Binning Job : " + this.modelConfig.getModelSetName());
@@ -415,12 +430,6 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         } else {
             // By average, each reducer handle 100 variables
             int newReducerSize = (this.columnConfigList.size() / 100) + 1;
-            // if(newReducerSize < 1) {
-            // newReducerSize = 1;
-            // }
-            // if(newReducerSize > 500) {
-            // newReducerSize = 500;
-            // }
             log.info("Adjust updating binning info reducer size to {} ", newReducerSize);
             job.setNumReduceTasks(newReducerSize);
         }
@@ -428,8 +437,14 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         job.setOutputValueClass(Text.class);
         job.setOutputFormatClass(TextOutputFormat.class);
 
-        String preTrainingInfo = this.pathFinder.getPreTrainingStatsPath(source);
-        FileOutputFormat.setOutputPath(job, new Path(preTrainingInfo));
+        String preTrainingInfo;
+        if(this.modelConfig.isMultiTask()) {
+            preTrainingInfo = this.pathFinder.getPreTrainingStatsPath(source, this.getMtlIndex());
+            FileOutputFormat.setOutputPath(job, new Path(preTrainingInfo));
+        } else {
+            preTrainingInfo = this.pathFinder.getPreTrainingStatsPath(source);
+            FileOutputFormat.setOutputPath(job, new Path(preTrainingInfo));
+        }
 
         // clean output firstly
         ShifuFileUtils.deleteFile(preTrainingInfo, source);
@@ -547,8 +562,14 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
      *             in stats processing from hdfs files
      */
     public void updateColumnConfigWithPreTrainingStats() throws IOException {
-        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPreTrainingStatsPath(),
-                modelConfig.getDataSet().getSource());
+        List<Scanner> scanners;
+        if(this.modelConfig.isMultiTask()) {
+            scanners = ShifuFileUtils.getDataScanners(pathFinder.getPreTrainingStatsPath(this.getMtlIndex()),
+                    modelConfig.getDataSet().getSource());
+        } else {
+            scanners = ShifuFileUtils.getDataScanners(pathFinder.getPreTrainingStatsPath(),
+                    modelConfig.getDataSet().getSource());
+        }
         int initSize = columnConfigList.size();
         for(Scanner scanner: scanners) {
             scanStatsResult(scanner, initSize);
@@ -755,11 +776,18 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         paramsMap.put("PSIColumn", modelConfig.getPsiColumnName().trim());
         paramsMap.put("column_parallel", Integer.toString(columnConfigList.size() / 10));
         paramsMap.put("value_index", "2");
+        paramsMap.put(CommonConstants.MTL_INDEX, this.getMtlIndex() + "");
 
         PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/PSI.pig"), paramsMap);
 
-        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getPSIInfoPath(),
-                modelConfig.getDataSet().getSource());
+        String psiPath;
+        if(this.modelConfig.isMultiTask()) {
+            psiPath = pathFinder.getPSIInfoPath(this.getMtlIndex());
+        } else {
+            psiPath = pathFinder.getPSIInfoPath();
+        }
+
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners(psiPath, modelConfig.getDataSet().getSource());
         if(CollectionUtils.isEmpty(scanners)) {
             log.info("The PSI got failure during the computation");
             return;
@@ -793,8 +821,12 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         // write unit stat into a temporary file
         ShifuFileUtils.createDirIfNotExists(new SourceFile(Constants.TMP, RawSourceData.SourceType.LOCAL));
-
-        String ccUnitStatsFile = this.pathFinder.getColumnConfigUnitStatsPath();
+        String ccUnitStatsFile;
+        if(modelConfig.isMultiTask()) {
+            ccUnitStatsFile = this.pathFinder.getColumnConfigUnitStatsPath(this.getMtlIndex());
+        } else {
+            ccUnitStatsFile = this.pathFinder.getColumnConfigUnitStatsPath();
+        }
         ShifuFileUtils.writeLines(unitStats, ccUnitStatsFile, RawSourceData.SourceType.LOCAL);
 
         log.info("The Unit Stats is stored in - {}.", ccUnitStatsFile);

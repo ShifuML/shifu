@@ -15,7 +15,7 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
-import static ml.shifu.shifu.core.dtrain.wdl.SerializationUtil.NULL;
+import static ml.shifu.shifu.core.dtrain.layer.SerializationUtil.NULL;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -40,11 +40,25 @@ import ml.shifu.guagua.io.Bytable;
 import ml.shifu.guagua.io.Combinable;
 import ml.shifu.shifu.core.dtrain.AssertUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
+import ml.shifu.shifu.core.dtrain.layer.AbstractLayer;
+import ml.shifu.shifu.core.dtrain.layer.BiasLayer;
+import ml.shifu.shifu.core.dtrain.layer.DenseInputLayer;
+import ml.shifu.shifu.core.dtrain.layer.DenseLayer;
+import ml.shifu.shifu.core.dtrain.layer.EmbedFieldLayer;
+import ml.shifu.shifu.core.dtrain.layer.EmbedLayer;
+import ml.shifu.shifu.core.dtrain.layer.Layer;
+import ml.shifu.shifu.core.dtrain.layer.SerializationType;
+import ml.shifu.shifu.core.dtrain.layer.SerializationUtil;
+import ml.shifu.shifu.core.dtrain.layer.SparseInput;
+import ml.shifu.shifu.core.dtrain.layer.WeightInitializer;
+import ml.shifu.shifu.core.dtrain.layer.WideDenseLayer;
+import ml.shifu.shifu.core.dtrain.layer.WideFieldLayer;
+import ml.shifu.shifu.core.dtrain.layer.WideLayer;
+import ml.shifu.shifu.core.dtrain.layer.activation.Activation;
+import ml.shifu.shifu.core.dtrain.layer.activation.ActivationFactory;
+import ml.shifu.shifu.core.dtrain.layer.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.layer.optimization.PropOptimizer;
 import ml.shifu.shifu.core.dtrain.loss.LossType;
-import ml.shifu.shifu.core.dtrain.wdl.activation.Activation;
-import ml.shifu.shifu.core.dtrain.wdl.activation.ActivationFactory;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.PropOptimizer;
 import ml.shifu.shifu.util.Tuple;
 
 /**

@@ -37,6 +37,10 @@ import java.util.Map;
  */
 public class PathFinder {
 
+    /**
+     * 
+     */
+    private static final String MTL_FOLDER = "mtl";
     public static final String FEATURE_IMPORTANCE_FILE = "all.fi";
     private static final String CORRELATION_CSV = "correlation.csv";
     private static final String REASON_CODE_PATH = "common/ReasonCodeMapV3.json";
@@ -201,8 +205,16 @@ public class PathFinder {
         return getPathBySourceType(Constants.COLUMN_CONFIG_JSON_FILE_NAME, sourceType);
     }
 
-    public String getLocalColumnStatsPath() {
+    public String getMTLColumnConfigFolder(SourceType sourceType) {
+        return getPathBySourceType(MTL_FOLDER, sourceType);
+    }
 
+    public String getMTLColumnConfigPath(SourceType sourceType, int index) {
+        return getPathBySourceType(MTL_FOLDER + File.separator + Constants.COLUMN_CONFIG_JSON_FILE_NAME + "." + index,
+                sourceType);
+    }
+
+    public String getLocalColumnStatsPath() {
         return getPathBySourceType(
                 Constants.COLUMN_META_FOLDER_NAME + File.separator + Constants.COLUMN_STATS_CSV_FILE_NAME,
                 SourceType.LOCAL);
@@ -215,6 +227,10 @@ public class PathFinder {
      */
     public String getPreTrainingStatsPath() {
         return getPreTrainingStatsPath(modelConfig.getDataSet().getSource());
+    }
+
+    public String getPreTrainingStatsPath(int mtlIndex) {
+        return getPreTrainingStatsPath(modelConfig.getDataSet().getSource()) + "." + mtlIndex;
     }
 
     /**
@@ -233,6 +249,10 @@ public class PathFinder {
         } else {
             return new Path(preTrainingStatsPath).toString();
         }
+    }
+
+    public String getPreTrainingStatsPath(SourceType sourceType, int mtlIndex) {
+        return getPreTrainingStatsPath(sourceType) + "." + mtlIndex;
     }
 
     public String getStatsSmallBins() {
@@ -490,7 +510,11 @@ public class PathFinder {
         }
     }
 
-    public String getDailyStatInfoPath(SourceType sourceType){
+    public String getUpdatedBinningInfoPath(SourceType sourceType, int mtlIndex) {
+        return getUpdatedBinningInfoPath(SourceType.LOCAL) + "." + mtlIndex;
+    }
+
+    public String getDailyStatInfoPath(SourceType sourceType) {
         String preTrainPath = getPreferPath(modelConfig.getTrain().getCustomPaths(),
                 Constants.KEY_PRE_TRAIN_STATS_PATH);
 
@@ -499,6 +523,10 @@ public class PathFinder {
         } else {
             return new Path(preTrainPath).toString();
         }
+    }
+
+    public String getPSIInfoPath(int mtlIndex) {
+        return this.getPSIInfoPath(modelConfig.getDataSet().getSource()) + "." + mtlIndex;
     }
 
     public String getPSIInfoPath() {
@@ -513,7 +541,10 @@ public class PathFinder {
         } else {
             return new Path(preTrainPath).toString();
         }
+    }
 
+    public String getPSIInfoPath(SourceType sourceType, int mtlIndex) {
+        return getPSIInfoPath(sourceType) + "." + mtlIndex;
     }
 
     /**
@@ -1048,7 +1079,9 @@ public class PathFinder {
 
     /**
      * Get the backup ColumnConfig
-     * @param postTimeStamp - timestamp to back ColumnConfig file name
+     * 
+     * @param postTimeStamp
+     *            - timestamp to back ColumnConfig file name
      * @return - the ColumnConfig.json path for backup
      */
     public String getBackupColumnConfig(String postTimeStamp) {
@@ -1111,18 +1144,25 @@ public class PathFinder {
 
     /**
      * Get the columnconfig.psi path
+     * 
      * @return - columnconfig.psi path for storing unit stats
      */
     public String getColumnConfigUnitStatsPath() {
         return getPathBySourceType(new Path(Constants.TMP, Constants.CC_UNIT_STATS_PATH), SourceType.LOCAL);
     }
 
+    public String getColumnConfigUnitStatsPath(int mtlIndex) {
+        return getColumnConfigPath() + "." + mtlIndex;
+    }
+
     public String getEncodeDataPath(EvalConfig evalConfig) {
-        if ( evalConfig == null ) {
+        if(evalConfig == null) {
             return getPathBySourceType(new Path(Constants.TMP, Constants.TRAIN_DATA_ENCODE_PATH), SourceType.HDFS);
         } else {
-            return getPathBySourceType(new Path(Constants.TMP,
-                    Constants.EVAL_DATA_ENCODE_PREFIX + StringUtils.capitalize(evalConfig.getName())), SourceType.HDFS);
+            return getPathBySourceType(
+                    new Path(Constants.TMP,
+                            Constants.EVAL_DATA_ENCODE_PREFIX + StringUtils.capitalize(evalConfig.getName())),
+                    SourceType.HDFS);
         }
     }
 }

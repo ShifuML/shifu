@@ -58,4 +58,16 @@ public class CategoryCounter extends Counter {
         counter[pos] = counter[pos] + 1;
         this.unitSum += this.binPosRate.get(pos);
     }
+    
+    
+
+
+    public static long mappingToLong(int vertexIndex, long key) {
+      return (key << 8) + vertexIndex;
+    }
+
+    
+    public static void main(String [] args ) {
+        System.out.println(mappingToLong(0, 23977254002229L));
+    }
 }

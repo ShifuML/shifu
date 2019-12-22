@@ -25,8 +25,16 @@ import java.util.Map;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.core.dtrain.AssertUtils;
-import ml.shifu.shifu.core.dtrain.wdl.activation.ReLU;
-import ml.shifu.shifu.core.dtrain.wdl.activation.Sigmoid;
+import ml.shifu.shifu.core.dtrain.layer.BiasLayer;
+import ml.shifu.shifu.core.dtrain.layer.DenseLayer;
+import ml.shifu.shifu.core.dtrain.layer.EmbedFieldLayer;
+import ml.shifu.shifu.core.dtrain.layer.EmbedLayer;
+import ml.shifu.shifu.core.dtrain.layer.Layer;
+import ml.shifu.shifu.core.dtrain.layer.WideDenseLayer;
+import ml.shifu.shifu.core.dtrain.layer.WideFieldLayer;
+import ml.shifu.shifu.core.dtrain.layer.WideLayer;
+import ml.shifu.shifu.core.dtrain.layer.activation.ReLU;
+import ml.shifu.shifu.core.dtrain.layer.activation.Sigmoid;
 
 /**
  * Persistent WideAndDeep models.

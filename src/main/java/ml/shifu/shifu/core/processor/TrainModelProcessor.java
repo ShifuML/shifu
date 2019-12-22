@@ -118,6 +118,10 @@ import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionMaster;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionOutput;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionParams;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionWorker;
+import ml.shifu.shifu.core.dtrain.mtl.MTLMaster;
+import ml.shifu.shifu.core.dtrain.mtl.MTLOutput;
+import ml.shifu.shifu.core.dtrain.mtl.MTLParams;
+import ml.shifu.shifu.core.dtrain.mtl.MTLWorker;
 import ml.shifu.shifu.core.dtrain.nn.ActivationLeakyReLU;
 import ml.shifu.shifu.core.dtrain.nn.ActivationPTANH;
 import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
@@ -387,9 +391,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) // NN algorithm
                 || LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) // LR algorithm
                 || CommonUtils.isTreeModel(alg) // RF or GBT algortihm
-                || Constants.TF_ALG_NAME.equalsIgnoreCase(alg) || Constants.WDL.equalsIgnoreCase(alg))) {
+                || Constants.TF_ALG_NAME.equalsIgnoreCase(alg) || Constants.WDL.equalsIgnoreCase(alg)
+                || CommonConstants.MTL_ALG_NAME.equalsIgnoreCase(alg))) {
             throw new IllegalArgumentException(
-                    "Currently we only support NN, LR, RF(RandomForest), WDL and GBDT(Gradient Boost Desicion Tree) distributed training.");
+                    "Currently we only support NN, LR, RF(RandomForest), WDL, MTL and GBDT(Gradient Boost Desicion Tree) distributed training.");
         }
 
         if((LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)
@@ -839,14 +844,18 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 .booleanValue();
         GuaguaMapReduceClient guaguaClient;
 
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
-                this.columnConfigList);
+        int[] inputOutputIndex;
+        if(modelConfig.isMultiTask()) {
+            inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                    this.mtlColumnConfigLists.get(0));
+        } else {
+            inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                    this.columnConfigList);
+        }
         int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         int candidateCount = inputOutputIndex[2];
 
         boolean isAfterVarSelect = (inputOutputIndex[0] != 0);
-        // cache all feature list for sampling features
-        List<Integer> allFeatures = NormalUtils.getAllFeatureList(this.columnConfigList, isAfterVarSelect);
 
         if(modelConfig.getNormalize().getIsParquet()) {
             guaguaClient = new GuaguaParquetMapReduceClient();
@@ -993,6 +1002,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         featureSubsetStrategy = FeatureSubsetStrategy.ALL;
                         featureSubsetRate = 0;
                     }
+
+                    // cache all feature list for sampling features
+                    List<Integer> allFeatures = NormalUtils.getAllFeatureList(this.columnConfigList, isAfterVarSelect);
 
                     Set<Integer> subFeatures = null;
                     if(isContinuous) {
@@ -1513,6 +1525,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             this.prepareDTParams(args, sourceType);
         } else if(Constants.WDL_ALG_NAME.equalsIgnoreCase(alg)) {
             this.prepareWDLParams(args, sourceType);
+        } else if(CommonConstants.MTL_ALG_NAME.equalsIgnoreCase(alg)) {
+            this.prepareMTLParams(args, sourceType);
         }
 
         args.add("-c");
@@ -1591,6 +1605,23 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         });
     }
 
+    private void prepareMTLParams(List<String> args, SourceType sourceType) {
+        args.add("-w");
+        args.add(MTLWorker.class.getName());
+
+        args.add("-m");
+        args.add(MTLMaster.class.getName());
+
+        args.add("-mr");
+        args.add(MTLParams.class.getName());
+
+        args.add("-wr");
+        args.add(MTLParams.class.getName());
+
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
+                MTLOutput.class.getName()));
+    }
+
     private void prepareWDLParams(List<String> args, SourceType sourceType) {
         args.add("-w");
         args.add(WDLWorker.class.getName());
@@ -1604,10 +1635,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add("-wr");
         args.add(WDLParams.class.getName());
 
-        // TODO, add WDLOutput here
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_MASTER_INTERCEPTERS,
                 WDLOutput.class.getName()));
-
     }
 
     private int vcoresSetting() {
@@ -1737,8 +1766,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         // in shifuconfig; by default it is 200M, consider in some cases user selects only a half of features, this
         // number should be 400m
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
-                this.columnConfigList);
+        int[] inputOutputIndex;
+        if(modelConfig.isMultiTask()) {
+            inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                    this.mtlColumnConfigLists.get(0));
+        } else {
+            inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+                    this.columnConfigList);
+        }
         int candidateCount = (inputOutputIndex[2] == 0 ? inputOutputIndex[0] : inputOutputIndex[2]);
         // 1. set benchmark
         long maxCombineSize = CommonUtils.isTreeModel(modelConfig.getAlgorithm()) ? 209715200L : 168435456L;
