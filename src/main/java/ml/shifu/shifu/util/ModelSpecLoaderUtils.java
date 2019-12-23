@@ -1,3 +1,17 @@
+/*
+ * Copyright [2013-2018] PayPal Software Foundation
+ * <p>
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
 package ml.shifu.shifu.util;
 
 import java.io.BufferedReader;
@@ -50,28 +64,12 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
-import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
 import ml.shifu.shifu.core.dtrain.mtl.MTLModel;
 import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-
-/**
- * Copyright [2013-2018] PayPal Software Foundation
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License")
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- **/
 
 public class ModelSpecLoaderUtils {
 
@@ -294,7 +292,7 @@ public class ModelSpecLoaderUtils {
             RawSourceData.SourceType sourceType) throws IOException {
         List<Path> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         List<String> modelNames = new ArrayList<>();
-        if (CollectionUtils.isNotEmpty(modelFileStats)) {
+        if(CollectionUtils.isNotEmpty(modelFileStats)) {
             modelFileStats.stream().forEach(modelPath -> modelNames.add(formatModelScoreName(modelPath.getName())));
         }
         return modelNames;
@@ -302,11 +300,13 @@ public class ModelSpecLoaderUtils {
 
     /**
      * format file name into the model score name
-     * @param fileName - model spec file name
+     * 
+     * @param fileName
+     *            - model spec file name
      * @return standard model score name
      */
     public static String formatModelScoreName(String fileName) {
-        if (StringUtils.isBlank(fileName)) {
+        if(StringUtils.isBlank(fileName)) {
             return null;
         } else {
             String name = StringUtils.trim(fileName); // trim empty space
@@ -477,7 +477,7 @@ public class ModelSpecLoaderUtils {
         BufferedReader br = null;
         try {
             stream = fs.open(modelPath);
-            if(modelPath.getName().endsWith(LogisticRegressionContants.LR_ALG_NAME.toLowerCase())) { // LR model
+            if(modelPath.getName().endsWith(CommonConstants.LR_ALG_NAME.toLowerCase())) { // LR model
                 br = new BufferedReader(new InputStreamReader(stream));
                 try {
                     return LR.loadFromString(br.readLine());
@@ -489,7 +489,7 @@ public class ModelSpecLoaderUtils {
             } else if(modelPath.getName().endsWith(CommonConstants.RF_ALG_NAME.toLowerCase()) // RF or GBT
                     || modelPath.getName().endsWith(CommonConstants.GBT_ALG_NAME.toLowerCase())) {
                 return TreeModel.loadFromStream(stream, gbtConvertToProb, gbtScoreConvertStrategy);
-            } else if(modelPath.getName().endsWith(Constants.WDL_ALG_NAME.toLowerCase())) {
+            } else if(modelPath.getName().endsWith(CommonConstants.WDL_ALG_NAME.toLowerCase())) {
                 return WDLModel.loadFromStream(stream);
             } else if(modelPath.getName().endsWith(CommonConstants.MTL_ALG_NAME.toLowerCase())) {
                 return MTLModel.loadFromStream(stream);
@@ -601,7 +601,7 @@ public class ModelSpecLoaderUtils {
         for(FileStatus fileStatus: fileList) {
             paths.add(fileStatus.getPath());
         }
-        
+
         LOG.debug(" findGenericModels Path of tf models {}", paths);
 
         return paths;

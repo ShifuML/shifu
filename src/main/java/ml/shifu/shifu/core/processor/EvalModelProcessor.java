@@ -18,7 +18,6 @@ package ml.shifu.shifu.core.processor;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -29,7 +28,6 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
-import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
@@ -61,19 +59,21 @@ import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 
 /**
- * EvalModelProcessor class
+ * {@link EvalModelProcessor} defines 'shifu eval' step mostly for model performance generation.
+ * 
+ * <p>
+ * Precision-Recall, gain chart, auc and score distribution are generated as csv format or html chart format. Champion
+ * model performance is also supported in the same html chart for visualization.
  */
 public class EvalModelProcessor extends BasicModelProcessor implements Processor {
 
-    /**
-     * log object
-     */
     private final static Logger LOG = LoggerFactory.getLogger(EvalModelProcessor.class);
 
     /**
-     * Step for evaluation
+     * Step definition for evaluation
      */
     public enum EvalStep {
         LIST, NEW, DELETE, RUN, PERF, SCORE, CONFMAT, NORM, GAINCHART;
@@ -237,7 +237,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     }
 
     /**
-     * run score only
+     * Run scoring only.
      * 
      * @param evalSetList
      *            eval config list
@@ -392,7 +392,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * @throws IOException
      *             any io exception
      */
-    private List<ScoreStatus> runDistScore(EvalConfig evalConfig, int index) throws IOException {
+    private ScoreStatus runDistScore(EvalConfig evalConfig, int index) throws IOException {
         // clean up output directories
         SourceType sourceType = evalConfig.getDataSet().getSource();
 
@@ -446,7 +446,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     }
 
     @SuppressWarnings("deprecation")
-    private List<ScoreStatus> getScoreStatusFromJobStats(SourceType sourceType, String maxMinScoreFolder, int mtlIndex)
+    private ScoreStatus getScoreStatusFromJobStats(SourceType sourceType, String maxMinScoreFolder, int mtlIndex)
             throws IOException {
         Iterator<JobStats> iter = PigStats.get().getJobGraph().iterator();
 
@@ -461,7 +461,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             }
             this.evalRecords = evalRecords;
             // mtlIndex here set to -1 since each eval pig job, output COUNTER are the same name.
-            return Arrays.asList(getScoreStatus(sourceType, maxMinScoreFolder, jobStats, evalRecords, -1));
+            return getScoreStatus(sourceType, maxMinScoreFolder, jobStats, evalRecords, -1);
         }
         return null;
     }
@@ -940,12 +940,12 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      *             when any exception in delete the old tmp files
      */
     private void runDistEval(EvalConfig evalConfig, int mtlIndex) throws IOException {
-        List<ScoreStatus> ss = runDistScore(evalConfig, mtlIndex);
+        ScoreStatus ss = runDistScore(evalConfig, mtlIndex);
 
         List<String> scoreMetaColumns = evalConfig.getScoreMetaColumns(modelConfig);
         if(scoreMetaColumns == null || scoreMetaColumns.isEmpty() || !modelConfig.isRegression()) {
             // if no any champion score column set, go to previous evaluation with only challendge model
-            runConfusionMatrix(evalConfig, ss.get(0), isGBTNotConvertToProb(evalConfig), false, -1);
+            runConfusionMatrix(evalConfig, ss, isGBTNotConvertToProb(evalConfig), false, -1);
             return;
         }
 
@@ -953,7 +953,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         List<PerformanceResult> prList = new ArrayList<PerformanceResult>();
         List<String> names = new ArrayList<String>();
 
-        PerformanceResult challengeModelPerformance = runConfusionMatrix(evalConfig, ss.get(0),
+        PerformanceResult challengeModelPerformance = runConfusionMatrix(evalConfig, ss,
                 pathFinder.getEvalScorePath(evalConfig), pathFinder.getEvalPerformancePath(evalConfig), false, false,
                 isGBTNotConvertToProb(evalConfig), modelConfig.isMultiTask(), mtlIndex);
         prList.add(challengeModelPerformance);

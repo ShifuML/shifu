@@ -93,7 +93,6 @@ import ml.shifu.guagua.mapreduce.GuaguaMapReduceClient;
 import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelBasicConf.RunMode;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.container.obj.ModelTrainConf.MultipleClassification;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -113,7 +112,6 @@ import ml.shifu.shifu.core.dtrain.dt.DTOutput;
 import ml.shifu.shifu.core.dtrain.dt.DTWorker;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
-import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionMaster;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionOutput;
 import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionParams;
@@ -149,7 +147,7 @@ import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
 import ml.shifu.shifu.util.ModelSpecLoaderUtils;
-import ml.shifu.shifu.util.NormalUtils;
+import ml.shifu.shifu.util.NormalizationUtils;
 import ml.shifu.shifu.util.ValueVisitor;
 import parquet.ParquetRuntimeException;
 import parquet.column.ParquetProperties;
@@ -160,7 +158,7 @@ import parquet.hadoop.ParquetRecordReader;
 import parquet.org.codehaus.jackson.Base64Variant;
 
 /**
- * Train processor, produce model based on the normalized dataset
+ * Train processor, produce model based on the normalized dataset.
  */
 public class TrainModelProcessor extends BasicModelProcessor implements Processor {
 
@@ -168,12 +166,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private static final int VAR_SELECT_TRAINING_DECAY_EPOCHES_THRESHOLD = 400;
 
-    public static final String SHIFU_DEFAULT_DTRAIN_PARALLEL = "true";
+    private static final String SHIFU_DEFAULT_DTRAIN_PARALLEL = "true";
 
-    private boolean isDryTrain, isDebug;
-    private List<AbstractTrainer> trainers;
-
-    private static final String LOGS = "./logs";
+    /**
+     * Local trainers list.
+     */
+    private List<AbstractTrainer> trainers = new ArrayList<AbstractTrainer>();
 
     /**
      * If for variable selection, only using bagging number 1 to train only one model.
@@ -185,6 +183,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      */
     private String trainLogFile;
 
+    /**
+     * Implicit data cleaning is also embedded in GBDT training, shuffle such clean data or not before gbdt training.
+     */
     private boolean isToShuffle = false;
 
     /**
@@ -192,32 +193,26 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      */
     private Random featureSamplingRandom = new Random();
 
+    /**
+     * Configuration file used in TensorFlow on Shifu training.
+     */
     private Path globalDefaultConfFile = new Path(Environment.getProperty(Environment.SHIFU_HOME) + File.separator
             + "conf" + File.separator + "global-default.xml");
 
+    /**
+     * Default constructor for model training processor.
+     */
     public TrainModelProcessor() {
     }
 
+    /**
+     * Constructor for model training processor.
+     * 
+     * @param otherConfigs
+     *            configs not from ModelConfig.json but can be set in such map.
+     */
     public TrainModelProcessor(Map<String, Object> otherConfigs) {
         super.otherConfigs = otherConfigs;
-    }
-
-    /**
-     * Constructor
-     *
-     * @param isDryTrain
-     *            dryTrain flag, if it's true, the trainer would start training
-     * @param isDebug
-     *            debug flag, if it's true, shifu will create log file to record
-     *            each training status
-     */
-    public TrainModelProcessor(boolean isDryTrain, boolean isDebug) {
-        super();
-
-        this.isDebug = isDebug;
-        this.isDryTrain = isDryTrain;
-
-        trainers = new ArrayList<AbstractTrainer>();
     }
 
     /**
@@ -225,28 +220,19 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      */
     @Override
     public int run() throws Exception {
-        int status = 0;
-
         if(!this.isForVarSelect()) {
             LOG.info("Step Start: train");
         }
+
+        int status = 0;
         long start = System.currentTimeMillis();
         try {
             setUp(ModelStep.TRAIN);
-
-            if(isDebug) {
-                File file = new File(LOGS);
-                if(!file.exists() && !file.mkdir()) {
-                    throw new RuntimeException("logs file is created failed.");
-                }
-            }
-
-            RunMode runMode = super.modelConfig.getBasic().getRunMode();
-            switch(runMode) {
+            switch(super.modelConfig.getBasic().getRunMode()) {
                 case DIST:
                 case MAPRED:
                     validateDistributedTrain();
-                    syncDataToHdfs(super.modelConfig.getDataSet().getSource());
+                    syncDataToHdfs(super.modelConfig.getDataSet().getSource()); // sync to HDFS to ensure consistency
                     checkAndCleanDataForTreeModels(this.isToShuffle);
                     if(Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
                         status = runDistributedTensorflowTrain();
@@ -260,6 +246,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     break;
             }
 
+            // need sync MC.json, CC.json back to HDFS for further steps.
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
             clearUp(ModelStep.TRAIN);
@@ -270,22 +257,30 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             LOG.error("Error:" + e.getMessage(), e);
             return -1;
         }
+
         if(!this.isForVarSelect()) {
             LOG.info("Step Finished: train with {} ms", (System.currentTimeMillis() - start));
         }
-
         return status;
     }
 
+    /**
+     * Local mode training entry point.
+     */
     private void runLocalTrain() throws IOException {
         if(Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
             runLocalTensorflowTrain();
-            return;
         } else {
-            runAkkaTrain(isForVarSelect ? 1 : modelConfig.getBaggingNum());
+            runLocalAkkaTrain(isForVarSelect ? 1 : modelConfig.getBaggingNum());
         }
     }
 
+    /**
+     * Run local TF script to train model.
+     * 
+     * @throws IOException
+     *             any exception in training.
+     */
     private void runLocalTensorflowTrain() throws IOException {
         List<Scanner> scanners = null;
         TensorflowTrainer trainer = new TensorflowTrainer(modelConfig, columnConfigList);
@@ -308,31 +303,30 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      * @param numBags
      *            number of bags, it decide how much trainer will start training
      */
-    private void runAkkaTrain(int numBags) throws IOException {
+    private void runLocalAkkaTrain(int numBags) throws IOException {
         File models = new File("models");
         FileUtils.deleteDirectory(models);
         FileUtils.forceMkdir(models);
 
+        // init trainers
         trainers.clear();
-
         for(int i = 0; i < numBags; i++) {
             AbstractTrainer trainer;
             if(modelConfig.getAlgorithm().equalsIgnoreCase("NN")) {
-                trainer = new NNTrainer(modelConfig, i, isDryTrain);
+                trainer = new NNTrainer(modelConfig, i, false);
             } else if(modelConfig.getAlgorithm().equalsIgnoreCase("SVM")) {
-                trainer = new SVMTrainer(this.modelConfig, i, isDryTrain);
+                trainer = new SVMTrainer(this.modelConfig, i, false);
             } else if(modelConfig.getAlgorithm().equalsIgnoreCase("LR")) {
-                trainer = new LogisticRegressionTrainer(this.modelConfig, i, isDryTrain);
+                trainer = new LogisticRegressionTrainer(this.modelConfig, i, false);
             } else {
                 throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_ALG);
             }
-
             trainers.add(trainer);
         }
 
         List<Scanner> scanners = null;
         if(modelConfig.getAlgorithm().equalsIgnoreCase("DT")) {
-            LOG.info("Raw Data: " + pathFinder.getNormalizedDataPath());
+            LOG.info("Raw Data: " + modelConfig.getDataSetRawPath());
             try {
                 scanners = ShifuFileUtils.getDataScanners(modelConfig.getDataSetRawPath(),
                         modelConfig.getDataSet().getSource());
@@ -356,8 +350,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             }
         }
 
-        // release
-        closeScanners(scanners);
+        closeScanners(scanners); // release
     }
 
     /**
@@ -382,35 +375,35 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         return trainers.get(index);
     }
 
+    /**
+     * Validate if valid distributed training configurations.
+     */
     private void validateDistributedTrain() throws IOException {
         String alg = super.getModelConfig().getTrain().getAlgorithm();
-        if(Constants.TENSORFLOW.equalsIgnoreCase(alg)) {
-            // we do not train tensorflow in dist mode currently
-            return;
-        }
-        if(!(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) // NN algorithm
-                || LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg) // LR algorithm
+
+        if(!(CommonConstants.NN_ALG_NAME.equalsIgnoreCase(alg) // NN algorithm
+                || CommonConstants.LR_ALG_NAME.equalsIgnoreCase(alg) // LR algorithm
                 || CommonUtils.isTreeModel(alg) // RF or GBT algortihm
-                || Constants.TF_ALG_NAME.equalsIgnoreCase(alg) || Constants.WDL.equalsIgnoreCase(alg)
-                || CommonConstants.MTL_ALG_NAME.equalsIgnoreCase(alg))) {
+                || Constants.TENSORFLOW.equalsIgnoreCase(alg) || CommonConstants.TF_ALG_NAME.equalsIgnoreCase(alg)
+                || Constants.WDL.equalsIgnoreCase(alg) || CommonConstants.MTL_ALG_NAME.equalsIgnoreCase(alg))) {
             throw new IllegalArgumentException(
-                    "Currently we only support NN, LR, RF(RandomForest), WDL, MTL and GBDT(Gradient Boost Desicion Tree) distributed training.");
+                    "Currently only NN, LR, RF(RandomForest), WDL, MTL and GBDT(Gradient Boost Desicion Tree) are supported in distributed training.");
         }
 
-        if((LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)
-                || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg)) && modelConfig.isClassification()
+        if((CommonConstants.LR_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg))
+                && modelConfig.isClassification()
                 && modelConfig.getTrain().getMultiClassifyMethod() == MultipleClassification.NATIVE) {
             throw new IllegalArgumentException(
                     "Distributed LR, GBDT(Gradient Boost Desicion Tree) only support binary classification, native multiple classification is not supported.");
         }
 
         if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll() && !CommonUtils.isTreeModel(alg)
-                && !NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
+                && !CommonConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
             throw new IllegalArgumentException("Only GBT and RF and NN support OneVsAll multiple classification.");
         }
 
         if(super.getModelConfig().getDataSet().getSource() != SourceType.HDFS) {
-            throw new IllegalArgumentException("Currently we only support distributed training on HDFS source type.");
+            throw new IllegalArgumentException("Currently distributed training is only supported on HDFS source type.");
         }
 
         if(Constants.WDL.equalsIgnoreCase(alg) && this.modelConfig.getNormalize().getNormType() != NormType.ZSCALE_INDEX
@@ -418,11 +411,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 && this.modelConfig.getNormalize().getNormType() != NormType.WOE_INDEX
                 && this.modelConfig.getNormalize().getNormType() != NormType.WOE_ZSCALE_INDEX) {
             throw new IllegalArgumentException(
-                    "WDL only support normalize#normType with ZSCALE_INDEX/ZSCORE_INDEX/WOE_INDEX/WOE_ZSCALE_INDEX, please reset and run 'shifu norm' again.");
-        }
-
-        if(isDebug()) {
-            LOG.warn("Currently we haven't debug logic. It's the same as you don't set it.");
+                    "WDL only supports normalize#normType with ZSCALE_INDEX/ZSCORE_INDEX/WOE_INDEX/WOE_ZSCALE_INDEX, please reset and run 'shifu norm' again.");
         }
 
         // check if parquet format norm output is consistent with current isParquet setting.
@@ -446,9 +435,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         GridSearch gridSearch = new GridSearch(modelConfig.getTrain().getParams(),
                 modelConfig.getTrain().getGridConfigFileContent());
-        if(!LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)
-                && !NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) && !CommonUtils.isTreeModel(alg)
-                && gridSearch.hasHyperParam()) {
+        if(!CommonConstants.LR_ALG_NAME.equalsIgnoreCase(alg) && !CommonConstants.NN_ALG_NAME.equalsIgnoreCase(alg)
+                && !CommonUtils.isTreeModel(alg) && gridSearch.hasHyperParam()) {
             // if grid search but not NN, not RF, not GBT, not LR
             throw new IllegalArgumentException("Grid search only supports NN, GBT and RF algorithms");
         }
@@ -456,31 +444,29 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(gridSearch.hasHyperParam() && super.getModelConfig().getDataSet().getSource() != SourceType.HDFS
                 && modelConfig.isDistributedRunMode()) {
             // if grid search but not mapred/dist run mode, not hdfs raw data set
-            throw new IllegalArgumentException("Grid search only supports NN, GBT and RF algorithms");
+            throw new IllegalArgumentException("Grid search only works in distributed run mode and HDFS source type.");
         }
     }
 
     protected int runDistributedTensorflowTrain() throws Exception {
-        LOG.info("Started {} tensorflow distributed training.", isDryTrain ? "dry " : "");
+        LOG.info("Started distributed TensorFlow training.");
         globalDefaultConfFile = new Path(
                 super.pathFinder.getAbsolutePath(new Path("conf" + File.separator + "global-default.xml").toString()));
         LOG.info("Shifu tensorflow on yarn global default file is found in: {}.", globalDefaultConfFile);
 
         if(super.modelConfig.getTrain().getBaggingNum() != 1) {
-            LOG.warn("Bagging tmperally is not supported, only one model can be trained (baggingNum = {}).",
+            LOG.warn("Bagging tmperally is not supported, only one model can be trained even (baggingNum = {}).",
                     super.modelConfig.getTrain().getBaggingNum());
         }
         // if not continuous mode, remove tmp models to not load it in tf python, continuous mode here there is a bug
         cleanModelPath();
 
         final List<String> args = new ArrayList<String>();
-
         args.add("-libjars");
         addTensorflowRuntimeJars(args);
 
         // copy globalconfig example from common conf path to project folder for user to update and modify
         generateGlobalConf();
-
         args.add("-globalconfig"); // include python env path,
         args.add(globalDefaultConfFile.getName());
 
@@ -488,7 +474,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             String clazz = "ml.shifu.shifu.core.yarn.client.TensorflowClient";
             Method main = Class.forName(clazz).getMethod("main",
                     new Class[] { Array.newInstance(String.class, 0).getClass() });
-
             try {
                 main.invoke(null, (Object) args.toArray(new String[0]));
             } catch (Exception e) {
@@ -505,11 +490,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 }
                 copyModelToLocal(null, modelPath, SourceType.HDFS);
             } else {
-                LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
-                        modelPath.toString());
+                LOG.warn("Model {} isn't there, training job is failed.", modelPath.toString());
             }
         } finally {
-            try {
+            try { // move config to a temp file for next running FIXME, how to configure two ps numbers in two trainings
                 FileUtils.moveFile(new File(globalDefaultConfFile.getName().toString()),
                         new File(globalDefaultConfFile.getName() + "_" + System.currentTimeMillis()));
             } catch (Exception e) {
@@ -548,8 +532,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private void setSelectedTargetAndWeightColumnNumber(Configuration globalConf) {
-        int targetColumnNum = -1;
-        int weightColumnNum = -1;
+        int targetColumnNum = -1, weightColumnNum = -1;
         List<Integer> seletectedColumnNums = new ArrayList<Integer>();
         String weightColumnName = this.modelConfig.getDataSet().getWeightColumnName();
 
@@ -583,9 +566,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         globalConf.set("shifu.application.selected-column-numbers", StringUtils.join(seletectedColumnNums, ' '));
     }
 
-    /**
-     * @param globalConf
-     */
     private void setSelectedColumnForWideDeep(Configuration globalConf) {
         int targetColumnNum = -1;
         int weightColumnNum = -1;
@@ -635,13 +615,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     /**
-     * update some fields of conf based on current project
-     * 
-     * @throws IOException
+     * Configure and update some fields of conf based on current project for TF-on-Yarn training
      */
     private void generateGlobalConf() throws IOException {
         if(HDFSUtils.getLocalFS().exists(new Path(globalDefaultConfFile.getName()))) {
-            LOG.info("Project already has global conf, we will remove it...");
+            LOG.warn("Project already has global conf, we will rename it and generate a new one ...");
             HDFSUtils.getLocalFS().moveToLocalFile(new Path(globalDefaultConfFile.getName()),
                     new Path(globalDefaultConfFile.getName() + "_" + System.currentTimeMillis()));
         }
@@ -656,23 +634,19 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         int fileNumber = HDFSUtils.getFileNumber(HDFSUtils.getFS(),
                 new Path(super.getPathFinder().getNormalizedDataPath()));
         globalConf.set("shifu.worker.instances", Integer.toString(fileNumber));
-
         // set backup workers as 1:10
         int backupWorkerNumber = (fileNumber / 10) > 0 ? fileNumber / 10 : 1;
         globalConf.set("shifu.worker.instances.backup", Integer.toString(backupWorkerNumber));
-
         // set model conf
         globalConf.set("shifu.application.model-conf", super.getPathFinder().getModelConfigPath(SourceType.LOCAL));
-
         String delimiter = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER);
         globalConf.set(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Base64Utils.base64Encode(delimiter));
-
         // set column conf
         globalConf.set("shifu.application.column-conf", super.getPathFinder().getColumnConfigPath(SourceType.LOCAL));
 
         // set python script
         if(this.modelConfig.getNormalize().getNormType() == NormType.ZSCALE_INDEX) {
-            // Running wide and deep
+            // Running wide and deep // TODO tmp for test
             globalConf.set("shifu.application.python-script-path",
                     super.getPathFinder().getScriptPath("scripts/distributed_tf_wnd_estimator_not_embed.py"));
 
@@ -683,7 +657,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             String tyType = tfTypeObj == null ? "keras" : tfTypeObj.toString().toLowerCase();
             String scriptPath = "distributed_tf_" + tyType + ".py";
             String currScriptPath = System.getProperty("user.dir") + File.separator + scriptPath;
-
             String rawScriptPath = super.getPathFinder().getScriptPath("scripts" + File.separator + scriptPath);
 
             if(!Files.exists(Paths.get(currScriptPath), LinkOption.NOFOLLOW_LINKS)) {
@@ -712,25 +685,18 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             // set shell to lauch python
             globalConf.set("shifu.application.python-shell-path",
                     super.getPathFinder().getScriptPath("bin/dist_pytrain.sh"));
-
             // set application name
             globalConf.set("shifu.application.name", "Shifu Tensorflow: " + modelConfig.getBasic().getName());
-
             // set yarn queue
             globalConf.set("shifu.yarn.queue", Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
-
             // set data total count
             globalConf.set("shifu.application.total-training-data-number",
                     Long.toString(columnConfigList.get(0).getTotalCount()));
-
             globalConf.set("shifu.application.epochs", this.modelConfig.getTrain().getNumTrainEpochs() + "");
-
             // set hdfs tmp model path
             globalConf.set("shifu.application.tmp-model-path", super.getPathFinder().getTmpModelsPath(SourceType.HDFS));
-
             // set hdfs final model path
             globalConf.set("shifu.application.final-model-path", super.getPathFinder().getModelsPath(SourceType.HDFS));
-
             // add all shifuconf, this includes 'shifu train -Dk=v' <k,v> pairs and it will override default keys set
             // above.
             Properties shifuConfigMap = Environment.getProperties();
@@ -754,6 +720,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
     }
 
+    /**
+     * Jars to start TF Yarn Application as tf-yarn-client role.
+     * 
+     * @param args
+     *            the command line args
+     * @throws ClassNotFoundException
+     *             if class in that lib not found (class not set well in current class path)
+     */
     private void addTensorflowRuntimeJars(List<String> args) throws ClassNotFoundException {
         List<String> jars = new ArrayList<String>(16);
         // zip4j-1.3.2.jar
@@ -764,14 +738,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         jars.add(JarManager.findContainingJar(GuaguaConstants.class));
         // shifu-*.jar
         jars.add(JarManager.findContainingJar(getClass()));
-        // shifu-tensorflow-on-yarn*.jar
+        // shifu-tensorflow-on-yarn*.jar, hard code here as core version without shifu-tensorflow won't have such jar
         jars.add(JarManager.findContainingJar(Class.forName("ml.shifu.shifu.core.yarn.client.TensorflowClient")));
 
         args.add(StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR));
     }
 
     protected int runDistributedTrain() throws IOException, InterruptedException, ClassNotFoundException {
-        LOG.info("Started {}distributed training.", isDryTrain ? "dry " : "");
+        LOG.info("Started distributed training.");
         int status = 0;
 
         Configuration conf = new Configuration();
@@ -782,16 +756,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 .getPathBySourceType(new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER), sourceType)));
 
         if(!this.modelConfig.getTrain().getIsContinuous()) {
-            // delete all old models if not continuous
-            String srcModelPath = super.getPathFinder().getModelsPath(sourceType);
-            String mvModelPath = srcModelPath + "_" + System.currentTimeMillis();
-            LOG.info("Old model path has been moved to {}", mvModelPath);
-            fileSystem.rename(new Path(srcModelPath), new Path(mvModelPath));
-            fileSystem.mkdirs(new Path(srcModelPath));
-            FileSystem.getLocal(conf).delete(new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL)), true);
-            // delete tmp model folder
-            fileSystem.delete(tmpModelsPath, true);
-            fileSystem.mkdirs(tmpModelsPath);
+            cleanOldModels(conf, sourceType, fileSystem, tmpModelsPath);
         }
 
         final List<String> args = new ArrayList<String>();
@@ -801,29 +766,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         prepareCommonParams(gs.hasHyperParam(), args, sourceType);
 
-        String alg = super.getModelConfig().getTrain().getAlgorithm();
-
         // add tmp models folder to config
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_TMP_MODELS_FOLDER,
                 tmpModelsPath.toString()));
-        int baggingNum = isForVarSelect ? 1 : super.getModelConfig().getBaggingNum();
-        if(modelConfig.isClassification()) {
-            int classes = modelConfig.getTags().size();
-            if(classes == 2) {
-                // binary classification, only need one job
-                baggingNum = 1;
-            } else {
-                if(modelConfig.getTrain().isOneVsAll()) {
-                    // one vs all multiple classification, we need multiple bagging jobs to do ONEVSALL
-                    baggingNum = modelConfig.getTags().size();
-                } else {
-                    // native classification, using bagging from setting job, no need set here
-                }
-            }
-            if(baggingNum != super.getModelConfig().getBaggingNum()) {
-                LOG.warn("'train:baggingNum' is set to {} because of ONEVSALL multiple classification.", baggingNum);
-            }
-        }
+        int baggingNum = checkBaggingNum();
 
         boolean isKFoldCV = false;
         Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
@@ -843,7 +789,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 .valueOf(Environment.getProperty(Constants.SHIFU_DTRAIN_PARALLEL, SHIFU_DEFAULT_DTRAIN_PARALLEL))
                 .booleanValue();
         GuaguaMapReduceClient guaguaClient;
-
         int[] inputOutputIndex;
         if(modelConfig.isMultiTask()) {
             inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
@@ -854,46 +799,197 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
         int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         int candidateCount = inputOutputIndex[2];
-
         boolean isAfterVarSelect = (inputOutputIndex[0] != 0);
-
         if(modelConfig.getNormalize().getIsParquet()) {
             guaguaClient = new GuaguaParquetMapReduceClient();
-
-            // set required field list to make sure we only load selected columns.
-            RequiredFieldList requiredFieldList = new RequiredFieldList();
-            boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
-            for(ColumnConfig columnConfig: super.columnConfigList) {
-                if(columnConfig.isTarget()) {
-                    requiredFieldList.add(new RequiredField(columnConfig.getColumnName(), columnConfig.getColumnNum(),
-                            null, DataType.FLOAT));
-                } else {
-                    if(inputNodeCount == candidateCount) {
-                        // no any variables are selected
-                        if(!columnConfig.isMeta() && !columnConfig.isTarget()
-                                && CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
-                            requiredFieldList.add(new RequiredField(columnConfig.getColumnName(),
-                                    columnConfig.getColumnNum(), null, DataType.FLOAT));
-                        }
-                    } else {
-                        if(!columnConfig.isMeta() && !columnConfig.isTarget() && columnConfig.isFinalSelect()) {
-                            requiredFieldList.add(new RequiredField(columnConfig.getColumnName(),
-                                    columnConfig.getColumnNum(), null, DataType.FLOAT));
-                        }
-                    }
-                }
-            }
-            // weight is added manually
-            requiredFieldList.add(new RequiredField("weight", columnConfigList.size(), null, DataType.DOUBLE));
-
-            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, "parquet.private.pig.required.fields",
-                    serializeRequiredFieldList(requiredFieldList)));
-            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, "parquet.private.pig.column.index.access",
-                    "true"));
+            checkParquetParams(args, inputNodeCount, candidateCount);
         } else {
             guaguaClient = new GuaguaMapReduceClient();
         }
 
+        String alg = super.getModelConfig().getTrain().getAlgorithm();
+        status = runDistributedBaggingTraining(status, conf, sourceType, fileSystem, args, gs, alg, baggingNum,
+                isKFoldCV, isParallel, guaguaClient, inputNodeCount, isAfterVarSelect);
+
+        if(isKFoldCV) {
+            status = postProcess4KFoldCV(status, sourceType, fileSystem, kCrossValidation, start);
+        } else if(gs.hasHyperParam()) {
+            postProcess4HyperParamTunning(status, sourceType, fileSystem, gs, start);
+        } else { // if(!gs.hasHyperParam())
+            postProcess4Train(status, sourceType, fileSystem, tmpModelsPath, baggingNum, start);
+        }
+
+        if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
+            postProcess4TreeModelFeatureImportance();
+        }
+
+        return status;
+    }
+
+    private void postProcess4TreeModelFeatureImportance() throws IOException {
+        List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(this.modelConfig, null);
+        // compute feature importance and write to local file after models are trained
+        Map<Integer, MutablePair<String, Double>> featureImportances = CommonUtils
+                .computeTreeModelFeatureImportance(models);
+        String localFsFolder = pathFinder.getLocalFeatureImportanceFolder();
+        String localFIPath = pathFinder.getLocalFeatureImportancePath();
+        processRollupForFIFiles(localFsFolder, localFIPath);
+        CommonUtils.writeFeatureImportance(localFIPath, featureImportances);
+    }
+
+    private void postProcess4Train(int status, SourceType sourceType, FileSystem fileSystem, Path tmpModelsPath,
+            int baggingNum, long start) throws IOException {
+        int totalModels = 0;
+        int foundModels = 0;
+        totalModels = baggingNum;
+        // copy model files at last.
+        for(int i = 0; i < baggingNum; i++) {
+            String modelName = getModelName(i);
+            Path modelPath = fileSystem
+                    .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
+            if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
+                copyModelToLocal(modelName, modelPath, sourceType);
+                foundModels++;
+            } else {
+                LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
+                        modelPath.toString());
+            }
+        }
+
+        // copy temp model files, for RF/GBT, not to copy tmp models because of larger space needed, for others
+        // by default copy tmp models to local
+        boolean copyTmpModelsToLocal = Boolean.TRUE.toString()
+                .equalsIgnoreCase(Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "true"));
+        if(copyTmpModelsToLocal) {
+            copyTmpModelsToLocal(tmpModelsPath, sourceType);
+        } else {
+            LOG.info("Tmp models are not copied into local, please find them in hdfs path: {}", tmpModelsPath);
+        }
+        LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
+        if(status != 0) {
+            LOG.error("Error may occurred. {} / {} models are generated. Please check!", totalModels, foundModels);
+        }
+    }
+
+    private void postProcess4HyperParamTunning(int status, SourceType sourceType, FileSystem fileSystem, GridSearch gs,
+            long start) throws IOException {
+        int totalModels = 0;
+        int foundModels = 0;
+        totalModels = gs.getFlattenParams().size();
+        // select the best parameter composite in grid search
+        LOG.info("Original grid search params: {}", modelConfig.getParams());
+        Map<String, Object> params = findBestParams(sourceType, fileSystem, gs);
+        // temp copy all models for evaluation
+        for(int i = 0; i < totalModels; i++) {
+            String modelName = getModelName(i);
+            Path modelPath = fileSystem
+                    .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
+            if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
+                copyModelToLocal(modelName, modelPath, sourceType);
+                foundModels++;
+            } else {
+                LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
+                        modelPath.toString());
+            }
+        }
+        LOG.info("The best parameters in grid search is {}", params);
+        LOG.info("Grid search on distributed training finished in {}ms.", System.currentTimeMillis() - start);
+        if(status != 0) {
+            LOG.error("Error may occurred. {} / {} models are generated. Please check!", totalModels, foundModels);
+        }
+    }
+
+    private int postProcess4KFoldCV(int status, SourceType sourceType, FileSystem fileSystem, Integer kCrossValidation,
+            long start) throws IOException {
+        int totalModels = 0;
+        int foundModels = 0;
+        totalModels = kCrossValidation;
+        // k-fold we also copy model files at last, such models can be used for evaluation
+        for(int i = 0; i < kCrossValidation; i++) {
+            String modelName = getModelName(i);
+            Path modelPath = fileSystem
+                    .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
+            if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
+                copyModelToLocal(modelName, modelPath, sourceType);
+                foundModels++;
+            } else {
+                LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
+                        modelPath.toString());
+                status += 1;
+            }
+        }
+
+        List<Double> valErrs = readAllValidationErrors(sourceType, fileSystem, kCrossValidation);
+        double sum = 0d;
+        for(Double err: valErrs) {
+            sum += err;
+        }
+        LOG.info("Average validation error for current k-fold cross validation is {}.", sum / valErrs.size());
+        LOG.info("K-fold cross validation on distributed training finished in {}ms.",
+                System.currentTimeMillis() - start);
+        if(status != 0) {
+            LOG.error("Error may occurred. {} / {} models are generated. Please check!", totalModels, foundModels);
+        }
+        return status;
+    }
+
+    private void checkParquetParams(final List<String> args, int inputNodeCount, int candidateCount) {
+        // set required field list to make sure we only load selected columns.
+        RequiredFieldList requiredFieldList = new RequiredFieldList();
+        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
+        for(ColumnConfig columnConfig: super.columnConfigList) {
+            if(columnConfig.isTarget()) {
+                requiredFieldList.add(new RequiredField(columnConfig.getColumnName(), columnConfig.getColumnNum(), null,
+                        DataType.FLOAT));
+            } else {
+                if(inputNodeCount == candidateCount) {
+                    // no any variables are selected
+                    if(!columnConfig.isMeta() && !columnConfig.isTarget()
+                            && CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
+                        requiredFieldList.add(new RequiredField(columnConfig.getColumnName(),
+                                columnConfig.getColumnNum(), null, DataType.FLOAT));
+                    }
+                } else {
+                    if(!columnConfig.isMeta() && !columnConfig.isTarget() && columnConfig.isFinalSelect()) {
+                        requiredFieldList.add(new RequiredField(columnConfig.getColumnName(),
+                                columnConfig.getColumnNum(), null, DataType.FLOAT));
+                    }
+                }
+            }
+        }
+        // weight is added manually
+        requiredFieldList.add(new RequiredField("weight", columnConfigList.size(), null, DataType.DOUBLE));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, "parquet.private.pig.required.fields",
+                serializeRequiredFieldList(requiredFieldList)));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, "parquet.private.pig.column.index.access",
+                "true"));
+    }
+
+    private int checkBaggingNum() {
+        int baggingNum = isForVarSelect ? 1 : super.getModelConfig().getBaggingNum();
+        if(modelConfig.isClassification()) {
+            int classes = modelConfig.getTags().size();
+            if(classes == 2) {
+                baggingNum = 1; // binary classification, only need one job
+            } else {
+                if(modelConfig.getTrain().isOneVsAll()) {
+                    // one vs all multiple classification, we need multiple bagging jobs to do ONEVSALL
+                    baggingNum = modelConfig.getTags().size();
+                } else {
+                    // native classification, using bagging from setting job, no need set here
+                }
+            }
+            if(baggingNum != super.getModelConfig().getBaggingNum()) {
+                LOG.warn("'train:baggingNum' is set to {} because of ONEVSALL multiple classification.", baggingNum);
+            }
+        }
+        return baggingNum;
+    }
+
+    private int runDistributedBaggingTraining(int status, Configuration conf, SourceType sourceType,
+            FileSystem fileSystem, final List<String> args, GridSearch gs, String alg, int baggingNum,
+            boolean isKFoldCV, boolean isParallel, GuaguaMapReduceClient guaguaClient, int inputNodeCount,
+            boolean isAfterVarSelect) throws IOException, InterruptedException, ClassNotFoundException {
         int parallelNum = Integer
                 .parseInt(Environment.getProperty(CommonConstants.SHIFU_TRAIN_BAGGING_INPARALLEL, "5"));
         int parallelGroups = 1;
@@ -913,21 +1009,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         List<String> progressLogList = new ArrayList<String>(baggingNum);
         boolean isOneJobNotContinuous = false;
         for(int j = 0; j < parallelGroups; j++) {
-            int currBags = baggingNum;
-            if(gs.hasHyperParam()) {
-                if(j == parallelGroups - 1) {
-                    currBags = gs.getFlattenParams().size() % parallelNum == 0 ? parallelNum
-                            : gs.getFlattenParams().size() % parallelNum;
-                } else {
-                    currBags = parallelNum;
-                }
-            } else {
-                if(j == parallelGroups - 1) {
-                    currBags = baggingNum % parallelNum == 0 ? parallelNum : baggingNum % parallelNum;
-                } else {
-                    currBags = parallelNum;
-                }
-            }
+            int currBags = getCurrBags(gs, baggingNum, parallelNum, parallelGroups, j);
             for(int k = 0; k < currBags; k++) {
                 int i = j * parallelNum + k;
                 if(gs.hasHyperParam()) {
@@ -944,7 +1026,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 String modelName = getModelName(i);
                 Path modelPath = fileSystem
                         .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
-
                 Path bModelPath = fileSystem
                         .makeQualified(new Path(super.getPathFinder().getNNBinaryModelsPath(sourceType), modelName));
 
@@ -965,8 +1046,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     }
                 }
 
-                // of course gs not support continuous model training, k-fold cross validation is not continuous model
-                // training
+                // gs not support continuous model training, k-fold cross validation is not continuous training
                 if(gs.hasHyperParam() || isKFoldCV) {
                     isContinuous = false;
                 }
@@ -982,58 +1062,14 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                             true);
                 }
 
-                if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
+                if(CommonConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
                     // tree related parameters initialization
-                    Map<String, Object> params = gs.hasHyperParam() ? gs.getParams(i)
-                            : this.modelConfig.getTrain().getParams();
-                    Object fssObj = params.get("FeatureSubsetStrategy");
-                    FeatureSubsetStrategy featureSubsetStrategy = null;
-                    double featureSubsetRate = 0d;
-                    if(fssObj != null) {
-                        try {
-                            featureSubsetRate = Double.parseDouble(fssObj.toString());
-                            // no need validate featureSubsetRate is in (0,1], as already validated in ModelInspector
-                            featureSubsetStrategy = null;
-                        } catch (NumberFormatException ee) {
-                            featureSubsetStrategy = FeatureSubsetStrategy.of(fssObj.toString());
-                        }
-                    } else {
-                        LOG.warn("FeatureSubsetStrategy is not set, set to ALL by default.");
-                        featureSubsetStrategy = FeatureSubsetStrategy.ALL;
-                        featureSubsetRate = 0;
-                    }
-
-                    // cache all feature list for sampling features
-                    List<Integer> allFeatures = NormalUtils.getAllFeatureList(this.columnConfigList, isAfterVarSelect);
-
-                    Set<Integer> subFeatures = null;
-                    if(isContinuous) {
-                        BasicFloatNetwork existingModel = (BasicFloatNetwork) ModelSpecLoaderUtils
-                                .getBasicNetwork(ModelSpecLoaderUtils.loadModel(modelConfig, modelPath, ShifuFileUtils
-                                        .getFileSystemBySourceType(this.modelConfig.getDataSet().getSource())));
-                        if(existingModel == null) {
-                            subFeatures = new HashSet<Integer>(getSubsamplingFeatures(allFeatures,
-                                    featureSubsetStrategy, featureSubsetRate, inputNodeCount));
-                        } else {
-                            subFeatures = existingModel.getFeatureSet();
-                        }
-                    } else {
-                        subFeatures = new HashSet<Integer>(getSubsamplingFeatures(allFeatures, featureSubsetStrategy,
-                                featureSubsetRate, inputNodeCount));
-                    }
-                    if(subFeatures == null || subFeatures.size() == 0) {
-                        localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                                CommonConstants.SHIFU_NN_FEATURE_SUBSET, ""));
-                    } else {
-                        localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                                CommonConstants.SHIFU_NN_FEATURE_SUBSET, StringUtils.join(subFeatures, ',')));
-                        LOG.debug("Size: {}, list: {}.", subFeatures.size(), StringUtils.join(subFeatures, ','));
-                    }
+                    setDistributedNNFeatureSubsetParams(gs, inputNodeCount, isAfterVarSelect, i, localArgs, modelPath,
+                            isContinuous);
                 }
 
                 localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.GUAGUA_OUTPUT,
                         modelPath.toString()));
-
                 localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
                         Constants.SHIFU_NN_BINARY_MODEL_PATH, bModelPath.toString()));
 
@@ -1067,97 +1103,88 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 stopTailThread(tailThread);
             }
         }
-
-        int totalModels = 0;
-        int foundModels = 0;
-        if(isKFoldCV) {
-            totalModels = kCrossValidation;
-            // k-fold we also copy model files at last, such models can be used for evaluation
-            for(int i = 0; i < kCrossValidation; i++) {
-                String modelName = getModelName(i);
-                Path modelPath = fileSystem
-                        .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
-                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
-                    copyModelToLocal(modelName, modelPath, sourceType);
-                    foundModels++;
-                } else {
-                    LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
-                            modelPath.toString());
-                    status += 1;
-                }
-            }
-
-            List<Double> valErrs = readAllValidationErrors(sourceType, fileSystem, kCrossValidation);
-            double sum = 0d;
-            for(Double err: valErrs) {
-                sum += err;
-            }
-            LOG.info("Average validation error for current k-fold cross validation is {}.", sum / valErrs.size());
-            LOG.info("K-fold cross validation on distributed training finished in {}ms.",
-                    System.currentTimeMillis() - start);
-        } else if(gs.hasHyperParam()) {
-            totalModels = gs.getFlattenParams().size();
-            // select the best parameter composite in grid search
-            LOG.info("Original grid search params: {}", modelConfig.getParams());
-            Map<String, Object> params = findBestParams(sourceType, fileSystem, gs);
-            // temp copy all models for evaluation
-            for(int i = 0; i < totalModels; i++) {
-                String modelName = getModelName(i);
-                Path modelPath = fileSystem
-                        .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
-                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
-                    copyModelToLocal(modelName, modelPath, sourceType);
-                    foundModels++;
-                } else {
-                    LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
-                            modelPath.toString());
-                }
-            }
-            LOG.info("The best parameters in grid search is {}", params);
-            LOG.info("Grid search on distributed training finished in {}ms.", System.currentTimeMillis() - start);
-        } else { // if(!gs.hasHyperParam())
-            totalModels = baggingNum;
-            // copy model files at last.
-            for(int i = 0; i < baggingNum; i++) {
-                String modelName = getModelName(i);
-                Path modelPath = fileSystem
-                        .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
-                if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(modelPath)) {
-                    copyModelToLocal(modelName, modelPath, sourceType);
-                    foundModels++;
-                } else {
-                    LOG.warn("Model {} isn't there, maybe job is failed, for bagging it can be ignored.",
-                            modelPath.toString());
-                }
-            }
-
-            // copy temp model files, for RF/GBT, not to copy tmp models because of larger space needed, for others
-            // by default copy tmp models to local
-            boolean copyTmpModelsToLocal = Boolean.TRUE.toString()
-                    .equalsIgnoreCase(Environment.getProperty(Constants.SHIFU_TMPMODEL_COPYTOLOCAL, "true"));
-            if(copyTmpModelsToLocal) {
-                copyTmpModelsToLocal(tmpModelsPath, sourceType);
-            } else {
-                LOG.info("Tmp models are not copied into local, please find them in hdfs path: {}", tmpModelsPath);
-            }
-            LOG.info("Distributed training finished in {}ms.", System.currentTimeMillis() - start);
-        }
-
-        if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
-            List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(this.modelConfig, null);
-            // compute feature importance and write to local file after models are trained
-            Map<Integer, MutablePair<String, Double>> featureImportances = CommonUtils
-                    .computeTreeModelFeatureImportance(models);
-            String localFsFolder = pathFinder.getLocalFeatureImportanceFolder();
-            String localFIPath = pathFinder.getLocalFeatureImportancePath();
-            processRollupForFIFiles(localFsFolder, localFIPath);
-            CommonUtils.writeFeatureImportance(localFIPath, featureImportances);
-        }
-
-        if(status != 0) {
-            LOG.error("Error may occurred. {} / {} models are generated. Please check!", totalModels, foundModels);
-        }
         return status;
+    }
+
+    private void setDistributedNNFeatureSubsetParams(GridSearch gs, int inputNodeCount, boolean isAfterVarSelect, int i,
+            List<String> localArgs, Path modelPath, boolean isContinuous) throws IOException {
+        Map<String, Object> params = gs.hasHyperParam() ? gs.getParams(i) : this.modelConfig.getTrain().getParams();
+        Object fssObj = params.get("FeatureSubsetStrategy");
+        FeatureSubsetStrategy featureSubsetStrategy = null;
+        double featureSubsetRate = 0d;
+        if(fssObj != null) {
+            try {
+                featureSubsetRate = Double.parseDouble(fssObj.toString());
+                // no need validate featureSubsetRate is in (0,1], as already validated in ModelInspector
+                featureSubsetStrategy = null;
+            } catch (NumberFormatException ee) {
+                featureSubsetStrategy = FeatureSubsetStrategy.of(fssObj.toString());
+            }
+        } else {
+            LOG.warn("FeatureSubsetStrategy is not set, set to ALL by default.");
+            featureSubsetStrategy = FeatureSubsetStrategy.ALL;
+            featureSubsetRate = 0;
+        }
+
+        // cache all feature list for sampling features
+        List<Integer> allFeatures = NormalizationUtils.getAllFeatureList(this.columnConfigList, isAfterVarSelect);
+
+        Set<Integer> subFeatures = null;
+        if(isContinuous) {
+            BasicFloatNetwork existingModel = (BasicFloatNetwork) ModelSpecLoaderUtils
+                    .getBasicNetwork(ModelSpecLoaderUtils.loadModel(modelConfig, modelPath,
+                            ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource())));
+            if(existingModel == null) {
+                subFeatures = new HashSet<Integer>(
+                        getSubsamplingFeatures(allFeatures, featureSubsetStrategy, featureSubsetRate, inputNodeCount));
+            } else {
+                subFeatures = existingModel.getFeatureSet();
+            }
+        } else {
+            subFeatures = new HashSet<Integer>(
+                    getSubsamplingFeatures(allFeatures, featureSubsetStrategy, featureSubsetRate, inputNodeCount));
+        }
+        if(subFeatures == null || subFeatures.size() == 0) {
+            localArgs.add(
+                    String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_NN_FEATURE_SUBSET, ""));
+        } else {
+            localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_NN_FEATURE_SUBSET,
+                    StringUtils.join(subFeatures, ',')));
+            LOG.debug("Size: {}, list: {}.", subFeatures.size(), StringUtils.join(subFeatures, ','));
+        }
+    }
+
+    private int getCurrBags(GridSearch gs, int baggingNum, int parallelNum, int parallelGroups, int j) {
+        int currBags = baggingNum;
+        if(gs.hasHyperParam()) {
+            if(j == parallelGroups - 1) {
+                currBags = gs.getFlattenParams().size() % parallelNum == 0 ? parallelNum
+                        : gs.getFlattenParams().size() % parallelNum;
+            } else {
+                currBags = parallelNum;
+            }
+        } else {
+            if(j == parallelGroups - 1) {
+                currBags = baggingNum % parallelNum == 0 ? parallelNum : baggingNum % parallelNum;
+            } else {
+                currBags = parallelNum;
+            }
+        }
+        return currBags;
+    }
+
+    private void cleanOldModels(Configuration conf, SourceType sourceType, FileSystem fileSystem, Path tmpModelsPath)
+            throws IOException {
+        // mv all old models if not continuous (move for backup, if delete, no any backups)
+        String srcModelPath = super.getPathFinder().getModelsPath(sourceType);
+        String mvModelPath = srcModelPath + "_" + System.currentTimeMillis();
+        LOG.info("Old model path has been moved to {}", mvModelPath);
+        fileSystem.rename(new Path(srcModelPath), new Path(mvModelPath));
+        fileSystem.mkdirs(new Path(srcModelPath));
+        FileSystem.getLocal(conf).delete(new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL)), true);
+        // delete tmp model folder
+        fileSystem.delete(tmpModelsPath, true);
+        fileSystem.mkdirs(tmpModelsPath);
     }
 
     /**
@@ -1267,7 +1294,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         return valErrs;
     }
 
-    static String serializeRequiredFieldList(RequiredFieldList requiredFieldList) {
+    private static String serializeRequiredFieldList(RequiredFieldList requiredFieldList) {
         try {
             return ObjectSerializer.serialize(requiredFieldList);
         } catch (IOException e) {
@@ -1289,10 +1316,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             } else if(!fileSystem.exists(modelPath)) {
                 finalContinuous = 0;
                 LOG.info("No existing model, model training will start from scratch.");
-            } else if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())
+            } else if(CommonConstants.NN_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())
                     && !inputOutputModelCheckSuccess(fileSystem, modelPath, modelParams)) {
-                // TODO hidden layer size and activation functions should also be validated
-                finalContinuous = 0;
+                finalContinuous = 0; // TODO hidden layer size and activation functions should also be validated
                 LOG.warn(
                         "!!! Model training parameters like hidden nodes, activation and others  are not consistent with settings, model training will start from scratch.");
             } else if(CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm())) {
@@ -1351,10 +1377,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             return false;
         }
 
-        // same hidden nodes ?
-        boolean isHasSameHiddenNodes = true;
-        // same activations ?
-        boolean isHasSameHiddenActivation = true;
+        // same hidden nodes; same hidden activiations
+        boolean isHasSameHiddenNodes = true, isHasSameHiddenActivation = true;
         List<Integer> hiddenNodeList = (List<Integer>) modelParams.get(CommonConstants.NUM_HIDDEN_NODES);
         List<String> actFuncList = (List<String>) modelParams.get(CommonConstants.ACTIVATION_FUNC);
         for(int i = 1; i < model.getLayerCount() - 1; i++) {
@@ -1389,13 +1413,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             if(!isHasSameHiddenActivation) {
                 break;
             }
-
         }
-        if(!isHasSameHiddenNodes || !isHasSameHiddenActivation) {
-            return false;
-        }
-
-        return true;
+        return isHasSameHiddenNodes && isHasSameHiddenActivation;
     }
 
     private String getProgressLogFile(int i) {
@@ -1430,14 +1449,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private void copyTmpModelsToLocal(final Path tmpModelsDir, final SourceType sourceType) throws IOException {
         // copy all tmp nn to local, these tmp nn are outputs from
-        if(!this.isDryTrain()) {
-            if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(tmpModelsDir)) {
-                Path localTmpModelsFolder = new Path(Constants.MODELS_TMP);
-                HDFSUtils.getLocalFS().delete(localTmpModelsFolder, true);
-                HDFSUtils.getLocalFS().mkdirs(localTmpModelsFolder);
-                ShifuFileUtils.getFileSystemBySourceType(sourceType).copyToLocalFile(tmpModelsDir,
-                        localTmpModelsFolder);
-            }
+        if(ShifuFileUtils.getFileSystemBySourceType(sourceType).exists(tmpModelsDir)) {
+            Path localTmpModelsFolder = new Path(Constants.MODELS_TMP);
+            HDFSUtils.getLocalFS().delete(localTmpModelsFolder, true);
+            HDFSUtils.getLocalFS().mkdirs(localTmpModelsFolder);
+            ShifuFileUtils.getFileSystemBySourceType(sourceType).copyToLocalFile(tmpModelsDir, localTmpModelsFolder);
         }
     }
 
@@ -1517,13 +1533,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             args.add(zkServers);
         }
 
-        if(LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)) {
+        if(CommonConstants.LR_ALG_NAME.equalsIgnoreCase(alg)) {
             this.prepareLRParams(args, sourceType);
-        } else if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
+        } else if(CommonConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
             this.prepareNNParams(args, sourceType);
         } else if(CommonUtils.isTreeModel(alg)) {
             this.prepareDTParams(args, sourceType);
-        } else if(Constants.WDL_ALG_NAME.equalsIgnoreCase(alg)) {
+        } else if(CommonConstants.WDL_ALG_NAME.equalsIgnoreCase(alg)) {
             this.prepareWDLParams(args, sourceType);
         } else if(CommonConstants.MTL_ALG_NAME.equalsIgnoreCase(alg)) {
             this.prepareMTLParams(args, sourceType);
@@ -1534,7 +1550,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // only for NN varselect, use half of epochs for sensitivity analysis
         // if for gs mode, half of iterations are used
         LOG.debug("this.isForVarSelect() - {}, isGsMode - {}", this.isForVarSelect(), isGsMode);
-        if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg) && (this.isForVarSelect() || isGsMode)
+        if(CommonConstants.NN_ALG_NAME.equalsIgnoreCase(alg) && (this.isForVarSelect() || isGsMode)
                 && numTrainEpoches >= VAR_SELECT_TRAINING_DECAY_EPOCHES_THRESHOLD) {
             numTrainEpoches = numTrainEpoches / 2;
         }
@@ -1547,9 +1563,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // the reason to add 1 is that the first iteration in implementation is used for training preparation.
         numTrainEpoches = numTrainEpoches + 1;
 
-        if(LogisticRegressionContants.LR_ALG_NAME.equalsIgnoreCase(alg)) {
+        if(CommonConstants.LR_ALG_NAME.equalsIgnoreCase(alg)) {
             LOG.info("Number of train iterations is set to {}.", numTrainEpoches - 1);
-        } else if(NNConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
+        } else if(CommonConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
             LOG.info("Number of train epochs is set to {}.", numTrainEpoches - 1);
         } else if(CommonUtils.isTreeModel(alg)) {
             LOG.info("Number of train iterations is set to {}.", numTrainEpoches - 1);
@@ -1579,7 +1595,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                         .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.MODELSET_SOURCE_TYPE,
                 sourceType));
-        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_DRY_DTRAIN, isDryTrain()));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.NN_POISON_SAMPLER,
                 Environment.getProperty(NNConstants.NN_POISON_SAMPLER, "true")));
         // hard code set computation threshold for 50s. Can be changed in shifuconfig file
@@ -1708,18 +1723,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
     private void setHeapSizeAndSplitSize(final List<String> args) throws IOException {
         // can be override by shifuconfig, ok for hard code
-        if(this.isDebug()) {
-            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                    GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
-                    "-Xms2048m -Xmx2048m -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
-        } else {
-            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                    GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
-                    "-Xms2048m -Xmx2048m -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
-            args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, "mapreduce.map.java.opts",
-                    "-Xms2048m -Xmx2048m -server -XX:+UseParNewGC -XX:+UseConcMarkSweepGC "
-                            + "-XX:CMSInitiatingOccupancyFraction=70 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
-        }
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaMapReduceConstants.MAPRED_CHILD_JAVA_OPTS,
+                "-Xms2048m -Xmx2048m -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
+        args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, "mapreduce.map.java.opts",
+                "-Xms2048m -Xmx2048m -server -XX:+UseParNewGC -XX:+UseConcMarkSweepGC "
+                        + "-XX:CMSInitiatingOccupancyFraction=70 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps"));
+
         if(super.modelConfig.getNormalize().getIsParquet()) {
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
                     Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, "false")));
@@ -1806,11 +1815,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private void copyModelToLocal(String modelName, Path modelPath, SourceType sourceType) throws IOException {
-        if(!this.isDryTrain()) {
-            ShifuFileUtils.getFileSystemBySourceType(sourceType).copyToLocalFile(modelPath,
-                    StringUtils.isBlank(modelName) ? new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL))
-                            : new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL), modelName));
-        }
+        ShifuFileUtils.getFileSystemBySourceType(sourceType).copyToLocalFile(modelPath,
+                StringUtils.isBlank(modelName) ? new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL))
+                        : new Path(super.getPathFinder().getModelsPath(SourceType.LOCAL), modelName));
     }
 
     // GuaguaOptionsParser doesn't to support *.jar currently.
@@ -1905,18 +1912,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     throw new IllegalArgumentException("Final select " + columnConfig.getColumnName()
                             + "column but binBoundary in ColumnConfig.json is null.");
                 }
-
                 if(columnConfig.isNumerical() && columnConfig.getBinBoundary().size() <= 1) {
                     LOG.warn(
                             "Column {} {} with only one or zero element in binBounday, such column will be ignored in tree model training.",
                             columnConfig.getColumnNum(), columnConfig.getColumnName());
                 }
-
                 if(columnConfig.isCategorical() && columnConfig.getBinCategory() == null) {
                     throw new IllegalArgumentException("Final select " + columnConfig.getColumnName()
                             + "column but binCategory in ColumnConfig.json is null.");
                 }
-
                 if(columnConfig.isCategorical() && columnConfig.getBinCategory().size() <= 0) {
                     LOG.warn(
                             "Column {} {} with only zero element in binCategory, such column will be ignored in tree model training.",
@@ -1938,8 +1942,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 || !ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)
                 || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())
                         && !ShifuFileUtils.isFileExists(pathFinder.getCleanedValidationDataPath(), sourceType))) {
-            // -1.0 means no re-balance
-            runDataClean(isToShuffle, -1.0, false);
+            runDataClean(isToShuffle, -1.0, false); // -1.0 means no re-balance
         } else {
             // no need regen data
             LOG.warn("For RF/GBT, training input in {} exists, no need to regenerate it.", cleanedDataPath);
@@ -1960,22 +1963,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     // d-train part ends here
-
-    public boolean isDryTrain() {
-        return isDryTrain;
-    }
-
-    public void setDryTrain(boolean isDryTrain) {
-        this.isDryTrain = isDryTrain;
-    }
-
-    public boolean isDebug() {
-        return isDebug;
-    }
-
-    public void setDebug(boolean isDebug) {
-        this.isDebug = isDebug;
-    }
 
     public void setToShuffle(boolean toShuffle) {
         isToShuffle = toShuffle;

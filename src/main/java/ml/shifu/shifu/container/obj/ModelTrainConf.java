@@ -596,7 +596,7 @@ public class ModelTrainConf {
             func.add("relu");
             params.put(CommonConstants.ACTIVATION_FUNC, func);
             params.put(CommonConstants.NUM_HIDDEN_NODES, 3);
-            params.put(CommonConstants.WDL_L2_REG, 1e-8f);
+            params.put(CommonConstants.L2_REG, 1e-8f);
         } else if(ALGORITHM.MTL.equals(alg)) {
             params.put(CommonConstants.PROPAGATION, "R");
             params.put(CommonConstants.LEARNING_RATE, 0.1);

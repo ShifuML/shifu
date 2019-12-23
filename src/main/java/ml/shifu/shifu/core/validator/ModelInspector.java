@@ -42,7 +42,6 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.FeatureSubsetStrategy;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
@@ -686,7 +685,7 @@ public class ModelInspector {
 
             if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)
                     || train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)
-                    || train.getAlgorithm().equalsIgnoreCase(NNConstants.NN_ALG_NAME)) {
+                    || train.getAlgorithm().equalsIgnoreCase(CommonConstants.NN_ALG_NAME)) {
                 Map<String, Object> params = train.getParams();
                 Object fssObj = params.get("FeatureSubsetStrategy");
 

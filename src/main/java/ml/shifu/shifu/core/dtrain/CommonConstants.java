@@ -85,8 +85,8 @@ public interface CommonConstants {
 
     public static final String NUM_HIDDEN_LAYERS = "NumHiddenLayers";
 
-    public static final String WDL_L2_REG = "WDLL2Reg";
-
+    public static final String L2_REG = "L2Reg";
+    
     public static final String CHECKPOINT_INTERVAL = "CheckpointInterval";
 
     public static final String ACTIVATION_FUNC = "ActivationFunc";
@@ -147,7 +147,7 @@ public interface CommonConstants {
     public static final int NN_FORMAT_VERSION = 1;
 
     public static final int WDL_FORMAT_VERSION = 1;
-    
+
     public static final int MTL_FORMAT_VERSION = 1;
 
     public static final int DEFAULT_EMBEDING_OUTPUT = 8;
@@ -168,10 +168,20 @@ public interface CommonConstants {
     public static final String MTL_SUBTAG_DELIMITER = "||";
 
     public static final String MTL_INDEX = "shifu_mtl_index";
-    
+
     public static final String SQUARED_LOSS = "squared";
 
     public static final String MTL_ALG_NAME = "MTL";
 
+    public static final String NN_ALG_NAME = "NN";
+
+    public static final String TF_ALG_NAME = "TensorFlow";
+
+    public static final String LR_ALG_NAME = "LR";
+
+    /**
+     * Wide and deep model name
+     */
+    public static final String WDL_ALG_NAME = "WDL";
 
 }

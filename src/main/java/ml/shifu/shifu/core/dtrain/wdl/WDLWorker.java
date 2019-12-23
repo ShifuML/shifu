@@ -70,9 +70,8 @@ import ml.shifu.shifu.util.MapReduceUtils;
  * 
  * <p>
  * Data loading into memory as memory list includes two parts: numerical double array and sparse input object array
- * which
- * is for categorical variables. To leverage sparse feature of categorical variables, sparse object is leveraged to
- * save memory and matrix computation.
+ * which is for categorical variables. To leverage sparse feature of categorical variables, sparse object is leveraged
+ * to save memory and matrix computation.
  * 
  * <p>
  * First iteration, just return empty to master but wait for next iteration master models sync-up. Since at very first
@@ -698,7 +697,7 @@ public class WDLWorker extends
         int numLayers = (Integer) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
-        double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0d);
+        double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.L2_REG).toString(), 0d);
         Object wideEnableObj = this.validParams.get(CommonConstants.WIDE_ENABLE);
         boolean wideEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.WIDE_ENABLE), true);
         boolean deepEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.DEEP_ENABLE), true);

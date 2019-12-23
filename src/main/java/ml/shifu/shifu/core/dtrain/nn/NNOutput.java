@@ -24,7 +24,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import ml.shifu.shifu.util.NormalUtils;
+import ml.shifu.shifu.util.NormalizationUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -368,7 +368,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
         boolean isAfterVarSelect = inputOutputIndex[0] != 0;
         // cache all feature list for sampling features
-        List<Integer> allFeatures = NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
+        List<Integer> allFeatures = NormalizationUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
         String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);
         if(StringUtils.isBlank(subsetStr)) {
             this.subFeatures = new HashSet<Integer>(allFeatures);

@@ -27,15 +27,15 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
-import ml.shifu.shifu.util.*;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.column.NSColumnUtils;
@@ -48,13 +48,18 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.PerformanceResult;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.eval.AreaUnderCurve;
 import ml.shifu.shifu.core.eval.GainChart;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.HDFSUtils;
+import ml.shifu.shifu.util.JSONUtils;
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 
 /**
  * Confusion matrix, hold the confusion matrix computing.
@@ -709,7 +714,7 @@ public class ConfusionMatrix {
                         }
                     }
                 } else if((CommonUtils.isTreeModel(modelConfig.getAlgorithm())
-                        || NNConstants.NN_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm()))
+                        || CommonConstants.NN_ALG_NAME.equalsIgnoreCase(modelConfig.getAlgorithm()))
                         && modelConfig.getTrain().isOneVsAll()) {
                     // for RF, GBT & NN OneVsAll classification
                     if(classes == 2) {

@@ -54,7 +54,7 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.ModelSpecLoaderUtils;
-import ml.shifu.shifu.util.NormalUtils;
+import ml.shifu.shifu.util.NormalizationUtils;
 
 /**
  * {@link NNMaster} is used to accumulate all workers NN parameters.
@@ -510,7 +510,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         this.isAfterVarSelect = (inputOutputIndex[3] == 1);
         // cache all feature list for sampling features
-        this.allFeatures = NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
+        this.allFeatures = NormalizationUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
         String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);
         if(StringUtils.isBlank(subsetStr)) {
             this.subFeatures = this.allFeatures;

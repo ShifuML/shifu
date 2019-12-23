@@ -1101,7 +1101,7 @@ public final class CommonUtils {
     }
 
     public static boolean isTensorFlowModel(String alg) {
-        return Constants.TF_ALG_NAME.equalsIgnoreCase(alg);
+        return CommonConstants.TF_ALG_NAME.equalsIgnoreCase(alg);
     }
 
     public static boolean isNNModel(String alg) {
@@ -1114,6 +1114,10 @@ public final class CommonUtils {
 
     public static boolean isWDLModel(String alg) {
         return "wdl".equalsIgnoreCase(alg);
+    }
+
+    public static boolean isMTLModel(String alg) {
+        return "mtl".equalsIgnoreCase(alg);
     }
 
     public static boolean isWeightColumn(String weightColumnName, ColumnConfig columnConfig) {

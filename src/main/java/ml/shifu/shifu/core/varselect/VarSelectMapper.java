@@ -261,7 +261,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         boolean isAfterVarSelect = (inputOutputIndex[0] != 0);
         // cache all feature list for sampling features
         if(this.featureSet == null || this.featureSet.size() == 0) {
-            this.featureSet = new HashSet<Integer>(NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect));
+            this.featureSet = new HashSet<Integer>(NormalizationUtils.getAllFeatureList(columnConfigList, isAfterVarSelect));
             this.inputs = new double[this.featureSet.size()];
         }
 

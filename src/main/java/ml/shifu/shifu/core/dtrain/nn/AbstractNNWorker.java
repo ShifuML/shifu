@@ -63,7 +63,7 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.MapReduceUtils;
-import ml.shifu.shifu.util.NormalUtils;
+import ml.shifu.shifu.util.NormalizationUtils;
 
 /**
  * {@link AbstractNNWorker} is refactored as a common class for different NN input format.
@@ -454,7 +454,7 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         LOG.info("isAfterVarSelect {}: Input count {}, output count {}, candidate count {}", isAfterVarSelect,
                 inputNodeCount, outputNodeCount, candidateCount);
         // cache all feature list for sampling features
-        this.allFeatures = NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
+        this.allFeatures = NormalizationUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
         String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);
         if(StringUtils.isBlank(subsetStr)) {
             this.subFeatures = this.allFeatures;

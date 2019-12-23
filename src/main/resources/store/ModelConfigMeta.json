@@ -660,7 +660,7 @@
                         "directive": "input",
                         "defval" : 0.1
                     }, {
-                        "name" : "WDLL2Reg",
+                        "name" : "L2Reg",
                         "type" : "float",
                         "directive": "input",
                         "defval" : 0.01

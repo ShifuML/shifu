@@ -313,9 +313,15 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
             List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(modelConfig, evalConfig,
                     evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb(),
                     evalConfig.getGbtScoreConvertStrategy());
-            this.modelRunner = new ModelRunner(modelConfig, mtlColumnConfigLists, this.headers,
-                    evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,
-                    this.isMultiThreadScoring, this.getCategoryMissingNormType(), this.isMultiTask);
+            if(this.isMultiTask) {
+                this.modelRunner = new ModelRunner(modelConfig, mtlColumnConfigLists, this.headers,
+                        evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,
+                        this.isMultiThreadScoring, this.getCategoryMissingNormType(), this.isMultiTask);
+            } else {
+                this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,
+                        evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,
+                        this.isMultiThreadScoring, this.getCategoryMissingNormType());
+            }
 
             // FIXME MTL not supported in sub models
             List<ModelSpec> subModels = ModelSpecLoaderUtils.loadSubModels(modelConfig, this.columnConfigList,

@@ -39,15 +39,15 @@ import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.ScoreObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.mtl.MTLModel;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.executor.ExecutorManager;
 import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.NormalUtils;
+import ml.shifu.shifu.util.NormalizationUtils;
 
 /**
  * Scorer, calculate the score for a specify input
@@ -131,9 +131,11 @@ public class Scorer {
         this.multiThread = multiThread;
         this.models = models;
 
-        this.mtlColumnConfigLists = mtlColumnConfigLists;
-        if(this.mtlColumnConfigLists == null) {
-            throw new IllegalArgumentException("mtlColumnConfigLists should not be null");
+        if(isMTL) {
+            this.mtlColumnConfigLists = mtlColumnConfigLists;
+            if(this.mtlColumnConfigLists == null) {
+                throw new IllegalArgumentException("mtlColumnConfigLists should not be null");
+            }
         }
 
         this.cutoff = cutoff;
@@ -299,7 +301,7 @@ public class Scorer {
     }
 
     public ScoreObject score(Map<String, String> rawDataMap) {
-        return scoreNsData(NormalUtils.convertRawMapToNsDataMap(rawDataMap));
+        return scoreNsData(NormalizationUtils.convertRawMapToNsDataMap(rawDataMap));
     }
 
     /**
@@ -314,16 +316,16 @@ public class Scorer {
     }
 
     public ScoreObject score(final MLDataPair pair, Map<String, String> rawDataMap) {
-        return scoreNsData(pair, NormalUtils.convertRawMapToNsDataMap(rawDataMap));
+        return scoreNsData(pair, NormalizationUtils.convertRawMapToNsDataMap(rawDataMap));
     }
 
     public ScoreObject scoreNsData(MLDataPair inputPair, Map<NSColumn, String> rawNsDataMap) {
-        if(inputPair == null && !this.alg.equalsIgnoreCase(NNConstants.NN_ALG_NAME)) {
+        if(inputPair == null && !this.alg.equalsIgnoreCase(CommonConstants.NN_ALG_NAME)) {
             if(modelConfig.isMultiTask()) {
-                inputPair = NormalUtils.assembleNsDataPair(mtlBinCategoryMaps, noVarSelect, modelConfig,
+                inputPair = NormalizationUtils.assembleNsDataPair(mtlBinCategoryMaps, noVarSelect, modelConfig,
                         mtlSelectedColumnConfigList, rawNsDataMap, cutoff, alg, categoryMissingNormType);
             } else {
-                inputPair = NormalUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
+                inputPair = NormalizationUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
                         selectedColumnConfigList, rawNsDataMap, cutoff, alg, categoryMissingNormType);
             }
         }
@@ -348,19 +350,12 @@ public class Scorer {
                 String cacheKey = featureSetToString(network.getFeatureSet());
                 MLDataPair dataPair = cachedNormDataPair.get(cacheKey);
                 if(dataPair == null) {
-                    dataPair = NormalUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
+                    dataPair = NormalizationUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
                             selectedColumnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet());
                     cachedNormDataPair.put(cacheKey, dataPair);
                 }
                 final MLDataPair networkPair = dataPair;
 
-                /*
-                 * if(network.getFeatureSet().size() != networkPair.getInput().size()) {
-                 * log.error("Network and input size mismatch: Network Size = " + network.getFeatureSet().size()
-                 * + "; Input Size = " + networkPair.getInput().size());
-                 * continue;
-                 * }
-                 */
                 if(System.currentTimeMillis() % 1000 == 0L) {
                     log.info("Network input count = {}, while input size = {}", network.getInputCount(),
                             networkPair.getInput().size());
@@ -398,8 +393,8 @@ public class Scorer {
                 }
             } else if(model instanceof BasicNetwork) {
                 final BasicNetwork network = (BasicNetwork) model;
-                final MLDataPair networkPair = NormalUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
-                        columnConfigList, rawNsDataMap, cutoff, alg);
+                final MLDataPair networkPair = NormalizationUtils.assembleNsDataPair(binCategoryMap, noVarSelect,
+                        modelConfig, columnConfigList, rawNsDataMap, cutoff, alg);
 
                 Callable<MLData> callable = new Callable<MLData>() {
                     @Override
