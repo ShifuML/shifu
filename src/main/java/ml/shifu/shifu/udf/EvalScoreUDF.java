@@ -173,8 +173,15 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
         // TODO not to load model but only to check model file cnt
         this.modelScoreNames = ModelSpecLoaderUtils.getBasicModelScoreNames(modelConfig, evalConfig,
                 evalConfig.getDataSet().getSource());
+        this.modelCnt = this.modelScoreNames.size();
         this.subModelScoreNames = ModelSpecLoaderUtils.getSubModelScoreNames(modelConfig, this.columnConfigList,
                 evalConfig, evalConfig.getDataSet().getSource());
+        if(this.subModelScoreNames != null && this.subModelScoreNames.size() > 0) {
+            this.subModelsCnt = new HashMap<>();
+            for(Entry<String, List<String>> entry: this.subModelScoreNames.entrySet()) {
+                this.subModelsCnt.put(entry.getKey(), entry.getValue().size());
+            }
+        }
 
         if(modelConfig.isClassification()) {
             if(modelConfig.getTrain().isOneVsAll()) {
@@ -639,7 +646,9 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
             if(isLinearTarget || this.isMultiTask || modelConfig.isRegression()) {
                 if(this.modelCnt > 0) {
                     if(this.isMultiTask) {
-                        addModelSchema(tupleSchema, this.modelConfig.getMultiTaskTargetColumnNames().size(), "");
+                        // TODO REMOVEME addModelSchema(tupleSchema,
+                        // this.modelConfig.getMultiTaskTargetColumnNames().size(), "");
+                        addModelSchema(tupleSchema, 1, "");
                     } else {
                         addModelSchema(tupleSchema, this.modelCnt, "");
                     }

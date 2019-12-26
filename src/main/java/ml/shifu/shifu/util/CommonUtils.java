@@ -1856,11 +1856,9 @@ public final class CommonUtils {
         }
 
         double[] output = new double[src.length];
-
         for(int i = 0; i < src.length; i++) {
             output[i] = src[i];
         }
-
         return output;
     }
 
@@ -1870,11 +1868,9 @@ public final class CommonUtils {
         }
 
         float[] output = new float[src.length];
-
         for(int i = 0; i < src.length; i++) {
             output[i] = (float) src[i];
         }
-
         return output;
     }
 
@@ -1882,15 +1878,12 @@ public final class CommonUtils {
         if(src == null || target == null) {
             return null;
         }
-
         assert src.length == target.length;
 
         double[] output = new double[src.length];
-
         for(int i = 0; i < src.length; i++) {
             output[i] = src[i] - target[i];
         }
-
         return output;
     }
 
@@ -1898,15 +1891,12 @@ public final class CommonUtils {
         if(src == null || target == null) {
             return null;
         }
-
         assert src.length == target.length;
 
         double[] output = new double[src.length];
-
         for(int i = 0; i < src.length; i++) {
             output[i] = src[i] + target[i];
         }
-
         return output;
     }
 
@@ -1914,15 +1904,12 @@ public final class CommonUtils {
         if(src == null || target == null) {
             return null;
         }
-
         assert src.length == target.length;
 
         double[] output = new double[src.length];
-
         for(int i = 0; i < src.length; i++) {
             output[i] = src[i] - target[i];
         }
-
         return output;
     }
 
@@ -1932,11 +1919,9 @@ public final class CommonUtils {
         }
 
         double[] output = new double[src.length];
-
         for(int i = 0; i < src.length; i++) {
             output[i] = sigmoid(src[i]);
         }
-
         return output;
     }
 
