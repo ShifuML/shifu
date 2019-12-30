@@ -491,40 +491,13 @@ public class MultiTaskModel implements WeightInitializer<MultiTaskModel>, Bytabl
     /**
      * Default weights initialization.
      */
-    @SuppressWarnings("rawtypes")
     public void initWeights() {
         InitMethod defaultMode = InitMethod.NEGATIVE_POSITIVE_ONE_RANGE_RANDOM;
         initWeight(defaultMode);
-
-        int hiddenCount = 0;
-        for(Layer layer: this.hiddenLayers) {
-            if(layer instanceof DenseLayer) {
-                hiddenCount += ((DenseLayer) layer).getOut();
-            }
-        }
-
-        // can't really do much, use regular randomization
-        if(hiddenCount < 1) {
-            return;
-        }
-
-        int inputCount = dil.getOutDim();
-        double beta = 0.7 * Math.pow(hiddenCount, 1.0 / inputCount);
-
-        for(Layer layer: this.hiddenLayers) {
-            if(!(layer instanceof DenseLayer)) {
-                continue;
-            }
-            initDenserLayerWeights((DenseLayer) layer, beta);
-        }
-
-        for(DenseLayer denseLayer: this.finalLayers) {
-            initDenserLayerWeights(denseLayer, beta);
-        }
-
         LOG.info("Init weight be called with mode:{}", defaultMode.name());
     }
 
+    @SuppressWarnings("unused")
     private void initDenserLayerWeights(DenseLayer layer, double beta) {
         double n = 0d;
         double[][] weights = layer.getWeights();
