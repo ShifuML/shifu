@@ -610,6 +610,7 @@ public class ModelTrainConf {
             func.add("tanh");
             params.put(CommonConstants.ACTIVATION_FUNC, func);
             params.put(CommonConstants.REGULARIZED_CONSTANT, 0.0);
+            params.put(CommonConstants.L2_REG, 1e-8f);
         }
         return params;
     }
