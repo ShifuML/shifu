@@ -646,9 +646,8 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
             if(isLinearTarget || this.isMultiTask || modelConfig.isRegression()) {
                 if(this.modelCnt > 0) {
                     if(this.isMultiTask) {
-                        // TODO REMOVEME addModelSchema(tupleSchema,
-                        // this.modelConfig.getMultiTaskTargetColumnNames().size(), "");
-                        addModelSchema(tupleSchema, 1, "");
+                        // TODO REMOVEME
+                        addModelSchema(tupleSchema, this.modelConfig.getMultiTaskTargetColumnNames().size(), "");
                     } else {
                         addModelSchema(tupleSchema, this.modelCnt, "");
                     }
