@@ -125,7 +125,7 @@
   <property>
     <description>Worker memory size, requested as a string (e.g. '2g' or '2048m').</description>
     <name>shifu.worker.memory</name>
-    <value>6g</value>
+    <value>2g</value>
   </property>
 
 <!-- Could change by User -->

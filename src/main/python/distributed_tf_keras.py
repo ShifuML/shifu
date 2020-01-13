@@ -502,18 +502,20 @@ def load_data(shifu_context):
                         train_pos_cnt += 1
                     else:
                         train_neg_cnt += 1
-                    single_train_data = []
+                    single_train_data = np.zeros([len(feature_column_nums)], dtype=np.float32)
+                    single_train_data_index = 0
                     for feature_column_num in feature_column_nums:
                         try:
                             f_val = float(columns[feature_column_num].strip('\n'))
                             if math.isnan(f_val):
                                 logging.warn("Warning: value is NaN after parsing %s." % columns[feature_column_num].strip('\n'))
                                 f_val = 0.0
-                            single_train_data.append(f_val)
+                            single_train_data[single_train_data_index] = f_val
                         except:
-                            single_train_data.append(0.0) # default value 1
+                            single_train_data[single_train_data_index] = 0.0
                             logging.warn("Could not convert %s to float." % str(columns[feature_column_num].strip('\n')))
                             logging.info("DEBUG: feature_column_num is %s." % str(feature_column_num))
+                        single_train_data_index += 1
                     train_data.append(single_train_data)
 
                     weight = float(columns[len(columns)-1].strip('\n'))
@@ -528,18 +530,20 @@ def load_data(shifu_context):
                         valid_pos_cnt += 1
                     else:
                         valid_neg_cnt += 1
-                    single_valid_data = []
+                    single_valid_data = np.zeros([len(feature_column_nums)], dtype=np.float32)
+                    single_valid_data_index = 0
                     for feature_column_num in feature_column_nums:
                         try:
                             f_val = float(columns[feature_column_num].strip('\n'))
                             if math.isnan(f_val):
                                 logging.warn("Warning: value is NaN after parsing %s." % columns[feature_column_num].strip('\n'))
                                 f_val = 0.0
-                            single_valid_data.append(f_val)
+                            single_valid_data[single_valid_data_index] = f_val
                         except:
-                            single_valid_data.append(0.0) # default value 1
+                            single_valid_data[single_valid_data_index] = 0.0
                             logging.warn("Could not convert %s to float." % str(columns[feature_column_num].strip('\n')))
                             logging.info("DEBUG: feature_column_num is %s." % str(feature_column_num))
+                        single_valid_data_index += 1
                     valid_data.append(single_valid_data)
 
                     weight = float(columns[len(columns)-1].strip('\n'))
