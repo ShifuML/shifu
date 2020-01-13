@@ -34,6 +34,11 @@ public class BasicFloatMLDataPair implements FloatMLDataPair, Serializable {
      * The significance.
      */
     private float significance = 1.0f;
+    
+    /**
+     * Significance array for multiple weights
+     */
+    private float[] significances;
 
     /**
      * Create a new data pair object of the correct size for the machine
@@ -186,6 +191,20 @@ public class BasicFloatMLDataPair implements FloatMLDataPair, Serializable {
      */
     public void setSignificance(float significance) {
         this.significance = significance;
+    }
+
+    /**
+     * @return the significances
+     */
+    public float[] getSignificances() {
+        return significances;
+    }
+
+    /**
+     * @param significances the significances to set
+     */
+    public void setSignificances(float[] significances) {
+        this.significances = significances;
     }
 
 }

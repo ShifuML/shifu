@@ -43,6 +43,7 @@ import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
 import org.encog.ml.BasicML;
 
+import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -139,6 +140,8 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
 
     @SuppressWarnings("rawtypes")
     private Map subModelsCnt;
+
+    private String currWgtNameInMTL;
 
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
@@ -254,7 +257,23 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
         this.isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
 
         this.isMultiTask = modelConfig.isMultiTask();
+        this.currWgtNameInMTL = evalConfig.getDataSet().getWeightColumnName();
         if(this.isMultiTask) {
+            int mtlIndex = -1;
+            if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+                mtlIndex = NumberFormatUtils
+                        .getInt(UDFContext.getUDFContext().getJobConf().get(CommonConstants.MTL_INDEX), -1);
+            } else {
+                // "when do local initilization mtlIndex is -1, set to 0 to pass");
+                mtlIndex = 0;
+            }
+            modelConfig.setMtlIndex(mtlIndex);
+            boolean multiWeightsInMTL = modelConfig.isMultiWeightsInMTL(evalConfig.getDataSet().getWeightColumnName());
+            if(multiWeightsInMTL) {
+                this.currWgtNameInMTL = modelConfig
+                        .getMultiTaskWeightColumnNames(evalConfig.getDataSet().getWeightColumnName())
+                        .get(this.modelConfig.getMtlIndex());
+            }
             initMultTaskConfigs();
         }
     }
@@ -389,8 +408,8 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
         }
 
         String weight = "1.0";
-        if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())) {
-            weight = rawDataNsMap.get(new NSColumn(evalConfig.getDataSet().getWeightColumnName()));
+        if(StringUtils.isNotBlank(this.currWgtNameInMTL)) {
+            weight = rawDataNsMap.get(new NSColumn(this.currWgtNameInMTL));
         }
 
         incrementTagCounters(tag, weight, runInterval);

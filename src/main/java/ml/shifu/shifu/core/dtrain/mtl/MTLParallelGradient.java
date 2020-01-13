@@ -234,14 +234,20 @@ public class MTLParallelGradient {
                 FloatMLDataPair data = BasicFloatMLDataPair.createPair(this.trainData.getInputSize(),
                         this.trainData.getIdealSize());
                 this.trainData.getRecord(i, data);
-                trainSize += data.getSignificance();
                 double[] logits = this.mtm.forward(CommonUtils.floatToDouble(data.getInputArray()));
                 double[] predict = CommonUtils.sigmoid(logits);
                 double[] error = CommonUtils.minus(predict, data.getIdealArray());
                 for(int j = 0; j < error.length; j++) {
-                    trainSumError += (error[j] * error[j] * data.getSignificance());
+                    float sig = data.getSignificances()!= null ? data.getSignificances()[j]:data.getSignificance();
+                    trainSize += sig;
+                    trainSumError += (error[j] * error[j] * sig);
                 }
-                this.mtm.backward(predict, CommonUtils.floatToDouble(data.getIdealArray()), data.getSignificance());
+                if(data.getSignificances()!= null) {
+                     this.mtm.backward(predict, CommonUtils.floatToDouble(data.getIdealArray()),
+                     data.getSignificances());
+                } else {
+                    this.mtm.backward(predict, CommonUtils.floatToDouble(data.getIdealArray()), data.getSignificance());
+                }
             }
             TASK_LOG.info("Worker with training time {} ms.", (System.currentTimeMillis() - start));
 
@@ -254,10 +260,11 @@ public class MTLParallelGradient {
                 this.validationData.getRecord(i, data);
                 double[] logits = this.mtm.forward(CommonUtils.floatToDouble(data.getInputArray()));
                 double[] predict = CommonUtils.sigmoid(logits);
-                validationSize += data.getSignificance();
                 double[] error = CommonUtils.minus(predict, data.getIdealArray());
                 for(int j = 0; j < error.length; j++) {
-                    validSumError += (error[j] * error[j] * data.getSignificance());
+                    float sig = data.getSignificances()!= null ? data.getSignificances()[j]:data.getSignificance();
+                    validationSize += sig;
+                    validSumError += (error[j] * error[j] * sig);
                 }
             }
             TASK_LOG.info("Training error is {}, validation error is {}.", trainSumError, validSumError);

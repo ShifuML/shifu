@@ -415,6 +415,46 @@ public class ModelConfig {
         return this.isMultiTask(dataSet.getTargetColumnName());
     }
 
+    /**
+     * If multi-task learning or not.
+     * 
+     * @return true if MTL
+     */
+    @JsonIgnore
+    public boolean isMultiWeightsInMTL() {
+        boolean result = this.isMultiTask() && this.getWeightColumnName() != null
+                && this.getWeightColumnName().contains(CommonConstants.MTL_DELIMITER);
+        if(result) {
+            List<String> weights = CommonUtils.splitAndReturnList(dataSet.getWeightColumnName(),
+                    CommonConstants.MTL_DELIMITER);
+            if(this.getMultiTaskTargetColumnNames().size() != weights.size()) {
+                throw new IllegalStateException(
+                        "Size of target columns is not consistent with size of weight columns.");
+            }
+        }
+        return result;
+    }
+    
+    /**
+     * If multi-task learning or not.
+     * 
+     * @return true if MTL
+     */
+    @JsonIgnore
+    public boolean isMultiWeightsInMTL(String wgtColName) {
+        boolean result = this.isMultiTask() && wgtColName != null
+                && wgtColName.contains(CommonConstants.MTL_DELIMITER);
+        if(result) {
+            List<String> weights = CommonUtils.splitAndReturnList(wgtColName,
+                    CommonConstants.MTL_DELIMITER);
+            if(this.getMultiTaskTargetColumnNames().size() != weights.size()) {
+                throw new IllegalStateException(
+                        "Size of target columns is not consistent with size of weight columns.");
+            }
+        }
+        return result;
+    }
+
     /*
      * Flattened tags for multiple classification. '1', '2|3' will be flattened to '1', '2', '3'. While '2' and '3' are
      * combined to one class.
@@ -667,6 +707,22 @@ public class ModelConfig {
             return null;
         }
         return CommonUtils.splitAndReturnList(dataSet.getTargetColumnName(), CommonConstants.MTL_DELIMITER);
+    }
+
+    @JsonIgnore
+    public List<String> getMultiTaskWeightColumnNames() {
+        if(this.isMultiWeightsInMTL()) {
+            return CommonUtils.splitAndReturnList(dataSet.getWeightColumnName(), CommonConstants.MTL_DELIMITER);
+        }
+        return null;
+    }
+
+    @JsonIgnore
+    public List<String> getMultiTaskWeightColumnNames(String wgtNames) {
+        if(this.isMultiWeightsInMTL(wgtNames)) {
+            return CommonUtils.splitAndReturnList(wgtNames, CommonConstants.MTL_DELIMITER);
+        }
+        return null;
     }
 
     @JsonIgnore

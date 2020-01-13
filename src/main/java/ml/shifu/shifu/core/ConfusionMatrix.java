@@ -309,11 +309,16 @@ public class ConfusionMatrix {
                 // the score column is not found in the header of EvalScore
                 throw new ShifuException(ShifuErrorCode.ERROR_EVAL_SELECTOR_EMPTY);
             }
-            
+
             targetColumnIndex = getColumnIndex(evalScoreHeaders,
                     StringUtils.trimToEmpty(modelConfig.getMultiTaskTargetColumnNames().get(mtlIndex)));
             if(targetColumnIndex < 0) {
                 throw new ShifuException(ShifuErrorCode.ERROR_EVAL_TARGET_NOT_FOUND);
+            }
+
+            if(modelConfig.isMultiWeightsInMTL(evalConfig.getDataSet().getWeightColumnName())) {
+                weightColumnIndex = getColumnIndex(evalScoreHeaders, StringUtils.trimToEmpty(modelConfig
+                        .getMultiTaskWeightColumnNames(evalConfig.getDataSet().getWeightColumnName()).get(mtlIndex)));
             }
         }
 

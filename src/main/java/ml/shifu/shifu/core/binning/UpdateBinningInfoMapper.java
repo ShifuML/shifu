@@ -173,7 +173,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             throw new RuntimeException(e);
         }
     }
-    
+
     /**
      * Initialization for column statistics in mapper.
      */
@@ -358,6 +358,9 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     private void loadWeightColumnNum() {
         String weightColumnName = this.modelConfig.getDataSet().getWeightColumnName();
         if(weightColumnName != null && weightColumnName.length() != 0) {
+            if(this.modelConfig.isMultiTask() && this.modelConfig.isMultiWeightsInMTL()) {
+                weightColumnName = this.modelConfig.getMultiTaskWeightColumnNames().get(this.modelConfig.getMtlIndex());
+            }
             for(int i = 0; i < this.columnConfigList.size(); i++) {
                 ColumnConfig config = this.columnConfigList.get(i);
                 if(config.getColumnName().equals(weightColumnName)) {

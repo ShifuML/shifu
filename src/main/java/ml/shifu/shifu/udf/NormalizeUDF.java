@@ -112,6 +112,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private List<Map<Integer, Map<String, Integer>>> mtlCiMapList;
     private List<List<Set<String>>> mtlSetTagsList;
     private Set<Integer> mtlTMIndexSet;
+    private boolean multiWeightsInMTL;
+    private int[] mtlWeightColumnNums;
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         this(source, pathModelConfig, pathColumnConfig, "false");
@@ -122,6 +124,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         super(source, pathModelConfig, pathColumnConfig);
 
         this.isMultiTask = modelConfig.isMultiTask();
+        this.multiWeightsInMTL = modelConfig.isMultiWeightsInMTL();
 
         this.categoryMissingNormType = CategoryMissingNormType
                 .of(getUdfProperty(Constants.SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
@@ -140,13 +143,26 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         this.tags = super.modelConfig.getSetTags();
 
         boolean hasColumnSelected = false;
+
+        if(this.isMultiTask && this.multiWeightsInMTL) {
+            this.mtlWeightColumnNums = new int[this.modelConfig.getMultiTaskWeightColumnNames().size()];
+        }
         for(ColumnConfig config: columnConfigList) {
             if(!hasColumnSelected && config.isFinalSelect()) {
                 hasColumnSelected = true;
             }
 
-            if(CommonUtils.isWeightColumn(modelConfig.getWeightColumnName(), config)) {
-                this.weightColumnId = config.getColumnNum();
+            if(this.isMultiTask && this.multiWeightsInMTL) {
+                List<String> wgtColumns = this.modelConfig.getMultiTaskWeightColumnNames();
+                for(int i = 0; i < wgtColumns.size(); i++) {
+                    if(CommonUtils.isWeightColumn(wgtColumns.get(i), config)) {
+                        this.mtlWeightColumnNums[i] = config.getColumnNum();
+                    }
+                }
+            } else {
+                if(CommonUtils.isWeightColumn(modelConfig.getWeightColumnName(), config)) {
+                    this.weightColumnId = config.getColumnNum();
+                }
             }
         }
         this.categoricalIndexMap = buildCateIndeMap(this.columnConfigList);
@@ -355,8 +371,20 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         // append tuple with weight.
 
+        if(this.isMultiTask && this.multiWeightsInMTL) {
+            for(int i = 0; i < this.mtlWeightColumnNums.length; i++) {
+                tuple.append(buildAndAppendWeight(input, this.mtlWeightColumnNums[i]));
+            }
+        } else {
+            tuple.append(buildAndAppendWeight(input, this.weightColumnId));
+        }
+
+        return tuple;
+    }
+
+    private double buildAndAppendWeight(Tuple input, int weightColumnId) throws ExecException {
         double weight = 1.0d;
-        if(this.weightColumnId > 0) {
+        if(weightColumnId > 0) {
             String weightRaw = input.get(weightColumnId).toString();
             try {
                 weight = Double.parseDouble(weightRaw);
@@ -367,9 +395,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 weight = 1.0d; // set to 1.0d as default
             }
         }
-        tuple.append(weight);
-
-        return tuple;
+        return weight;
     }
 
     private boolean norm(Tuple input, Tuple tuple, Map<String, Object> compactVarMap, int inputSize,
@@ -692,7 +718,14 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 } else {
                     buildSchema(schemaStr, this.columnConfigList, this.isMultiTask, -1);
                 }
-                schemaStr.append("shifu::weight:").append(getOutputPrecisionType()).append(")");
+                if(this.isMultiTask && this.multiWeightsInMTL) {
+                    for(int i = 0; i < this.mtlWeightColumnNums.length; i++) {
+                        schemaStr.append("shifu::weight_").append(i).append(":").append(getOutputPrecisionType());
+                    }
+                    schemaStr.append(")");
+                } else {
+                    schemaStr.append("shifu::weight:").append(getOutputPrecisionType()).append(")");
+                }
                 log.info(" schema string is " + schemaStr.toString());
                 return Utils.getSchemaFromString(schemaStr.toString());
             }

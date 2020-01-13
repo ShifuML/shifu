@@ -185,6 +185,11 @@ public class MTLWorker extends
     private List<String> multiTagColumns;
 
     /**
+     * If has multiple weight columns in MTL
+     */
+    private boolean isMultiWeights;
+
+    /**
      * Load data as input data array into memory training data set and validation data set. Multiple tasks are sorted
      * one by one in the same line to avoid join operations.
      */
@@ -200,17 +205,27 @@ public class MTLWorker extends
         float[] outputs = new float[this.multiTagColumns.size()];
 
         float significance = 1f;
+        float[] significances = new float[this.multiTagColumns.size()];
 
-        int index = 0, inputIndex = 0, outputIndex = 0;
+        int index = 0, inputIndex = 0, outputIndex = 0, mtlWgtIndex = 0;
 
         // all columnConfigList have the same size, so just get the first one
         int columns = this.mtlColumnConfigLists.get(0).size();
 
         // use guava Splitter to iterate only once
         for(String input: this.splitter.split(currentValue.getWritable().toString())) {
-            if(index == this.multiTagColumns.size() * columns) {
-                significance = getWeightValue(input);
-                break; // only the last field is significance, break here
+            if(this.isMultiWeights) {
+                significances[mtlWgtIndex++] = getWeightValue(input);
+                if(mtlWgtIndex < significances.length) {
+                    continue;
+                } else {
+                    break; // last fields are all weights
+                }
+            } else {
+                if(index == this.multiTagColumns.size() * columns) {
+                    significance = getWeightValue(input);
+                    break; // only the last field is significance, break here
+                }
             }
 
             // multiple norm outputs are appended one by one in the same line
@@ -234,6 +249,9 @@ public class MTLWorker extends
 
         FloatMLDataPair data = new BasicFloatMLDataPair(new BasicFloatMLData(inputs), new BasicFloatMLData(outputs));
         data.setSignificance(significance);
+        if(this.isMultiWeights) {
+            data.setSignificances(significances);
+        }
 
         // split into validation and training data set according to validation rate
         this.addDataPairToDataSet(hashcode, data, context.getAttachment());
@@ -407,6 +425,8 @@ public class MTLWorker extends
     public void init(WorkerContext<MTLParams, MTLParams> context) {
         Properties props = context.getProps();
         loadConfigs(props);
+
+        this.isMultiWeights = this.modelConfig.isMultiTask() && this.modelConfig.isMultiWeightsInMTL();
 
         this.hasCandidates = CommonUtils.hasCandidateColumns(this.mtlColumnConfigLists.get(0));
 

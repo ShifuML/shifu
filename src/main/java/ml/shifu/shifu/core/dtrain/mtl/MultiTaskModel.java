@@ -280,6 +280,48 @@ public class MultiTaskModel implements WeightInitializer<MultiTaskModel>, Bytabl
     }
 
     /**
+     * Backward computation to get gradients. Gradients are computed and saved in each layer based on backward errors.
+     * 
+     * @param predicts
+     *            predicted values
+     * @param actuals
+     *            the actual target values
+     * @param sig
+     *            array of weights for targets
+     * @return null as gradients are accumulated in backward computation of each layer.
+     */
+    @SuppressWarnings("rawtypes")
+    public double[] backward(double[] predicts, double[] actuals, float[] sig) {
+        // TODO add binary cross entropy here, merge into another backward method
+        // 1. Error computation based on outputs of different target.
+        double[] grad2Logits = new double[predicts.length];
+        for(int i = 0; i < grad2Logits.length; i++) {
+            double error = (predicts[i] - actuals[i]);
+            grad2Logits[i] = error * (CommonUtils.sigmoidDerivedFunction(predicts[i]) + FLAT_SPOT_VALUE) * sig[i] * -1d;
+        }
+
+        // 2. Final layers backward accumulation
+        double[] backInputs = new double[finalLayers.get(0).getIn()];
+        for(int i = 0; i < this.finalLayers.size(); i++) {
+            backInputs = CommonUtils.plus(backInputs,
+                    this.finalLayers.get(i).backward(new double[] { grad2Logits[i] }));
+        }
+
+        // 3. Backward computation in hidden layers
+        for(int i = 0; i < this.hiddenLayers.size(); i++) {
+            Layer layer = this.hiddenLayers.get(this.hiddenLayers.size() - 1 - i);
+            if(layer instanceof DenseLayer) {
+                backInputs = ((DenseLayer) layer).backward(backInputs);
+            } else if(layer instanceof Activation) {
+                backInputs = ((Activation) layer).backward(backInputs);
+            }
+        }
+
+        // no need return final backward outputs as gradients are computed well
+        return null;
+    }
+
+    /**
      * Each layer with correlated optimizer should be optimized for weights updating.
      */
     @SuppressWarnings("rawtypes")

@@ -66,9 +66,15 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
         super(source, pathModelConfig, pathColumnConfig);
         negTags = new HashSet<String>(modelConfig.getNegTags());
         // get weight column ID
+        String wgtColName = null;
         if(StringUtils.isNotBlank(this.modelConfig.getWeightColumnName())) {
+            if(this.modelConfig.isMultiTask() && this.modelConfig.isMultiWeightsInMTL()) {
+                wgtColName = this.modelConfig.getMultiTaskWeightColumnNames().get(this.modelConfig.getMtlIndex());
+            } else {
+                wgtColName = modelConfig.getWeightColumnName();
+            }
             for(ColumnConfig columnConfig: columnConfigList) {
-                if(columnConfig.getColumnName().equalsIgnoreCase(modelConfig.getWeightColumnName().trim())) {
+                if(columnConfig.getColumnName().equalsIgnoreCase(wgtColName.trim())) {
                     this.weightColumnId = columnConfig.getColumnNum();
                 }
             }
