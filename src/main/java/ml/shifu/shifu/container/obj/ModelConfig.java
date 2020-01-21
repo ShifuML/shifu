@@ -416,7 +416,7 @@ public class ModelConfig {
     }
 
     /**
-     * If multi-task learning or not.
+     * If has multi-task learning weights or not.
      * 
      * @return true if MTL
      */
@@ -434,19 +434,19 @@ public class ModelConfig {
         }
         return result;
     }
-    
+
     /**
-     * If multi-task learning or not.
+     * If has multi-task learning weights or not.
      * 
+     * @param wgtColName
+     *            the raw weight column name (may contains multiple weight columns)
      * @return true if MTL
      */
     @JsonIgnore
     public boolean isMultiWeightsInMTL(String wgtColName) {
-        boolean result = this.isMultiTask() && wgtColName != null
-                && wgtColName.contains(CommonConstants.MTL_DELIMITER);
+        boolean result = this.isMultiTask() && wgtColName != null && wgtColName.contains(CommonConstants.MTL_DELIMITER);
         if(result) {
-            List<String> weights = CommonUtils.splitAndReturnList(wgtColName,
-                    CommonConstants.MTL_DELIMITER);
+            List<String> weights = CommonUtils.splitAndReturnList(wgtColName, CommonConstants.MTL_DELIMITER);
             if(this.getMultiTaskTargetColumnNames().size() != weights.size()) {
                 throw new IllegalStateException(
                         "Size of target columns is not consistent with size of weight columns.");

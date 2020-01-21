@@ -134,7 +134,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                     log.warn("Some mean value of column is null, could you check if you run 'shifu stats'.");
                     return -1;
                 }
-                
+
                 if(this.modelConfig.isMultiTask()) {
                     throw new IllegalArgumentException("FIXME corre doesn't support MULTI Task Learning");
                 }
@@ -164,7 +164,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 }
 
                 if(StringUtils.isNotEmpty(modelConfig.getPsiColumnName())) {
-                    new MapReducerStatsWorker(this, modelConfig, columnConfigList).runPSI();
+                    new MapReducerStatsWorker(this, modelConfig, columnConfigList, false).runPSI();
                     // save column config list after running PSI successfully
                     saveColumnConfigList();
                 } else {
@@ -217,8 +217,19 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 // use the merge ColumnConfig.json to replace current one
                 saveColumnConfigList();
             } else {
+                boolean isUpdateStatsOnly = getBooleanParam(this.params, Constants.IS_UPDATE_STATS_ONLY);
+                if(isUpdateStatsOnly) {
+                    for(ColumnConfig cc: columnConfigList) {
+                        if(cc.isTarget() && (cc.getBinCategory() == null || cc.getBinCategory().size() == 0)) {
+                            throw new IllegalStateException(
+                                    "No binBoundry or binCategory in current ColumnConfig.json, please run 'shifu stats' or make sure ColumnConfig.json with enougn boundry information.");
+                        }
+                    }
+                }
+
                 if(!this.modelConfig.isMultiTask()) {
-                    AbstractStatsExecutor statsExecutor = createStatsExecutor(this.modelConfig, this.columnConfigList);
+                    AbstractStatsExecutor statsExecutor = createStatsExecutor(this.modelConfig, this.columnConfigList,
+                            isUpdateStatsOnly);
                     statsExecutor.doStats();
 
                     // update the backup ColumnConfig.json after running stats
@@ -229,7 +240,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                     // TODO run in parallel
                     for(int i = 0; i < this.mtlColumnConfigLists.size(); i++) {
                         AbstractStatsExecutor statsExecutor = createStatsExecutor(this.modelConfig,
-                                this.mtlColumnConfigLists.get(i));
+                                this.mtlColumnConfigLists.get(i), isUpdateStatsOnly);
                         statsExecutor.setMtlIndex(i);
                         log.info("Start to run the {} multi-task learning job.", i);
                         statsExecutor.doStats();
@@ -254,21 +265,22 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         return 0;
     }
 
-    private AbstractStatsExecutor createStatsExecutor(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
+    private AbstractStatsExecutor createStatsExecutor(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            boolean isUpdateStatsOnly) {
         AbstractStatsExecutor statsExecutor = null;
         if(modelConfig.isMapReduceRunMode()) {
             if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.DynamicBinning)) {
-                statsExecutor = new DIBStatsExecutor(this, modelConfig, columnConfigList);
+                statsExecutor = new DIBStatsExecutor(this, modelConfig, columnConfigList, isUpdateStatsOnly);
             } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPat)) {
-                statsExecutor = new MunroPatStatsExecutor(this, modelConfig, columnConfigList);
+                statsExecutor = new MunroPatStatsExecutor(this, modelConfig, columnConfigList, isUpdateStatsOnly);
             } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPatI)) {
-                statsExecutor = new MunroPatIStatsExecutor(this, modelConfig, columnConfigList);
+                statsExecutor = new MunroPatIStatsExecutor(this, modelConfig, columnConfigList, isUpdateStatsOnly);
             } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.SPDT)) {
-                statsExecutor = new SPDTStatsExecutor(this, modelConfig, columnConfigList);
+                statsExecutor = new SPDTStatsExecutor(this, modelConfig, columnConfigList, isUpdateStatsOnly);
             } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.SPDTI)) {
-                statsExecutor = new SPDTIStatsExecutor(this, modelConfig, columnConfigList);
+                statsExecutor = new SPDTIStatsExecutor(this, modelConfig, columnConfigList, isUpdateStatsOnly);
             } else {
-                statsExecutor = new SPDTIStatsExecutor(this, modelConfig, columnConfigList);
+                statsExecutor = new SPDTIStatsExecutor(this, modelConfig, columnConfigList, isUpdateStatsOnly);
             }
         } else if(modelConfig.isLocalRunMode()) {
             statsExecutor = new AkkaStatsWorker(this, modelConfig, columnConfigList);

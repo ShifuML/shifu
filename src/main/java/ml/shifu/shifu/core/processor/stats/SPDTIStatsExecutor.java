@@ -37,32 +37,33 @@ public class SPDTIStatsExecutor extends MapReducerStatsWorker {
     private static Logger log = LoggerFactory.getLogger(SPDTIStatsExecutor.class);
 
     public SPDTIStatsExecutor(BasicModelProcessor processor, ModelConfig modelConfig,
-            List<ColumnConfig> columnConfigList) {
-        super(processor, modelConfig, columnConfigList);
+            List<ColumnConfig> columnConfigList, boolean isUpdateStatsOnly) {
+        super(processor, modelConfig, columnConfigList, isUpdateStatsOnly);
     }
 
     @Override
     protected void runStatsPig(Map<String, String> paramsMap) throws Exception {
-        log.info("Run SPDTI to stats ... ");
+        if(!this.isUpdateStatsOnly) {
+            log.info("Run SPDTI to stats ... ");
 
-        paramsMap.put("group_binning_parallel", Integer.toString(columnConfigList.size() / (5 * 8)));
+            paramsMap.put("group_binning_parallel", Integer.toString(columnConfigList.size() / (5 * 8)));
 
-        String expressionsAsString = super.modelConfig.getSegmentFilterExpressionsAsString();
-        Environment.getProperties().put("shifu.segment.expressions", expressionsAsString);
+            String expressionsAsString = super.modelConfig.getSegmentFilterExpressionsAsString();
+            Environment.getProperties().put("shifu.segment.expressions", expressionsAsString);
 
-        if(this.modelConfig.isMultiTask()) {
-            ShifuFileUtils.deleteFile(
-                    pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource(), this.getMtlIndex()),
-                    modelConfig.getDataSet().getSource());
-            paramsMap.put(CommonConstants.MTL_INDEX, this.getMtlIndex() + "");
-        } else {
-            ShifuFileUtils.deleteFile(pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource()),
-                    modelConfig.getDataSet().getSource());
+            if(this.modelConfig.isMultiTask()) {
+                ShifuFileUtils.deleteFile(
+                        pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource(), this.getMtlIndex()),
+                        modelConfig.getDataSet().getSource());
+                paramsMap.put(CommonConstants.MTL_INDEX, this.getMtlIndex() + "");
+            } else {
+                ShifuFileUtils.deleteFile(pathFinder.getUpdatedBinningInfoPath(modelConfig.getDataSet().getSource()),
+                        modelConfig.getDataSet().getSource());
+            }
+
+            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/StatsSpdtI.pig"),
+                    paramsMap, modelConfig.getDataSet().getSource(), super.pathFinder);
         }
-
-        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/StatsSpdtI.pig"), paramsMap,
-                modelConfig.getDataSet().getSource(), super.pathFinder);
-
         // update
         log.info("Updating binning info ...");
         updateBinningInfoWithMRJob();

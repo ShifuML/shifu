@@ -97,6 +97,9 @@ public class ShifuCLI {
     private static final String CORRELATION = "correlation";
     private static final String SHORT_CORRELATION = "c";
     private static final String PSI = "psi";
+    private static final String UPDATE_STATS_ONLY = "updatestatsonly";
+    private static final String SHORT_UPDATE_STATS_ONLY = "u";
+
     private static final String SHORT_PSI = "p";
     // options for variable re-binning
     private static final String REBIN = "rebin";
@@ -218,6 +221,8 @@ public class ShifuCLI {
                     params.put(Constants.IV_KEEP_RATIO, cmd.getOptionValue(IVR));
                     params.put(Constants.MINIMUM_BIN_INST_CNT, cmd.getOptionValue(BIC));
                     params.put(Constants.IS_COMPUTE_PSI, cmd.hasOption(PSI) || cmd.hasOption(SHORT_PSI));
+                    params.put(Constants.IS_UPDATE_STATS_ONLY,
+                            cmd.hasOption(UPDATE_STATS_ONLY) || cmd.hasOption(SHORT_UPDATE_STATS_ONLY));
 
                     // stats step
                     status = calModelStats(params);
@@ -732,6 +737,13 @@ public class ShifuCLI {
                 .withDescription("Compute correlation value for all column pairs.").create("c");
         Option opt_psi = OptionBuilder.hasArg(false).withDescription("Compute psi value.").create(PSI);
         Option opt_psi_short = OptionBuilder.hasArg(false).withDescription("Compute psi value.").create(SHORT_PSI);
+        Option opt_uso = OptionBuilder.hasArg(false)
+                .withDescription("Compute stats value with given binning in local ColumnConfig.json.")
+                .create(UPDATE_STATS_ONLY);
+        Option opt_uso_short = OptionBuilder.hasArg(false)
+                .withDescription("Compute stats value with given binning in local ColumnConfig.json.")
+                .create(SHORT_UPDATE_STATS_ONLY);
+
         Option opt_shuffle = OptionBuilder.hasArg(false).withDescription("Shuffle data after normalization")
                 .create(SHUFFLE);
         Option opt_rebalance = OptionBuilder.hasArg().withDescription("rebalance ratio for positive instances")
@@ -807,6 +819,9 @@ public class ShifuCLI {
         opts.addOption(opt_psi);
         opts.addOption(opt_psi_short);
 
+        opts.addOption(opt_uso);
+        opts.addOption(opt_uso_short);
+
         opts.addOption(opt_rebin);
         opts.addOption(opt_vars);
         opts.addOption(opt_n);
@@ -835,6 +850,8 @@ public class ShifuCLI {
         System.out.println(
                 "\tstats -correlation(c)                   Calculate correlation values between column pairs.");
         System.out.println("\tstats -psi(p)                           Calculate psi values if psi column is provided.");
+        System.out.println(
+                "\tstats -updatestatsonly                  Calculate stats values if given bin boundaries in ColumnConfig.json.");
         System.out.println("\tstats -rebin [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
         System.out.println("\t                                        Do the variable Re-bin.");
         System.out.println(

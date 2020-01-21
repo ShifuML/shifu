@@ -215,11 +215,13 @@ public class MTLWorker extends
         // use guava Splitter to iterate only once
         for(String input: this.splitter.split(currentValue.getWritable().toString())) {
             if(this.isMultiWeights) {
-                significances[mtlWgtIndex++] = getWeightValue(input);
-                if(mtlWgtIndex < significances.length) {
-                    continue;
-                } else {
-                    break; // last fields are all weights
+                if(index >= this.multiTagColumns.size() * columns) {
+                    significances[mtlWgtIndex++] = getWeightValue(input);
+                    if(mtlWgtIndex < significances.length) {
+                        continue;
+                    } else {
+                        break; // last fields are all weights
+                    }
                 }
             } else {
                 if(index == this.multiTagColumns.size() * columns) {

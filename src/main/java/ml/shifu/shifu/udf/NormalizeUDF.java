@@ -721,12 +721,14 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 if(this.isMultiTask && this.multiWeightsInMTL) {
                     for(int i = 0; i < this.mtlWeightColumnNums.length; i++) {
                         schemaStr.append("shifu::weight_").append(i).append(":").append(getOutputPrecisionType());
+                        if(i != this.mtlWeightColumnNums.length - 1) {
+                            schemaStr.append(",");
+                        }
                     }
                     schemaStr.append(")");
                 } else {
                     schemaStr.append("shifu::weight:").append(getOutputPrecisionType()).append(")");
                 }
-                log.info(" schema string is " + schemaStr.toString());
                 return Utils.getSchemaFromString(schemaStr.toString());
             }
         } catch (Exception e) {

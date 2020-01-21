@@ -218,7 +218,7 @@ public class BasicModelProcessor {
         }
 
         if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())
-                && !names.contains(new NSColumn(modelConfig.getWeightColumnName()))) {
+                && (!modelConfig.isMultiTask() && !names.contains(new NSColumn(modelConfig.getWeightColumnName())))) {
             throw new IllegalArgumentException(
                     "weight column " + modelConfig.getWeightColumnName() + " does not exist.");
         }
@@ -626,7 +626,8 @@ public class BasicModelProcessor {
         this.otherConfigs = otherConfigs;
     }
 
-    protected void runDataClean(boolean isToShuffle, double expectPosRatio, boolean rblUpdateWeight) throws IOException {
+    protected void runDataClean(boolean isToShuffle, double expectPosRatio, boolean rblUpdateWeight)
+            throws IOException {
         SourceType sourceType = modelConfig.getDataSet().getSource();
         String cleanedDataPath = this.pathFinder.getCleanedDataPath();
 
@@ -660,7 +661,8 @@ public class BasicModelProcessor {
                 Map<String, String> confMap = new HashMap<>();
                 // validation data set is sent to UDF by MapReduce configuration
                 confMap.put(Constants.IS_VALIDATION_DATASET, "true");
-                PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap, sourceType, confMap, this.pathFinder);
+                PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap, sourceType, confMap,
+                        this.pathFinder);
             }
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
@@ -670,9 +672,9 @@ public class BasicModelProcessor {
 
         if(isToShuffle) {
             try {
-                runDataShuffle(this.modelConfig, this.columnConfigList,
-                        this.pathFinder.getCleanedDataPath(), this.pathFinder.getCleanedDataHeaderPath(),
-                        this.modelConfig.getDataSet().getSource(), expectPosRatio, rblUpdateWeight);
+                runDataShuffle(this.modelConfig, this.columnConfigList, this.pathFinder.getCleanedDataPath(),
+                        this.pathFinder.getCleanedDataHeaderPath(), this.modelConfig.getDataSet().getSource(),
+                        expectPosRatio, rblUpdateWeight);
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException("Fail to shuffle the cleaned data.", e);
             } catch (InterruptedException e) {
@@ -807,9 +809,9 @@ public class BasicModelProcessor {
             throws IOException {
         String[] fields = CommonUtils.getHeaders(headerPath, delimiter, sourceType);
         int targetIndex = -1;
-        if (fields != null && fields.length > 0) {
-            for (int i = 0; i < fields.length; i ++) {
-                if (StringUtils.equals(targetName, fields[i])) {
+        if(fields != null && fields.length > 0) {
+            for(int i = 0; i < fields.length; i++) {
+                if(StringUtils.equals(targetName, fields[i])) {
                     targetIndex = i;
                     break;
                 }
@@ -819,11 +821,11 @@ public class BasicModelProcessor {
     }
 
     // shuffling normalized data, to make data random
-    protected void runDataShuffle(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-            String dataPath, String headerPath, SourceType sourceType, double expectRatio, boolean rblUpdateWeight)
+    protected void runDataShuffle(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String dataPath,
+            String headerPath, SourceType sourceType, double expectRatio, boolean rblUpdateWeight)
             throws IOException, InterruptedException, ClassNotFoundException {
         MapReduceShuffle shuffler = new MapReduceShuffle(modelConfig);
-        if (modelConfig.isRegression() && expectRatio > 0) {
+        if(modelConfig.isRegression() && expectRatio > 0) {
             ColumnConfig columnConfig = CommonUtils.findTargetColumn(columnConfigList);
             double totalPosSum = columnConfig.getBinCountPos().stream().mapToDouble(a -> a.doubleValue()).sum();
             double totalNegSum = columnConfig.getBinCountNeg().stream().mapToDouble(a -> a.doubleValue()).sum();

@@ -215,7 +215,12 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         String delimiter = context.getConfiguration().get(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
         this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
 
-        loadColumnBinningInfo();
+        boolean isUpdateStatsOnly = context.getConfiguration().getBoolean(Constants.IS_UPDATE_STATS_ONLY, false);
+        if(isUpdateStatsOnly) {
+            loadColumnBinningInfoFromCC();
+        } else {
+            loadColumnBinningInfo();
+        }
 
         this.outputKey = new IntWritable();
 
@@ -233,6 +238,74 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         LOG.debug("Column binning info: {}", this.columnBinningInfo);
         this.isLinearTarget = (CollectionUtils.isEmpty(modelConfig.getTags())
                 && CommonUtils.getTargetColumnConfig(columnConfigList).isNumerical());
+    }
+
+    private void loadColumnBinningInfoFromCC() {
+        for(ColumnConfig cc: columnConfigList) {
+            BinningInfoWritable binningInfo = new BinningInfoWritable();
+            binningInfo.setColumnNum(cc.getColumnNum());
+            int binSize = 0;
+            if(cc.isHybrid()) {
+                binningInfo.setNumeric(true);
+                binningInfo.setBinBoundaries(cc.getBinBoundary());
+                Map<String, Integer> map = this.categoricalBinMap.get(cc.getColumnNum());
+                if(map == null) {
+                    map = new HashMap<String, Integer>();
+                    this.categoricalBinMap.put(cc.getColumnNum(), map);
+                }
+                if(cc.getBinCategory() != null) {
+                    for(int k = 0; k < cc.getBinCategory().size(); k++) {
+                        String currCate = cc.getBinCategory().get(k);
+                        if(currCate.contains(Constants.CATEGORICAL_GROUP_VAL_DELIMITER)) {
+                            String[] splits = StringUtils.split(currCate, Constants.CATEGORICAL_GROUP_VAL_DELIMITER);
+                            for(String str: splits) {
+                                map.put(str, k);
+                            }
+                        } else {
+                            map.put(currCate, k);
+                        }
+                    }
+                }
+                binningInfo.setBinCategories(cc.getBinCategory());
+                binSize = cc.getBinBoundary().size() + cc.getBinCategory().size();
+            } else if(cc.isNumerical()) {
+                binningInfo.setNumeric(true);
+                binningInfo.setBinBoundaries(cc.getBinBoundary());
+                binSize = cc.getBinBoundary().size();
+            } else {
+                binningInfo.setNumeric(false);
+                Map<String, Integer> map = this.categoricalBinMap.get(cc.getColumnNum());
+                if(map == null) {
+                    map = new HashMap<String, Integer>();
+                    this.categoricalBinMap.put(cc.getColumnNum(), map);
+                }
+                if(cc.getBinCategory() != null) {
+                    for(int k = 0; k < cc.getBinCategory().size(); k++) {
+                        String currCate = cc.getBinCategory().get(k);
+                        if(currCate.contains(Constants.CATEGORICAL_GROUP_VAL_DELIMITER)) {
+                            String[] splits = StringUtils.split(currCate, Constants.CATEGORICAL_GROUP_VAL_DELIMITER);
+                            for(String str: splits) {
+                                map.put(str, k);
+                            }
+                        } else {
+                            map.put(currCate, k);
+                        }
+                    }
+                }
+                binningInfo.setBinCategories(cc.getBinCategory());
+                binSize = cc.getBinCategory().size();
+            }
+
+            long[] binCountPos = new long[binSize + 1];
+            binningInfo.setBinCountPos(binCountPos);
+            long[] binCountNeg = new long[binSize + 1];
+            binningInfo.setBinCountNeg(binCountNeg);
+            double[] binWeightPos = new double[binSize + 1];
+            binningInfo.setBinWeightPos(binWeightPos);
+            double[] binWeightNeg = new double[binSize + 1];
+            binningInfo.setBinWeightNeg(binWeightNeg);
+            this.columnBinningInfo.put(cc.getColumnNum(), binningInfo);
+        }
     }
 
     /**

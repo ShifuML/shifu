@@ -84,27 +84,27 @@ public class StatsStep extends Step<List<ColumnConfig>> {
                 if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.DynamicBinning)) {
                     statsExecutor = new DIBStatsExecutor(
                             new BasicModelProcessor(super.modelConfig, super.columnConfigList, super.otherConfigs),
-                            modelConfig, columnConfigList);
+                            modelConfig, columnConfigList, false);
                 } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPat)) {
                     statsExecutor = new MunroPatStatsExecutor(
                             new BasicModelProcessor(super.modelConfig, super.columnConfigList, super.otherConfigs),
-                            modelConfig, columnConfigList);
+                            modelConfig, columnConfigList, false);
                 } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.MunroPatI)) {
                     statsExecutor = new MunroPatIStatsExecutor(
                             new BasicModelProcessor(super.modelConfig, super.columnConfigList, super.otherConfigs),
-                            modelConfig, columnConfigList);
+                            modelConfig, columnConfigList, false);
                 } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.SPDT)) {
                     statsExecutor = new SPDTStatsExecutor(
                             new BasicModelProcessor(super.modelConfig, super.columnConfigList, super.otherConfigs),
-                            modelConfig, columnConfigList);
+                            modelConfig, columnConfigList, false);
                 } else if(modelConfig.getBinningAlgorithm().equals(ModelStatsConf.BinningAlgorithm.SPDTI)) {
                     statsExecutor = new SPDTIStatsExecutor(
                             new BasicModelProcessor(super.modelConfig, super.columnConfigList, super.otherConfigs),
-                            modelConfig, columnConfigList);
+                            modelConfig, columnConfigList, false);
                 } else {
                     statsExecutor = new SPDTIStatsExecutor(
                             new BasicModelProcessor(super.modelConfig, super.columnConfigList, super.otherConfigs),
-                            modelConfig, columnConfigList);
+                            modelConfig, columnConfigList, false);
                 }
             } else if(modelConfig.isLocalRunMode()) {
                 statsExecutor = new AkkaStatsWorker(
