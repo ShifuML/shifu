@@ -261,7 +261,7 @@ public final class CommonUtils {
         if(StringUtils.isNotBlank(modelConfig.getTrain().getGridConfigFile())) {
             String gridConfigPath = modelConfig.getTrain().getGridConfigFile().trim();
             if(sourceType == SourceType.HDFS) {
-                // gridsearch config file is uploaded to modelset path
+                // grid-search config file is uploaded to modelset path
                 gridConfigPath = new PathFinder(modelConfig).getPathBySourceType(
                         gridConfigPath.substring(gridConfigPath.lastIndexOf(File.separator) + 1), SourceType.HDFS);
             }
