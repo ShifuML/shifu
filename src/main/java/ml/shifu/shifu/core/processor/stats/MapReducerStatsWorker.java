@@ -379,7 +379,9 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         File file = new File(StringUtils.isEmpty(dateStatsOutputFileName) ? LOCAL_DATE_STATS_CSV_FILE_NAME
                 : dateStatsOutputFileName);
         OutputStream out = org.apache.commons.io.FileUtils.openOutputStream(file);
-        for(Path p: list) {
+        //add title in csv file
+        IOUtils.write("variable name|date|column type|max|min|mean|median value|count|missing count|standard deviation|missing ratio|WOE|KS|IV|weighted WOE|weighted KS|weighted IV|skewness|kurtosis|cardinality|P25th|P75th\n", out);
+        for(Path p : list){
             FSDataInputStream in = hdfs.open(p);
             GZIPInputStream gzin = new GZIPInputStream(in);
             IOUtils.copy(gzin, out);
@@ -567,7 +569,6 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         return StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR);
     }
-
     /**
      * update the max/min/mean/std/binning information from stats step
      * 
@@ -587,6 +588,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         for(Scanner scanner: scanners) {
             scanStatsResult(scanner, initSize);
         }
+
         // release
         processor.closeScanners(scanners);
 
@@ -623,7 +625,6 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             if(columnNum >= ccInitSize) {
                 corrColumnNum = columnNum % ccInitSize;
             }
-
             try {
                 ColumnConfig basicConfig = this.columnConfigList.get(corrColumnNum);
                 LOG.debug("basicConfig is - " + basicConfig.getColumnName() + " corrColumnNum:" + corrColumnNum);

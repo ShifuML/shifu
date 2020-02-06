@@ -174,14 +174,14 @@ public class DateStatComputeReducer extends Reducer<Text, DateStatInfoWritable, 
                 }
 
                 int binSize = 0;
-                if(columnConfig.isNumerical() && columnConfig.getBinBoundary() != null) {
+                if(columnConfig.isNumerical() && variableStatInfo.getBinCountPos() == null) {
                     binSize = columnConfig.getBinBoundary().size();
                     variableStatInfo.setBinCountPos(new long[binSize + 1]);
                     variableStatInfo.setBinCountNeg(new long[binSize + 1]);
                     variableStatInfo.setBinWeightPos(new double[binSize + 1]);
                     variableStatInfo.setBinWeightNeg(new double[binSize + 1]);
                     variableStatInfo.setBinCountTotal(new long[binSize + 1]);
-                } else if(columnConfig.isCategorical() && columnConfig.getBinCategory() != null) {
+                } else if(columnConfig.isCategorical() && variableStatInfo.getBinCountPos() == null) {
                     binSize = columnConfig.getBinCategory().size();
                     variableStatInfo.setBinCountPos(new long[binSize + 1]);
                     variableStatInfo.setBinCountNeg(new long[binSize + 1]);
@@ -190,7 +190,7 @@ public class DateStatComputeReducer extends Reducer<Text, DateStatInfoWritable, 
                     variableStatInfo.setBinCountTotal(new long[binSize + 1]);
                 }
 
-                for(int i = 0; i < (binSize + 1); i++) {
+                for(int i = 0; i < statInfo.getBinCountPos().length; i++) {
                     variableStatInfo.getBinCountPos()[i] += statInfo.getBinCountPos() == null ? 0 : statInfo.getBinCountPos()[i];
                     variableStatInfo.getBinCountNeg()[i] += statInfo.getBinCountNeg() == null ? 0 : statInfo.getBinCountNeg()[i];
                     variableStatInfo.getBinWeightPos()[i] += statInfo.getBinWeightPos() == null ? 0 : statInfo.getBinWeightPos()[i];
@@ -212,6 +212,10 @@ public class DateStatComputeReducer extends Reducer<Text, DateStatInfoWritable, 
                 long medianCount = p25Count * 2;
                 long p75Count = p25Count * 3;
                 int currentCount = 0;
+                //init P25, P75 and median to min value, that is Double.MAX_VALUE
+                variableStatInfo.setP25th(variableStatInfo.getMin());
+                variableStatInfo.setMedian(variableStatInfo.getMin());
+                variableStatInfo.setP75th(variableStatInfo.getMin());
                 for(int i = 0; i < columnConfig.getBinBoundary().size(); i++) {
 
                     double left = getCutoffBoundary(columnConfig.getBinBoundary().get(i), variableStatInfo.getMax(), variableStatInfo.getMin());
@@ -305,7 +309,7 @@ public class DateStatComputeReducer extends Reducer<Text, DateStatInfoWritable, 
                     // max
                     .append(Constants.DEFAULT_DELIMITER).append(df.format(variableStatInfo.getMin()))
                     // min
-                    .append(Constants.DEFAULT_DELIMITER).append(Double.isNaN(variableStatInfo.getMean()) ? "NaN" : df.format(variableStatInfo.getMean()))
+                    .append(Constants.DEFAULT_DELIMITER).append(normDoubleValue(variableStatInfo.getMean()))
                     // mean
                     .append(Constants.DEFAULT_DELIMITER).append(variableStatInfo.getMedian())
                     // median value ?
@@ -313,7 +317,7 @@ public class DateStatComputeReducer extends Reducer<Text, DateStatInfoWritable, 
                     // count
                     .append(Constants.DEFAULT_DELIMITER).append(variableStatInfo.getMissingCount())
                     // missing count
-                    .append(Constants.DEFAULT_DELIMITER).append(Double.isNaN(variableStatInfo.getStdDev()) ? "NaN" : df.format(variableStatInfo.getStdDev()))
+                    .append(Constants.DEFAULT_DELIMITER).append(normDoubleValue(variableStatInfo.getStdDev()))
                     // standard deviation
                     .append(Constants.DEFAULT_DELIMITER).append(variableStatInfo.getMissingCount() * 1.0d / variableStatInfo.getTotalCount())
                     // missing ratio
@@ -348,6 +352,18 @@ public class DateStatComputeReducer extends Reducer<Text, DateStatInfoWritable, 
         }
 
         LOG.debug("Time:{}", (System.currentTimeMillis() - start));
+    }
+
+    /**
+     * Normalize double value, process exception case include NaN and infinite and format it with ##.######
+     * @param value double value need to be format
+     * @return a String formated value
+     */
+    private String normDoubleValue(double value){
+        if(Double.isNaN(value) || Double.isInfinite(value)){
+            return "NaN";
+        }
+        return df.format(value);
     }
 
     private double[] computePosRate(long[] binCountPos, long[] binCountNeg) {
