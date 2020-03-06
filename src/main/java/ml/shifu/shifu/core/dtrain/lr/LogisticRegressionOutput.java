@@ -24,9 +24,8 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
-import org.apache.hadoop.conf.Configuration;
+import ml.shifu.shifu.util.HDFSUtils;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
@@ -179,7 +178,7 @@ public class LogisticRegressionOutput
             LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), progress.toString());
             this.progressOutput.write(progress.getBytes("UTF-8"));
             this.progressOutput.flush();
-            this.progressOutput.sync();
+            this.progressOutput.hflush();
         } catch (IOException e) {
             LOG.error("Error in write progress log:", e);
         }
@@ -210,7 +209,7 @@ public class LogisticRegressionOutput
     private void writeValErrorToFileSystem(double valError, Path out) {
         FSDataOutputStream fos = null;
         try {
-            fos = FileSystem.get(new Configuration()).create(out);
+            fos = HDFSUtils.getFS(out).create(out);
             LOG.info("Writing valerror to {}", out);
             fos.write((valError + "").getBytes("UTF-8"));
         } catch (IOException e) {
@@ -254,9 +253,9 @@ public class LogisticRegressionOutput
             // if the progressLog already exists, that because the master failed, and fail-over
             // we need to append the log, so that client console can get refreshed. Or console will appear stuck.
             if(ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
-                this.progressOutput = FileSystem.get(new Configuration()).append(progressLog);
+                this.progressOutput = HDFSUtils.getFS(progressLog).append(progressLog);
             } else {
-                this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
+                this.progressOutput = HDFSUtils.getFS(progressLog).create(progressLog);
             }
         } catch (IOException e) {
             LOG.error("Error in create progress log:", e);
@@ -285,7 +284,7 @@ public class LogisticRegressionOutput
         FSDataOutputStream fos = null;
         PrintWriter pw = null;
         try {
-            fos = FileSystem.get(new Configuration()).create(out);
+            fos = HDFSUtils.getFS(out).create(out);
             LOG.info("Writing results to {}", out);
             if(out != null) {
                 pw = new PrintWriter(fos);

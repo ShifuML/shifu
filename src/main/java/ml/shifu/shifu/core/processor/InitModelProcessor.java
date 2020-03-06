@@ -299,10 +299,12 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_REDUCE_SPECULATIVE, true);
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 5000);
-        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
-        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
+        Path modelConfigPath = new Path(super.getPathFinder().getModelConfigPath(source));
+        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source, modelConfigPath)
+                .makeQualified(modelConfigPath).toString());
+        Path columnConfigPath = new Path(super.getPathFinder().getColumnConfigPath(source));
+        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source, columnConfigPath)
+                .makeQualified(columnConfigPath).toString());
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
 
         conf.set("mapred.reduce.slowstart.completed.maps",
@@ -333,8 +335,9 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         job.setMapOutputValueClass(CountAndFrequentItemsWritable.class);
 
         job.setInputFormatClass(CombineInputFormat.class);
-        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.modelConfig.getDataSetRawPath())));
+        Path filePath = new Path(super.modelConfig.getDataSetRawPath());
+        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source, filePath)
+                .makeQualified(filePath));
 
         job.setReducerClass(AutoTypeDistinctCountReducer.class);
         job.setNumReduceTasks(1);
@@ -381,8 +384,9 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
         List<Scanner> scanners = null;
         try {
             // here only works for 1 reducer
-            FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source)
-                    .globStatus(new Path(outputFilePattern));
+            Path filePath = new Path(outputFilePattern);
+            FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source, filePath)
+                    .globStatus(filePath);
             if(globStatus == null || globStatus.length == 0) {
                 throw new RuntimeException("Auto type checking output file not exist.");
             }

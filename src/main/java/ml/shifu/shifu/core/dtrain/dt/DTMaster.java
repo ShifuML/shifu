@@ -1085,7 +1085,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     try {
                         Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
                         existingModel = (TreeModel) ModelSpecLoaderUtils.loadModel(modelConfig, modelPath,
-                                ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
+                                ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource(), modelPath));
                         if(existingModel == null) {
                             // null means no existing model file or model file is in wrong format
                             this.trees = new CopyOnWriteArrayList<TreeNode>();
@@ -1118,7 +1118,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
     private void recoverMasterStatus(SourceType sourceType) {
         FSDataInputStream stream = null;
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType, this.checkpointOutput);
         try {
             stream = fs.open(this.checkpointOutput);
             int treeSize = stream.readInt();

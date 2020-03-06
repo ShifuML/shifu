@@ -19,11 +19,9 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import ml.shifu.shifu.util.NormalUtils;
+import ml.shifu.shifu.util.HDFSUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.encog.ml.BasicML;
@@ -226,7 +224,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), progress.toString());
             this.progressOutput.write(progress.getBytes("UTF-8"));
             this.progressOutput.flush();
-            this.progressOutput.sync();
+            this.progressOutput.hflush();
         } catch (IOException e) {
             LOG.error("Error in write progress log:", e);
         }
@@ -257,7 +255,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     private void writeValErrorToFileSystem(double valError, Path out) {
         FSDataOutputStream fos = null;
         try {
-            fos = FileSystem.get(new Configuration()).create(out);
+            fos = HDFSUtils.getFS(out).create(out);
             LOG.info("Writing valerror to {}", out);
             fos.write((valError + "").getBytes("UTF-8"));
         } catch (IOException e) {
@@ -320,9 +318,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             // if the progressLog already exists, that because the master failed, and fail-over
             // we need to append the log, so that client console can get refreshed. Or console will appear stuck.
             if(ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
-                this.progressOutput = FileSystem.get(new Configuration()).append(progressLog);
+                this.progressOutput = HDFSUtils.getFS(progressLog).append(progressLog);
             } else {
-                this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
+                this.progressOutput = HDFSUtils.getFS(progressLog).create(progressLog);
             }
         } catch (IOException e) {
             LOG.error("Error in create progress log:", e);
@@ -399,7 +397,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     private void writeEncogModelToFileSystem(double[] weights, Path out) {
         FSDataOutputStream fos = null;
         try {
-            fos = FileSystem.get(new Configuration()).create(out);
+            fos = HDFSUtils.getFS(out).create(out);
             LOG.info("Writing results to {}", out);
             this.network.getFlat().setWeights(weights);
             if(out != null) {
@@ -419,7 +417,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         BasicML basicML = this.network;
         try {
             BinaryNNSerializer.save(modelConfig, columnConfigList, Arrays.asList(basicML),
-                    FileSystem.get(new Configuration()), out);
+                    HDFSUtils.getFS(out), out);
         } catch (IOException e) {
             LOG.error("Error in writing model", e);
         }

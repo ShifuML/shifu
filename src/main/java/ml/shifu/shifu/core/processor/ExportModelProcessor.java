@@ -574,7 +574,8 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     private Map<Integer, ColumnStatistics> readSEValuesToMap(String seOutputFiles, SourceType source)
             throws IOException {
         // here only works for 1 reducer
-        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source).globStatus(new Path(seOutputFiles));
+        Path filePath = new Path(seOutputFiles);
+        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source, filePath).globStatus(filePath);
         if(globStatus == null || globStatus.length == 0) {
             throw new RuntimeException("Var select MSE stats output file not exist.");
         }

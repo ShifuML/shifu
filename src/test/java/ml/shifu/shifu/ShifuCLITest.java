@@ -22,6 +22,7 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.fs.Path;
 import org.easymock.EasyMock;
 import org.powermock.api.easymock.PowerMock;
 import org.powermock.modules.testng.PowerMockObjectFactory;
@@ -367,5 +368,14 @@ public class ShifuCLITest {
         File file = new File("model0.gbt.fi");
         Assert.assertTrue(file.exists());
         FileUtils.deleteQuietly(file);
+    }
+
+    @Test
+    public void testPath() {
+        Path filePath = new Path("tmp/354240.log");
+        String schema = filePath.toUri().getScheme();
+        String host = filePath.toUri().getHost();
+        System.out.println("Schema is " + schema);
+        System.out.println("Host is " + host);
     }
 }

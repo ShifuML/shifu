@@ -143,8 +143,9 @@ public class TensorflowTrainer {
         hiddenLayers = hiddenLayerNodes.size();
         inputDataPath = pathFinder.getNormalizedDataPath();
         if(modelConfig.getDataSet().getSource() == SourceType.HDFS) {
-            inputDataPath = ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS)
-                    .makeQualified(new Path(inputDataPath)).toString();
+            Path filePath = new Path(inputDataPath);
+            inputDataPath = ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS, filePath)
+                    .makeQualified(filePath).toString();
         }
 
         alg = (String) modelConfig.getParams().get(CommonConstants.TF_ALG);

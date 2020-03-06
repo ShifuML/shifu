@@ -249,7 +249,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
                 Thread.currentThread().getName());
         long start = System.currentTimeMillis();
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.LOCAL);
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.LOCAL, null);
         // load model from local d-cache model file
         if(CommonUtils.isTensorFlowModel(modelConfig.getAlgorithm())) {
             this.model = (MLRegression) (ModelSpecLoaderUtils.loadBasicModels(modelConfig, null).get(0));

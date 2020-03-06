@@ -191,8 +191,8 @@ public class ModelConfig {
             Path dst = new Path(File.separator + "user" + File.separator
                     + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement");
             if(!ShifuFileUtils.isFileExists(dst, SourceType.HDFS)) {
-                HDFSUtils.getFS().mkdirs(dst);
-                HDFSUtils.getFS().copyFromLocalFile(new Path(exampleLocalDSPath), dst);
+                HDFSUtils.getFS(dst).mkdirs(dst);
+                HDFSUtils.getFS(dst).copyFromLocalFile(new Path(exampleLocalDSPath), dst);
             }
             dataSet.setSource(SourceType.HDFS);
             dataSet.setDataPath(
@@ -294,9 +294,10 @@ public class ModelConfig {
         if(enableHadoop) {
             evalSet.setSource(SourceType.HDFS);
             Path dst = new Path(File.separator + "user" + File.separator
-                    + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement");
+                    + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement"
+                    + File.separator + "EvalSet1");
             if (!ShifuFileUtils.isFileExists(dst, SourceType.HDFS)) {
-                HDFSUtils.getFS().copyFromLocalFile(new Path(exampleLocalESFolder), dst);
+                HDFSUtils.getFS(dst).copyFromLocalFile(new Path(exampleLocalESFolder), dst);
             }
             evalSet.setDataPath(
                     new File(File.separator + "user" + File.separator + Environment.getProperty(Environment.SYSTEM_USER)

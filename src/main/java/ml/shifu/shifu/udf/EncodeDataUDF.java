@@ -54,8 +54,9 @@ public class EncodeDataUDF extends AbstractEvalUDF<Tuple> {
 
         // get model path
         SourceType sourceType = SourceType.valueOf(source);
-        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(sourceType);
-        Path modelPath = fileSystem.makeQualified(new Path(this.pathFinder.getModelsPath(sourceType), getModelName(0)));
+        Path filePath = new Path(this.pathFinder.getModelsPath(sourceType), getModelName(0));
+        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath);
+        Path modelPath = fileSystem.makeQualified(filePath);
 
         // load Tree model
         InputStream inputStream = null;
