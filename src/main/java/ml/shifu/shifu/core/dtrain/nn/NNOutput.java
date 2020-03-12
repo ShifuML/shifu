@@ -177,7 +177,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
                 this.minTestError = currentError;
                 // the optimizedWeights are the weights just evaluated, not current weights after applying gradients
                 this.optimizedWeights = context.getMasterResult().getEvaluatedWeights();
-                context.getMasterResult().setEvaluatedWeights(null);
+                if(this.optimizedWeights == null) {
+                    this.optimizedWeights = context.getMasterResult().getWeights();
+                }
                 LOG.info("change minTestError to {}, and update best weights at {}-th epoch.",
                         this.minTestError, context.getCurrentIteration());
             }
@@ -245,11 +247,12 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         if(this.isDry) {
             return;
         }
-
+        
         if(optimizedWeights != null) {
-            Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             // TODO do we need to check IOException and retry again to make sure such important model is saved
             // successfully.
+            Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
+
             writeModelWeightsToFileSystem(optimizedWeights, out, true);
         }
 

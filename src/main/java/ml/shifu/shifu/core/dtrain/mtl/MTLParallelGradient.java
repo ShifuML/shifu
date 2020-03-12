@@ -238,13 +238,13 @@ public class MTLParallelGradient {
                 double[] predict = CommonUtils.sigmoid(logits);
                 double[] error = CommonUtils.minus(predict, data.getIdealArray());
                 for(int j = 0; j < error.length; j++) {
-                    float sig = data.getSignificances()!= null ? data.getSignificances()[j]:data.getSignificance();
+                    float sig = data.getSignificances() != null ? data.getSignificances()[j] : data.getSignificance();
                     trainSize += sig;
                     trainSumError += (error[j] * error[j] * sig);
                 }
-                if(data.getSignificances()!= null) {
-                     this.mtm.backward(predict, CommonUtils.floatToDouble(data.getIdealArray()),
-                     data.getSignificances());
+                if(data.getSignificances() != null) {
+                    this.mtm.backward(predict, CommonUtils.floatToDouble(data.getIdealArray()),
+                            data.getSignificances());
                 } else {
                     this.mtm.backward(predict, CommonUtils.floatToDouble(data.getIdealArray()), data.getSignificance());
                 }
@@ -262,7 +262,7 @@ public class MTLParallelGradient {
                 double[] predict = CommonUtils.sigmoid(logits);
                 double[] error = CommonUtils.minus(predict, data.getIdealArray());
                 for(int j = 0; j < error.length; j++) {
-                    float sig = data.getSignificances()!= null ? data.getSignificances()[j]:data.getSignificance();
+                    float sig = data.getSignificances() != null ? data.getSignificances()[j] : data.getSignificance();
                     validationSize += sig;
                     validSumError += (error[j] * error[j] * sig);
                 }
