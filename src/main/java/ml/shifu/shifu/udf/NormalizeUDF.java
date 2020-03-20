@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.DataType;
@@ -39,6 +40,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.core.DataSampler;
 import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
@@ -114,6 +116,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private Set<Integer> mtlTMIndexSet;
     private boolean multiWeightsInMTL;
     private int[] mtlWeightColumnNums;
+    private List<DataPurifier> mtlDataPurifiers;
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         this(source, pathModelConfig, pathColumnConfig, "false");
@@ -143,6 +146,18 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         this.tags = super.modelConfig.getSetTags();
 
         boolean hasColumnSelected = false;
+
+        if(this.isMultiTask) {
+            // if multiple filters, filter should be also set here as union norm for all filters.
+            String[] filters = CommonUtils.split(modelConfig.getDataSet().getFilterExpressions(),
+                    CommonConstants.MTL_DELIMITER);
+            if(filters != null && filters.length > 1) {
+                mtlDataPurifiers = new ArrayList<>(filters.length);
+                for(String filter: filters) {
+                    mtlDataPurifiers.add(new DataPurifier(modelConfig, columnConfigList, filter));
+                }
+            }
+        }
 
         if(this.isMultiTask && this.multiWeightsInMTL) {
             this.mtlWeightColumnNums = new int[this.modelConfig.getMultiTaskWeightColumnNames().size()];
@@ -345,14 +360,19 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
+        boolean[] tagSuccess = null;
         if(this.isMultiTask) {
+            boolean succResult = false;
+            tagSuccess = new boolean[mtlTagColumnNums.length];
             for(int i = 0; i < this.mtlTagColumnNums.length; i++) {
                 boolean success = norm(input, tuple, compactVarMap, inputSize, this.mtlColumnConfigLists.get(i),
                         this.mtlCiMapList.get(i), this.mtlTagColumnNums[i], this.mtlPosTagSet[i], this.mtlNegTagSet[i],
                         isMultiTask, i);
-                if(!success) {
-                    return null;
-                }
+                tagSuccess[i] = success;
+                succResult = succResult || success;
+            }
+            if(!succResult) {
+                return null;
             }
         } else {
             boolean success = norm(input, tuple, compactVarMap, inputSize, this.columnConfigList,
@@ -373,7 +393,19 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         if(this.isMultiTask && this.multiWeightsInMTL) {
             for(int i = 0; i < this.mtlWeightColumnNums.length; i++) {
-                tuple.append(buildAndAppendWeight(input, this.mtlWeightColumnNums[i]));
+                if(tagSuccess != null && !tagSuccess[i]) {
+                    tuple.append(0d);
+                } else if(CollectionUtils.isEmpty(this.mtlDataPurifiers)) {
+                    tuple.append(buildAndAppendWeight(input, this.mtlWeightColumnNums[i]));
+                } else {
+                    Boolean isFilter = this.mtlDataPurifiers.get(i).isFilter(input);
+                    if(isFilter != null && isFilter.booleanValue()) {
+                        tuple.append(buildAndAppendWeight(input, this.mtlWeightColumnNums[i]));
+                    } else {
+                        // if filter out, set weights to 0 thus in training it will be ignored by weighting gradients
+                        tuple.append(0d);
+                    }
+                }
             }
         } else {
             tuple.append(buildAndAppendWeight(input, this.weightColumnId));
@@ -401,6 +433,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private boolean norm(Tuple input, Tuple tuple, Map<String, Object> compactVarMap, int inputSize,
             List<ColumnConfig> columnConfigList, Map<Integer, Map<String, Integer>> categoricalIndexMap, int tagColumn,
             Set<String> posTagSet, Set<String> negTagSet, boolean isMultiTask, int mtlIndex) throws ExecException {
+        boolean result = true;
         for(int i = 0; i < columnConfigList.size(); i++) {
             int dataIndex = ((this.hasSegExpression) ? i % inputSize : i);
             String val = (input.get(dataIndex) == null) ? "" : input.get(dataIndex).toString();
@@ -418,7 +451,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         log.error("Invalid data! The target value is not listed - " + rawTag);
                         warn("Invalid data! The target value is not listed - " + rawTag,
                                 WarnInNormalizeUDF.INVALID_TAG);
-                        return false;
+                        result = false;
                     }
                     if(this.isCompactNorm) {
                         compactVarMap.put(getColumnName(CommonUtils.normColumnName(config.getColumnName()), isMultiTask,
@@ -433,7 +466,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     } catch (Exception e) {
                         log.error("Tag - " + rawTag + " is invalid(not numerical). Skip record.");
                         // skip this line
-                        return false;
+                        result = false;
                     }
                     if(this.isCompactNorm) {
                         compactVarMap.put(getColumnName(CommonUtils.normColumnName(config.getColumnName()), isMultiTask,
@@ -460,7 +493,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         log.error("Invalid data! The target value is not listed - " + rawTag);
                         warn("Invalid data! The target value is not listed - " + rawTag,
                                 WarnInNormalizeUDF.INVALID_TAG);
-                        return false;
+                        result = false;
                     }
                     if(this.isCompactNorm) {
                         compactVarMap.put(getColumnName(CommonUtils.normColumnName(config.getColumnName()), isMultiTask,
@@ -532,7 +565,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 }
             }
         }
-        return true;
+        return result;
     }
 
     @SuppressWarnings("deprecation")

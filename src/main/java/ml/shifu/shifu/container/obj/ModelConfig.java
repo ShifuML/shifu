@@ -390,6 +390,24 @@ public class ModelConfig {
     }
 
     @JsonIgnore
+    public String getMTLFilterExpression(int mtlIndex) {
+        if(this.isMultiTask()) {
+            String[] filters = CommonUtils.split(dataSet.getFilterExpressions(), CommonConstants.MTL_DELIMITER);
+            if(filters.length > 0) {
+                if(filters.length != this.getMultiTaskTargetColumnNames().size()) {
+                    throw new IllegalArgumentException(
+                            "Size of multiple filter are not equals to size of mutiple target columns, please check ModelConfig#dataSet#targetColumnName and ModelConfig#dataSet#filterExpressions.");
+                }
+                return filters[mtlIndex];
+            } else {
+                return dataSet.getFilterExpressions();
+            }
+        } else {
+            return dataSet.getFilterExpressions();
+        }
+    }
+
+    @JsonIgnore
     public List<String> getMissingOrInvalidValues() {
         return dataSet.getMissingOrInvalidValues();
     }

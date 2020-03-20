@@ -33,7 +33,7 @@ SET mapred.map.output.compress.codec org.apache.hadoop.io.compress.GzipCodec;
 SET mapreduce.output.fileoutputformat.compress.codec org.apache.hadoop.io.compress.GzipCodec;
 SET mapreduce.output.fileoutputformat.compress.type block;
 
-DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
+DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config', 1);
 DEFINE Normalize        ml.shifu.shifu.udf.NormalizeUDF('$source_type', '$path_model_config', '$path_column_config', '$is_norm_for_clean');
 
 raw = LOAD '$path_raw_data' USING PigStorage('$delimiter', '-noschema');

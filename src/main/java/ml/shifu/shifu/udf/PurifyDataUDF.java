@@ -15,14 +15,20 @@
  */
 package ml.shifu.shifu.udf;
 
-import ml.shifu.shifu.container.obj.EvalConfig;
-import ml.shifu.shifu.core.DataPurifier;
-import ml.shifu.shifu.util.Constants;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
 
-import java.io.IOException;
+import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.core.DataPurifier;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 
 /**
  * PurifyDataUDF class purify the data for training and evaluation.
@@ -32,7 +38,16 @@ public class PurifyDataUDF extends AbstractTrainerUDF<Boolean> {
 
     private DataPurifier dataPurifier;
 
+    private List<DataPurifier> mtlDataPurifiers;
+
+    private boolean isForNormMTLFilters = false;
+
     public PurifyDataUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
+        this(source, pathModelConfig, pathColumnConfig, 0);
+    }
+
+    public PurifyDataUDF(String source, String pathModelConfig, String pathColumnConfig, int isForNormMTL)
+            throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
 
         boolean isForValidationDataSet = false;
@@ -42,6 +57,21 @@ public class PurifyDataUDF extends AbstractTrainerUDF<Boolean> {
         }
 
         dataPurifier = new DataPurifier(modelConfig, columnConfigList, isForValidationDataSet);
+        isForNormMTLFilters = isForNormMTL == 1;
+        if(isForNormMTLFilters && modelConfig.isMultiTask()) {
+            String[] filters = CommonUtils.split(modelConfig.getDataSet().getFilterExpressions(),
+                    CommonConstants.MTL_DELIMITER);
+            if(filters != null && filters.length > 1) {
+                if(filters.length != modelConfig.getMultiTaskTargetColumnNames().size()) {
+                    throw new IllegalArgumentException(
+                            "Size of multiple filter are not equals to size of mutiple target columns, please check ModelConfig#dataSet#targetColumnName and ModelConfig#dataSet#filterExpressions.");
+                }
+                mtlDataPurifiers = new ArrayList<>(filters.length);
+                for(String filter: filters) {
+                    mtlDataPurifiers.add(new DataPurifier(modelConfig, columnConfigList, filter));
+                }
+            }
+        }
     }
 
     public PurifyDataUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
@@ -55,9 +85,21 @@ public class PurifyDataUDF extends AbstractTrainerUDF<Boolean> {
         }
 
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(evalSetName);
-        dataPurifier = ((evalConfig == null)
-                ? new DataPurifier(modelConfig, this.columnConfigList, isForValidationDataSet)
-                : new DataPurifier(this.columnConfigList, evalConfig));
+        if(evalConfig == null) {
+            dataPurifier = new DataPurifier(modelConfig, this.columnConfigList, isForValidationDataSet);
+        } else {
+            if(modelConfig.isMultiTask()) {
+                String[] filters = CommonUtils.split(evalConfig.getDataSet().getFilterExpressions(),
+                        CommonConstants.MTL_DELIMITER);
+                if(filters != null && filters.length > 1) {
+                    dataPurifier = new DataPurifier(modelConfig, columnConfigList, filters[modelConfig.getMtlIndex()]);
+                } else {
+                    dataPurifier = new DataPurifier(this.columnConfigList, evalConfig);
+                }
+            } else {
+                dataPurifier = new DataPurifier(this.columnConfigList, evalConfig);
+            }
+        }
     }
 
     /*
@@ -72,15 +114,31 @@ public class PurifyDataUDF extends AbstractTrainerUDF<Boolean> {
         if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT")) {
             PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1);
         }
-        Boolean filterOut = dataPurifier.isFilter(input);
-        if(filterOut != null && !filterOut) {
-            // update model run time for stats
-            if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT")) {
-                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT")
-                        .increment(1);
+        if(CollectionUtils.isEmpty(this.mtlDataPurifiers)) {
+            Boolean filterOut = dataPurifier.isFilter(input);
+            if(filterOut != null && !filterOut) {
+                // update model run time for stats
+                if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT")) {
+                    PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT")
+                            .increment(1);
+                }
             }
+            return filterOut;
+        } else {
+            boolean result = false;
+            for(DataPurifier dp: mtlDataPurifiers) {
+                Boolean fi = dp.isFilter(input);
+                result = result || (fi != null && fi.booleanValue());
+                // if one is true, return true;
+            }
+            if(!result) {
+                if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT")) {
+                    PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT")
+                            .increment(1);
+                }
+            }
+            return result;
         }
-        return filterOut;
     }
 
 }
