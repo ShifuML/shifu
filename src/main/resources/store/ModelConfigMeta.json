@@ -429,7 +429,8 @@
                     {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCALE_INDEX"},
                     {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCORE_INDEX"},
                     {"label":"numerical variable using woe, categorical variable, using cate index", "value":"WOE_INDEX"},
-                    {"label":"numerical variable using zscaled woe, categorical variable using cate index", "value":"WOE_ZSCALE_INDEX"}
+                    {"label":"numerical variable using zscaled woe, categorical variable using cate index", "value":"WOE_ZSCALE_INDEX"},
+                    {"label":"both numerical and categorical norm to index, numerical index is from binBoundry, categorical index is from binCategory", "value":"INDEX"}
                 ]
             }, {
                 "name": "stdDevCutOff",
