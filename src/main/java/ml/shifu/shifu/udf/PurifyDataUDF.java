@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
@@ -43,11 +44,11 @@ public class PurifyDataUDF extends AbstractTrainerUDF<Boolean> {
     private boolean isForNormMTLFilters = false;
 
     public PurifyDataUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
-        this(source, pathModelConfig, pathColumnConfig, 0);
+        this(source, pathModelConfig, pathColumnConfig, "", "false");
     }
 
-    public PurifyDataUDF(String source, String pathModelConfig, String pathColumnConfig, int isForNormMTL)
-            throws IOException {
+    public PurifyDataUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName,
+            String isForNormMTL) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
 
         boolean isForValidationDataSet = false;
@@ -57,7 +58,7 @@ public class PurifyDataUDF extends AbstractTrainerUDF<Boolean> {
         }
 
         dataPurifier = new DataPurifier(modelConfig, columnConfigList, isForValidationDataSet);
-        isForNormMTLFilters = isForNormMTL == 1;
+        isForNormMTLFilters = Boolean.TRUE.toString().equalsIgnoreCase(isForNormMTL);
         if(isForNormMTLFilters && modelConfig.isMultiTask()) {
             String[] filters = CommonUtils.split(modelConfig.getDataSet().getFilterExpressions(),
                     CommonConstants.MTL_DELIMITER);
@@ -89,12 +90,17 @@ public class PurifyDataUDF extends AbstractTrainerUDF<Boolean> {
             dataPurifier = new DataPurifier(modelConfig, this.columnConfigList, isForValidationDataSet);
         } else {
             if(modelConfig.isMultiTask()) {
-                String[] filters = CommonUtils.split(evalConfig.getDataSet().getFilterExpressions(),
-                        CommonConstants.MTL_DELIMITER);
-                if(filters != null && filters.length > 1) {
-                    dataPurifier = new DataPurifier(modelConfig, columnConfigList, filters[modelConfig.getMtlIndex()]);
-                } else {
+                String filterExpression = evalConfig.getDataSet().getFilterExpressions();
+                if(StringUtils.isBlank(filterExpression)) {
                     dataPurifier = new DataPurifier(this.columnConfigList, evalConfig);
+                } else {
+                    String[] filters = CommonUtils.split(filterExpression, CommonConstants.MTL_DELIMITER);
+                    if(filters != null && filters.length > 1) {
+                        dataPurifier = new DataPurifier(modelConfig, columnConfigList,
+                                filters[modelConfig.getMtlIndex()]);
+                    } else {
+                        dataPurifier = new DataPurifier(this.columnConfigList, evalConfig);
+                    }
                 }
             } else {
                 dataPurifier = new DataPurifier(this.columnConfigList, evalConfig);
