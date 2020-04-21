@@ -117,6 +117,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private boolean multiWeightsInMTL;
     private int[] mtlWeightColumnNums;
     private List<DataPurifier> mtlDataPurifiers;
+    private boolean enablePrecision; // enable precision or not
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         this(source, pathModelConfig, pathColumnConfig, "false");
@@ -133,8 +134,16 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 .of(getUdfProperty(Constants.SHIFU_NORM_CATEGORY_MISSING_NORM, POSRATE));
         log.info("'categoryMissingNormType' is set to: " + this.categoryMissingNormType);
 
-        this.precisionType = PrecisionType.of( // get precision type
-                getUdfProperty(Constants.SHIFU_NORM_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
+        String precision = getUdfProperty(Constants.SHIFU_NORM_PRECISION_TYPE);
+        
+        if(precision == null) {
+            this.enablePrecision = false;
+            this.precisionType = PrecisionType.FLOAT32;
+        } else {
+            this.precisionType = PrecisionType.of(
+                    getUdfProperty(Constants.SHIFU_NORM_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
+            this.enablePrecision = true;
+        }
         log.info("Precision type is set to: " + this.precisionType);
 
         this.isForClean = "true".equalsIgnoreCase(isForClean);
@@ -519,7 +528,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         normVal = Normalizer.defaultMissingValue(config);
                     }
 
-                    appendOutputValue(tuple, normVal, true);
+                    appendOutputValue(tuple, normVal, this.enablePrecision);
                 }
             } else { // for NN/LR model, needs to do data normalization
                 if(this.isCompactNorm) { // compact format <target, meta, select_vars>
@@ -557,7 +566,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         List<Double> normVals = Normalizer.fullNormalize(config, val, cutoff, normType,
                                 this.categoryMissingNormType, categoricalIndexMap.get(config.getColumnNum()));
                         for(Double normVal: normVals) {
-                            appendOutputValue(tuple, normVal, true);
+                            appendOutputValue(tuple, normVal, this.enablePrecision);
                         }
                     } else {
                         tuple.append(config.isMeta() ? val : null);
