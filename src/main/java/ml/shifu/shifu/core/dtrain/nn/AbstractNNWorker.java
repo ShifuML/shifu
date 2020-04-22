@@ -60,6 +60,7 @@ import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataPair;
 import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataSet;
 import ml.shifu.shifu.core.dtrain.dataset.MemoryDiskFloatMLDataSet;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.MapReduceUtils;
@@ -310,6 +311,11 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      *      else use the last column of the normalized data
      */
     protected boolean isWeightColumnMeta = false;
+    
+    /**
+     * If precision type supported when sending out of gradients to master
+     */
+    private PrecisionType precisionType;
 
     protected boolean isUpSampleEnabled() {
         // only enabled in regression
@@ -384,6 +390,12 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         this.props = context.getProps();
 
         loadConfigFiles(context.getProps());
+        
+        // load precision type, if not set, leave it to null
+        String precision = props.getProperty(Constants.SHIFU_PRECISION_TYPE);
+        if(precision != null) {
+            this.precisionType = PrecisionType.of(precision);
+        }
 
         this.trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
         GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(),
@@ -606,7 +618,11 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         NNParams params = new NNParams();
         params.setValidationError(testError);
         params.setTrainError(trainError);
-        params.setGradients(gradients);
+        if(this.precisionType == null) {
+            params.setGradients(gradients);
+        } else {
+            params.setGradients(castToPrecision(gradients));
+        }
         // prevent null point;
         params.setWeights(new double[0]);
         params.setTrainSize(this.trainingData.getRecordCount());
@@ -616,6 +632,13 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
                 : this.trainingData.getRecordSum());
         params.setCount(count);
         return params;
+    }
+
+    private double[] castToPrecision(double[] gradients) {
+        for(int i = 0; i < gradients.length; i++) {
+            gradients[i] = this.precisionType.to(gradients[i]);
+        }
+        return gradients;
     }
 
     @SuppressWarnings("unchecked")
@@ -636,7 +659,6 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         double[] flatSpot = new double[flat.getActivationFunctions().length];
         for(int i = 0; i < flat.getActivationFunctions().length; i++) {
             flatSpot[i] = flat.getActivationFunctions()[i] instanceof ActivationSigmoid ? 0.1 : 0.0;
-
         }
         LOG.info("Gradient computing thread count is {}.", modelConfig.getTrain().getWorkerThreadCount());
 

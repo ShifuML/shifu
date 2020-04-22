@@ -367,6 +367,8 @@ public interface Constants {
     public static final String SHIFU_OUTPUT_DATA_CSV = "shifu.output.data.csv";
 
     public static final String SHIFU_NORM_PRECISION_TYPE = "shifu.norm.precision.type";
+    
+    public static final String SHIFU_PRECISION_TYPE = "shifu.precision.type";
 
     public static final String IS_UPDATE_STATS_ONLY = "IS_UPDATE_STATS_ONLY";
 
