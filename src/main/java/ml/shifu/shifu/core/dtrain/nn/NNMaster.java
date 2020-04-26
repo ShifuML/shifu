@@ -338,7 +338,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
 
     private double[] castToPrecision(double[] gradients) {
         for(int i = 0; i < gradients.length; i++) {
-            gradients[i] = this.precisionType.to(gradients[i]);
+            gradients[i] = (double)this.precisionType.to(gradients[i]);
         }
         return gradients;
     }

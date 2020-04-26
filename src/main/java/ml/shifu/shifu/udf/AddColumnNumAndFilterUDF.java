@@ -39,6 +39,7 @@ import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
@@ -68,6 +69,9 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
     private boolean isLinearTarget = false;
     private int mismatchCnt = 0;
 
+    // null means not set
+    private PrecisionType precisionType;
+
     public AddColumnNumAndFilterUDF(String source, String pathModelConfig, String pathColumnConfig, String withScoreStr)
             throws Exception {
         this(source, pathModelConfig, pathColumnConfig, withScoreStr, "true");
@@ -83,6 +87,12 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
             filterExpressions = UDFContext.getUDFContext().getJobConf().get(Constants.SHIFU_SEGMENT_EXPRESSIONS);
         } else {
             filterExpressions = Environment.getProperty(Constants.SHIFU_SEGMENT_EXPRESSIONS);
+        }
+
+        String precision = getUdfProperty(Constants.SHIFU_PRECISION_TYPE);
+        if(StringUtils.isBlank(precision)) {
+            this.precisionType = PrecisionType
+                    .of(getUdfProperty(Constants.SHIFU_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
         }
 
         if(StringUtils.isNotBlank(filterExpressions)) {
@@ -219,7 +229,19 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
             String tag, int i, int finalIndex) throws ExecException {
         Tuple tuple = tupleFactory.newTuple(TOTAL_COLUMN_CNT);
         tuple.set(COLUMN_ID_INDX, finalIndex);
-        tuple.set(COLUMN_VAL_INDX, (input.get(i) == null ? null : input.get(i).toString())); // Set Data
+
+        if(this.precisionType == null || this.columnConfigList.get(i).isCategorical()) {
+            tuple.set(COLUMN_VAL_INDX, (input.get(i) == null ? null : input.get(i).toString())); // Set Data
+        } else {
+            double dval;
+            try {
+                dval = Double.parseDouble(input.get(i).toString());
+                // reduced to precision Type
+                tuple.set(COLUMN_VAL_INDX, (input.get(i) == null ? null : this.precisionType.to(dval).toString())); 
+            } catch (Exception e) {
+                tuple.set(COLUMN_VAL_INDX, null); // Set Data
+            }
+        }
 
         if(modelConfig.isRegression()) {
             if(posTags.contains(tag)) { // Set Tag

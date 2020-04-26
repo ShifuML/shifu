@@ -45,6 +45,7 @@ import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.mtl.MTLModel;
 import ml.shifu.shifu.executor.ExecutorManager;
 import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.NormalizationUtils;
@@ -101,6 +102,7 @@ public class Scorer {
     private List<List<ColumnConfig>> mtlColumnConfigLists;
     private List<Map<Integer, Map<String, Integer>>> mtlBinCategoryMaps;
     private List<List<ColumnConfig>> mtlSelectedColumnConfigList;
+    private PrecisionType precisionType;
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm,
             ModelConfig modelConfig) {
@@ -109,21 +111,22 @@ public class Scorer {
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
             boolean multiThread) {
-        this(models, columnConfigList, algorithm, modelConfig, 4.0d, 0, multiThread);
+        this(models, columnConfigList, algorithm, modelConfig, 4.0d, 0, multiThread, null);
     }
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
             Double cutoff, boolean multiThread) {
-        this(models, columnConfigList, algorithm, modelConfig, cutoff, 0, multiThread);
+        this(models, columnConfigList, algorithm, modelConfig, cutoff, 0, multiThread, null);
     }
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
             Double cutoff) {
-        this(models, columnConfigList, algorithm, modelConfig, cutoff, 0, false);
+        this(models, columnConfigList, algorithm, modelConfig, cutoff, 0, false, null);
     }
 
     public Scorer(List<BasicML> models, List<List<ColumnConfig>> mtlColumnConfigLists, String algorithm,
-            ModelConfig modelConfig, Double cutoff, int outputHiddenLayerIndex, boolean multiThread, boolean isMTL) {
+            ModelConfig modelConfig, Double cutoff, int outputHiddenLayerIndex, boolean multiThread, boolean isMTL,
+            PrecisionType pt) {
         if(modelConfig == null) {
             throw new IllegalArgumentException("modelConfig should not be null");
         }
@@ -208,10 +211,11 @@ public class Scorer {
             }
             mtlSelectedColumnConfigList.add(selectedColumnConfigList);
         }
+        this.precisionType = pt;
     }
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
-            Double cutoff, int outputHiddenLayerIndex, boolean multiThread) {
+            Double cutoff, int outputHiddenLayerIndex, boolean multiThread, PrecisionType pt) {
         if(modelConfig == null) {
             throw new IllegalArgumentException("modelConfig should not be null");
         }
@@ -285,6 +289,8 @@ public class Scorer {
             // no final-selected ColumnConfigs, add all to check
             selectedColumnConfigList.addAll(this.columnConfigList);
         }
+
+        this.precisionType = pt;
     }
 
     public void setCategoryMissingNormType(CategoryMissingNormType categoryMissingNormType) {
@@ -351,7 +357,8 @@ public class Scorer {
                 MLDataPair dataPair = cachedNormDataPair.get(cacheKey);
                 if(dataPair == null) {
                     dataPair = NormalizationUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
-                            selectedColumnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet());
+                            selectedColumnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet(),
+                            this.precisionType);
                     cachedNormDataPair.put(cacheKey, dataPair);
                 }
                 final MLDataPair networkPair = dataPair;

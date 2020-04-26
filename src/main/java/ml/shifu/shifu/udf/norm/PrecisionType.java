@@ -20,27 +20,28 @@ public enum PrecisionType {
 
     FLOAT7 {
 
-        public double to(double value) {
-            return Double.parseDouble(DECIMAL_FORMAT.format(value));
+        public Float to(double value) {
+            return Float.parseFloat(DECIMAL_FORMAT.format(value));
         }
 
     },
     FLOAT16 {
 
-        public double to(double value) {
+        public Float to(double value) {
             return toFloat(fromFloat((float) value));
         }
 
     },
     FLOAT32 {
-        public double to(double value) {
+
+        public Float to(double value) {
             return (float) value;
         }
 
     },
     DOUBLE64 {
 
-        public double to(double value) {
+        public Double to(double value) {
             return value;
         }
 
@@ -57,7 +58,8 @@ public enum PrecisionType {
         return FLOAT32;
     }
 
-    public abstract double to(double value);
+    // FIXME return as Object need extra cost, see how to reduce the cost
+    public abstract Object to(double value);
 
     // returns all higher 16 bits as 0 for all results
     public static int fromFloat(float fval) {
@@ -106,5 +108,22 @@ public enum PrecisionType {
         return Float.intBitsToFloat( // combine all parts
                 (hbits & 0x8000) << 16 // sign << ( 31 - 15 )
                         | (exp | mant) << 13); // value << ( 23 - 10 )
+    }
+
+    public static void main(String[] args) {
+        PrecisionType pt = PrecisionType.DOUBLE64;
+        System.out.println(pt.to(1.2345679899881234556689989889d));
+
+        pt = PrecisionType.FLOAT32;
+        System.out.println(pt.to(1.2345679899881234556689989889d));
+
+        pt = PrecisionType.FLOAT16;
+        System.out.println(pt.to(1.2345679899881234556689989889d));
+
+        pt = PrecisionType.FLOAT7;
+        System.out.println(pt.to(1.2345679899881234556689989889d));
+        
+        Float ff = 1f;
+        System.out.println((double)ff);
     }
 }

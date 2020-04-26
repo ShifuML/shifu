@@ -118,6 +118,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private int[] mtlWeightColumnNums;
     private List<DataPurifier> mtlDataPurifiers;
     private boolean enablePrecision; // enable precision or not
+    private PrecisionType inputPrecisionType;
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         this(source, pathModelConfig, pathColumnConfig, "false");
@@ -135,14 +136,22 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         log.info("'categoryMissingNormType' is set to: " + this.categoryMissingNormType);
 
         String precision = getUdfProperty(Constants.SHIFU_NORM_PRECISION_TYPE);
-        
+
+        // output precision
         if(precision == null) {
             this.enablePrecision = false;
             this.precisionType = PrecisionType.FLOAT32;
         } else {
-            this.precisionType = PrecisionType.of(
-                    getUdfProperty(Constants.SHIFU_NORM_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
+            this.precisionType = PrecisionType
+                    .of(getUdfProperty(Constants.SHIFU_NORM_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
             this.enablePrecision = true;
+        }
+
+        // input precision
+        String inputPrecision = getUdfProperty(Constants.SHIFU_PRECISION_TYPE);
+        if(StringUtils.isBlank(inputPrecision)) {
+            this.inputPrecisionType = PrecisionType
+                    .of(getUdfProperty(Constants.SHIFU_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
         }
         log.info("Precision type is set to: " + this.precisionType);
 
@@ -520,12 +529,16 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     // map should not be null, no need check if map is null, if val not in binCategory, set it to ""
                     tuple.append(((map.get(val) == null || map.get(val) == -1)) ? "" : val);
                 } else {
-                    Double normVal = 0d;
+                    double normVal = 0d;
                     try {
                         normVal = Double.parseDouble(val);
                     } catch (Exception e) {
                         log.debug("Not decimal format " + val + ", using default!");
                         normVal = Normalizer.defaultMissingValue(config);
+                    }
+
+                    if(this.inputPrecisionType != null) {
+                        normVal = (double) this.inputPrecisionType.to(normVal);
                     }
 
                     appendOutputValue(tuple, normVal, this.enablePrecision);
@@ -536,6 +549,15 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     if(!config.isMeta() && config.isFinalSelect()) {
                         // for multiple classification, binPosRate means rate of such category over all counts,
                         // reuse binPosRate for normalize
+                        if(this.inputPrecisionType != null && config.isNumerical()) {
+                            double dVal = 0d;
+                            try {
+                                dVal = Double.parseDouble(val);
+                            } catch (Exception e) {
+                                dVal = Normalizer.defaultMissingValue(config);
+                            }
+                            val = this.inputPrecisionType.to(dVal).toString();
+                        }
                         List<Double> normVals = Normalizer.fullNormalize(config, val, cutoff, normType,
                                 this.categoryMissingNormType, categoricalIndexMap.get(config.getColumnNum()));
                         List<String> formatNormVals = new ArrayList<>();
@@ -563,6 +585,15 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     if(CommonUtils.isToNormVariable(config, super.hasCandidates, modelConfig.isRegression())) {
                         // for multiple classification, binPosRate means rate of such category over all counts,
                         // reuse binPosRate for normalize
+                        if(this.inputPrecisionType != null && config.isNumerical()) {
+                            double dVal = 0d;
+                            try {
+                                dVal = Double.parseDouble(val);
+                            } catch (Exception e) {
+                                dVal = Normalizer.defaultMissingValue(config);
+                            }
+                            val = this.inputPrecisionType.to(dVal).toString();
+                        }
                         List<Double> normVals = Normalizer.fullNormalize(config, val, cutoff, normType,
                                 this.categoryMissingNormType, categoricalIndexMap.get(config.getColumnNum()));
                         for(Double normVal: normVals) {

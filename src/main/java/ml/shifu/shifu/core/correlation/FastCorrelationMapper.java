@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -36,6 +37,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
@@ -104,6 +106,8 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
     protected Set<String> tagSet;
     private List<Set<String>> tags;
 
+    private PrecisionType precisionType;
+
     private synchronized static void loadConfigFiles(final Context context) {
         if(modelConfig == null) {
             LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(),
@@ -128,6 +132,12 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
 
+        String precision = context.getConfiguration().get(Constants.SHIFU_PRECISION_TYPE);
+        if(StringUtils.isBlank(precision)) {
+            this.precisionType = PrecisionType
+                    .of(context.getConfiguration().get(Constants.SHIFU_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
+        }
+        
         this.dataSetDelimiter = modelConfig.getDataSetDelimiter();
 
         this.dataPurifier = new DataPurifier(modelConfig, this.columnConfigList, false);
@@ -318,7 +328,10 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
                     } else {
                         dValues[i] = NumberFormatUtils.getDouble(units[i], Double.MIN_VALUE);
                     }
-                }
+                    if(precisionType != null) {
+                        // mimic like cur precision
+                        dValues[i] = (double) this.precisionType.to(dValues[i]);
+                    }                }
                 if(columnConfig.isCategorical()) {
                     if(columnConfig.getBinCategory() == null) {
                         if(System.currentTimeMillis() % 100L == 0) {

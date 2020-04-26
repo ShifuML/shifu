@@ -48,6 +48,7 @@ import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper.CountAndFrequent
 import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -151,6 +152,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
     private List<Integer> newTagIndexes;
 
+    private PrecisionType precisionType;
+
     /**
      * Load model config and column config files.
      */
@@ -180,6 +183,12 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
+        
+        String precision = context.getConfiguration().get(Constants.SHIFU_PRECISION_TYPE);
+        if(StringUtils.isBlank(precision)) {
+            this.precisionType = PrecisionType
+                    .of(context.getConfiguration().get(Constants.SHIFU_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
+        }
 
         this.dataSetDelimiter = this.modelConfig.getDataSetDelimiter();
 
@@ -596,6 +605,10 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     binNum += binningInfoWritable.getBinBoundaries().size();;
                 }
             } else if(isNumber) {
+                if(precisionType != null) {
+                    // mimic like cur precision
+                    douVal = (double)this.precisionType.to(douVal);
+                }
                 binNum = getBinNum(binningInfoWritable.getBinBoundaries(), douVal);
                 if(binNum == -1) {
                     throw new RuntimeException("binNum should not be -1 to this step.");
@@ -671,6 +684,11 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 }
             }
 
+            if(precisionType != null) {
+                // mimic like cut precision
+                douVal = (double)this.precisionType.to(douVal);
+            }
+            
             // add logic the same as CalculateNewStatsUDF
             if(Double.compare(douVal, modelConfig.getNumericalValueThreshold()) > 0) {
                 isInvalidValue = true;
