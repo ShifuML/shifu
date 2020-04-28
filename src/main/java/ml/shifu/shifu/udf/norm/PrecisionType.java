@@ -112,18 +112,18 @@ public enum PrecisionType {
 
     public static void main(String[] args) {
         PrecisionType pt = PrecisionType.DOUBLE64;
-        System.out.println(pt.to(1.2345679899881234556689989889d));
+        System.out.println(pt.to(1231.2345679899881234556689989889d));
 
         pt = PrecisionType.FLOAT32;
-        System.out.println(pt.to(1.2345679899881234556689989889d));
+        System.out.println(pt.to(1231.2345679899881234556689989889d));
 
         pt = PrecisionType.FLOAT16;
-        System.out.println(pt.to(1.2345679899881234556689989889d));
+        System.out.println(pt.to(1231.2345679899881234556689989889d));
 
         pt = PrecisionType.FLOAT7;
-        System.out.println(pt.to(1.2345679899881234556689989889d));
-        
+        System.out.println(pt.to(1231.2345679899881234556689989889d));
+
         Float ff = 1f;
-        System.out.println((double)ff);
+        System.out.println((double) ff);
     }
 }

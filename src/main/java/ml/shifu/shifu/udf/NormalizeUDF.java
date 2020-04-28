@@ -558,6 +558,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                             }
                             val = this.inputPrecisionType.to(dVal).toString();
                         }
+                        
                         List<Double> normVals = Normalizer.fullNormalize(config, val, cutoff, normType,
                                 this.categoryMissingNormType, categoricalIndexMap.get(config.getColumnNum()));
                         List<String> formatNormVals = new ArrayList<>();

@@ -270,7 +270,7 @@ public class NormalizationUtils {
             PrecisionType precisionType) {
         if(CollectionUtils.isEmpty(featureSet)) {
             return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff,
-                    alg, categoryMissingNormType);
+                    alg, categoryMissingNormType, precisionType);
         }
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
 
@@ -305,7 +305,7 @@ public class NormalizationUtils {
                                 binCategoryMap.get(config.getColumnNum()));
                         inputList.addAll(normalizeValue);
                     } else {
-                        inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val, null));
+                        inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val, precisionType));
                     }
                 }
             }
