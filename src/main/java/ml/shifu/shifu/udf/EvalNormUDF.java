@@ -146,7 +146,7 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
         this.outputNames = new ArrayList<>();
 
         // 1. target at first
-        outputNames.add(modelConfig.getTargetColumnName(evalConfig));
+        outputNames.add(modelConfig.getTargetColumnName(evalConfig, modelConfig.getTargetColumnName()));
 
         // 2. weight column
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())) {

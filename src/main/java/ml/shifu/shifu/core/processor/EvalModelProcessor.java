@@ -15,30 +15,6 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Scanner;
-import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-
-import ml.shifu.shifu.util.ModelSpecLoaderUtils;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.Path;
-import org.apache.pig.tools.pigstats.JobStats;
-import org.apache.pig.tools.pigstats.PigStats;
-import org.encog.ml.BasicML;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -60,6 +36,21 @@ import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.Path;
+import org.apache.pig.tools.pigstats.JobStats;
+import org.apache.pig.tools.pigstats.PigStats;
+import org.encog.ml.BasicML;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * EvalModelProcessor class
@@ -734,41 +725,28 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                     evalConfig.getDataSet().getSource());
         } else {
             String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) // get header delimiter
-                    ? evalConfig.getDataSet().getDataDelimiter()
-                    : evalConfig.getDataSet().getHeaderDelimiter();
+                    ? evalConfig.getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
             String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter,
                     evalConfig.getDataSet().getSource());
-            // if first line contains target column name, we guess it is csv format and first line is header.
-            String evalTargetColumnName = modelConfig.getTargetColumnName(evalConfig);
-            if(StringUtils.join(fields, "").contains(evalTargetColumnName)) {
-                // first line of data meaning second line in data files excluding first header line
-                String[] dataInFirstLine = CommonUtils.takeFirstTwoLines(evalConfig.getDataSet().getDataPath(),
-                        delimiter, evalConfig.getDataSet().getSource())[1];
-                if(dataInFirstLine != null && fields.length != dataInFirstLine.length) {
-                    throw new IllegalArgumentException(
-                            "Eval header length and eval data length are not consistent, please check you header setting and data set setting in eval.");
-                }
-
-                // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
-                // char or / in its name in shifu will be replaced;
-                for(int i = 0; i < fields.length; i++) {
-                    fields[i] = CommonUtils.normColumnName(fields[i]);
-                }
-                evalColumnNames = fields;
-                // for(int i = 0; i < fields.length; i++) {
-                // evalColumnNames[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
-                // }
-                LOG.warn("No header path is provided, we will try to read first line and detect schema.");
-                LOG.warn("Schema in ColumnConfig.json are named as first line of data set path.");
-            } else {
-                LOG.warn("No header path is provided, we will try to read first line and detect schema.");
-                LOG.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
-                LOG.warn("Please make sure weight column and tag column are also taking index as name.");
-                evalColumnNames = new String[fields.length];
-                for(int i = 0; i < fields.length; i++) {
-                    evalColumnNames[i] = i + "";
-                }
+            // first line of data meaning second line in data files excluding first header line
+            String[] dataInFirstLine = CommonUtils.takeFirstTwoLines(evalConfig.getDataSet().getDataPath(), delimiter,
+                    evalConfig.getDataSet().getSource())[1];
+            if(dataInFirstLine != null && fields.length != dataInFirstLine.length) {
+                throw new IllegalArgumentException(
+                        "Eval header length and eval data length are not consistent, please check you header setting and data set setting in eval.");
             }
+
+            // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
+            // char or / in its name in shifu will be replaced;
+            for(int i = 0; i < fields.length; i++) {
+                fields[i] = CommonUtils.normColumnName(fields[i]);
+            }
+            evalColumnNames = fields;
+            // for(int i = 0; i < fields.length; i++) {
+            // evalColumnNames[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
+            // }
+            LOG.warn("No header path is provided, we will try to read first line and detect schema.");
+            LOG.warn("Schema in ColumnConfig.json are named as first line of data set path.");
         }
 
         Set<NSColumn> names = new HashSet<NSColumn>();
@@ -798,7 +776,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             validateFinalColumns(evalConfig, this.modelConfig.getModelSetName(), false, this.columnConfigList, names);
         }
 
-        String evalTargetName = modelConfig.getTargetColumnName(evalConfig);
+        String evalTargetName = modelConfig.getTargetColumnName(evalConfig, null);
         NSColumn targetColumn = new NSColumn(evalTargetName);
         if(StringUtils.isNotBlank(evalTargetName) && !names.contains(targetColumn)
                 && !names.contains(new NSColumn(targetColumn.getSimpleName()))) {
