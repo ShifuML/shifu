@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
+import ml.shifu.shifu.util.CommonUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,6 +50,11 @@ public class ModelSourceDataConf extends RawSourceData {
      */
     private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "?" });
     // private List<String> missingOrInvalidValues = Lists.asList("", new String[] { "*", "#", "?", "null", "none" });
+
+    /**
+     * Date column, should be one of columns
+     */
+    private String dateColumnName = "";
 
     private String hybridColumnNameFile;
 
@@ -96,6 +102,14 @@ public class ModelSourceDataConf extends RawSourceData {
         this.missingOrInvalidValues = missingOrInvalidValues;
     }
 
+    public String getDateColumnName() {
+        return CommonUtils.normColumnName(dateColumnName);
+    }
+
+    public void setDateColumnName(String dateColumnName) {
+        this.dateColumnName = dateColumnName;
+    }
+
     @JsonIgnoreProperties(ignoreUnknown = true)
     public RawSourceData cloneRawSourceData() {
         return super.clone();
@@ -137,6 +151,7 @@ public class ModelSourceDataConf extends RawSourceData {
         other.setValidationDataPath(this.validationDataPath);
         other.setValidationFilterExpressions(this.validationFilterExpressions);
         other.setMissingOrInvalidValues(this.getMissingOrInvalidValues());
+        other.setDateColumnName(this.dateColumnName);
 
         other.setCategoricalColumnNameFile(categoricalColumnNameFile);
         other.setHybridColumnNameFile(this.hybridColumnNameFile);
