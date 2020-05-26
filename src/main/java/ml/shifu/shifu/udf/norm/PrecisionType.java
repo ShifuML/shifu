@@ -14,6 +14,7 @@
  **/
 package ml.shifu.shifu.udf.norm;
 
+import java.math.BigDecimal;
 import java.text.DecimalFormat;
 
 public enum PrecisionType {
@@ -28,7 +29,14 @@ public enum PrecisionType {
     FLOAT16 {
 
         public Float to(double value) {
-            return toFloat(fromFloat((float) value));
+            float float16 = toFloat(fromFloat((float) value));
+            BigDecimal bdnum = BigDecimal.valueOf(float16);
+            if(float16 < 1f && float16 > -1f) {
+                bdnum = bdnum.setScale(4, BigDecimal.ROUND_FLOOR);
+            } else {
+                bdnum = bdnum.setScale(3, BigDecimal.ROUND_FLOOR);
+            }
+            return bdnum.floatValue();
         }
 
     },
@@ -112,18 +120,83 @@ public enum PrecisionType {
 
     public static void main(String[] args) {
         PrecisionType pt = PrecisionType.DOUBLE64;
-        System.out.println(pt.to(1231.2345679899881234556689989889d));
 
+        double dd = 111.2345679899881234d;
+        pt = PrecisionType.DOUBLE64;
+        System.out.println(pt + ":" + pt.to(dd));
         pt = PrecisionType.FLOAT32;
-        System.out.println(pt.to(1231.2345679899881234556689989889d));
-
+        System.out.println(pt + ":" + pt.to(dd));
+        System.out.println("float:" + (float) (dd));
         pt = PrecisionType.FLOAT16;
-        System.out.println(pt.to(1231.2345679899881234556689989889d));
-
+        System.out.println(pt + ":" + pt.to(dd));
         pt = PrecisionType.FLOAT7;
-        System.out.println(pt.to(1231.2345679899881234556689989889d));
+        System.out.println(pt + ":" + pt.to(dd));
+        float fff = toFloat(fromFloat((float) dd));
+        System.out.println("To From:" + fff);
+        BigDecimal bdnum = BigDecimal.valueOf(fff);
+        bdnum = bdnum.setScale(3, BigDecimal.ROUND_FLOOR);
+        System.out.println("Round 3:" + bdnum.floatValue());
+        bdnum = BigDecimal.valueOf(fff);
+        bdnum = bdnum.setScale(4, BigDecimal.ROUND_FLOOR);
+        System.out.println("Round 4:" + bdnum.floatValue());
+        System.out.println("");
+        dd = 11.2345679899881234d;
+        pt = PrecisionType.DOUBLE64;
+        System.out.println(pt + ":" + pt.to(dd));
+        pt = PrecisionType.FLOAT32;
+        System.out.println(pt + ":" + pt.to(dd));
+        System.out.println("float:" + (float) (dd));
+        pt = PrecisionType.FLOAT16;
+        System.out.println(pt + ":" + pt.to(dd));
+        pt = PrecisionType.FLOAT7;
+        System.out.println(pt + ":" + pt.to(dd));
+        fff = toFloat(fromFloat((float) dd));
+        System.out.println("To From:" + fff);
+        bdnum = BigDecimal.valueOf(fff);
+        bdnum = bdnum.setScale(3, BigDecimal.ROUND_FLOOR);
+        System.out.println("Round 3:" + bdnum.floatValue());
+        bdnum = BigDecimal.valueOf(fff);
+        bdnum = bdnum.setScale(4, BigDecimal.ROUND_FLOOR);
+        System.out.println("Round 4:" + bdnum.floatValue());
+        System.out.println("");
 
-        Float ff = 1f;
-        System.out.println((double) ff);
+        dd = 1.2345679899881234d;
+        pt = PrecisionType.DOUBLE64;
+        System.out.println(pt + ":" + pt.to(dd));
+        pt = PrecisionType.FLOAT32;
+        System.out.println(pt + ":" + pt.to(dd));
+        System.out.println("float:" + (float) (dd));
+        pt = PrecisionType.FLOAT16;
+        System.out.println(pt + ":" + pt.to(dd));
+        pt = PrecisionType.FLOAT7;
+        System.out.println(pt + ":" + pt.to(dd));
+        fff = toFloat(fromFloat((float) dd));
+        System.out.println("To From:" + fff);
+        bdnum = BigDecimal.valueOf(fff);
+        bdnum = bdnum.setScale(3, BigDecimal.ROUND_FLOOR);
+        System.out.println("Round 3:" + bdnum.floatValue());
+        bdnum = BigDecimal.valueOf(fff);
+        bdnum = bdnum.setScale(4, BigDecimal.ROUND_FLOOR);
+        System.out.println("Round 4:" + bdnum.floatValue());
+        System.out.println("");
+
+        dd = 0.2345679899881234d;
+        pt = PrecisionType.DOUBLE64;
+        System.out.println(pt + ":" + pt.to(dd));
+        pt = PrecisionType.FLOAT32;
+        System.out.println(pt + ":" + pt.to(dd));
+        System.out.println("float:" + (float) (dd));
+        pt = PrecisionType.FLOAT16;
+        System.out.println(pt + ":" + pt.to(dd));
+        pt = PrecisionType.FLOAT7;
+        System.out.println(pt + ":" + pt.to(dd));
+        fff = toFloat(fromFloat((float) dd));
+        System.out.println("To From:" + fff);
+        bdnum = BigDecimal.valueOf(fff);
+        bdnum = bdnum.setScale(3, BigDecimal.ROUND_FLOOR);
+        System.out.println("Round 3:" + bdnum.floatValue());
+        bdnum = BigDecimal.valueOf(fff);
+        bdnum = bdnum.setScale(4, BigDecimal.ROUND_FLOOR);
+        System.out.println("Round 4:" + bdnum.floatValue());
     }
 }

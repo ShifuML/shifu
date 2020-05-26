@@ -16,6 +16,7 @@
 package ml.shifu.shifu.udf;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -662,7 +663,14 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     tuple.append(DECIMAL_FORMAT.format(value));
                     break;
                 case FLOAT16:
-                    tuple.append(toFloat(fromFloat((float) value)));
+                    float float16 = toFloat(fromFloat((float) value));
+                    BigDecimal bdnum = BigDecimal.valueOf(float16);
+                    if(float16<1f && float16>-1f) {
+                        bdnum = bdnum.setScale(4, BigDecimal.ROUND_FLOOR);
+                    } else {
+                        bdnum = bdnum.setScale(3, BigDecimal.ROUND_FLOOR);
+                    }
+                    tuple.append(bdnum.floatValue());
                     break;
                 case DOUBLE64:
                     tuple.append(value);
