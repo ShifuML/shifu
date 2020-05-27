@@ -122,7 +122,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
         loadConfigFiles(context);
 
         String precision = context.getConfiguration().get(Constants.SHIFU_PRECISION_TYPE);
-        if(StringUtils.isBlank(precision)) {
+        if(StringUtils.isNotBlank(precision)) {
             this.precisionType = PrecisionType.of(
                     context.getConfiguration().get(Constants.SHIFU_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
         }

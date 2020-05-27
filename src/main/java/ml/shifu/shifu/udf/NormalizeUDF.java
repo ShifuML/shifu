@@ -150,7 +150,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         // input precision
         String inputPrecision = getUdfProperty(Constants.SHIFU_PRECISION_TYPE);
-        if(StringUtils.isBlank(inputPrecision)) {
+        if(StringUtils.isNotBlank(inputPrecision)) {
             this.inputPrecisionType = PrecisionType
                     .of(getUdfProperty(Constants.SHIFU_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
         }

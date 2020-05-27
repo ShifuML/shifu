@@ -90,7 +90,7 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
         }
 
         String precision = getUdfProperty(Constants.SHIFU_PRECISION_TYPE);
-        if(StringUtils.isBlank(precision)) {
+        if(StringUtils.isNotBlank(precision)) {
             this.precisionType = PrecisionType
                     .of(getUdfProperty(Constants.SHIFU_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
         }

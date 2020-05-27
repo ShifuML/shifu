@@ -176,7 +176,7 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
         }
 
         String precision = getUdfProperty(Constants.SHIFU_PRECISION_TYPE);
-        if(StringUtils.isBlank(precision)) {
+        if(StringUtils.isNotBlank(precision)) {
             this.precisionType = PrecisionType
                     .of(getUdfProperty(Constants.SHIFU_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
         }

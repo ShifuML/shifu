@@ -133,7 +133,7 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
         loadConfigFiles(context);
 
         String precision = context.getConfiguration().get(Constants.SHIFU_PRECISION_TYPE);
-        if(StringUtils.isBlank(precision)) {
+        if(StringUtils.isNotBlank(precision)) {
             this.precisionType = PrecisionType
                     .of(context.getConfiguration().get(Constants.SHIFU_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
         }
