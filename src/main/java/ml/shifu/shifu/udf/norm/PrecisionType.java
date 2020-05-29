@@ -22,14 +22,22 @@ public enum PrecisionType {
     FLOAT7 {
 
         public Float to(double value) {
-            return Float.parseFloat(DECIMAL_FORMAT.format(value));
+            return (Double.isNaN(value) ? Float.NaN : Float.parseFloat(DECIMAL_FORMAT.format(value)));
         }
 
     },
     FLOAT16 {
 
         public Float to(double value) {
+            if (Double.isNaN(value)) {
+                return Float.NaN;
+            }
+
             float float16 = toFloat(fromFloat((float) value));
+            if (Float.isNaN(float16)) {
+                return Float.NaN;
+            }
+
             BigDecimal bdnum = BigDecimal.valueOf(float16);
             if(float16 < 1f && float16 > -1f) {
                 bdnum = bdnum.setScale(4, BigDecimal.ROUND_FLOOR);
@@ -120,7 +128,9 @@ public enum PrecisionType {
 
     public static void main(String[] args) {
         PrecisionType pt = PrecisionType.DOUBLE64;
-
+        double test = Double.NaN;
+        pt = PrecisionType.FLOAT16;
+        System.out.println(pt + ":" + pt.to(test));
         double dd = 111.2345679899881234d;
         pt = PrecisionType.DOUBLE64;
         System.out.println(pt + ":" + pt.to(dd));
