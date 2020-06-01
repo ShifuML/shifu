@@ -539,7 +539,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     }
 
                     if(this.inputPrecisionType != null) {
-                        normVal = (double) this.inputPrecisionType.to(normVal);
+                        normVal = ((Number) this.inputPrecisionType.to(normVal)).doubleValue();
                     }
 
                     appendOutputValue(tuple, normVal, this.enablePrecision);

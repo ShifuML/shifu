@@ -306,7 +306,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                     }
                     if(precisionType != null) {
                         // mimic like cur precision
-                        dValues[i] = (double) this.precisionType.to(dValues[i]);
+                        dValues[i] = ((Number) this.precisionType.to(dValues[i])).doubleValue();
                     }
                 }
                 if(columnConfig.isCategorical()) {

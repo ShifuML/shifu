@@ -134,10 +134,10 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
 
         String precision = context.getConfiguration().get(Constants.SHIFU_PRECISION_TYPE);
         if(StringUtils.isNotBlank(precision)) {
-            this.precisionType = PrecisionType
-                    .of(context.getConfiguration().get(Constants.SHIFU_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
+            this.precisionType = PrecisionType.of(
+                    context.getConfiguration().get(Constants.SHIFU_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
         }
-        
+
         this.dataSetDelimiter = modelConfig.getDataSetDelimiter();
 
         this.dataPurifier = new DataPurifier(modelConfig, this.columnConfigList, false);
@@ -330,8 +330,9 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
                     }
                     if(precisionType != null) {
                         // mimic like cur precision
-                        dValues[i] = (double) this.precisionType.to(dValues[i]);
-                    }                }
+                        dValues[i] = ((Number) this.precisionType.to(dValues[i])).doubleValue();
+                    }
+                }
                 if(columnConfig.isCategorical()) {
                     if(columnConfig.getBinCategory() == null) {
                         if(System.currentTimeMillis() % 100L == 0) {

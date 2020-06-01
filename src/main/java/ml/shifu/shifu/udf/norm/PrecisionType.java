@@ -30,7 +30,13 @@ public enum PrecisionType {
 
         public Float to(double value) {
             float float16 = toFloat(fromFloat((float) value));
-            BigDecimal bdnum = BigDecimal.valueOf(float16);
+            BigDecimal bdnum;
+            try {
+                bdnum = BigDecimal.valueOf(float16);
+            } catch (NumberFormatException e) {
+                // BigDecimal.valueOf(float16) throws NumberFormatException if {@code val} is infinite or NaN.
+                return float16;
+            }
             if(float16 < 1f && float16 > -1f) {
                 bdnum = bdnum.setScale(4, BigDecimal.ROUND_FLOOR);
             } else {

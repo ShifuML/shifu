@@ -625,7 +625,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             } else if(isNumber) {
                 if(precisionType != null) {
                     // mimic like cur precision
-                    douVal = (double) this.precisionType.to(douVal);
+                    douVal = ((Number) this.precisionType.to(douVal)).doubleValue();
                 }
                 binNum = getBinNum(binningInfoWritable.getBinBoundaries(), douVal);
                 if(binNum == -1) {
@@ -704,7 +704,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
             if(precisionType != null) {
                 // mimic like cut precision
-                douVal = (double) this.precisionType.to(douVal);
+                douVal = ((Number) this.precisionType.to(douVal)).doubleValue();
             }
 
             // add logic the same as CalculateNewStatsUDF
