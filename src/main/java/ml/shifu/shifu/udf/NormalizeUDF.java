@@ -147,14 +147,15 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     .of(getUdfProperty(Constants.SHIFU_NORM_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
             this.enablePrecision = true;
         }
+        log.info("Output Precision type is set to: " + this.precisionType);
 
         // input precision
         String inputPrecision = getUdfProperty(Constants.SHIFU_PRECISION_TYPE);
         if(StringUtils.isNotBlank(inputPrecision)) {
             this.inputPrecisionType = PrecisionType
                     .of(getUdfProperty(Constants.SHIFU_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
+            log.info("Input Precision type is set to: " + this.inputPrecisionType);
         }
-        log.info("Precision type is set to: " + this.precisionType);
 
         this.isForClean = "true".equalsIgnoreCase(isForClean);
         this.normType = modelConfig.getNormalizeType();
@@ -559,7 +560,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                             }
                             val = this.inputPrecisionType.to(dVal).toString();
                         }
-                        
+
                         List<Double> normVals = Normalizer.fullNormalize(config, val, cutoff, normType,
                                 this.categoryMissingNormType, categoricalIndexMap.get(config.getColumnNum()));
                         List<String> formatNormVals = new ArrayList<>();
@@ -665,7 +666,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                 case FLOAT16:
                     float float16 = toFloat(fromFloat((float) value));
                     BigDecimal bdnum = BigDecimal.valueOf(float16);
-                    if(float16<1f && float16>-1f) {
+                    if(float16 < 1f && float16 > -1f) {
                         bdnum = bdnum.setScale(4, BigDecimal.ROUND_FLOOR);
                     } else {
                         bdnum = bdnum.setScale(3, BigDecimal.ROUND_FLOOR);

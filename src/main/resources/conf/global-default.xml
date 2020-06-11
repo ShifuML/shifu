@@ -77,7 +77,7 @@
   <property>
     <description>AM memory size, requested as a string (e.g. '2g' or '2048m').</description>
     <name>shifu.am.memory</name>
-    <value>2g</value>
+    <value>4g</value>
   </property>
 
   <property>
