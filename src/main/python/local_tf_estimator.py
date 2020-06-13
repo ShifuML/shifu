@@ -19,34 +19,34 @@
 # same folder of regular models in 'models' folder and being evaluated in distributed shifu eval step.
 #
 
-import shutil
 import argparse
-from tensorflow.python.platform import gfile
-import gzip
-from StringIO import StringIO
-import random
-from tensorflow.python.framework import ops
-from tensorflow.python.saved_model import builder
-from tensorflow.python.saved_model import signature_constants
-from tensorflow.python.saved_model import signature_def_utils
-from tensorflow.python.saved_model import tag_constants
-from tensorflow.python.estimator import model_fn as model_fn_lib
-import tensorflow as tf
-from tensorflow import keras
-import numpy as np
-import sys
-import os
 import datetime
+import gzip
 import math
+import os
+import random
+import shutil
+import sys
+from io import BytesIO
+
+import numpy as np
+import tensorflow.compat.v1 as tf
+import tensorflow as tf2
+from tensorflow import keras
+from tensorflow.python.platform import gfile
+
+# tf.disable_v2_behavior()
 
 FEATURE_CNT = 0
 TRAINING_MODE = "Training"
 EVAL_MODE = "Validation"
 
+
 def tprint(content, log_level="INFO"):
     systime = datetime.datetime.now()
-    print(str(systime) + " " + log_level + " " + " [Shifu.Tensorflow.train] " + str(content))
+    print((str(systime) + " " + log_level + " " + " [Shifu.Tensorflow.train] " + str(content)))
     sys.stdout.flush()
+
 
 def get_activation_fun(name):
     if name == None:
@@ -98,9 +98,9 @@ def get_initalizer(name):
     if 'gaussian' == name:
         return tf.initializers.random_normal()
     elif 'xavier' == name:
-        return tf.contrib.layers.xavier_initializer()
+        return tf2.initializers.GlorotUniform()
     else:
-        return tf.contrib.layers.xavier_initializer()
+        return tf2.initializers.GlorotUniform()
 
 
 def export_generic_config(export_dir):
@@ -150,35 +150,35 @@ def load_data(context):
     feature_column_nums = context["feature_column_nums"]
     sample_weight_column_num = context["sample_weight_column_num"]
     allFileNames = gfile.ListDirectory(root)
-    normFileNames = filter(lambda x: not x.startswith(".") and not x.startswith("_"), allFileNames)
+    normFileNames = [x for x in allFileNames if not x.startswith(".") and not x.startswith("_")]
     print(normFileNames)
-    print("Total input file count is " + str(len(normFileNames)) + ".")
+    print(("Total input file count is " + str(len(normFileNames)) + "."))
     sys.stdout.flush()
 
     file_count = 1
     line_count = 0
 
     for normFileName in normFileNames:
-        print("Now loading " + normFileName + " Progress: " + str(file_count) + "/" + str(len(normFileNames)) + ".")
+        print(("Now loading " + normFileName + " Progress: " + str(file_count) + "/" + str(len(normFileNames)) + "."))
         sys.stdout.flush()
         file_count += 1
 
         with gfile.Open(root + '/' + normFileName, 'rb') as f:
-            gf = gzip.GzipFile(fileobj=StringIO(f.read()))
+            gf = gzip.GzipFile(fileobj=BytesIO(f.read()))
             while True:
-                line = gf.readline()
+                line = gf.readline().decode()
                 if len(line) == 0:
                     break
 
                 line_count += 1
                 if line_count % 10000 == 0:
-                    print("Total loading lines cnt: " + str(line_count))
+                    print(("Total loading lines cnt: " + str(line_count)))
                     sys.stdout.flush()
 
                 columns = line.split(delimiter)
 
                 if feature_column_nums == None:
-                    feature_column_nums = range(0, len(columns))
+                    feature_column_nums = list(range(0, len(columns)))
                     feature_column_nums.remove(target_index)
 
                 if random.random() >= valid_data_percentage:
@@ -196,7 +196,7 @@ def load_data(context):
                     if sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):
                         weight = float(columns[sample_weight_column_num].strip('\n'))
                         if weight < 0.0:
-                            print("Warning: weight is below 0. example:" + line)
+                            print(("Warning: weight is below 0. example:" + line))
                             weight = 1.0
                         training_data_sample_weight.append([weight])
                     else:
@@ -216,17 +216,17 @@ def load_data(context):
                     if sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):
                         weight = float(columns[sample_weight_column_num].strip('\n'))
                         if weight < 0.0:
-                            print("Warning: weight is below 0. example:" + line)
+                            print(("Warning: weight is below 0. example:" + line))
                             weight = 1.0
                         valid_data_sample_weight.append([weight])
                     else:
                         valid_data_sample_weight.append([1.0])
 
-    print("Total data count: " + str(line_count) + ".")
-    print("Train pos count: " + str(train_pos_cnt) + ".")
-    print("Train neg count: " + str(train_neg_cnt) + ".")
-    print("Valid pos count: " + str(valid_pos_cnt) + ".")
-    print("Valid neg count: " + str(valid_neg_cnt) + ".")
+    print(("Total data count: " + str(line_count) + "."))
+    print(("Train pos count: " + str(train_pos_cnt) + "."))
+    print(("Train neg count: " + str(train_neg_cnt) + "."))
+    print(("Valid pos count: " + str(valid_pos_cnt) + "."))
+    print(("Valid neg count: " + str(valid_neg_cnt) + "."))
     sys.stdout.flush()
 
     context['feature_count'] = len(feature_column_nums)
@@ -252,8 +252,8 @@ class TrainAndEvalErrorHook(tf.train.SessionRunHook):
         self.total_loss = 0.0
         self.current_step = 1
         print("")
-        print("*** " + self._mode_name + " Hook: - Created")
-        print("steps_per_epoch: " + str(self.steps_per_epoch))
+        print(("*** " + self._mode_name + " Hook: - Created"))
+        print(("steps_per_epoch: " + str(self.steps_per_epoch)))
         print("")
 
     def before_run(self, run_context):
@@ -271,13 +271,13 @@ class TrainAndEvalErrorHook(tf.train.SessionRunHook):
         self.total_loss += current_loss
         if self.current_step >= self.steps_per_epoch:
             if EVAL_MODE == self._mode_name:
-                print("                               " + self._mode_name + " Epoch " + str(
-                    type(self)._current_epoch - 1) + ": Loss :" + str(self.total_loss / self._data_cnt))
+                print(("                               " + self._mode_name + " Epoch " + str(
+                    type(self)._current_epoch - 1) + ": Loss :" + str(self.total_loss / self._data_cnt)))
             elif TRAINING_MODE == self._mode_name:
-                print(self._mode_name + " Epoch " + str(type(self)._current_epoch) + ": Loss :" + str(
-                    self.total_loss / self._data_cnt))
+                print((self._mode_name + " Epoch " + str(type(self)._current_epoch) + ": Loss :" + str(
+                    self.total_loss / self._data_cnt)))
             else:
-                print("invalid mode name: " + self._mode_name)
+                print(("invalid mode name: " + self._mode_name))
             sys.stdout.flush()
 
             self.current_step = 1
@@ -373,16 +373,18 @@ def dnn_model_fn(features, labels, mode, params):
             loss=average_loss,
             eval_metric_ops=eval_metrics)
 
+
 def get_model(optimizer_name, learning_rate, feature_count):
     model = keras.Sequential()
     model.add(keras.layers.Dense(units=40, activation='relu', input_shape=(feature_count,)))
     model.add(keras.layers.Dense(units=1, activation='sigmoid'))
-    
+
     model.compile(loss='binary_crossentropy', optimizer=get_optimizer(optimizer_name)(learning_rate=learning_rate), metrics=['mse'])
     return model
 
+
 if __name__ == "__main__":
-    print("Training input arguments: " + str(sys.argv))
+    print(("Training input arguments: " + str(sys.argv)))
     sys.stdout.flush()
     # Use for parse Arguments
     parser = argparse.ArgumentParser("Shifu_tensorflow_training")
@@ -440,7 +442,7 @@ if __name__ == "__main__":
                "learning_rate": learning_rate, "loss_func": loss_func, "optimizer": optimizer,
                "weight_initalizer": weight_initalizer, "act_funcs": act_funcs}
     if not os.path.exists("./models"):
-        os.makedirs("./models", 0777)
+        os.makedirs("./models", 0o777)
 
     if is_continuous == "TRUE":
         print("Removing previous artifacts...")
@@ -483,18 +485,18 @@ if __name__ == "__main__":
                                         model_dir='./models/tmp',
                                         save_checkpoints_secs=TIME_INTERVAL_TO_DO_VALIDATION)
     new_model = get_model("adam", learning_rate, len(feature_column_nums))
-            
+
     dnn = tf.keras.estimator.model_to_estimator(keras_model=new_model)
 
     #tprint("DEBUG DEBUG DEBUG START")
-    
+
     #features, target = train_input_fn();
     #estimator_spec = dnn.model_fn(features, target, model_fn_lib.ModeKeys.TRAIN, dnn.config)
     #tprint("DEBUG: loss: "+str(estimator_spec.loss))
     #tprint("DEBUG: train_op: "+str(estimator_spec.train_op))
 
     #tprint(str(estimator_spec))
-    
+
     #tprint("DEBUG DEBUG DEBUG end")
 
     # dnn.train(input_fn=train_input_fn, steps=context['epoch'])
