@@ -116,7 +116,7 @@ def export_generic_config(export_dir):
     config_json_str += "         \"normtype\": \"ZSCALE\"\n"
     config_json_str += "      }\n"
     config_json_str += "}"
-    f = file(export_dir + "/" + "GenericModelConfig.json", mode="w+")
+    f = open(export_dir + "/" + "GenericModelConfig.json", mode="w+")
     f.write(config_json_str)
 
 
@@ -237,7 +237,7 @@ def load_data(context):
 def serving_input_receiver_fn():
     global FEATURE_CNT
     inputs = {
-        'input_feature': tf.placeholder(tf.float32, [None, FEATURE_CNT], name='shifu_input_0')
+        'dense_input': tf.placeholder(tf.float32, [None, FEATURE_CNT], name='shifu_input_0')
     }
     return tf.estimator.export.ServingInputReceiver(inputs, inputs)
 
@@ -262,8 +262,12 @@ class TrainAndEvalErrorHook(tf.train.SessionRunHook):
 
         # tensor_name = 'loss_tensor_0'
         # loss_tensor = graph.get_tensor_by_name(tensor_name)
-
-        loss_tensor = graph.get_collection(tf.GraphKeys.LOSSES)[0]
+        loss_info = graph.get_collection(tf.GraphKeys.LOSSES)
+        if len(loss_info) >= 1:
+            loss_tensor = loss_info[0]
+        else:
+            print("error happen")
+            loss_tensor = None
         return tf.train.SessionRunArgs(loss_tensor)
 
     def after_run(self, run_context, run_values):
@@ -319,7 +323,7 @@ def dnn_model_fn(features, labels, mode, params):
     # print(labels)
     # sys.stdout.flush()
 
-    input_layer = tf.convert_to_tensor(features['input_feature'], dtype=tf.float32)
+    input_layer = tf.convert_to_tensor(features['dense_input'], dtype=tf.float32)
     # sample_weight = tf.convert_to_tensor(features['sample_weight'], dtype=tf.float32)
 
     # Start define model structure
@@ -389,31 +393,36 @@ if __name__ == "__main__":
     # Use for parse Arguments
     parser = argparse.ArgumentParser("Shifu_tensorflow_training")
     parser.add_argument("-inputdaatapath", action='store', dest='inputdaatapath', help="data path used for training",
-                        type=str)
-    parser.add_argument("-delimiter", action='store', dest='delimiter',
+                        type=str, default='/Users/haifwu/Work/shifu/src/main/python/NormalizedData')
+    parser.add_argument("-delimiter", action='store', dest='delimiter', default='|',
                         help="delimiter of data file to seperate columns", type=str)
-    parser.add_argument("-target", action='store', dest='target', help="target index in training data file", type=int)
+    parser.add_argument("-target", action='store', dest='target', help="target index in training data file", type=int,
+                        default=0)
     parser.add_argument("-validationrate", action='store', dest='validationrate', default=0.2, help="validation rate",
                         type=float)
     parser.add_argument("-hiddenlayernodes", action='store', dest='hiddenlayernodes', help="NN hidden layer nodes",
-                        nargs='+', type=int)
-    parser.add_argument("-epochnums", action='store', dest='epochnums', help="", type=int)
-    parser.add_argument("-checkppointinterval", action='store', dest='checkpointinterval', default=0, help="", type=int)
+                        nargs='+', type=int, default=50)
+    parser.add_argument("-epochnums", action='store', dest='epochnums', help="", type=int, default=200)
+    parser.add_argument("-checkppointinterval", action='store', dest='checkpointinterval', default=20, help="", type=int)
     parser.add_argument("-modelname", action='store', dest='modelname', default="model0", help="", type=str)
     parser.add_argument("-seletectedcolumnnums", action='store', dest='selectedcolumns', help="selected columns list",
-                        nargs='+', type=int)
+                        nargs='+', type=int, default=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+                                                      20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30])
     parser.add_argument("-weightcolumnnum", action='store', dest='weightcolumnnum', help="Sample Weight column num",
-                        type=int)
-    parser.add_argument("-learningRate", action='store', dest='learningRate', help="Learning rate of NN", type=float)
+                        type=int, default=-1)
+    parser.add_argument("-learningRate", action='store', dest='learningRate', help="Learning rate of NN", type=float,
+                        default=0.002)
 
     parser.add_argument("-lossfunc", action='store', dest='lossfunc', help="Loss functions", type=str)
     parser.add_argument("-optimizer", action='store', dest='optimizer', help="optimizer functions", type=str)
     parser.add_argument("-weightinitalizer", action='store', dest='weightinitalizer', help="weightinitalizer functions",
                         type=str)
     parser.add_argument("-actfuncs", action='store', dest='actfuncs', help="act funcs of each hidden layers",
-                        nargs='+', type=str)
-    parser.add_argument("-minibatch", action='store', dest='minibatch', help="batch size of each iteration", type=int)
-    parser.add_argument("-iscontinuous", action='store', dest='iscontinuous', help="continuous training or not", default=False)
+                        nargs='+', type=str, default='tanh')
+    parser.add_argument("-minibatch", action='store', dest='minibatch', help="batch size of each iteration", type=int
+                        , default=128)
+    parser.add_argument("-iscontinuous", action='store', dest='iscontinuous', help="continuous training or not"
+                        , type=str, default='False')
 
     args, unknown = parser.parse_known_args()
 
@@ -458,7 +467,7 @@ if __name__ == "__main__":
 
     # Train the model
     train_input_fn = tf.estimator.inputs.numpy_input_fn(
-        x={'input_feature': np.asarray(input_features, dtype=np.float32),
+        x={'dense_input': np.asarray(input_features, dtype=np.float32),
            'sample_weight': np.asarray(training_data_sample_weight, dtype=np.float32)},
         y=np.asarray(targets, dtype=np.float32),
         batch_size=context["batch_size"],
@@ -470,16 +479,15 @@ if __name__ == "__main__":
                                                                      context["batch_size"])])
 
     eval_input_fn = tf.estimator.inputs.numpy_input_fn(
-        x={'input_feature': np.asarray(validate_feature, dtype=np.float32),
+        x={'dense_input': np.asarray(validate_feature, dtype=np.float32),
            'sample_weight': np.asarray(valid_data_sample_weight, dtype=np.float32)},
         y=np.asarray(validate_target, dtype=np.float32),
         batch_size=len(validate_target),
         num_epochs=1,
         shuffle=False)
     eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn,
-                                      throttle_secs=TIME_INTERVAL_TO_DO_VALIDATION,
-                                      hooks=[
-                                          TrainAndEvalErrorHook(EVAL_MODE, len(validate_target), len(validate_target))])
+                                      throttle_secs=TIME_INTERVAL_TO_DO_VALIDATION
+                                      )
 
     run_config = tf.estimator.RunConfig(tf_random_seed=19830610,
                                         model_dir='./models/tmp',
@@ -503,7 +511,7 @@ if __name__ == "__main__":
     tf.estimator.train_and_evaluate(dnn, train_spec, eval_spec)
 
     export_dir = context["export_dir"] + "/" + context["model_name"]
-    dnn.export_savedmodel(export_dir, serving_input_receiver_fn)
+    dnn.export_saved_model(export_dir, serving_input_receiver_fn)
 
     move_model(export_dir)
 
