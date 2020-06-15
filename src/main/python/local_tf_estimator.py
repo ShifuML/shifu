@@ -30,12 +30,10 @@ import sys
 from io import BytesIO
 
 import numpy as np
-import tensorflow.compat.v1 as tf
-import tensorflow as tf2
-from tensorflow import keras
+import tensorflow as tf
 from tensorflow.python.platform import gfile
 
-# tf.disable_v2_behavior()
+tf.compat.v1.disable_v2_behavior()
 
 FEATURE_CNT = 0
 TRAINING_MODE = "Training"
@@ -49,7 +47,7 @@ def tprint(content, log_level="INFO"):
 
 
 def get_activation_fun(name):
-    if name == None:
+    if name is None:
         return tf.nn.leaky_relu
     name = name.lower()
 
@@ -66,41 +64,42 @@ def get_activation_fun(name):
 
 
 def get_loss_func(name):
-    if name == None:
+    if name is None:
         return tf.losses.mean_squared_error
     name = name.lower()
 
     if 'squared' == name:
         return tf.losses.mean_squared_error
     elif 'absolute' == name:
-        return tf.losses.absolute_difference
+        return tf.compat.v1.losses.absolute_difference
     elif 'log' == name:
-        return tf.losses.log_loss
+        return tf.compat.v1.losses.log_loss
     else:
         return tf.losses.mean_squared_error
 
+
 def get_optimizer(name):
-    if name == None:
-        return tf.train.AdamOptimizer
+    if name is None:
+        return tf.keras.optimizers.Adam
     name = name.lower()
 
     if 'adam' == name:
-        return tf.train.AdamOptimizer
+        return tf.keras.optimizers.Adam
     elif 'gradientdescent' == name:
-        return tf.train.GradientDescentOptimizer
+        return tf.keras.optimizers.SGD
     elif 'rmsprop' == name:
-        return tf.train.RMSPropOptimizer
+        return tf.keras.optimizers.RMSprop
     else:
-        return tf.train.AdamOptimizer
+        return tf.keras.optimizers.Adam
 
 
 def get_initalizer(name):
     if 'gaussian' == name:
-        return tf.initializers.random_normal()
+        return tf.random_normal_initializer()
     elif 'xavier' == name:
-        return tf2.initializers.GlorotUniform()
+        return tf.initializers.GlorotUniform()
     else:
-        return tf2.initializers.GlorotUniform()
+        return tf.initializers.GlorotUniform()
 
 
 def export_generic_config(export_dir):
@@ -237,12 +236,12 @@ def load_data(context):
 def serving_input_receiver_fn():
     global FEATURE_CNT
     inputs = {
-        'dense_input': tf.placeholder(tf.float32, [None, FEATURE_CNT], name='shifu_input_0')
+        'dense_input': tf.compat.v1.placeholder(tf.float32, [None, FEATURE_CNT], name='shifu_input_0')
     }
     return tf.estimator.export.ServingInputReceiver(inputs, inputs)
 
 
-class TrainAndEvalErrorHook(tf.train.SessionRunHook):
+class TrainAndEvalErrorHook(tf.estimator.SessionRunHook):
     _current_epoch = 1
 
     def __init__(self, mode_name=None, data_cnt=0, batch_size=1):
@@ -262,13 +261,13 @@ class TrainAndEvalErrorHook(tf.train.SessionRunHook):
 
         # tensor_name = 'loss_tensor_0'
         # loss_tensor = graph.get_tensor_by_name(tensor_name)
-        loss_info = graph.get_collection(tf.GraphKeys.LOSSES)
+        loss_info = graph.get_collection(tf.compat.v1.GraphKeys.LOSSES)
         if len(loss_info) >= 1:
             loss_tensor = loss_info[0]
         else:
             print("error happen")
             loss_tensor = None
-        return tf.train.SessionRunArgs(loss_tensor)
+        return tf.estimator.SessionRunArgs(loss_tensor)
 
     def after_run(self, run_context, run_values):
         current_loss = run_values.results
@@ -365,7 +364,7 @@ def dnn_model_fn(features, labels, mode, params):
 
     if mode == tf.estimator.ModeKeys.TRAIN:
         optimizer = get_optimizer(optimizer_name)(learning_rate=learning_rate)
-        train_op = optimizer.minimize(average_loss, global_step=tf.train.get_global_step())
+        train_op = optimizer.minimize(average_loss, [])
         return tf.estimator.EstimatorSpec(mode=mode, loss=average_loss, train_op=train_op)
 
     eval_metrics = {"a-loss": tf.metrics.mean_squared_error(predictions=prediction, labels=labels,
@@ -378,12 +377,14 @@ def dnn_model_fn(features, labels, mode, params):
             eval_metric_ops=eval_metrics)
 
 
-def get_model(optimizer_name, learning_rate, feature_count):
-    model = keras.Sequential()
-    model.add(keras.layers.Dense(units=40, activation='relu', input_shape=(feature_count,)))
-    model.add(keras.layers.Dense(units=1, activation='sigmoid'))
+def get_model(optimizer_name, _learning_rate, feature_count):
+    model = tf.keras.models.Sequential([
+        tf.keras.layers.Dense(units=40, activation='relu', input_shape=(feature_count,)),
+        tf.keras.layers.Dense(units=1, activation='sigmoid')
+    ])
 
-    model.compile(loss='binary_crossentropy', optimizer=get_optimizer(optimizer_name)(learning_rate=learning_rate), metrics=['mse'])
+    model.compile(loss='binary_crossentropy', optimizer=get_optimizer(optimizer_name)(learning_rate=_learning_rate),
+                  metrics=['mse'])
     return model
 
 
@@ -403,7 +404,8 @@ if __name__ == "__main__":
     parser.add_argument("-hiddenlayernodes", action='store', dest='hiddenlayernodes', help="NN hidden layer nodes",
                         nargs='+', type=int, default=50)
     parser.add_argument("-epochnums", action='store', dest='epochnums', help="", type=int, default=200)
-    parser.add_argument("-checkppointinterval", action='store', dest='checkpointinterval', default=20, help="", type=int)
+    parser.add_argument("-checkppointinterval", action='store', dest='checkpointinterval', default=20, help="",
+                        type=int)
     parser.add_argument("-modelname", action='store', dest='modelname', default="model0", help="", type=str)
     parser.add_argument("-seletectedcolumnnums", action='store', dest='selectedcolumns', help="selected columns list",
                         nargs='+', type=int, default=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
@@ -466,7 +468,7 @@ if __name__ == "__main__":
     # tf.logging.set_verbosity(tf.logging.INFO)
 
     # Train the model
-    train_input_fn = tf.estimator.inputs.numpy_input_fn(
+    train_input_fn = tf.compat.v1.estimator.inputs.numpy_input_fn(
         x={'dense_input': np.asarray(input_features, dtype=np.float32),
            'sample_weight': np.asarray(training_data_sample_weight, dtype=np.float32)},
         y=np.asarray(targets, dtype=np.float32),
@@ -478,7 +480,7 @@ if __name__ == "__main__":
                                         hooks=[TrainAndEvalErrorHook(TRAINING_MODE, len(input_features),
                                                                      context["batch_size"])])
 
-    eval_input_fn = tf.estimator.inputs.numpy_input_fn(
+    eval_input_fn = tf.compat.v1.estimator.inputs.numpy_input_fn(
         x={'dense_input': np.asarray(validate_feature, dtype=np.float32),
            'sample_weight': np.asarray(valid_data_sample_weight, dtype=np.float32)},
         y=np.asarray(validate_target, dtype=np.float32),
@@ -486,8 +488,7 @@ if __name__ == "__main__":
         num_epochs=1,
         shuffle=False)
     eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn,
-                                      throttle_secs=TIME_INTERVAL_TO_DO_VALIDATION
-                                      )
+                                      throttle_secs=TIME_INTERVAL_TO_DO_VALIDATION)
 
     run_config = tf.estimator.RunConfig(tf_random_seed=19830610,
                                         model_dir='./models/tmp',
@@ -496,16 +497,16 @@ if __name__ == "__main__":
 
     dnn = tf.keras.estimator.model_to_estimator(keras_model=new_model)
 
-    #tprint("DEBUG DEBUG DEBUG START")
+    # tprint("DEBUG DEBUG DEBUG START")
 
-    #features, target = train_input_fn();
-    #estimator_spec = dnn.model_fn(features, target, model_fn_lib.ModeKeys.TRAIN, dnn.config)
-    #tprint("DEBUG: loss: "+str(estimator_spec.loss))
-    #tprint("DEBUG: train_op: "+str(estimator_spec.train_op))
+    # features, target = train_input_fn();
+    # estimator_spec = dnn.model_fn(features, target, model_fn_lib.ModeKeys.TRAIN, dnn.config)
+    # tprint("DEBUG: loss: "+str(estimator_spec.loss))
+    # tprint("DEBUG: train_op: "+str(estimator_spec.train_op))
 
-    #tprint(str(estimator_spec))
+    # tprint(str(estimator_spec))
 
-    #tprint("DEBUG DEBUG DEBUG end")
+    # tprint("DEBUG DEBUG DEBUG end")
 
     # dnn.train(input_fn=train_input_fn, steps=context['epoch'])
     tf.estimator.train_and_evaluate(dnn, train_spec, eval_spec)
