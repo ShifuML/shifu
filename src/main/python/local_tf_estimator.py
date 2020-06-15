@@ -42,7 +42,7 @@ EVAL_MODE = "Validation"
 
 def tprint(content, log_level="INFO"):
     systime = datetime.datetime.now()
-    print((str(systime) + " " + log_level + " " + " [Shifu.Tensorflow.train] " + str(content)))
+    print(str(systime) + " " + log_level + " " + " [Shifu.Tensorflow.train] " + str(content))
     sys.stdout.flush()
 
 
@@ -151,14 +151,14 @@ def load_data(context):
     allFileNames = gfile.ListDirectory(root)
     normFileNames = [x for x in allFileNames if not x.startswith(".") and not x.startswith("_")]
     print(normFileNames)
-    print(("Total input file count is " + str(len(normFileNames)) + "."))
+    print("Total input file count is " + str(len(normFileNames)) + ".")
     sys.stdout.flush()
 
     file_count = 1
     line_count = 0
 
     for normFileName in normFileNames:
-        print(("Now loading " + normFileName + " Progress: " + str(file_count) + "/" + str(len(normFileNames)) + "."))
+        print("Now loading " + normFileName + " Progress: " + str(file_count) + "/" + str(len(normFileNames)) + ".")
         sys.stdout.flush()
         file_count += 1
 
@@ -171,7 +171,7 @@ def load_data(context):
 
                 line_count += 1
                 if line_count % 10000 == 0:
-                    print(("Total loading lines cnt: " + str(line_count)))
+                    print("Total loading lines cnt: " + str(line_count))
                     sys.stdout.flush()
 
                 columns = line.split(delimiter)
@@ -195,7 +195,7 @@ def load_data(context):
                     if sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):
                         weight = float(columns[sample_weight_column_num].strip('\n'))
                         if weight < 0.0:
-                            print(("Warning: weight is below 0. example:" + line))
+                            print("Warning: weight is below 0. example:" + line)
                             weight = 1.0
                         training_data_sample_weight.append([weight])
                     else:
@@ -215,17 +215,17 @@ def load_data(context):
                     if sample_weight_column_num >= 0 and sample_weight_column_num < len(columns):
                         weight = float(columns[sample_weight_column_num].strip('\n'))
                         if weight < 0.0:
-                            print(("Warning: weight is below 0. example:" + line))
+                            print("Warning: weight is below 0. example:" + line)
                             weight = 1.0
                         valid_data_sample_weight.append([weight])
                     else:
                         valid_data_sample_weight.append([1.0])
 
-    print(("Total data count: " + str(line_count) + "."))
-    print(("Train pos count: " + str(train_pos_cnt) + "."))
-    print(("Train neg count: " + str(train_neg_cnt) + "."))
-    print(("Valid pos count: " + str(valid_pos_cnt) + "."))
-    print(("Valid neg count: " + str(valid_neg_cnt) + "."))
+    print("Total data count: " + str(line_count) + ".")
+    print("Train pos count: " + str(train_pos_cnt) + ".")
+    print("Train neg count: " + str(train_neg_cnt) + ".")
+    print("Valid pos count: " + str(valid_pos_cnt) + ".")
+    print("Valid neg count: " + str(valid_neg_cnt) + ".")
     sys.stdout.flush()
 
     context['feature_count'] = len(feature_column_nums)
@@ -251,8 +251,8 @@ class TrainAndEvalErrorHook(tf.estimator.SessionRunHook):
         self.total_loss = 0.0
         self.current_step = 1
         print("")
-        print(("*** " + self._mode_name + " Hook: - Created"))
-        print(("steps_per_epoch: " + str(self.steps_per_epoch)))
+        print("*** " + self._mode_name + " Hook: - Created")
+        print("steps_per_epoch: " + str(self.steps_per_epoch))
         print("")
 
     def before_run(self, run_context):
@@ -274,13 +274,13 @@ class TrainAndEvalErrorHook(tf.estimator.SessionRunHook):
         self.total_loss += current_loss
         if self.current_step >= self.steps_per_epoch:
             if EVAL_MODE == self._mode_name:
-                print(("                               " + self._mode_name + " Epoch " + str(
-                    type(self)._current_epoch - 1) + ": Loss :" + str(self.total_loss / self._data_cnt)))
+                print("                               " + self._mode_name + " Epoch " + str(
+                    type(self)._current_epoch - 1) + ": Loss :" + str(self.total_loss / self._data_cnt))
             elif TRAINING_MODE == self._mode_name:
-                print((self._mode_name + " Epoch " + str(type(self)._current_epoch) + ": Loss :" + str(
-                    self.total_loss / self._data_cnt)))
+                print(self._mode_name + " Epoch " + str(type(self)._current_epoch) + ": Loss :" + str(
+                    self.total_loss / self._data_cnt))
             else:
-                print(("invalid mode name: " + self._mode_name))
+                print("invalid mode name: " + self._mode_name)
             sys.stdout.flush()
 
             self.current_step = 1
@@ -389,7 +389,7 @@ def get_model(optimizer_name, _learning_rate, feature_count):
 
 
 if __name__ == "__main__":
-    print(("Training input arguments: " + str(sys.argv)))
+    print("Training input arguments: " + str(sys.argv))
     sys.stdout.flush()
     # Use for parse Arguments
     parser = argparse.ArgumentParser("Shifu_tensorflow_training")
