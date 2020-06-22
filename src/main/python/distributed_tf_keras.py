@@ -40,6 +40,7 @@ from tensorflow.python.client import timeline
 from threading import Thread
 
 
+tf.compat.v1.disable_eager_execution()
 TB_PORT_ENV_VAR = 'TB_PORT'
 
 #######################################################################################################################
@@ -85,13 +86,13 @@ def model(shifu_context):
 def get_optimizer(name):
     name = name.lower()
     if 'adam' == name:
-        return tf.keras.optimizers.Adam
+        return tf.compat.v1.train.AdamOptimizer
     elif 'b' == name or 'sgd' == name or 'gd' == name or 'gradientdescent' == name:
-        return tf.keras.optimizers.SGD
+        return tf.compat.v1.train.GradientDescentOptimizer
     elif 'adagrad' == name:
-        return tf.keras.optimizers.Adagrad
+        return tf.compat.v1.train.AdagradOptimizer
     else:
-        return tf.keras.optimizers.Adam
+        return tf.compat.v1.train.AdamOptimizer
 
 
 def get_loss_func(name):
@@ -107,7 +108,7 @@ def get_loss_func(name):
     elif 'log' == name:
         return tf.compat.v1.losses.log_loss
     elif 'binary_crossentropy' == name:
-        return tf.losses.binary_crossentropy
+        return tf.compat.v1.losses.log_loss
     else:
         return tf.losses.mean_squared_error
 
@@ -134,7 +135,7 @@ def get_activation_fun(name):
 def read_context_from_env_and_modelconf():
     replicas_to_aggregate_ratio = 1
     # Aggregation replica reatio, default is 1, setting to < 1 can accerlerate traning but accuracy may be dropped.
-    
+
     delimiter = '|'
     if "DELIMITER" in os.environ:
         delimiter = os.environ['DELIMITER']
@@ -170,7 +171,7 @@ def read_context_from_env_and_modelconf():
         loss_func = 'binary_crossentropy'
         if "Loss" in model_conf['train']['params']:
             loss_func = model_conf['train']['params']['Loss']
-        
+
     learning_rate = model_conf['train']['params']['LearningRate']
 
     training_data_path = ''
@@ -178,10 +179,9 @@ def read_context_from_env_and_modelconf():
         training_data_path = os.environ["TRAINING_DATA_PATH"]
 
     # TODO weight_initalizer should be set and enabled
-
-    return {"model_conf": model_conf, "replicas_to_aggregate_ratio": replicas_to_aggregate_ratio, "delimiter": delimiter, 
-            "cluster_spec": cluster_spec, "n_pss": n_pss, "n_workers": n_workers, "job_name": job_name, "task_index": task_index, 
-            "socket_server_port": socket_server_port, "feature_column_nums": feature_column_nums, 
+    return {"model_conf": model_conf, "replicas_to_aggregate_ratio": replicas_to_aggregate_ratio, "delimiter": delimiter,
+            "cluster_spec": cluster_spec, "n_pss": n_pss, "n_workers": n_workers, "job_name": job_name, "task_index": task_index,
+            "socket_server_port": socket_server_port, "feature_column_nums": feature_column_nums,
             "total_training_data_number": total_training_data_number, "sample_weight_column_num": sample_weight_column_num,
             "target_column_num": target_column_num, "tmp_model_path": tmp_model_path, "final_model_path": final_model_path,
             "is_continue_train": is_continue_train, "valid_training_data_ratio": valid_training_data_ratio,
@@ -206,8 +206,8 @@ class GraphEditTestHook(tf.estimator.SessionRunHook):
     def begin(self):
         logging.info("test begin ... ")
         with tf.compat.v1.device(tf.compat.v1.train.replica_device_setter(#ps_tasks=n_pss,
-                                              cluster=self.cluster,
-                                              worker_device=self.worker_device)):
+                cluster=self.cluster,
+                worker_device=self.worker_device)):
             graph = tf.compat.v1.get_default_graph()
             output_tensor = graph.get_tensor_by_name('shifu_output_0/Sigmoid:0')
             constant = tf.constant([1])
@@ -220,7 +220,7 @@ def main(_):
 
     shifu_context = read_context_from_env_and_modelconf()
     logging.info("Shifu context: %s" % str(shifu_context))
-    
+
     # This client is used for sync worker training intermediate information with master
     socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     socket_client.connect(("127.0.0.1", shifu_context["socket_server_port"])) # sync to local one and logic processed in local TaskExecutor
@@ -235,14 +235,14 @@ def main(_):
     if shifu_context['job_name'] == 'ps':  # checks if parameter server
         logging.info("Join cluster as ps role.")
         server = tf.compat.v1.train.Server(cluster,
-                                 job_name="ps",
-                                 task_index=shifu_context['task_index'])
+                                           job_name="ps",
+                                           task_index=shifu_context['task_index'])
         server.join()
     else:  # it must be a worker server
         is_chief = (shifu_context['task_index'] == 0)  # checks if this is the chief node
         server = tf.compat.v1.train.Server(cluster,
-                                 job_name="worker",
-                                 task_index=shifu_context['task_index'])
+                                           job_name="worker",
+                                           task_index=shifu_context['task_index'])
         logging.info("Loading data from worker index = %d" % shifu_context['task_index'])
 
         if "TRAINING_DATA_PATH" in os.environ:
@@ -284,10 +284,10 @@ def main(_):
 
         # Graph
         worker_device = "/job:%s/task:%d" % (shifu_context['job_name'], shifu_context['task_index'])
-        with tf.device(tf.compat.v1.train.replica_device_setter(   # ps_tasks=n_pss,
-                                                      cluster=cluster,
-                                                      worker_device=worker_device
-                                                      )):
+        with tf.compat.v1.device(tf.compat.v1.train.replica_device_setter(   # ps_tasks=n_pss,
+                cluster=cluster,
+                worker_device=worker_device
+        )):
             label_placeholder = tf.compat.v1.placeholder(dtype=tf.int32, shape=(None, 1))
             sample_weight_placeholder = tf.compat.v1.placeholder(dtype=tf.float32, shape=(None, 1))
 
@@ -319,9 +319,9 @@ def main(_):
                 name="shifu_sync_replicas")
 
             global_step = tf.compat.v1.get_variable('global_step', [],
-                                  initializer=tf.constant_initializer(0),
-                                  trainable=False,
-                                  dtype=tf.int32)
+                                                    initializer=tf.constant_initializer(0),
+                                                    trainable=False,
+                                                    dtype=tf.int32)
 
             train_step = opt.minimize(loss, global_step=global_step)
             logging.info("Train step: %s." % str(train_step))
@@ -350,27 +350,27 @@ def main(_):
             scaff = None
         else:
             scaff = tf.compat.v1.train.Scaffold(init_op=init_op,
-                                  local_init_op=local_init,
-                                  ready_for_local_init_op=ready_for_local_init)
+                                                local_init_op=local_init,
+                                                ready_for_local_init_op=ready_for_local_init)
         # Configure
         if "IS_BACKUP" in os.environ:
             config = tf.compat.v1.ConfigProto(log_device_placement=False,
-                                    allow_soft_placement=True,
-                                    device_filters=['/job:ps', '/job:worker/task:0',
-                                                    '/job:worker/task:%d' % shifu_context['task_index']])
+                                              allow_soft_placement=True,
+                                              device_filters=['/job:ps', '/job:worker/task:0',
+                                                              '/job:worker/task:%d' % shifu_context['task_index']])
         else:
             config = tf.compat.v1.ConfigProto(log_device_placement=False,
-                                    allow_soft_placement=True)
+                                              allow_soft_placement=True)
 
         # Create a "supervisor", which oversees the training process.
         sess = tf.compat.v1.train.MonitoredTrainingSession(master=server.target,
-                                                 is_chief=shifu_context['is_chief'],
-                                                 config=config,
-                                                 scaffold=scaff,
-                                                 hooks=chief_hooks,
-                                                 log_step_count_steps=0,
-                                                 stop_grace_period_secs=10,
-                                                 checkpoint_dir=shifu_context['tmp_model_path'])
+                                                           is_chief=shifu_context['is_chief'],
+                                                           config=config,
+                                                           scaffold=scaff,
+                                                           hooks=chief_hooks,
+                                                           log_step_count_steps=0,
+                                                           stop_grace_period_secs=10,
+                                                           checkpoint_dir=shifu_context['tmp_model_path'])
 
         if shifu_context['is_chief'] and not shifu_context['is_continue_train']:
             sess.run(init_tokens_op)
@@ -394,7 +394,7 @@ def main(_):
                     _, l, gs = sess.run([train_step, loss, global_step], feed_dict=train_feed, options=run_options,
                                         run_metadata=run_metadata)
                 training_time = time.time() - start
-                
+
                 valid_start = time.time()
                 # compute validation loss
                 valid_loss, gs = sess.run([loss, global_step], feed_dict={new_model.inputs[0]: valid_x,
