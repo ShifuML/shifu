@@ -644,7 +644,8 @@ def start_tb(checkpoint_dir, port):
     tb = program.TensorBoard()
     tb.configure(argv=[None, '--port=%d' % port, '--logdir', checkpoint_dir, '--host', '0.0.0.0'])
     url = tb.launch()
-    logging.info("TensorBoard will start at url:%s" % url)
+    logging.info("TensorBoard started with url: http://%s:%d" % (socket.gethostname(), port))
+
 
 if __name__ == '__main__':
     tf.compat.v1.app.run()
