@@ -39,7 +39,7 @@ from tensorflow.python.saved_model import tag_constants
 from tensorflow.python.client import timeline
 from threading import Thread
 
-
+tf.compat.v1.disable_v2_behavior()
 tf.compat.v1.disable_eager_execution()
 TB_PORT_ENV_VAR = 'TB_PORT'
 
@@ -132,6 +132,10 @@ def get_activation_fun(name):
         return tf.nn.relu
 
 
+def build_env_str():
+    return ",".join(["%s=%s" % (key, os.environ[key]) for key in os.environ])
+
+
 def read_context_from_env_and_modelconf():
     replicas_to_aggregate_ratio = 1
     # Aggregation replica reatio, default is 1, setting to < 1 can accerlerate traning but accuracy may be dropped.
@@ -139,6 +143,7 @@ def read_context_from_env_and_modelconf():
     delimiter = '|'
     if "DELIMITER" in os.environ:
         delimiter = os.environ['DELIMITER']
+    logging.info("os.env:" + build_env_str())
 
     # Read properties from ENV
     cluster_spec = json.loads(os.environ["CLUSTER_SPEC"])
@@ -409,9 +414,9 @@ def main(_):
                 message = "worker_index:{},time:{},current_epoch:{},training_loss:{},valid_loss:{},valid_time:{}\n".format(
                     str(shifu_context['task_index']), str(training_time), str(gs), str(l), str(valid_loss), str(valid_time))
                 if sys.version_info < (3, 0):
-                    socket_client.send(bytes(message))
+                    socket_client.send(bytes(message.encode()))
                 else:
-                    socket_client.send(bytes(message), 'utf8')
+                    socket_client.send(bytes(message.encode('utf-8')))
 
             except RuntimeError as re:
                 if 'Run called even after should_stop requested.' == re.args[0]:

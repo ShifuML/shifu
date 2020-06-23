@@ -394,7 +394,7 @@ if __name__ == "__main__":
     # Use for parse Arguments
     parser = argparse.ArgumentParser("Shifu_tensorflow_training")
     parser.add_argument("-inputdaatapath", action='store', dest='inputdaatapath', help="data path used for training",
-                        type=str, default='/Users/haifwu/Work/shifu/src/main/python/NormalizedData')
+                        type=str, default='./NormalizedData')
     parser.add_argument("-delimiter", action='store', dest='delimiter', default='|',
                         help="delimiter of data file to seperate columns", type=str)
     parser.add_argument("-target", action='store', dest='target', help="target index in training data file", type=int,
