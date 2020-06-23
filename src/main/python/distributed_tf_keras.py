@@ -29,7 +29,7 @@ import random
 import numpy as np
 import json
 import socket
-import tensorboard.main as tb_main
+from tensorboard import program
 from tensorflow.python.platform import gfile
 from tensorflow.python.framework import ops
 from tensorflow.python.saved_model import builder
@@ -98,11 +98,11 @@ def get_optimizer(name):
 def get_loss_func(name):
     if name is None:
         logging.warn("Loss 'name' is not specified, set to mean_squared_error.")
-        return tf.losses.mean_squared_error
+        return tf.compat.v1.losses.mean_squared_error
     name = name.lower()
 
     if 'squared' == name or 'mse' == name or 'mean_squared_error' == name:
-        return tf.losses.mean_squared_error
+        return tf.compat.v1.losses.mean_squared_error
     elif 'absolute' == name:
         return tf.compat.v1.losses.absolute_difference
     elif 'log' == name:
@@ -110,7 +110,7 @@ def get_loss_func(name):
     elif 'binary_crossentropy' == name:
         return tf.compat.v1.losses.log_loss
     else:
-        return tf.losses.mean_squared_error
+        return tf.compat.v1.losses.mean_squared_error
 
 
 def get_activation_fun(name):
@@ -382,6 +382,7 @@ def main(_):
             logging.info("Chief worker start waiting 20 seconds.")
             time.sleep(20)  # grace period to wait on other workers before starting training
             logging.info("Chief worker finish waiting 20 seconds.")
+            start_tensorboard(shifu_context['tmp_model_path'])
 
         # Train until hook stops session
         logging.info('Starting training on worker %d.' % shifu_context['task_index'])
@@ -629,16 +630,21 @@ def export_generic_config(export_dir, _input, output, norm_type):
 
 
 def start_tensorboard(checkpoint_dir):
-    tf.compat.v1.flags.FLAGS.logdir = checkpoint_dir
+    port = 23453
     if TB_PORT_ENV_VAR in os.environ:
-        tf.compat.v1.flags.FLAGS.port = os.environ['TB_PORT']
-
-    tb_thread = Thread(target=tb_main.run_main)
+        port = int(os.environ['TB_PORT'])
+    tb_thread = Thread(target=start_tb, args=[checkpoint_dir, port])
     tb_thread.daemon = True
 
     logging.info("Starting TensorBoard with --logdir= %s in daemon thread ..." % checkpoint_dir)
     tb_thread.start()
 
+
+def start_tb(checkpoint_dir, port):
+    tb = program.TensorBoard()
+    tb.configure(argv=[None, '--port=%d' % port, '--logdir', checkpoint_dir, '--host', '0.0.0.0'])
+    url = tb.launch()
+    logging.info("TensorBoard will start at url:%s" % url)
 
 if __name__ == '__main__':
     tf.compat.v1.app.run()
