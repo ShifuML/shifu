@@ -1,0 +1,182 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<configuration>
+
+
+  <!-- Application configurations -->
+  <property>
+    <description>Default queue to submit to YARN.</description>
+    <name>shifu.application.yarn.queue</name>
+    <value>default</value>
+  </property>
+
+  <property>
+    <description>Name of your YARN application.</description>
+    <name>shifu.application.name</name>
+    <value>TensorFlowApplication</value>
+  </property>
+
+  <property>
+    <description>Max runtime of the application before killing it, in milliseconds.</description>
+    <name>shifu.application.timeout</name>
+    <value>0</value>
+  </property>
+
+  <property>
+    <description>python env path in hdfs</description>
+    <name>shifu.application.python-env-zip</name>
+    <value>/tmp/tensor-local/python_env.zip</value>
+  </property>
+
+  <property>
+    <description>python env path</description>
+    <name>shifu.application.python-binary-path</name>
+    <value>/x/home/website/python3.7</value>
+  </property>
+
+  <property>
+    <description>glibc path in hdfs</description>
+    <name>shifu.application.glibc-env-zip</name>
+    <value>/tmp/tensor-local/glibc.zip</value>
+  </property>
+
+    <property>
+    <description>glibc path</description>
+    <name>shifu.application.glibc-binary-path</name>
+    <value>/x/home/website/glibc2.17</value>
+  </property>
+
+  <!-- Task configurations -->
+  <!-- Could change by User -->
+  <property>
+    <description>JVM opts for each TaskExecutor.</description>
+    <name>shifu.task.executor.jvm.opts</name>
+    <value>-Xmx1536m</value>
+  </property>
+
+  <property>
+    <description>Frequency, in milliseconds, for which TaskExecutors should heartbeat with AM.</description>
+    <name>shifu.task.heartbeat-interval</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>How many missed heartbeats before declaring a TaskExecutor dead.</description>
+    <name>shifu.task.max-missed-heartbeats</name>
+    <value>25</value>
+  </property>
+
+  <!-- AM configurations -->
+  <property>
+    <description>How many times a failed AM should retry.</description>
+    <name>shifu.am.retry-count</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>AM memory size, requested as a string (e.g. '2g' or '2048m').</description>
+    <name>shifu.am.memory</name>
+    <value>4g</value>
+  </property>
+
+  <property>
+    <description>Number of AM vcores to use.</description>
+    <name>shifu.am.vcores</name>
+    <value>1</value>
+  </property>
+
+  <!-- PS configurations -->
+  <!-- Could change by User -->
+  <property>
+    <description>Parameter server memory size, requested as a string (e.g. '2g' or '2048m').</description>
+    <name>shifu.ps.memory</name>
+    <value>4g</value>
+  </property>
+
+  <!-- Could change by User -->
+  <property>
+    <description>Number of vcores per parameter server.</description>
+    <name>shifu.ps.vcores</name>
+    <value>2</value>
+  </property>
+
+  <!-- Could change by User -->
+  <property>
+    <description>Number of parameter servers to request.</description>
+    <name>shifu.ps.instances</name>
+    <value>1</value>
+  </property>
+  <!--
+         <property>
+      <description>Number of back-up parameter servers to request.</description>
+      <name>shifu.ps.instances.backup</name>
+      <value>2</value>
+    </property>
+  -->
+  <!-- Worker configurations -->
+  <property>
+    <description>Timeout, in milliseconds for the user's python processes before forcibly killing them.</description>
+    <name>shifu.worker.timeout</name>
+    <value>0</value>
+  </property>
+
+<!-- Could change by User -->
+  <property>
+    <description>Worker memory size, requested as a string (e.g. '2g' or '2048m').</description>
+    <name>shifu.worker.memory</name>
+    <value>2g</value>
+  </property>
+
+<!-- Could change by User -->
+  <property>
+    <description>Number of vcores per worker.</description>
+    <name>shifu.worker.vcores</name>
+    <value>2</value>
+  </property>
+
+  <property>
+    <description>Number of workers to request.</description>
+    <name>shifu.worker.instances</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>Number of backup workers to request.</description>
+    <name>shifu.worker.instances.backup</name>
+    <value>0</value>
+  </property>
+
+  <!--History Server configurations-->
+  <property>
+    <description>
+      Hostname of history server
+    </description>
+    <name>shifu.history.host</name>
+    <value>historyhost.com</value>
+  </property>
+
+  <property>
+    <description>
+      Location for Shifu AM to write config and events on HDFS
+    </description>
+    <name>shifu.history.location</name>
+    <value>/path/to/shifu-history</value>
+  </property>
+
+  <property>
+    <description>
+      Location of intermediate folder
+    </description>
+    <name>shifu.history.intermediate</name>
+    <value>/path/to/shifu-history/intermediate</value>
+  </property>
+
+  <property>
+    <description>
+      Location of finished folder
+    </description>
+    <name>shifu.history.finished</name>
+    <value>/path/to/shifu-history/finished</value>
+  </property>
+</configuration>
