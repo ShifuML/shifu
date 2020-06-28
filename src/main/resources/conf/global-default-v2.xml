@@ -26,7 +26,7 @@
   <property>
     <description>python env path in hdfs</description>
     <name>shifu.application.python-env-zip</name>
-    <value>/tmp/tensor-local/python_env.zip</value>
+    <value>/apps/risk/dev/shifuml/python_env.zip</value>
   </property>
 
   <property>
@@ -38,7 +38,7 @@
   <property>
     <description>glibc path in hdfs</description>
     <name>shifu.application.glibc-env-zip</name>
-    <value>/tmp/tensor-local/glibc.zip</value>
+    <value>/apps/risk/dev/shifuml/glibc.zip</value>
   </property>
 
     <property>
