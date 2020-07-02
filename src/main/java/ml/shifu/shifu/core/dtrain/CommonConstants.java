@@ -133,6 +133,10 @@ public interface CommonConstants {
 
     public static final String TF_ALG = "TF.alg";
 
+    public static final String TF_Version = "TF.version";
+
+    public static final String TF_V2 = "2.0";
+
     /* -------------- varsel Constants ---------------------- */
     public static final String OP_METRIC = "OpMetric";
     public static final String OP_UNIT = "OpUnit";

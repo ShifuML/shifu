@@ -829,6 +829,15 @@
                             {"label": "Momentum", "value":"Momentum"}
                         ]
                     }, {
+                        "name" : "TF.version",
+                        "type" : "text",
+                        "directive": "select",
+                        "defval" : "1.0",
+                        "options": [
+                            {"label": "1.0", "value":"1.0"},
+                            {"label": "2.0", "value":"2.0"}
+                        ]
+                    }, {
                         "name" : "wideEnable",
                         "type": "boolean",
                         "directive": "checkbox",
