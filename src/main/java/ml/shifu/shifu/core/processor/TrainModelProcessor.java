@@ -157,6 +157,8 @@ import parquet.format.PageType;
 import parquet.hadoop.ParquetRecordReader;
 import parquet.org.codehaus.jackson.Base64Variant;
 
+import static ml.shifu.shifu.core.dtrain.CommonConstants.*;
+
 /**
  * Train processor, produce model based on the normalized dataset.
  */
@@ -448,10 +450,22 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
     }
 
+    protected boolean useTensorFlow2() {
+        return TF_V2.equals(super.modelConfig.getTrain().getParams().get(TF_Version));
+    }
+
+    protected String getConfigFileName() {
+        return useTensorFlow2() ? "global-default-v2.xml" : "global-default.xml";
+    }
+
+    protected String getScriptPrefix() {
+        return useTensorFlow2() ? "distributed_tf20_" : "distributed_tf_";
+    }
+
     protected int runDistributedTensorflowTrain() throws Exception {
         LOG.info("Started distributed TensorFlow training.");
         globalDefaultConfFile = new Path(
-                super.pathFinder.getAbsolutePath(new Path("conf" + File.separator + "global-default.xml").toString()));
+                super.pathFinder.getAbsolutePath(new Path("conf" + File.separator + getConfigFileName()).toString()));
         LOG.info("Shifu tensorflow on yarn global default file is found in: {}.", globalDefaultConfFile);
 
         if(super.modelConfig.getTrain().getBaggingNum() != 1) {
@@ -655,7 +669,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             // Running normal NN
             Object tfTypeObj = this.modelConfig.getTrain().getParams().get("TF_type");
             String tyType = tfTypeObj == null ? "keras" : tfTypeObj.toString().toLowerCase();
-            String scriptPath = "distributed_tf_" + tyType + ".py";
+            String scriptPath = getScriptPrefix() + tyType + ".py";
             String currScriptPath = System.getProperty("user.dir") + File.separator + scriptPath;
             String rawScriptPath = super.getPathFinder().getScriptPath("scripts" + File.separator + scriptPath);
 
