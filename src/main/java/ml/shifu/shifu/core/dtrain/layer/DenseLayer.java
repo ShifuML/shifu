@@ -215,7 +215,7 @@ public class DenseLayer extends AbstractLayer<double[], double[], double[], doub
         }
         for(int j = 0; j < this.out; j++) {
             // no need l2 reg here as bias no need
-            this.bGrads[j] = (backInputs[j]);
+            this.bGrads[j] += (backInputs[j]);
         }
 
         // compute back inputs
