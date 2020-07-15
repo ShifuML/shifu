@@ -159,7 +159,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         if (minimumEpochs < 0) {
             double minimumStepsRatio = DTrainUtils.getDouble(context.getProps(), // get # of steps to choose parameters
                     CommonConstants.SHIFU_TRAIN_VAL_STEPS_RATIO, 0.1);
-            minimumEpochs = (int) (modelConfig.getNumTrainEpochs() * minimumStepsRatio) ;
+            minimumEpochs = Math.max((int) (modelConfig.getNumTrainEpochs() * minimumStepsRatio), 5) ;
         }
 
 
