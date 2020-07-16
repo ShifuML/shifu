@@ -68,8 +68,22 @@ public class WDLParallelGradient {
         this.lossType = lossType;
 
         assert threadNumber > 0 && threadNumber < 33;
+        adjustTrainSet(0, this.trainData.size());
+        adjustTestSet(0, this.testData.size());
+    }
+
+    /**
+     * [start, end)
+     *
+     * @param start
+     *          start included
+     * @param end
+     *          end not included
+     */
+    private void adjustTrainSet(int start, int miniBatchSize) {
+        assert start >= 0;
+        int recordCount = start + miniBatchSize > this.trainData.size() ? this.trainData.size() - start: miniBatchSize;
         if(this.trainData != null && this.trainData.size() > 0) {
-            int recordCount = this.trainData.size();
             this.trainLows = new int[threadNumber];
             this.trainHighs = new int[threadNumber];
 
@@ -78,32 +92,40 @@ public class WDLParallelGradient {
                 stepCount += (recordCount % threadNumber) / stepCount;
             }
             for(int i = 0; i < threadNumber; i++) {
-                this.trainLows[i] = i * stepCount < recordCount ? i * stepCount : recordCount - 1;
-                this.trainHighs[i] = this.trainLows[i] + stepCount - 1 < recordCount ? this.trainLows[i] + stepCount - 1
+                int lowOffset = i * stepCount < recordCount ? i * stepCount : recordCount - 1;
+                int highOffset = lowOffset + stepCount - 1 < recordCount ? lowOffset + stepCount - 1
                         : recordCount - 1;
+                this.trainLows[i] = start + lowOffset;
+                this.trainHighs[i] = start + highOffset;
             }
             LOG.info("Train record count: {}", recordCount);
             LOG.info("Train lows: {}", Arrays.toString(trainLows));
             LOG.info("Train highs: {}", Arrays.toString(trainHighs));
         }
+    }
 
+    private void adjustTestSet(int start, int miniBatchSize) {
+        assert start >= 0;
+        int recordCount = start + miniBatchSize > this.testData.size() ? this.testData.size() - start: miniBatchSize;
         if(this.testData != null && this.testData.size() > 0) {
-            int testRecordCount = this.testData.size();
             this.testLows = new int[threadNumber];
             this.testHighs = new int[threadNumber];
-            int testStepCount = Math.max(testRecordCount / threadNumber, 1);
-            if(testRecordCount % threadNumber != 0) {
+
+            int stepCount = Math.max(recordCount / threadNumber, 1);
+            if(stepCount % threadNumber != 0) {
                 // move step count to append last gap to avoid last thread worse 2*testStepCount-1
-                testStepCount += (testRecordCount % threadNumber) / testStepCount;
+                stepCount += (recordCount % threadNumber) / stepCount;
             }
             for(int i = 0; i < threadNumber; i++) {
-                this.testLows[i] = i * testStepCount < testRecordCount ? i * testStepCount : testRecordCount - 1;
-                this.testHighs[i] = this.testLows[i] + testStepCount - 1 < testRecordCount
-                        ? this.testLows[i] + testStepCount - 1
-                        : testRecordCount - 1;
+                int lowOffset = i * stepCount < recordCount ? i * stepCount : recordCount - 1;
+                int highOffset = lowOffset + stepCount - 1 < recordCount ? lowOffset + stepCount - 1
+                        : recordCount - 1;
+                this.testLows[i] = start + lowOffset;
+                this.testHighs[i] = start + highOffset;
+
             }
 
-            LOG.info("Test record count: {}", testRecordCount);
+            LOG.info("Test record count: {}", recordCount);
             LOG.info("Test lows: {}", Arrays.toString(testLows));
             LOG.info("Test highs: {}", Arrays.toString(testHighs));
         }
@@ -141,6 +163,17 @@ public class WDLParallelGradient {
         }
         LOG.info("Worker with parallel train run time {} ms.", (System.currentTimeMillis() - start));
         return params;
+    }
+
+    public WDLParams doCompute(int iteration, int trainBatchSize, int validateBatchSize) {
+        if(validateBatchSize < 10) {
+            LOG.info("Origin validationBatchSize is " + validateBatchSize + " which is so less and adjust to a large value");
+            validateBatchSize = Math.min(this.testData.size(), 10);
+        }
+        LOG.info("training on iteration: " + iteration + " with trainBatchSize: " + trainBatchSize + ", validateBatchSize:" + validateBatchSize);
+        adjustTrainSet(iteration * trainBatchSize % this.trainData.size(), trainBatchSize);
+        adjustTestSet(iteration * validateBatchSize % this.testData.size(), validateBatchSize);
+        return doCompute();
     }
 
     public static class GradientTask implements Callable<WDLParams> {
