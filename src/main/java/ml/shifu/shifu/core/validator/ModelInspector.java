@@ -538,7 +538,7 @@ public class ModelInspector {
         GridSearch gs = new GridSearch(train.getParams(), train.getGridConfigFileContent());
         // such parameter validation only in regression and not grid search mode
         if(modelConfig.isRegression() && !gs.hasHyperParam()) {
-            if(train.getAlgorithm().equalsIgnoreCase("nn")) {
+            if(train.getAlgorithm().equalsIgnoreCase("nn") || train.getAlgorithm().equalsIgnoreCase("wdl")) {
                 Map<String, Object> params = train.getParams();
 
                 Object loss = params.get("Loss");
@@ -641,7 +641,7 @@ public class ModelInspector {
                 Object miniBatchsO = params.get(CommonConstants.MINI_BATCH);
                 if(miniBatchsO != null) {
                     Integer miniBatchs = Integer.valueOf(miniBatchsO.toString());
-                    if(miniBatchs != null && (miniBatchs <= 0 || miniBatchs > 1000)) {
+                    if(miniBatchs != null && (miniBatchs <= 0 || miniBatchs > 10000)) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
                         tmpResult.getCauses().add("MiniBatchs should be in (0, 1000] if set.");

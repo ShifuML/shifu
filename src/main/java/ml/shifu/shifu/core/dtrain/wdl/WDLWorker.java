@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Objects;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -335,7 +336,7 @@ public class WDLWorker extends
     }
 
     private boolean miniBatchEnabled() {
-        return !"1".equals(this.modelConfig.getTrain().getParams().getOrDefault(CommonConstants.MINI_BATCH, "1").toString());
+        return Objects.nonNull(this.modelConfig.getTrain().getParams().get(CommonConstants.MINI_BATCH));
     }
 
     protected boolean isUpSampleEnabled() {
