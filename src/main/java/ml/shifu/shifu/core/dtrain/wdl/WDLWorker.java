@@ -743,9 +743,7 @@ public class WDLWorker extends
         if(miniBatchEnabled()) {
             int iteration = context.getCurrentIteration();
             int miniBatchSize = Integer.parseInt(this.modelConfig.getTrain().getParams().get(CommonConstants.MINI_BATCH).toString());
-            int validateBatchSize = (int) (miniBatchSize * this.modelConfig.getValidSetRate());
-            int trainBatchSize = miniBatchSize - validateBatchSize;
-            wdlParams = parallelGradient.doCompute(iteration, trainBatchSize, validateBatchSize);
+            wdlParams = parallelGradient.doCompute(iteration, miniBatchSize);
         } else {
             wdlParams = parallelGradient.doCompute();
         }

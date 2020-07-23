@@ -122,7 +122,6 @@ public class WDLParallelGradient {
                         : recordCount - 1;
                 this.testLows[i] = start + lowOffset;
                 this.testHighs[i] = start + highOffset;
-
             }
 
             LOG.info("Test record count: {}", recordCount);
@@ -165,14 +164,9 @@ public class WDLParallelGradient {
         return params;
     }
 
-    public WDLParams doCompute(int iteration, int trainBatchSize, int validateBatchSize) {
-        if(validateBatchSize < 10) {
-            LOG.info("Origin validationBatchSize is " + validateBatchSize + " which is so less and adjust to a large value");
-            validateBatchSize = Math.min(this.testData.size(), 10);
-        }
-        LOG.info("training on iteration: " + iteration + " with trainBatchSize: " + trainBatchSize + ", validateBatchSize:" + validateBatchSize);
-        adjustTrainSet(iteration * trainBatchSize % this.trainData.size(), trainBatchSize);
-        adjustTestSet(iteration * validateBatchSize % this.testData.size(), validateBatchSize);
+    public WDLParams doCompute(int iteration, int miniBatchSize) {
+        LOG.info("training on iteration: " + iteration + " with miniBatchSize: " + miniBatchSize);
+        adjustTrainSet(iteration * miniBatchSize % this.trainData.size(), miniBatchSize);
         return doCompute();
     }
 
