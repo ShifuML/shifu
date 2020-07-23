@@ -93,8 +93,7 @@ public class WDLParallelGradient {
             }
             for(int i = 0; i < threadNumber; i++) {
                 int lowOffset = i * stepCount < recordCount ? i * stepCount : recordCount - 1;
-                int highOffset = lowOffset + stepCount - 1 < recordCount ? lowOffset + stepCount - 1
-                        : recordCount - 1;
+                int highOffset = lowOffset + stepCount - 1 < recordCount ? lowOffset + stepCount - 1 : recordCount - 1;
                 this.trainLows[i] = start + lowOffset;
                 this.trainHighs[i] = start + highOffset;
             }
