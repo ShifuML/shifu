@@ -644,7 +644,7 @@ public class ModelInspector {
                     if(miniBatchs != null && (miniBatchs <= 0 || miniBatchs > 10000)) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("MiniBatchs should be in (0, 1000] if set.");
+                        tmpResult.getCauses().add("MiniBatchs should be in (0, 10000] if set.");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }
