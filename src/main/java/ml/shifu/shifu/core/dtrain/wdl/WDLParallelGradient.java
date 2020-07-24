@@ -35,7 +35,14 @@ import ml.shifu.shifu.core.dtrain.loss.LossType;
 import ml.shifu.shifu.core.dtrain.loss.SquaredErrorCalculation;
 
 /**
- * To running gradient update in parallel.
+ * {@link WDLParallelGradient} is a class design to running training process in parallel. Both batch training and
+ * mini-batch training are supported for this.
+ * 
+ * For batch training, call {@link WDLParallelGradient#doCompute()}
+ * For mini-batch training, call {@link WDLParallelGradient#doCompute(int, int)}
+ * 
+ * User can configure the ${@link WDLParallelGradient#threadNumber} of how many threads for each worker in
+ * train#workerThreadCount in ModelConfig.json.
  *
  * @author Wu Devin (haifwu@paypal.com)
  */
@@ -73,12 +80,18 @@ public class WDLParallelGradient {
     }
 
     /**
-     * [start, end)
+     * In general, we adopt multi-threads to fast speed the training process. So for the whole training set, we will
+     * divided into {@link WDLParallelGradient#threadNumber} group, each thread ${i} own one slice of training set which
+     * index start from trainLows[i] to trainHighs[i] in {@link WDLParallelGradient#trainData}.
+     *
+     * While for mini-batch cases, instead of training all the training data set from index 0 to the end, we need to
+     * adjust the train set index, so that it will only training a ${miniBatchSize} size data which start from the index
+     * ${start} in {@link WDLParallelGradient#trainData}.
      *
      * @param start
-     *          start included
-     * @param end
-     *          end not included
+     *          The start index in {@link WDLParallelGradient#trainData}, this iteration to train start with.
+     * @param miniBatchSize
+     *          The mini-batch size for each iteration.
      */
     private void adjustTrainSet(int start, int miniBatchSize) {
         assert start >= 0;
@@ -128,6 +141,12 @@ public class WDLParallelGradient {
         }
     }
 
+    /**
+     * Batch training in parallel with {@link WDLParallelGradient#threadNumber} threads
+     * 
+     * @return
+     *      the combined gradients result
+     */
     public WDLParams doCompute() {
         long start = System.currentTimeMillis();
         for(int i = 0; i < this.threadNumber; i++) {
@@ -162,6 +181,17 @@ public class WDLParallelGradient {
         return params;
     }
 
+    /**
+     * MiniBatch training in parallel with {@link WDLParallelGradient#threadNumber} threads. For the first iteration,
+     * it will training data slice [0, batchSize], and next iteration [batchSize, 2 * batchSize), and so on.
+     * 
+     * @param iteration
+     *          the current iteration of whole training process.
+     * @param miniBatchSize
+     *          the mini batch size for each iteration
+     * @return
+     *          the combined gradients result
+     */
     public WDLParams doCompute(int iteration, int miniBatchSize) {
         LOG.info("training on iteration: " + iteration + " with miniBatchSize: " + miniBatchSize);
         adjustTrainSet(iteration * miniBatchSize % this.trainData.size(), miniBatchSize);
