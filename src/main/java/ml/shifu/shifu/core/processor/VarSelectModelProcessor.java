@@ -483,6 +483,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private void validateSEParameters() {
         if(!CommonConstants.NN_ALG_NAME.equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())
                 && !"LR".equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())
+                && !CommonConstants.WDL_ALG_NAME.equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())
                 && !CommonUtils.isTensorFlowModel(super.getModelConfig().getTrain().getAlgorithm())) {
             throw new IllegalArgumentException(
                     "Currently we only support NN and LR distributed training to do wrapper by analyzing variable selection.");
