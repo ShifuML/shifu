@@ -36,13 +36,13 @@ import ml.shifu.shifu.core.dtrain.loss.SquaredErrorCalculation;
 
 /**
  * {@link WDLParallelGradient} is a class design to running training process in parallel. Both batch training and
- * mini-batch training are supported for this.
+ * mini-batch training are supported by this class.
  * 
  * For batch training, call {@link WDLParallelGradient#doCompute()}
  * For mini-batch training, call {@link WDLParallelGradient#doCompute(int, int)}
  * 
- * User can configure the ${@link WDLParallelGradient#threadNumber} of how many threads for each worker in
- * train#workerThreadCount in ModelConfig.json.
+ * User can configure the parameter ${@link WDLParallelGradient#threadNumber} stands for how many threads for each
+ * worker in ModelConfig.json.
  *
  * @author Wu Devin (haifwu@paypal.com)
  */
@@ -81,12 +81,13 @@ public class WDLParallelGradient {
 
     /**
      * In general, we adopt multi-threads to fast speed the training process. So for the whole training set, we will
-     * divided into {@link WDLParallelGradient#threadNumber} group, each thread ${i} own one slice of training set which
-     * index start from trainLows[i] to trainHighs[i] in {@link WDLParallelGradient#trainData}.
+     * divided it into {@link WDLParallelGradient#threadNumber} groups, each thread own one slice of training set which
+     * index starts from trainLows[i] to trainHighs[i] in {@link WDLParallelGradient#trainData}.
      *
-     * While for mini-batch cases, instead of training all the training data set from index 0 to the end, we need to
-     * adjust the train set index, so that it will only training a ${miniBatchSize} size data which start from the index
-     * ${start} in {@link WDLParallelGradient#trainData}.
+     * While for mini-batch case, instead of training all the data we just training a small part of it, namely
+     * miniBatchSize, and return.
+     * So to achieve this, we need to adjust the start index of training set for each iteration. And also need update
+     * the slice for each thread.
      *
      * @param start
      *          The start index in {@link WDLParallelGradient#trainData}, this iteration to train start with.
