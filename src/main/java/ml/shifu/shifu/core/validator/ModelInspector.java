@@ -538,7 +538,7 @@ public class ModelInspector {
         GridSearch gs = new GridSearch(train.getParams(), train.getGridConfigFileContent());
         // such parameter validation only in regression and not grid search mode
         if(modelConfig.isRegression() && !gs.hasHyperParam()) {
-            if(train.getAlgorithm().equalsIgnoreCase("nn")) {
+            if(train.getAlgorithm().equalsIgnoreCase("nn") || train.getAlgorithm().equalsIgnoreCase("wdl")) {
                 Map<String, Object> params = train.getParams();
 
                 Object loss = params.get("Loss");

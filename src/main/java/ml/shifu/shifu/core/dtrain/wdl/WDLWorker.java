@@ -336,6 +336,10 @@ public class WDLWorker extends
         this.updateMetrics(data, isInTraining);
     }
 
+    private boolean miniBatchEnabled() {
+        return null != this.modelConfig.getTrain().getParams().get(CommonConstants.MINI_BATCH);
+    }
+
     protected boolean isUpSampleEnabled() {
         // only enabled in regression
         return this.upSampleRng != null && (modelConfig.isRegression()
@@ -755,7 +759,14 @@ public class WDLWorker extends
         this.wnd.updateWeights(context.getLastMasterResult());
         WDLParallelGradient parallelGradient = new WDLParallelGradient(this.wnd, this.workerThreadCount,
                 this.inputIndexMap, this.trainingData, this.validationData, this.completionService, this.lossType);
-        WDLParams wdlParams = parallelGradient.doCompute();
+        WDLParams wdlParams = null;
+        if(miniBatchEnabled()) {
+            int iteration = context.getCurrentIteration();
+            int miniBatchSize = Integer.parseInt(this.modelConfig.getTrain().getParams().get(CommonConstants.MINI_BATCH).toString());
+            wdlParams = parallelGradient.doCompute(iteration, miniBatchSize);
+        } else {
+            wdlParams = parallelGradient.doCompute();
+        }
         wdlParams.setSerializationType(SerializationType.GRADIENTS);
         this.wnd.setSerializationType(SerializationType.GRADIENTS);
         return wdlParams;
