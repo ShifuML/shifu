@@ -299,7 +299,7 @@ public class WideFieldLayer extends AbstractLayer<SparseInput, double[], double[
 
     @Override
     public void initOptimizer(double learningRate, String algorithm, double reg, RegulationLevel rl) {
-        this.optimizer = new WeightOptimizer(this.in, learningRate, algorithm, reg, rl);
+        this.optimizer = new WeightOptimizer(this.in, learningRate, algorithm, reg, rl, algorithm);
     }
 
     @Override

@@ -100,7 +100,7 @@ public class BiasLayer extends AbstractLayer<Double, Double, Double, Double, Bia
     }
 
     public void initOptimizer(double learningRate, String algorithm, double reg, RegulationLevel rl) {
-        this.optimizer = new WeightOptimizer(1, learningRate, algorithm, reg, rl);
+        this.optimizer = new WeightOptimizer(1, learningRate, algorithm, reg, rl, algorithm);
     }
 
     public void optimizeWeight(double numTrainSize, int iteration, BiasLayer model) {

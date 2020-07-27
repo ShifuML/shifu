@@ -296,9 +296,9 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         String binBounString = null;
 
         if(columnConfig.isHybrid()) {
-            if(binCategories.size() > (this.maxCateSize + 1)) { // +1 make sure big cate column can be cut and stored
-                LOG.warn("Column {} {} with invalid bin category size.", key.get(), columnConfig.getColumnName(),
-                        binCategories.size());
+            if(binCategories.size() > (this.maxCateSize + 10)) { // +10 make sure big cate column can be cut and stored
+                LOG.warn("Column {} {} with invalid bin category size (large than maxCateSize {}).", key.get(),
+                        columnConfig.getColumnName(), binCategories.size(), this, maxCateSize);
                 return;
             }
             binBounString = binBoundaryList.toString();

@@ -625,11 +625,10 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
         }
         // prevent null point;
         params.setWeights(new double[0]);
-        params.setTrainSize(this.trainingData.getRecordCount());
-        params.setTrainSize(this.validationData.getRecordCount());
-        params.setTrainSum(this.trainingData.getRecordSum());
-        params.setValidationSum(this.validationData.getRecordCount() > 0 ? this.validationData.getRecordSum()
-                : this.trainingData.getRecordSum());
+        params.setTrainSize(this.gradient.getTrainSize());
+        params.setValidationSize(this.gradient.getValidationSize());
+        params.setTrainSum(this.gradient.getTrainSum());
+        params.setValidationSum(this.gradient.getValidationSum());
         params.setCount(count);
         return params;
     }

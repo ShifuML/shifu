@@ -641,10 +641,10 @@ public class ModelInspector {
                 Object miniBatchsO = params.get(CommonConstants.MINI_BATCH);
                 if(miniBatchsO != null) {
                     Integer miniBatchs = Integer.valueOf(miniBatchsO.toString());
-                    if(miniBatchs != null && (miniBatchs <= 0 || miniBatchs > 1000)) {
+                    if(miniBatchs != null && (miniBatchs <= 0 || miniBatchs > 100000000)) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("MiniBatchs should be in (0, 1000] if set.");
+                        tmpResult.getCauses().add("MiniBatchs should be in (0, 100000000] if set.");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }

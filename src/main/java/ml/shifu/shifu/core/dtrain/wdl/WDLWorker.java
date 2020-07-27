@@ -268,6 +268,8 @@ public class WDLWorker extends
      */
     private LossType lossType;
 
+    private int batchs;
+
     /**
      * Logic to load data into memory list which includes double array for numerical features and sparse object array
      * for
@@ -679,6 +681,24 @@ public class WDLWorker extends
         this.isStratifiedSampling = this.modelConfig.getTrain().getStratifiedSample();
 
         this.validParams = this.modelConfig.getTrain().getParams();
+
+        Object miniBatchO = validParams.get(CommonConstants.MINI_BATCH);
+        if(miniBatchO != null) {
+            int miniBatchs;
+            try {
+                miniBatchs = Integer.parseInt(miniBatchO.toString());
+            } catch (Exception e) {
+                miniBatchs = 1;
+            }
+            if(miniBatchs < 0) {
+                this.batchs = 1;
+            } else if(miniBatchs > 1000) {
+                this.batchs = 1000;
+            } else {
+                this.batchs = miniBatchs;
+            }
+            LOG.info("'miniBatchs' in worker is : {}, batchs is {} ", miniBatchs, batchs);
+        }
 
         Object lossObj = validParams.get("Loss");
         this.lossType = LossType.of(lossObj != null ? lossObj.toString() : CommonConstants.SQUARED_LOSS);

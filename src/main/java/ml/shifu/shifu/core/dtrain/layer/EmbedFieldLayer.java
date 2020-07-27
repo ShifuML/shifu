@@ -320,7 +320,7 @@ public class EmbedFieldLayer extends AbstractLayer<SparseInput, double[], double
     public void initOptimizer(double learningRate, String algorithm, double reg, RegulationLevel rl) {
         this.optimizers = new WeightOptimizer[this.in];
         for(int i = 0; i < this.in; i++) {
-            this.optimizers[i] = new WeightOptimizer(this.out, learningRate, algorithm, reg, rl);
+            this.optimizers[i] = new WeightOptimizer(this.out, learningRate, algorithm, reg, rl, algorithm);
         }
     }
 

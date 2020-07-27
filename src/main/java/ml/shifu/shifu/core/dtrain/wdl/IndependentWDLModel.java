@@ -82,7 +82,7 @@ public class IndependentWDLModel {
      */
     private Map<Integer, List<Double>> numerBinBoundaries;
     /**
-     * Mapping for (columnNum, woes) for numberical columns; for hybrid, woe bins for both numberical and categorical
+     * Mapping for (columnNum, woes) for numerical columns; for hybrid, woe bins for both numberical and categorical
      * bins; last one in weightedWoes is for missing value bin
      */
     private Map<Integer, List<Double>> numerWoes;

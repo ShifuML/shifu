@@ -309,6 +309,7 @@ public class WideAndDeep
         }
 
         if(this.wideEnable && this.deepEnable) {
+            // TODO refact me please to remove duplicated code
             double[] backInputs = this.wdLayer.backward(grad2Logits);
 
             this.wl.backward(new double[] { backInputs[0] });
@@ -1026,7 +1027,6 @@ public class WideAndDeep
         this.wl.optimizeWeight(numTrainSize, iteration, gradWnd.getWl());
         if(this.wideEnable && this.deepEnable) {
             this.wdLayer.optimizeWeight(numTrainSize, iteration, gradWnd.wdLayer);
-
         }
     }
 
