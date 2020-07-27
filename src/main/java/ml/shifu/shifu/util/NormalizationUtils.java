@@ -70,6 +70,8 @@ public class NormalizationUtils {
      *            algorithm used in model
      * @param categoryMissingNormType
      *            missing categorical value norm type, only used in WDL model
+     * @param pt
+     *            the precision type
      * @return data pair instance
      * @throws NullPointerException
      *             if input is null
