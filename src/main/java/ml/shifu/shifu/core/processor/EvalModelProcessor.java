@@ -423,7 +423,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 "tmp" + File.separator + "maxmin_score_" + System.currentTimeMillis() + "_" + RANDOM.nextLong()))
                 .toString();
         confMap.put(Constants.SHIFU_EVAL_MAXMIN_SCORE_OUTPUT, maxMinScoreFolder);
-        if(modelConfig.isClassification() || (isNoSort() && EvalStep.SCORE.equals(this.evalStep))) {
+        if(modelConfig.isClassification() ||
+                (isNoSort() && (EvalStep.SCORE.equals(this.evalStep) || EvalStep.AUDIT.equals(this.evalStep)))) {
             pigScript = "scripts/EvalScore.pig";
         }
         try {
@@ -1219,6 +1220,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         evalConfig.getDataSet().setMetaColumnNameFile(newEvalMetaFile);
         evalConfig.setScoreMetaColumnNameFile(null);
         saveModelConfig(); // update ModelConfig
+        syncDataToHdfs(Arrays.asList(new EvalConfig[]{evalConfig}));
         runScore(evalConfig);
 
         // recover setting
@@ -1260,7 +1262,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         HdfsPartFile hdfsPartFile = null;
         int currentNumOfLine = 0;
         try {
-            if (isPartFile) {
+            if (!isPartFile) {
                 reader = ShifuFileUtils.getReader(filePath, sourceType);
                 String line = null;
                 while (currentNumOfLine ++ < linesCount && (line = reader.readLine()) != null) {
@@ -1276,7 +1278,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 }
             }
         } catch (IOException e) {
-            LOG.error("Fail to read data from {}.", filePath);
+            LOG.error("Fail to read data from {}.", filePath, e);
         } finally {
             IOUtils.closeQuietly(reader);
             if (hdfsPartFile != null) {
