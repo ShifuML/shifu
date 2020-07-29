@@ -19,6 +19,7 @@ import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.ModelBasicConf;
 import ml.shifu.shifu.container.obj.PerformanceResult;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ConfusionMatrix;
@@ -33,12 +34,10 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.pig.PigExecutor;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-import ml.shifu.shifu.util.ModelSpecLoaderUtils;
+import ml.shifu.shifu.util.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.pig.tools.pigstats.JobStats;
@@ -47,10 +46,10 @@ import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
 
 /**
  * EvalModelProcessor class
@@ -66,10 +65,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * Step for evaluation
      */
     public enum EvalStep {
-        LIST, NEW, DELETE, RUN, PERF, SCORE, CONFMAT, NORM, GAINCHART;
+        LIST, NEW, DELETE, RUN, PERF, SCORE, AUDIT, CONFMAT, NORM, GAINCHART;
     }
 
     public static final String NOSORT = "NOSORT";
+    public static final String EXPECT_AUDIT_CNT = "EXPECT_AUDIT_CNT";
 
     private String evalName = null;
 
@@ -155,6 +155,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                     break;
                 case SCORE:
                     runScore(getEvalConfigListFromInput());
+                    break;
+                case AUDIT:
+                    runGenAudit(getEvalConfigListFromInput());
                     break;
                 case CONFMAT:
                     // FIXME, here should be failed
@@ -1185,6 +1188,103 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
     }
 
+    private void runGenAudit(List<EvalConfig> evalSetList) throws IOException{
+        this.params.put(NOSORT, Boolean.TRUE);
+        if (CollectionUtils.isNotEmpty(evalSetList)) {
+            for (EvalConfig evalConfig: evalSetList) {
+                doGenAuditData(evalConfig);
+            }
+        }
+    }
+
+    private void doGenAuditData(EvalConfig evalConfig) throws IOException {
+        // generate audit meta columns
+        List<String> evalMetaColumns = evalConfig.getAllMetaColumns(this.modelConfig);
+        final Set<String> metaColumnSet = new HashSet<>(evalMetaColumns);
+        this.columnConfigList.stream().filter(columnConfig -> columnConfig.isFinalSelect())
+                .map(columnConfig -> columnConfig.getColumnName())
+                .forEach(finalVar -> {
+                    if(!metaColumnSet.contains(finalVar)) {
+                        evalMetaColumns.add(finalVar);
+                    } });
+
+        File columns = new File("columns");
+        columns.mkdirs(); // create folder if it doesn't exist
+        String newEvalMetaFile = "columns" + File.separator + evalConfig.getName() + ".audit.names";
+        ShifuFileUtils.writeLines(evalMetaColumns, newEvalMetaFile, SourceType.LOCAL);
+
+        String originalMetaFileName = evalConfig.getDataSet().getMetaColumnNameFile();
+        String originalScoreFileName = evalConfig.getScoreMetaColumnNameFile();
+
+        evalConfig.getDataSet().setMetaColumnNameFile(newEvalMetaFile);
+        evalConfig.setScoreMetaColumnNameFile(null);
+        saveModelConfig(); // update ModelConfig
+        runScore(evalConfig);
+
+        // recover setting
+        evalConfig.getDataSet().setMetaColumnNameFile(originalMetaFileName);
+        evalConfig.setScoreMetaColumnNameFile(originalScoreFileName);
+        saveModelConfig();
+
+        int auditRecordsCount = getExpectAuditCount();
+
+        File auditFile = new File("tmp",
+                modelConfig.getModelSetName() + "_" + evalConfig.getName() + "_audit.data");
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter(new FileWriter(auditFile));
+            if (ModelBasicConf.RunMode.LOCAL.equals(this.modelConfig.getBasic().getRunMode())) {
+                String evalSorePah = this.pathFinder.getEvalScorePath(evalConfig);
+                writeFileLines(writer, evalSorePah, evalConfig.getDataSet().getSource(),
+                        false, auditRecordsCount + 1);
+            } else {
+                String headerPath = this.pathFinder.getEvalScoreHeaderPath(evalConfig);
+                writeFileLines(writer, headerPath, evalConfig.getDataSet().getSource(),
+                        false,1);
+                String evalSorePah = this.pathFinder.getEvalScorePath(evalConfig);
+                writeFileLines(writer, evalSorePah, evalConfig.getDataSet().getSource(),
+                        true, auditRecordsCount);
+            }
+            
+            LOG.info("Generate audit file {} successfully", auditFile.getCanonicalFile());
+        } catch (IOException e) {
+            LOG.error("Error occurred when generating audit file - {}", auditFile.getCanonicalPath());
+        } finally {
+            IOUtils.closeQuietly(writer);
+        }
+    }
+
+    private void writeFileLines(BufferedWriter writer, String filePath, SourceType sourceType,
+            boolean isPartFile, int linesCount) {
+        BufferedReader reader = null;
+        HdfsPartFile hdfsPartFile = null;
+        int currentNumOfLine = 0;
+        try {
+            if (isPartFile) {
+                reader = ShifuFileUtils.getReader(filePath, sourceType);
+                String line = null;
+                while (currentNumOfLine ++ < linesCount && (line = reader.readLine()) != null) {
+                    writer.write(line);
+                    writer.newLine();
+                }
+            } else {
+                hdfsPartFile = new HdfsPartFile(filePath, sourceType);
+                String line = null;
+                while (currentNumOfLine ++ < linesCount && (line = hdfsPartFile.readLine()) != null) {
+                    writer.write(line);
+                    writer.newLine();
+                }
+            }
+        } catch (IOException e) {
+            LOG.error("Fail to read data from {}.", filePath);
+        } finally {
+            IOUtils.closeQuietly(reader);
+            if (hdfsPartFile != null) {
+                hdfsPartFile.close();
+            }
+        }
+    }
+
     /**
      * Run confusion matrix
      * 
@@ -1197,6 +1297,16 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     private void runConfusionMatrix(EvalConfig config) throws IOException {
         runConfusionMatrix(config, null, false);
     }
+
+    /**
+     * Check user set the expect audit count or not
+     *
+     * @return the expect audit records count, if user doesn't set, return default value - 10k
+     */
+    private int getExpectAuditCount() {
+        return getIntParam(this.params, EXPECT_AUDIT_CNT, 10000);
+    }
+
 
     /**
      * Check "-nosort" is specified or not

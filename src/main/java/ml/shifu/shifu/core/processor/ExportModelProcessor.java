@@ -19,6 +19,7 @@ package ml.shifu.shifu.core.processor;
 
 import ml.shifu.shifu.container.obj.ColumnAdditionalInfo;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -81,12 +82,15 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     public static final String WOE_MAPPING = "woemapping";
     public static final String WOE = "woe";
     public static final String CORRELATION = "corr";
+    public static final String UME = "ume";
+    public static final String BAGGING_UME = "baggingume";
 
     public static final String IS_CONCISE = "IS_CONCISE";
     public static final String REQUEST_VARS = "REQUEST_VARS";
     public static final String EXPECTED_BIN_NUM = "EXPECTED_BIN_NUM";
     public static final String IV_KEEP_RATIO = "IV_KEEP_RATIO";
     public static final String MINIMUM_BIN_INST_CNT = "MINIMUM_BIN_INST_CNT";
+    public static final String EXPORT_MODEL_NAME = "EXPORT_MODEL_NAME";
 
     private String type;
     private Map<String, Object> params;
@@ -226,6 +230,20 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 return 2;
             }
             return exportVariableCorr();
+        } else if(type.equalsIgnoreCase(UME) || type.equalsIgnoreCase(BAGGING_UME)) {
+            Class cls = null;
+            try {
+                cls = Class.forName("com.paypal.gds.art.UmeExporter");
+                Object umeExporter = cls.getConstructor(ModelConfig.class).newInstance(modelConfig);
+                cls.getMethod("translate", String.class, Boolean.class)
+                        .invoke(umeExporter, getExportModelName(), type.equalsIgnoreCase(BAGGING_UME));
+            } catch (ClassNotFoundException e) {
+                log.error("UMEExporter doesn't support!", e);
+                return 3;
+            } catch (Exception e) {
+                log.error("Error occurred when exporting UME model.", e);
+                return 3;
+            }
         } else {
             log.error("Unsupported output format - {}", type);
             status = -1;
@@ -664,6 +682,13 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             }
         }
         return 0;
+    }
+
+    public String getExportModelName() {
+        if (MapUtils.isNotEmpty(this.params) && this.params.get(EXPORT_MODEL_NAME) instanceof String) {
+            return (String) this.params.get(EXPORT_MODEL_NAME);
+        }
+        return null;
     }
 
     public static class VarCorrInfo implements Comparable<VarCorrInfo> {
