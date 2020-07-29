@@ -368,7 +368,8 @@ public class ShifuCLI {
                     } else if(cmd.hasOption(NORM)) {
                         runEvalNorm(cmd.getOptionValue(NORM), cmd.hasOption(STRICT));
                     } else if (cmd.hasOption(AUDIT)) {
-                        runAuditEval(cmd.getOptionValue(AUDIT), cmd.getOptionValue(N));
+                        params.put(EvalModelProcessor.EXPECT_AUDIT_CNT, cmd.getOptionValue(N));
+                        runAuditEval(cmd.getOptionValue(AUDIT), params);
                     } else {
                         log.error("Invalid command, please check help message.");
                         printUsage();
@@ -580,11 +581,7 @@ public class ShifuCLI {
         return p.run();
     }
 
-    private static void runAuditEval(String evalSetNames, String expectAuditCount) throws Exception {
-        Map<String, Object> params = new HashedMap();
-        if (StringUtils.isNotBlank(expectAuditCount)) {
-            params.put(EvalModelProcessor.EXPECT_AUDIT_CNT, Integer.parseInt(expectAuditCount));
-        }
+    private static void runAuditEval(String evalSetNames, Map<String, Object> params) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.AUDIT, evalSetNames, params);
         p.run();
     }
