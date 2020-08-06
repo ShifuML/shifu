@@ -364,6 +364,7 @@ public class GridSearch {
             try {
                 validateResult = validate(getItemKeyInMeta(entry.getKey()), entry.getValue());
             } catch (Exception e) {
+                LOG.error("Exception in validation:", e);
                 throw new ShifuException(ShifuErrorCode.ERROR_GRIDCONFIG_NOT_VALIDATION, e,
                         "Train param and value pair " + entry.getKey() + ":" + entry.getValue()
                                 + " did not pass the validation.");

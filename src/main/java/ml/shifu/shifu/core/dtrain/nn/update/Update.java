@@ -62,4 +62,12 @@ public interface Update {
      *      the learning decay
      */
     double getLearningDecay();
+    
+    /**
+     * Get number of train size (not weighted)
+     * @return
+     *      the learning decay
+     */
+    double getNumTrainSize() ;
+
 }

@@ -23,14 +23,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UTFDataFormatException;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -166,6 +160,11 @@ public class IndependentTreeModel {
      */
     @SuppressWarnings("unused")
     private boolean isGBTRawScore;
+
+    /**
+     * Used features
+     */
+    private List<String> usedFeatures;
 
     public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping, Map<Integer, String> numNameMapping,
             Map<Integer, List<String>> categoricalColumnNameNames,
@@ -804,6 +803,45 @@ public class IndependentTreeModel {
      */
     public void setInputNode(int inputNode) {
         this.inputNode = inputNode;
+    }
+
+    /**
+     * Get use features name
+     * @return used features
+     */
+    public List<String> getUsedFeatures() {
+        if (this.usedFeatures != null) {
+            return this.usedFeatures;
+        }
+        Set<String> usedFeaturesSet = new HashSet<>();
+        for (List<TreeNode> treeNodes : this.trees) {
+            for (TreeNode root: treeNodes) {
+                parseTreeForFeatures(root.getNode(), usedFeaturesSet, this.numNameMapping);
+            }
+        }
+        this.usedFeatures = new ArrayList<>(usedFeaturesSet);
+        return this.usedFeatures;
+    }
+
+    private void parseTreeForFeatures(Node root, Set<String> usedFeatures, Map<Integer, String> numNameMapping) {
+        Queue<Node> queue = new LinkedList<>();
+        queue.offer(root);
+        while (!queue.isEmpty()) {
+            Node node = queue.poll();
+            if (node.getSplit() != null && !node.isRealLeaf()) {
+                int columnNum = node.getSplit().getColumnNum();
+                String columnName = numNameMapping.get(columnNum);
+                if (columnName != null) {
+                    usedFeatures.add(columnName);
+                }
+                if (node.getLeft() != null) {
+                    queue.offer(node.getLeft());
+                }
+                if (node.getRight() != null) {
+                    queue.offer(node.getRight());
+                }
+            }
+        }
     }
 
     /**

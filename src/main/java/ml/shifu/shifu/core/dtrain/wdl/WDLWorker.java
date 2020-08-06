@@ -55,6 +55,8 @@ import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.layer.SerializationType;
+import ml.shifu.shifu.core.dtrain.layer.SparseInput;
 import ml.shifu.shifu.core.dtrain.loss.LossType;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.util.CommonUtils;
@@ -68,9 +70,8 @@ import ml.shifu.shifu.util.MapReduceUtils;
  * 
  * <p>
  * Data loading into memory as memory list includes two parts: numerical double array and sparse input object array
- * which
- * is for categorical variables. To leverage sparse feature of categorical variables, sparse object is leveraged to
- * save memory and matrix computation.
+ * which is for categorical variables. To leverage sparse feature of categorical variables, sparse object is leveraged
+ * to save memory and matrix computation.
  * 
  * <p>
  * First iteration, just return empty to master but wait for next iteration master models sync-up. Since at very first
@@ -267,6 +268,8 @@ public class WDLWorker extends
      */
     private LossType lossType;
 
+    private int batchs;
+
     /**
      * Logic to load data into memory list which includes double array for numerical features and sparse object array
      * for
@@ -313,7 +316,7 @@ public class WDLWorker extends
         }
 
         // output delimiter in norm can be set by user now and if user set a special one later changed, this exception
-        // is helped to quick find such issue., here only check numerical array
+        // is helped to quick find such issue, here only check numerical array
         validateInputLength(context, inputs, numIndex);
 
         // sample negative only logic here, sample negative out, no need continue
@@ -331,6 +334,10 @@ public class WDLWorker extends
         boolean isInTraining = this.addDataPairToDataSet(hashcode, data, context.getAttachment());
         // update some positive or negative selected count in metrics
         this.updateMetrics(data, isInTraining);
+    }
+
+    private boolean miniBatchEnabled() {
+        return null != this.modelConfig.getTrain().getParams().get(CommonConstants.MINI_BATCH);
     }
 
     protected boolean isUpSampleEnabled() {
@@ -679,6 +686,24 @@ public class WDLWorker extends
 
         this.validParams = this.modelConfig.getTrain().getParams();
 
+        Object miniBatchO = validParams.get(CommonConstants.MINI_BATCH);
+        if(miniBatchO != null) {
+            int miniBatchs;
+            try {
+                miniBatchs = Integer.parseInt(miniBatchO.toString());
+            } catch (Exception e) {
+                miniBatchs = 1;
+            }
+            if(miniBatchs < 0) {
+                this.batchs = 1;
+            } else if(miniBatchs > 1000) {
+                this.batchs = 1000;
+            } else {
+                this.batchs = miniBatchs;
+            }
+            LOG.info("'miniBatchs' in worker is : {}, batchs is {} ", miniBatchs, batchs);
+        }
+
         Object lossObj = validParams.get("Loss");
         this.lossType = LossType.of(lossObj != null ? lossObj.toString() : CommonConstants.SQUARED_LOSS);
         LOG.info("Loss type is {}.", this.lossType);
@@ -696,7 +721,7 @@ public class WDLWorker extends
         int numLayers = (Integer) this.validParams.get(CommonConstants.NUM_HIDDEN_LAYERS);
         List<String> actFunc = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
-        double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.WDL_L2_REG).toString(), 0d);
+        double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.L2_REG).toString(), 0d);
         Object wideEnableObj = this.validParams.get(CommonConstants.WIDE_ENABLE);
         boolean wideEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.WIDE_ENABLE), true);
         boolean deepEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.DEEP_ENABLE), true);
@@ -734,7 +759,14 @@ public class WDLWorker extends
         this.wnd.updateWeights(context.getLastMasterResult());
         WDLParallelGradient parallelGradient = new WDLParallelGradient(this.wnd, this.workerThreadCount,
                 this.inputIndexMap, this.trainingData, this.validationData, this.completionService, this.lossType);
-        WDLParams wdlParams = parallelGradient.doCompute();
+        WDLParams wdlParams = null;
+        if(miniBatchEnabled()) {
+            int iteration = context.getCurrentIteration();
+            int miniBatchSize = Integer.parseInt(this.modelConfig.getTrain().getParams().get(CommonConstants.MINI_BATCH).toString());
+            wdlParams = parallelGradient.doCompute(iteration, miniBatchSize);
+        } else {
+            wdlParams = parallelGradient.doCompute();
+        }
         wdlParams.setSerializationType(SerializationType.GRADIENTS);
         this.wnd.setSerializationType(SerializationType.GRADIENTS);
         return wdlParams;

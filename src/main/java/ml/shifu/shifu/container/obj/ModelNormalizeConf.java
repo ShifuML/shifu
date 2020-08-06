@@ -44,7 +44,8 @@ public class ModelNormalizeConf {
                         // for categorical feature, pos rate is used.
         ZSCALE_INDEX, ZSCORE_INDEX, // numerical variable using zscale, categorical variable, using cate index
         WOE_INDEX, // numerical variable using woe, categorical variable, using cate index
-        WOE_ZSCALE_INDEX; // numerical variable using zscaled woe, categorical variable using cate index
+        WOE_ZSCALE_INDEX, // numerical variable using zscaled woe, categorical variable using cate index
+        INDEX; // both numerical and categorical norm to index, numerical index is from binBoundry, categorical index is from binCategory 
 
         public boolean isWoe() {
             return this == WOE || this == WEIGHT_WOE || this == WOE_ZSCORE || this == WOE_ZSCALE

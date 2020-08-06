@@ -15,10 +15,12 @@
  */
 package ml.shifu.shifu.udf;
 
+import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
@@ -69,6 +71,17 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
 
         if(pathModelConfig != null) {
             modelConfig = CommonUtils.loadModelConfig(pathModelConfig, sourceType);
+            if(modelConfig.isMultiTask()) {
+                int mtlIndex = -1;
+                if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+                    mtlIndex = NumberFormatUtils
+                            .getInt(UDFContext.getUDFContext().getJobConf().get(CommonConstants.MTL_INDEX), -1);
+                } else {
+                   //"when do local initilization mtlIndex is -1, set to 0 to pass");
+                    mtlIndex = 0;
+                }
+                modelConfig.setMtlIndex(mtlIndex);
+            }
         }
 
         columnConfigList = CommonUtils.loadColumnConfigList(pathColumnConfig, sourceType);
@@ -85,8 +98,8 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
         }
 
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
-            this.maxCategorySize = UDFContext.getUDFContext().getJobConf()
-                    .getInt(Constants.SHIFU_MAX_CATEGORY_SIZE, Constants.MAX_CATEGORICAL_BINC_COUNT);
+            this.maxCategorySize = UDFContext.getUDFContext().getJobConf().getInt(Constants.SHIFU_MAX_CATEGORY_SIZE,
+                    Constants.MAX_CATEGORICAL_BINC_COUNT);
         } else {
             this.maxCategorySize = Environment.getInt(Constants.SHIFU_MAX_CATEGORY_SIZE,
                     Constants.MAX_CATEGORICAL_BINC_COUNT);
@@ -120,8 +133,11 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
 
     /**
      * Get property value from UDF job context, or get it from @Environment
-     * @param udfPropertyName UDF property name
-     * @param defval default value, if there is no such property
+     * 
+     * @param udfPropertyName
+     *            UDF property name
+     * @param defval
+     *            default value, if there is no such property
      * @return property value or default value
      */
     protected String getUdfProperty(String udfPropertyName, String defval) {
@@ -136,7 +152,9 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
 
     /**
      * Get property value from UDF job context, or get it from @Environment
-     * @param udfPropertyName UDF property name
+     * 
+     * @param udfPropertyName
+     *            UDF property name
      * @return property value or null
      */
     protected String getUdfProperty(String udfPropertyName) {
@@ -145,11 +163,14 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
 
     /**
      * Generate the normalized Column names for one config
-     * @param config - ColumnConfig to norm
-     * @param normType - normalization type
+     * 
+     * @param config
+     *            - ColumnConfig to norm
+     * @param normType
+     *            - normalization type
      * @return
-     *      if the NormType is ONEHOT, it will be normalized to multi variables
-     *      or it will be just one normalized column name
+     *         if the NormType is ONEHOT, it will be normalized to multi variables
+     *         or it will be just one normalized column name
      */
     protected List<String> genNormColumnNames(ColumnConfig config, NormType normType) {
         List<String> normalizedNames = new ArrayList<>();
@@ -166,6 +187,25 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
             normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_missing");
         } else {
             normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()));
+        }
+        return normalizedNames;
+    }
+
+    protected List<String> genMTLNormColumnNames(ColumnConfig config, NormType normType, int mtlIndex) {
+        List<String> normalizedNames = new ArrayList<>();
+        if(NormType.ONEHOT.equals(normType) && config.isNumerical()) { // ONEHOT and numerical variable
+            for(int i = 0; i < config.getBinBoundary().size(); i++) {
+                normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_" + mtlIndex + "_" + i);
+            }
+            normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_" + mtlIndex + "_missing");
+        } else if((NormType.ONEHOT.equals(normType) || NormType.ZSCALE_ONEHOT.equals(normType))
+                && config.isCategorical()) { // ONEHOT or ZSCALE_ONEHOT for categorical variable
+            for(int i = 0; i < config.getBinCategory().size(); i++) {
+                normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_" + mtlIndex + "_" + i);
+            }
+            normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_" + mtlIndex + "_missing");
+        } else {
+            normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_" + mtlIndex);
         }
         return normalizedNames;
     }

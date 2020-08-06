@@ -19,7 +19,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import ml.shifu.shifu.util.NormalUtils;
+import ml.shifu.shifu.util.NormalizationUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -172,7 +172,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
                 this.minTestError = currentError;
                 // the optimizedWeights are the weights just evaluated, not current weights after applying gradients
                 this.optimizedWeights = context.getMasterResult().getEvaluatedWeights();
-                context.getMasterResult().setEvaluatedWeights(null);
+                if(this.optimizedWeights == null) {
+                    this.optimizedWeights = context.getMasterResult().getWeights();
+                }
                 LOG.info("change minTestError to {}, and update best weights at {}-th epoch.",
                         this.minTestError, context.getCurrentIteration());
             }
@@ -240,11 +242,12 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         if(this.isDry) {
             return;
         }
-
+        
         if(optimizedWeights != null) {
-            Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             // TODO do we need to check IOException and retry again to make sure such important model is saved
             // successfully.
+            Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
+
             writeModelWeightsToFileSystem(optimizedWeights, out, true);
         }
 
@@ -361,7 +364,6 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
-        boolean isAfterVarSelect = inputOutputIndex[0] != 0;
         // cache all feature list for sampling features
         List<Integer> allFeatures = new ArrayList<>(DTrainUtils.generateModelFeatureSet(modelConfig, columnConfigList));
         // NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);

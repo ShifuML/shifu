@@ -24,6 +24,8 @@ import java.util.Set;
 
 import org.apache.hadoop.io.Writable;
 
+import ml.shifu.shifu.core.dtrain.StringUtils;
+
 /**
  * A mixed writable class to wrapper HyperLogLogPlus byte instance and frequent items together.
  * 
@@ -158,7 +160,7 @@ public class CountAndFrequentItemsWritable implements Writable {
                     out.writeBoolean(false);
                 } else {
                     out.writeBoolean(true);
-                    out.writeUTF(unit);
+                    StringUtils.writeString(out, unit);
                 }
                 i++;
             }
@@ -189,7 +191,7 @@ public class CountAndFrequentItemsWritable implements Writable {
         if(len != 0) {
             for(int i = 0; i < len; i++) {
                 if(in.readBoolean()) {
-                    frequentItems.add(in.readUTF());
+                    frequentItems.add(StringUtils.readString(in));
                 }
             }
         }

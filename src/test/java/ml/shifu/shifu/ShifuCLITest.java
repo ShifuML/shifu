@@ -201,7 +201,7 @@ public class ShifuCLITest {
         ShifuCLI.normalizeTrainData();
 
         // run train
-        ShifuCLI.trainModel(false, false, false);
+        ShifuCLI.trainModel(false);
 
         File modelFile = new File("models/model0.nn");
         Assert.assertTrue(modelFile.exists());
@@ -265,7 +265,7 @@ public class ShifuCLITest {
         FileUtils.copyDirectory(modelsDir, tmpModelsDir);
 
         // run evaluation set
-        ShifuCLI.runEvalSet(false);
+        ShifuCLI.runEvalSet();
         File evalScore = new File("evals/EvalA/EvalScore");
         Assert.assertTrue(evalScore.exists());
 

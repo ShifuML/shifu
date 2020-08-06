@@ -58,7 +58,7 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
         Integer columnId = (Integer) input.get(0);
         DataBag databag = (DataBag) input.get(1);
         int corrColumnId = columnId;
-        if(corrColumnId >= super.columnConfigList.size()){
+        if(corrColumnId >= super.columnConfigList.size()) {
             corrColumnId = corrColumnId % super.columnConfigList.size();
         }
         ColumnConfig columnConfig = super.columnConfigList.get(corrColumnId);
@@ -113,12 +113,11 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
         output.set(0, columnId);
         List<?> binFields = binning.getDataBin();
 
-        // Do check here. It's because if there are too many value for categorical variable,
-        // it will consume too much memory when join them together, that will cause OOM exception
         if(columnConfig.isCategorical() && binFields.size() > this.maxCategorySize) {
             log.warn(columnId + " " + columnConfig.getColumnName() + " is over maximal categorical size: "
-                    + this.maxCategorySize);
-            output.set(1, "");
+                    + this.maxCategorySize + "only keep random " + this.maxCategorySize
+                    + "category, better to use hash column or check if it is numerical variable.");
+            output.set(1, StringUtils.join(binFields, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
         } else {
             if(columnConfig.isHybrid()) {
                 String finalBinStr = StringUtils.join(binFields, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);

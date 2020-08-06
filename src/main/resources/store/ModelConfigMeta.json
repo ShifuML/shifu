@@ -429,7 +429,8 @@
                     {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCALE_INDEX"},
                     {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCORE_INDEX"},
                     {"label":"numerical variable using woe, categorical variable, using cate index", "value":"WOE_INDEX"},
-                    {"label":"numerical variable using zscaled woe, categorical variable using cate index", "value":"WOE_ZSCALE_INDEX"}
+                    {"label":"numerical variable using zscaled woe, categorical variable using cate index", "value":"WOE_ZSCALE_INDEX"},
+                    {"label":"both numerical and categorical norm to index, numerical index is from binBoundry, categorical index is from binCategory", "value":"INDEX"}
                 ]
             }, {
                 "name": "stdDevCutOff",
@@ -571,6 +572,7 @@
                     {"label": "Gradient Boost Decision Tree", "value":"GBT"},
                     {"label": "Tensorflow", "value":"Tensorflow"},
                     {"label": "Wide And Deep", "value":"WDL"},
+                    {"label": "Multi Task Model", "value":"MTL"},
                     {"label": "Generic", "value":"generic"}
                 ]
             }, {
@@ -659,7 +661,7 @@
                         "directive": "input",
                         "defval" : 0.1
                     }, {
-                        "name" : "WDLL2Reg",
+                        "name" : "L2Reg",
                         "type" : "float",
                         "directive": "input",
                         "defval" : 0.01
@@ -825,6 +827,15 @@
                             {"label": "RMSProp", "value":"RMSProp"},
                             {"label": "Nesterov", "value":"Nesterov"},
                             {"label": "Momentum", "value":"Momentum"}
+                        ]
+                    }, {
+                        "name" : "TF.version",
+                        "type" : "text",
+                        "directive": "select",
+                        "defval" : "1.0",
+                        "options": [
+                            {"label": "1.0", "value":"1.0"},
+                            {"label": "2.0", "value":"2.0"}
                         ]
                     }, {
                         "name" : "wideEnable",

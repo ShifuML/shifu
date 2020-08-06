@@ -387,8 +387,8 @@ public class PerformanceEvaluator {
 
         log.info("Start print: " + info);
 
-        log.info(String.format(formatString, "ActionRate", "wgtActionRate", "Recall", "wgtRecall",
-                "Precision", "wgtPrecision", "FPR", "wgtFPR", "FTPR", "wgtFTPR", "cutOffScore"));
+        log.info(String.format(formatString, "ActionRate", "WgtActionRate", "Recall", "WgtRecall",
+                "Precision", "WgtPrecision", "FPR", "WgtFPR", "FTPR", "WgtFTPR", "CutOffScore"));
 
         for(PerformanceObject po: list) {
             log.info(String.format(formatString,

@@ -358,21 +358,18 @@ public interface Constants {
 
     public static final String SHIFU_SEGMENT_EXPRESSIONS = "shifu.segment.expressions";
     public static final String SHIFU_NORM_CATEGORY_MISSING_NORM = "shifu.norm.category.missing.norm";
-    
+
     public static final String SHIFU_EVAL_NORM_APPEND_SCORE = "shifu.eval.norm.appendscore";
     public static final String SHIFU_EVAL_NORM_OUTPUTRAW = "shifu.eval.norm.outputraw";
     public static final String SHIFU_NORM_ONLY_SELECTED = "shifu.norm.only.selected";
 
     public static final String SHIFU_OUTPUT_DATA_DELIMITER = "shifu.output.data.delimiter";
     public static final String SHIFU_OUTPUT_DATA_CSV = "shifu.output.data.csv";
-    
+
     public static final String SHIFU_NORM_PRECISION_TYPE = "shifu.norm.precision.type";
     
-    public static final String TF_ALG_NAME = "Tensorflow";
-    
-    /**
-     * Wide and deep model name
-     */
-    public static final String WDL_ALG_NAME = "WDL";
+    public static final String SHIFU_PRECISION_TYPE = "shifu.precision.type";
+
+    public static final String IS_UPDATE_STATS_ONLY = "IS_UPDATE_STATS_ONLY";
 
 }

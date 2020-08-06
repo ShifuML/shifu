@@ -316,6 +316,21 @@ public class Normalizer {
                     }
                     return Arrays.asList((double) index);
                 }
+            case INDEX:
+                if(config.isNumerical()) {
+                    int binIndex = BinUtils.getBinNum(config, raw);
+                    if(binIndex < 0 ) {
+                        binIndex = config.getBinBoundary().size();
+                    } 
+                    return Arrays.asList((double) binIndex);
+                } else if(config.isCategorical()) {
+                    Integer index = cateIndexMap == null ? null : cateIndexMap.get(raw == null ? "" : raw.toString());
+                    if(index == null || index == -1) {
+                        // last index for null category
+                        index = config.getBinCategory().size();
+                    }
+                    return Arrays.asList((double) index);
+                }
             default:
                 // others use old normalize API to reuse code
                 return normalize(config, raw, cutoff, type, categoryMissingNormType);

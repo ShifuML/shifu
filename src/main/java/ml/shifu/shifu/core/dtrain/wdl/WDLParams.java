@@ -15,12 +15,13 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
-import ml.shifu.guagua.io.Combinable;
-import ml.shifu.guagua.io.HaltBytable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import ml.shifu.guagua.io.Combinable;
+import ml.shifu.guagua.io.HaltBytable;
+import ml.shifu.shifu.core.dtrain.layer.SerializationType;
 
 /**
  * {@link WDLParams} is message sent between master and workers for wide and deep model training.
@@ -28,10 +29,6 @@ import java.io.IOException;
  * <p>
  * In worker, it will collect combined gradients and then send to master for merging. While in master when model weights
  * are updated, master will send model new weights to all works for next epoch iterations.
- * 
- * <p>
- * TODO define wide, dnn, embedding different weights/gradients parameters
- * TODO add model arch graph here
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -75,8 +72,6 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
     private SerializationType serializationType = SerializationType.MODEL_SPEC;
 
     private WideAndDeep wnd;
-
-    // TODO: add wide. dnn, embedding weights/gradients here
 
     public void update(WideAndDeep wnd) {
         this.getWnd().updateWeights(wnd);
