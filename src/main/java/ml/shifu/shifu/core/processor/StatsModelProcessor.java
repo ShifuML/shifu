@@ -366,7 +366,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                 Environment.getProperty("mapred.reduce.slowstart.completed.maps", "0.7"));
 
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
-        if(StringUtils.isNotBlank(hdpVersion)) {
+        if(StringUtils.isNotBlank(hdpVersion) && Environment.getProperty("hdp.version") == null) {
             // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
             conf.set("hdp.version", hdpVersion);
         }

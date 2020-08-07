@@ -32,6 +32,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
@@ -125,6 +126,7 @@ public class ShifuCLI {
     private static final String NOSORT = "nosort";
     private static final String REF = "ref";
     private static final String STRICT = "strict";
+    private static final String AUDIT = "audit";
 
     private static final String SAVE = "save";
     private static final String SWITCH = "switch";
@@ -143,6 +145,8 @@ public class ShifuCLI {
     private static final String TO_TREEB = "totreeb";
     // for model spec analysis
     private static final String FI = "fi";
+    // for model name
+    private static final String NAME = "name";
 
     static private final Logger log = LoggerFactory.getLogger(ShifuCLI.class);
 
@@ -367,6 +371,9 @@ public class ShifuCLI {
                         deleteEvalSet(cmd.getOptionValue(DELETE));
                     } else if(cmd.hasOption(NORM)) {
                         runEvalNorm(cmd.getOptionValue(NORM), cmd.hasOption(STRICT));
+                    } else if (cmd.hasOption(AUDIT)) {
+                        params.put(EvalModelProcessor.EXPECT_AUDIT_CNT, cmd.getOptionValue(N));
+                        runAuditEval(cmd.getOptionValue(AUDIT), params);
                     } else {
                         log.error("Invalid command, please check help message.");
                         printUsage();
@@ -378,6 +385,7 @@ public class ShifuCLI {
                     params.put(ExportModelProcessor.EXPECTED_BIN_NUM, cmd.getOptionValue(N));
                     params.put(ExportModelProcessor.IV_KEEP_RATIO, cmd.getOptionValue(IVR));
                     params.put(ExportModelProcessor.MINIMUM_BIN_INST_CNT, cmd.getOptionValue(BIC));
+                    params.put(ExportModelProcessor.EXPORT_MODEL_NAME, cmd.getOptionValue(NAME));
                     status = exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE), params);
                     if(status == 0) {
                         log.info("Export models/columnstats/corr successfully.");
@@ -436,7 +444,6 @@ public class ShifuCLI {
             exceptionExit(e);
         }
     }
-
     private static String[] cleanArgs(String[] args) {
         // get -D parameters at first and set it in Environment then clean args
         List<String> cleanedArgsList = new ArrayList<>();
@@ -576,6 +583,11 @@ public class ShifuCLI {
     public static int runEvalScore(String evalSetNames, Map<String, Object> params) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.SCORE, evalSetNames, params);
         return p.run();
+    }
+
+    private static void runAuditEval(String evalSetNames, Map<String, Object> params) throws Exception {
+        EvalModelProcessor p = new EvalModelProcessor(EvalStep.AUDIT, evalSetNames, params);
+        p.run();
     }
 
     private static int runEvalConfMat(String evalSetNames) throws Exception {
@@ -764,6 +776,7 @@ public class ShifuCLI {
         Option opt_ref = OptionBuilder.hasArg(true).create(REF);
         Option opt_filter = OptionBuilder.hasOptionalArg().create(FILTER);
         Option opt_strict = OptionBuilder.hasArg(false).create(STRICT);
+        Option opt_audit = OptionBuilder.hasOptionalArg().create(AUDIT);
 
         // options for variable re-binning
         Option opt_rebin = OptionBuilder.hasArg(false).create(REBIN);
@@ -780,6 +793,8 @@ public class ShifuCLI {
         Option opt_totreeb = OptionBuilder.hasArg(false).create(TO_TREEB);
 
         Option opt_fi = OptionBuilder.hasArg(true).create(FI);
+
+        Option opt_name = OptionBuilder.hasArg(true).withDescription("New model name for model spec.").create(NAME);
 
         opts.addOption(opt_cmt);
         opts.addOption(opt_new);
@@ -818,6 +833,7 @@ public class ShifuCLI {
         opts.addOption(opt_correlation_short);
         opts.addOption(opt_psi);
         opts.addOption(opt_psi_short);
+        opts.addOption(opt_audit);
 
         opts.addOption(opt_uso);
         opts.addOption(opt_uso_short);
@@ -832,6 +848,7 @@ public class ShifuCLI {
         opts.addOption(opt_totreeb);
 
         opts.addOption(opt_fi);
+        opts.addOption(opt_name);
 
         return opts;
     }
@@ -852,7 +869,7 @@ public class ShifuCLI {
         System.out.println("\tstats -psi(p)                           Calculate psi values if psi column is provided.");
         System.out.println(
                 "\tstats -updatestatsonly                  Calculate stats values if given bin boundaries in ColumnConfig.json.");
-        System.out.println("\tstats -rebin [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
+        System.out.println("\tstats -rebin [-vars var1,var1] [-ivr <ratio>] [-bic <bic>] [-n <expectBinCnt>]");
         System.out.println("\t                                        Do the variable Re-bin.");
         System.out.println(
                 "\tvarselect/varsel                        Variable selection, will update finalSelect in ColumnConfig.json.");
@@ -875,11 +892,12 @@ public class ShifuCLI {
         System.out.println("\teval -run     <EvalSetName>             Run eval set evaluation.");
         System.out.println("\teval -score   <EvalSetName> [-nosort]   Scoring evaluation dataset.");
         System.out.println("\teval -norm    <EvalSetName>             Normalize evaluation dataset.");
-        System.out.println("\teval -confmat <EvalSetName>             Compute the TP/FP/TN/FN based on scoring");
+        System.out.println("\teval -confmat <EvalSetName>             Compute the TP/FP/TN/FN based on scoring.");
         System.out
-                .println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat");
+                .println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat.");
+        System.out.println("\teval -audit [-n <#numofrecords>]        Score eval data and generate audit dataset.");
         System.out.println(
-                "\texport [-t pmml|columnstats|woemapping|bagging|baggingpmml|corr|woe] [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>]");
+                "\texport [-t pmml|columnstats|woemapping|bagging|baggingpmml|corr|woe|ume|baggingume] [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>] [-name <modelName>]");
         System.out.println(
                 "\t                                        Export model to PMML format or export ColumnConfig.");
         System.out.println(

@@ -161,7 +161,7 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
         }
 
         this.isCsvFormat = StringUtils.isBlank(evalConfig.getDataSet().getHeaderPath());
-        this.headers = CommonUtils.getFinalHeaders(evalConfig);
+        this.headers = CommonUtils.getFinalHeaders(modelConfig, evalConfig);
 
         String filterExpressions;
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
@@ -403,7 +403,8 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
             return null;
         }
 
-        String tag = CommonUtils.trimTag(rawDataNsMap.get(new NSColumn(modelConfig.getTargetColumnName(evalConfig))));
+        String tag = CommonUtils.trimTag(rawDataNsMap.get(
+                new NSColumn(modelConfig.getTargetColumnName(evalConfig, modelConfig.getTargetColumnName()))));
 
         // run model scoring
         long startTime = System.nanoTime();
@@ -663,8 +664,8 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
     public Schema outputSchema(Schema input) {
         try {
             Schema tupleSchema = new Schema();
-            tupleSchema.add(
-                    new FieldSchema(SCHEMA_PREFIX + modelConfig.getTargetColumnName(evalConfig), DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + modelConfig.getTargetColumnName(evalConfig,
+                            modelConfig.getTargetColumnName()), DataType.CHARARRAY));
 
             String weightName = StringUtils.isBlank(evalConfig.getDataSet().getWeightColumnName()) ? "weight"
                     : evalConfig.getDataSet().getWeightColumnName();

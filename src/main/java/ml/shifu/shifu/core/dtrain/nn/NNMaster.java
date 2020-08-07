@@ -537,7 +537,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         this.isAfterVarSelect = (inputOutputIndex[3] == 1);
         // cache all feature list for sampling features
-        this.allFeatures = NormalizationUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
+        this.allFeatures = new ArrayList<>(DTrainUtils.generateModelFeatureSet(modelConfig, columnConfigList));
         String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);
         if(StringUtils.isBlank(subsetStr)) {
             this.subFeatures = this.allFeatures;

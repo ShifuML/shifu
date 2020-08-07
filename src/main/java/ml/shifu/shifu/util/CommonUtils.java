@@ -279,7 +279,7 @@ public final class CommonUtils {
         if(StringUtils.isNotBlank(modelConfig.getTrain().getGridConfigFile())) {
             String gridConfigPath = modelConfig.getTrain().getGridConfigFile().trim();
             if(sourceType == SourceType.HDFS) {
-                // gridsearch config file is uploaded to modelset path
+                // grid-search config file is uploaded to modelset path
                 gridConfigPath = new PathFinder(modelConfig).getPathBySourceType(
                         gridConfigPath.substring(gridConfigPath.lastIndexOf(File.separator) + 1), SourceType.HDFS);
             }
@@ -534,7 +534,7 @@ public final class CommonUtils {
         return fields;
     }
 
-    public static String[] getFinalHeaders(EvalConfig evalConfig) throws IOException {
+    public static String[] getFinalHeaders(ModelConfig modelConfig, EvalConfig evalConfig) throws IOException {
         String[] fields = null;
         boolean isSchemaProvided = true;
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
@@ -549,17 +549,18 @@ public final class CommonUtils {
                             ? evalConfig.getDataSet().getDataDelimiter()
                             : evalConfig.getDataSet().getHeaderDelimiter(),
                     evalConfig.getDataSet().getSource());
-            // TODO - if there is no target column in eval, it may fail to check it is schema or not
-
             if(evalConfig.isMultiTask()) {
                 List<String> tarColumns = evalConfig.getMultiTaskTargetColumnNames();
-                for(String column: tarColumns) {
-                    if(!StringUtils.join(fields, "").contains(column)) {
-                        isSchemaProvided = false;
-                        break;
+                if (CollectionUtils.isNotEmpty(tarColumns)) {
+                    for(String column : tarColumns) {
+                        if(!StringUtils.join(fields, "").contains(column)) {
+                            isSchemaProvided = false;
+                            break;
+                        }
                     }
                 }
-            } else if(StringUtils.join(fields, "").contains(evalConfig.getDataSet().getTargetColumnName())) {
+            } else if(StringUtils.join(fields, "").contains(
+                    modelConfig.getTargetColumnName(evalConfig, ""))) {
                 // if first line contains target column name, we guess it is csv format and first line is header.
                 isSchemaProvided = true;
                 log.warn("No header path is provided, we will try to read first line and detect schema.");

@@ -197,10 +197,10 @@ public class AutoTypeDistinctCountMapper
 
         private long validNumCount;
 
-        public void offer(Set<String> missingorInvalidValues, String unit) {
+        public void offer(Set<String> missingOrInvalidValues, String unit) {
             count += 1;
 
-            if(unit == null || missingorInvalidValues.contains(unit.toLowerCase())) {
+            if(unit == null || missingOrInvalidValues.contains(unit.toLowerCase())) {
                 invalidCount += 1;
                 return;
             }
@@ -215,7 +215,8 @@ public class AutoTypeDistinctCountMapper
             }
 
             if(frequentItems.size() <= CountAndFrequentItemsWritable.FREQUET_ITEM_MAX_SIZE
-                    && !frequentItems.contains(unit)) {
+                    && !frequentItems.contains(unit)
+                    && unit.length() < CountAndFrequentItemsWritable.FREQUET_ITEM_MAX_LENGTH) {
                 frequentItems.add(unit);
             }
         }

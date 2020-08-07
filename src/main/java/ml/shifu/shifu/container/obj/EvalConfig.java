@@ -226,7 +226,7 @@ public class EvalConfig {
     
     @JsonIgnore
     public List<String> getMultiTaskTargetColumnNames() {
-        if(dataSet.getTargetColumnName() == null) {
+        if(StringUtils.isBlank(dataSet.getTargetColumnName())) {
             return null;
         }
         return CommonUtils.splitAndReturnList(dataSet.getTargetColumnName(), CommonConstants.MTL_DELIMITER);

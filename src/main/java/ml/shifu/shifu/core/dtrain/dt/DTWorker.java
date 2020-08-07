@@ -453,7 +453,7 @@ public class DTWorker extends
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         // numerical + categorical = # of all input
         this.inputCount = inputOutputIndex[0] + inputOutputIndex[1];
-        // regression outputNodeCount is 1, binaryClassfication, it is 1, OneVsAll it is 1, Native classification it is
+        // regression outputNodeCount is 1, binaryClassification, it is 1, OneVsAll it is 1, Native classification it is
         // 1, with index of 0,1,2,3 denotes different classes
         this.isAfterVarSelect = (inputOutputIndex[3] == 1);
         this.isManualValidation = (modelConfig.getValidationDataSetRawPath() != null

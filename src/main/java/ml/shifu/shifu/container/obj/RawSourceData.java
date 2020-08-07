@@ -86,11 +86,6 @@ public class RawSourceData implements Cloneable {
     private String targetColumnName;
 
     /**
-     * Date column, should be one of columns
-     */
-    private String dateColumnName = "";
-
-    /**
      * Positive tag list: Example like ["0", "1"];
      */
     private List<String> posTags;
@@ -195,14 +190,6 @@ public class RawSourceData implements Cloneable {
 
     public void setTargetColumnName(String targetColumnName) {
         this.targetColumnName = targetColumnName;
-    }
-
-    public String getDateColumnName() {
-        return CommonUtils.normColumnName(dateColumnName);
-    }
-
-    public void setDateColumnName(String dateColumnName) {
-        this.dateColumnName = dateColumnName;
     }
 
     public List<String> getPosTags() {

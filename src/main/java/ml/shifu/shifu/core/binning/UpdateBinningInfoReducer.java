@@ -169,7 +169,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             totalCount += cfiw.getCount();
             invalidCount += cfiw.getInvalidCount();
             validNumCount += cfiw.getValidNumCount();
-            fis.addAll(cfiw.getFrequetItems());
+            fis.addAll(cfiw.getFrequentItems());
             if(hyperLogLogPlus == null) {
                 hyperLogLogPlus = HyperLogLogPlus.Builder.build(cfiw.getHyperBytes());
             } else {

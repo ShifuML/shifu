@@ -86,8 +86,8 @@ public class EncodeDataUDF extends AbstractEvalUDF<Tuple> {
 
         Map<String, Object> rawInput = convertTupleToRawInput(tuple);
         //1. append the tag
-        Object obj = ((evalConfig == null) ? rawInput.get(this.modelConfig.getTargetColumnName())
-                : rawInput.get(this.modelConfig.getTargetColumnName(evalConfig)));
+        Object obj = rawInput.get(this.modelConfig.getTargetColumnName(this.evalConfig,
+                this.modelConfig.getTargetColumnName()));
         outputList.add(obj == null ? null : obj.toString());
 
         //2. append the weight
@@ -134,10 +134,8 @@ public class EncodeDataUDF extends AbstractEvalUDF<Tuple> {
     public Schema outputSchema(Schema input) {
         try {
             Schema tupleSchema = new Schema();
-            String targetColumnName = this.modelConfig.getTargetColumnName();
-            if(evalConfig != null) {
-                targetColumnName = this.modelConfig.getTargetColumnName(evalConfig);
-            }
+            String targetColumnName = this.modelConfig.getTargetColumnName(this.evalConfig,
+                    modelConfig.getTargetColumnName());
             tupleSchema.add(new FieldSchema(targetColumnName, DataType.CHARARRAY));
 
             String weightName = this.modelConfig.getWeightColumnName();
