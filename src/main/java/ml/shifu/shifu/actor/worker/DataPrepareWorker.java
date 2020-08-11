@@ -210,7 +210,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
                 ColumnConfig config = columnConfigList.get(i);
                 if(config.isNumerical()) { // NUMERICAL
                     try {
-                        vo.setValue(Double.valueOf(raw[i].trim()));
+                        vo.setValue(parseDoubleExceptionOnNaN(raw[i].trim()));
                         vo.setRaw(null);
 
                     } catch (Exception e) {
@@ -230,7 +230,7 @@ public class DataPrepareWorker extends AbstractWorkerActor {
                     vo.setValue(null);
                 } else { // AUTO TYPE
                     try {
-                        vo.setValue(Double.valueOf(raw[i]));
+                        vo.setValue(parseDoubleExceptionOnNaN(raw[i]));
                         vo.setRaw(null);
                     } catch (Exception e) {
                         incMap(i, missingMap);
@@ -264,6 +264,14 @@ public class DataPrepareWorker extends AbstractWorkerActor {
         DataPrepareStatsResult rt = new DataPrepareStatsResult(total, missingMap);
 
         return rt;
+    }
+
+    private Double parseDoubleExceptionOnNaN(String s) throws NumberFormatException {
+        Double value = Double.valueOf(s);
+        if(Double.isNaN(value)) {
+            throw new NumberFormatException(s + " should not be " + Double.NaN);
+        }
+        return value;
     }
 
     private void incMap(int index, Map<Integer, Long> mapping) {
