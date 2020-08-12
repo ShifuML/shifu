@@ -95,7 +95,7 @@ public class ColumnProjector extends AbstractEvalUDF<Tuple> {
         }
 
         for(int i = 0; i < this.headers.length; i++) {
-            if(this.headers[i].equals(evalConfig.getDataSet().getTargetColumnName())) {
+            if(this.headers[i].equals(modelConfig.getTargetColumnName(evalConfig, modelConfig.getTargetColumnName()))) {
                 this.targetColumnIndex = i;
             }
             if(this.headers[i].equals(this.scoreMetaColumn)) {

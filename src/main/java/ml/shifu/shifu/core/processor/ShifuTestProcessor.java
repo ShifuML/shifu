@@ -112,7 +112,7 @@ public class ShifuTestProcessor extends BasicModelProcessor {
         }
 
         LOG.info("Start to test the filter against eval `{}` dataset.", evalConfig.getName());
-        DataPurifier dataPurifier = new DataPurifier(this.columnConfigList, evalConfig);
+        DataPurifier dataPurifier = new DataPurifier(modelConfig, columnConfigList, evalConfig);
         return doFilterTest(dataPurifier, dataset.getDataPath(), dataset.getSource());
     }
 

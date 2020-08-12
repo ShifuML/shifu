@@ -26,21 +26,21 @@
   <property>
     <description>python env path in hdfs</description>
     <name>shifu.application.python-env-zip</name>
-    <value>/user/website/.tensorflow_yarn/python_env.zip</value>
+    <value>/apps/risk/dev/shifuml/python_env.zip</value>
   </property>
 
   <property>
     <description>python env path</description>
     <name>shifu.application.python-binary-path</name>
-    <value>/x/home/website/python2.7</value>
+    <value>/x/home/website/python3.7</value>
   </property>
 
-    <property>
+  <property>
     <description>glibc path in hdfs</description>
     <name>shifu.application.glibc-env-zip</name>
-    <value>/user/website/.tensorflow_yarn/glibc.zip</value>
+    <value>/apps/risk/dev/shifuml/glibc.zip</value>
   </property>
-  
+
     <property>
     <description>glibc path</description>
     <name>shifu.application.glibc-binary-path</name>
@@ -105,15 +105,15 @@
   <property>
     <description>Number of parameter servers to request.</description>
     <name>shifu.ps.instances</name>
-    <value>8</value>
+    <value>1</value>
   </property>
-<!-- 
-  <property>
-    <description>Number of back-up parameter servers to request.</description>
-    <name>shifu.ps.instances.backup</name>
-    <value>2</value>
-  </property>
--->
+  <!--
+         <property>
+      <description>Number of back-up parameter servers to request.</description>
+      <name>shifu.ps.instances.backup</name>
+      <value>2</value>
+    </property>
+  -->
   <!-- Worker configurations -->
   <property>
     <description>Timeout, in milliseconds for the user's python processes before forcibly killing them.</description>

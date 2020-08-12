@@ -80,6 +80,9 @@ public class DataPurifier {
         this.columnConfigList = columnConfigList;
         String filterExpressions = (isForValidationDataSet ? modelConfig.getDataSet().getValidationFilterExpressions()
                 : modelConfig.getFilterExpressions());
+        if(modelConfig.isMultiTask()) {
+            filterExpressions = modelConfig.getMTLFilterExpression(modelConfig.getMtlIndex());
+        }
         if(StringUtils.isNotBlank(filterExpressions)) {
             filterExpressions = parseNewTagInfo(filterExpressions);
             jexl = new JexlEngine();
@@ -157,7 +160,7 @@ public class DataPurifier {
         this(modelConfig, columnConfigList, filterExpressions, false);
     }
 
-    public DataPurifier(List<ColumnConfig> columnConfigList, EvalConfig evalConfig) throws IOException {
+    public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, EvalConfig evalConfig) throws IOException {
         this.columnConfigList = columnConfigList;
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getFilterExpressions())) {
             jexl = new JexlEngine();
@@ -169,7 +172,24 @@ public class DataPurifier {
                 dataFilterExpr = null;
             }
 
-            headers = CommonUtils.getFinalHeaders(evalConfig);
+            headers = CommonUtils.getFinalHeaders(modelConfig, evalConfig);
+            dataDelimiter = evalConfig.getDataSet().getDataDelimiter();
+        }
+    }
+    
+    public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, EvalConfig evalConfig, int mtlIndex) throws IOException {
+        this.columnConfigList = columnConfigList;
+        if(StringUtils.isNotBlank(evalConfig.getDataSet().getFilterExpressions())) {
+            jexl = new JexlEngine();
+            try {
+                dataFilterExpr = jexl.createExpression(evalConfig.getDataSet().getFilterExpressions());
+            } catch (JexlException e) {
+                log.error("The expression {} is invalid, please use correct expression.",
+                        evalConfig.getDataSet().getFilterExpressions());
+                dataFilterExpr = null;
+            }
+
+            headers = CommonUtils.getFinalHeaders(modelConfig, evalConfig);
             dataDelimiter = evalConfig.getDataSet().getDataDelimiter();
         }
     }

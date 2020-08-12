@@ -157,6 +157,8 @@ import parquet.format.PageType;
 import parquet.hadoop.ParquetRecordReader;
 import parquet.org.codehaus.jackson.Base64Variant;
 
+import static ml.shifu.shifu.core.dtrain.CommonConstants.*;
+
 /**
  * Train processor, produce model based on the normalized dataset.
  */
@@ -448,10 +450,22 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
     }
 
+    protected boolean useTensorFlow2() {
+        return TF_V2.equals(super.modelConfig.getTrain().getParams().get(TF_Version));
+    }
+
+    protected String getConfigFileName() {
+        return useTensorFlow2() ? "global-default-v2.xml" : "global-default.xml";
+    }
+
+    protected String getScriptPrefix() {
+        return useTensorFlow2() ? "distributed_tf20_" : "distributed_tf_";
+    }
+
     protected int runDistributedTensorflowTrain() throws Exception {
         LOG.info("Started distributed TensorFlow training.");
         globalDefaultConfFile = new Path(
-                super.pathFinder.getAbsolutePath(new Path("conf" + File.separator + "global-default.xml").toString()));
+                super.pathFinder.getAbsolutePath(new Path("conf" + File.separator + getConfigFileName()).toString()));
         LOG.info("Shifu tensorflow on yarn global default file is found in: {}.", globalDefaultConfFile);
 
         if(super.modelConfig.getTrain().getBaggingNum() != 1) {
@@ -655,7 +669,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             // Running normal NN
             Object tfTypeObj = this.modelConfig.getTrain().getParams().get("TF_type");
             String tyType = tfTypeObj == null ? "keras" : tfTypeObj.toString().toLowerCase();
-            String scriptPath = "distributed_tf_" + tyType + ".py";
+            String scriptPath = getScriptPrefix() + tyType + ".py";
             String currScriptPath = System.getProperty("user.dir") + File.separator + scriptPath;
             String rawScriptPath = super.getPathFinder().getScriptPath("scripts" + File.separator + scriptPath);
 
@@ -1773,17 +1787,16 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             // otherwise, let dynamic combine size works
         }
 
-        // in shifuconfig; by default it is 200M, consider in some cases user selects only a half of features, this
-        // number should be 400m
-        int[] inputOutputIndex;
-        if(modelConfig.isMultiTask()) {
-            inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
-                    this.mtlColumnConfigLists.get(0));
-        } else {
-            inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
-                    this.columnConfigList);
-        }
-        int candidateCount = (inputOutputIndex[2] == 0 ? inputOutputIndex[0] : inputOutputIndex[2]);
+        // in shifuconfig; by default it is 200M, consider in some cases user selects only a half of features,
+        // this number should be 400m ?
+
+        // int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
+        //        this.columnConfigList);
+        //int candidateCount = (inputOutputIndex[2] == 0 ? inputOutputIndex[0] : inputOutputIndex[2]);
+        int candidateCount = (modelConfig.isMultiTask() ?
+                DTrainUtils.generateModelFeatureSet(modelConfig, this.mtlColumnConfigLists.get(0)).size()
+                : DTrainUtils.generateModelFeatureSet(modelConfig, columnConfigList).size());
+
         // 1. set benchmark
         long maxCombineSize = CommonUtils.isTreeModel(modelConfig.getAlgorithm()) ? 209715200L : 168435456L;
         if(modelConfig.isClassification()) {

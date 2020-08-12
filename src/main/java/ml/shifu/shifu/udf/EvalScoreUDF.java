@@ -56,6 +56,7 @@ import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
@@ -143,6 +144,8 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
 
     private String currWgtNameInMTL;
 
+    private PrecisionType precisionType;
+
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
         this(source, pathModelConfig, pathColumnConfig, evalSetName, Integer.toString(Scorer.DEFAULT_SCORE_SCALE));
@@ -158,7 +161,7 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
         }
 
         this.isCsvFormat = StringUtils.isBlank(evalConfig.getDataSet().getHeaderPath());
-        this.headers = CommonUtils.getFinalHeaders(evalConfig);
+        this.headers = CommonUtils.getFinalHeaders(modelConfig, evalConfig);
 
         String filterExpressions;
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
@@ -170,6 +173,12 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
         if(StringUtils.isNotBlank(filterExpressions)) {
             this.segFilterSize = CommonUtils.split(filterExpressions,
                     Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER).length;
+        }
+
+        String precision = getUdfProperty(Constants.SHIFU_PRECISION_TYPE);
+        if(StringUtils.isNotBlank(precision)) {
+            this.precisionType = PrecisionType
+                    .of(getUdfProperty(Constants.SHIFU_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
         }
 
         // move model runner construction in exec to avoid OOM error in client side if model is too big like RF
@@ -342,11 +351,12 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
             if(this.isMultiTask) {
                 this.modelRunner = new ModelRunner(modelConfig, mtlColumnConfigLists, this.headers,
                         evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,
-                        this.isMultiThreadScoring, this.getCategoryMissingNormType(), this.isMultiTask);
+                        this.isMultiThreadScoring, this.getCategoryMissingNormType(), this.isMultiTask,
+                        this.precisionType);
             } else {
                 this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,
                         evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,
-                        this.isMultiThreadScoring, this.getCategoryMissingNormType());
+                        this.isMultiThreadScoring, this.getCategoryMissingNormType(), this.precisionType);
             }
 
             // FIXME MTL not supported in sub models
@@ -381,7 +391,7 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
                 }
                 this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,
                         evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,
-                        this.isMultiThreadScoring, this.getCategoryMissingNormType());
+                        this.isMultiThreadScoring, this.getCategoryMissingNormType(), this.precisionType);
             }
             this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
             log.info("DEBUG: model cnt " + this.modelScoreNames.size() + " sub models cnt "
@@ -393,7 +403,8 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
             return null;
         }
 
-        String tag = CommonUtils.trimTag(rawDataNsMap.get(new NSColumn(modelConfig.getTargetColumnName(evalConfig))));
+        String tag = CommonUtils.trimTag(rawDataNsMap.get(
+                new NSColumn(modelConfig.getTargetColumnName(evalConfig, modelConfig.getTargetColumnName()))));
 
         // run model scoring
         long startTime = System.nanoTime();
@@ -653,8 +664,8 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
     public Schema outputSchema(Schema input) {
         try {
             Schema tupleSchema = new Schema();
-            tupleSchema.add(
-                    new FieldSchema(SCHEMA_PREFIX + modelConfig.getTargetColumnName(evalConfig), DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + modelConfig.getTargetColumnName(evalConfig,
+                            modelConfig.getTargetColumnName()), DataType.CHARARRAY));
 
             String weightName = StringUtils.isBlank(evalConfig.getDataSet().getWeightColumnName()) ? "weight"
                     : evalConfig.getDataSet().getWeightColumnName();

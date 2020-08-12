@@ -59,9 +59,9 @@ public final class ColumnStatsCalculator {
             double p = cntP / sumP;
             double n = cntN / sumN;
             // TODO merge bin with p or q = 0 ???
-            double woePerBin = Math.log((p + EPS) / (n + EPS));
+            double woePerBin = Math.log((n + EPS) / (p + EPS));
             binningWoe.add(woePerBin);
-            iv += (p - n) * woePerBin;
+            iv += (n - p) * woePerBin;
             cumP += p;
             cumN += n;
             double tmpKS = Math.abs(cumP - cumN);

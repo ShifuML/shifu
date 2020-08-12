@@ -215,7 +215,7 @@ public class DenseLayer extends AbstractLayer<double[], double[], double[], doub
         }
         for(int j = 0; j < this.out; j++) {
             // no need l2 reg here as bias no need
-            this.bGrads[j] = (backInputs[j]);
+            this.bGrads[j] += (backInputs[j]);
         }
 
         // compute back inputs
@@ -374,9 +374,9 @@ public class DenseLayer extends AbstractLayer<double[], double[], double[], doub
     public void initOptimizer(double learningRate, String algorithm, double reg, RegulationLevel rl) {
         this.optimizers = new WeightOptimizer[this.in];
         for(int i = 0; i < this.in; i++) {
-            this.optimizers[i] = new WeightOptimizer(this.out, learningRate, algorithm, reg, rl);
+            this.optimizers[i] = new WeightOptimizer(this.out, learningRate, algorithm, reg, rl, algorithm);
         }
-        this.biasOptimizer = new WeightOptimizer(this.bias.length, learningRate, algorithm, reg, rl);
+        this.biasOptimizer = new WeightOptimizer(this.bias.length, learningRate, algorithm, reg, rl, algorithm);
     }
 
     @Override

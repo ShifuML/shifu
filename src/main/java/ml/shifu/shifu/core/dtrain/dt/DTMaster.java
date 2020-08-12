@@ -921,7 +921,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         this.allFeatures = this.getAllFeatureList(columnConfigList, isAfterVarSelect);
 
         int trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
-        // If grid search, select valid paramters, if not parameters is what in ModelConfig.json
+        // If grid search, select valid parameters, if not parameters is what in ModelConfig.json
         GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(),
                 modelConfig.getTrain().getGridConfigFileContent());
         Map<String, Object> validParams = this.modelConfig.getTrain().getParams();

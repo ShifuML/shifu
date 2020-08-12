@@ -38,8 +38,11 @@ public class RMSPropUpdate implements UpdateRule {
 
     private double learningRate;
 
+    private Update update;
+
     @Override
     public void init(Update update) {
+        this.update = update;
         this.learningRate = update.getLearningRate();
         this.cache = new double[update.getNumWeight()];
         this.decayRate = update.getLearningDecay();
@@ -48,11 +51,14 @@ public class RMSPropUpdate implements UpdateRule {
     @Override
     public void update(double[] gradients, double[] weights, int iteration, Set<Integer> fixedWeights) {
         for(int i = 0; i < weights.length; i++) {
-            if (fixedWeights.contains(i)) continue;
-            
-            this.cache[i] += gradients[i] * gradients[i];
-            this.cache[i] = this.decayRate * cache[i] + (1 - this.decayRate) * gradients[i] * gradients[i];
-            final double delta = (this.learningRate * gradients[i]) / (Math.sqrt(cache[i]) + this.eps);
+            if(fixedWeights.contains(i))
+                continue;
+
+            double avgGrad = gradients[i] / this.update.getNumTrainSize();
+
+            this.cache[i] += avgGrad * avgGrad;
+            this.cache[i] = this.decayRate * cache[i] + (1 - this.decayRate) * avgGrad * avgGrad;
+            final double delta = (this.learningRate * avgGrad) / (Math.sqrt(cache[i]) + this.eps);
             weights[i] += delta;
         }
     }

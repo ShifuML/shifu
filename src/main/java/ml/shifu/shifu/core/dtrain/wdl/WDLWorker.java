@@ -268,6 +268,8 @@ public class WDLWorker extends
      */
     private LossType lossType;
 
+    private int batchs;
+
     /**
      * Logic to load data into memory list which includes double array for numerical features and sparse object array
      * for
@@ -332,6 +334,10 @@ public class WDLWorker extends
         boolean isInTraining = this.addDataPairToDataSet(hashcode, data, context.getAttachment());
         // update some positive or negative selected count in metrics
         this.updateMetrics(data, isInTraining);
+    }
+
+    private boolean miniBatchEnabled() {
+        return null != this.modelConfig.getTrain().getParams().get(CommonConstants.MINI_BATCH);
     }
 
     protected boolean isUpSampleEnabled() {
@@ -680,6 +686,24 @@ public class WDLWorker extends
 
         this.validParams = this.modelConfig.getTrain().getParams();
 
+        Object miniBatchO = validParams.get(CommonConstants.MINI_BATCH);
+        if(miniBatchO != null) {
+            int miniBatchs;
+            try {
+                miniBatchs = Integer.parseInt(miniBatchO.toString());
+            } catch (Exception e) {
+                miniBatchs = 1;
+            }
+            if(miniBatchs < 0) {
+                this.batchs = 1;
+            } else if(miniBatchs > 1000) {
+                this.batchs = 1000;
+            } else {
+                this.batchs = miniBatchs;
+            }
+            LOG.info("'miniBatchs' in worker is : {}, batchs is {} ", miniBatchs, batchs);
+        }
+
         Object lossObj = validParams.get("Loss");
         this.lossType = LossType.of(lossObj != null ? lossObj.toString() : CommonConstants.SQUARED_LOSS);
         LOG.info("Loss type is {}.", this.lossType);
@@ -735,7 +759,14 @@ public class WDLWorker extends
         this.wnd.updateWeights(context.getLastMasterResult());
         WDLParallelGradient parallelGradient = new WDLParallelGradient(this.wnd, this.workerThreadCount,
                 this.inputIndexMap, this.trainingData, this.validationData, this.completionService, this.lossType);
-        WDLParams wdlParams = parallelGradient.doCompute();
+        WDLParams wdlParams = null;
+        if(miniBatchEnabled()) {
+            int iteration = context.getCurrentIteration();
+            int miniBatchSize = Integer.parseInt(this.modelConfig.getTrain().getParams().get(CommonConstants.MINI_BATCH).toString());
+            wdlParams = parallelGradient.doCompute(iteration, miniBatchSize);
+        } else {
+            wdlParams = parallelGradient.doCompute();
+        }
         wdlParams.setSerializationType(SerializationType.GRADIENTS);
         this.wnd.setSerializationType(SerializationType.GRADIENTS);
         return wdlParams;

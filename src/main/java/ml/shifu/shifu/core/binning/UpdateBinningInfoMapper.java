@@ -48,6 +48,7 @@ import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper.CountAndFrequent
 import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -72,8 +73,14 @@ import ml.shifu.shifu.util.MapReduceUtils;
  */
 public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWritable, BinningInfoWritable> {
 
+
     private final static Logger LOG = LoggerFactory.getLogger(UpdateBinningInfoMapper.class);
 
+    /**
+     * Minimal bin gap, if two adjacent bin boundaries with gap smaller than such value, they will be merged into one.
+     */
+    private static final double MINIMAL_BIN_GAP = 0.00000001d;
+    
     /**
      * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
      */
@@ -151,6 +158,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
     private List<Integer> newTagIndexes;
 
+    private PrecisionType precisionType;
+
     /**
      * Load model config and column config files.
      */
@@ -180,6 +189,12 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
+
+        String precision = context.getConfiguration().get(Constants.SHIFU_PRECISION_TYPE);
+        if(StringUtils.isNotBlank(precision)) {
+            this.precisionType = PrecisionType.of(
+                    context.getConfiguration().get(Constants.SHIFU_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
+        }
 
         this.dataSetDelimiter = this.modelConfig.getDataSetDelimiter();
 
@@ -339,10 +354,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                         binningInfo.setNumeric(true);
                         String[] splits = CommonUtils.split(cols[1], Constants.HYBRID_BIN_STR_DILIMETER);
 
-                        List<Double> list = new ArrayList<Double>();
-                        for(String startElement: BIN_BOUNDARY_SPLITTER.split(splits[0])) {
-                            list.add(Double.valueOf(startElement));
-                        }
+                        List<Double> list = extractBinBoundaryList(splits[0]);
                         binningInfo.setBinBoundaries(list);
 
                         List<String> cateList = new ArrayList<String>();
@@ -362,10 +374,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                         binSize = list.size() + cateList.size();
                     } else if(columnConfig.isNumerical()) {
                         binningInfo.setNumeric(true);
-                        List<Double> list = new ArrayList<Double>();
-                        for(String startElement: BIN_BOUNDARY_SPLITTER.split(cols[1])) {
-                            list.add(Double.valueOf(startElement));
-                        }
+                        List<Double> list = extractBinBoundaryList(cols[1]);
                         binningInfo.setBinBoundaries(list);
                         binSize = list.size();
                     } else {
@@ -407,6 +416,24 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 reader.close();
             }
         }
+    }
+
+    public List<Double> extractBinBoundaryList(String cols) {
+        List<Double> list = new ArrayList<Double>();
+        double lastBinValue = Double.POSITIVE_INFINITY;
+        for(String startElement: BIN_BOUNDARY_SPLITTER.split(cols)) {
+            double binValue = Double.valueOf(startElement);
+            if(lastBinValue == Double.POSITIVE_INFINITY) { // fist one in iteration
+                list.add(binValue);
+                lastBinValue = binValue;
+            } else {
+                if(Math.abs(binValue - lastBinValue) > MINIMAL_BIN_GAP) { // if gap < MINIMAL_BIN_GAP, merge the two into one
+                    list.add(binValue);
+                    lastBinValue = binValue;
+                } // else no need set lastBinValue because of merge into one
+            }
+        }
+        return list;
     }
 
     /**
@@ -596,6 +623,10 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     binNum += binningInfoWritable.getBinBoundaries().size();;
                 }
             } else if(isNumber) {
+                if(precisionType != null) {
+                    // mimic like cur precision
+                    douVal = ((Number) this.precisionType.to(douVal)).doubleValue();
+                }
                 binNum = getBinNum(binningInfoWritable.getBinBoundaries(), douVal);
                 if(binNum == -1) {
                     throw new RuntimeException("binNum should not be -1 to this step.");
@@ -669,6 +700,11 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 } catch (Exception e) {
                     isInvalidValue = true;
                 }
+            }
+
+            if(precisionType != null) {
+                // mimic like cut precision
+                douVal = ((Number) this.precisionType.to(douVal)).doubleValue();
             }
 
             // add logic the same as CalculateNewStatsUDF

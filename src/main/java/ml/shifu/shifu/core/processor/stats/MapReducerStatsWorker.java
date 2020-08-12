@@ -164,8 +164,10 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
             runPSI();
 
-            // run daily stat compute
-            updateDateStatWithMRJob();
+            if(StringUtils.isNotBlank(modelConfig.getDataSet().getDateColumnName())) {
+                // run, only when the date column available
+                updateDateStatWithMRJob();
+            }
         }
 
         return true;

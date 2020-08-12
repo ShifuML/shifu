@@ -184,7 +184,7 @@ public class ConfusionMatrix {
         }
 
         targetColumnIndex = getColumnIndex(evalScoreHeaders,
-                StringUtils.trimToEmpty(modelConfig.getTargetColumnName(evalConfig)));
+                StringUtils.trimToEmpty(modelConfig.getTargetColumnName(evalConfig, modelConfig.getTargetColumnName())));
         if(targetColumnIndex < 0) {
             // the target column is not found in the header of EvalScore
             throw new ShifuException(ShifuErrorCode.ERROR_EVAL_TARGET_NOT_FOUND);

@@ -242,13 +242,14 @@ public class ModelInspector {
             }
 
             if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())) {
-                String columnColumn = CommonUtils.containsAny(metaColumns, forceRemoveColumns);
-                if(columnColumn != null) {
-                    result.addCause(
-                            "Column - " + columnColumn + " exists both in meta column conf and force remove conf.");
-                }
+                // It's fine, if user put both variables both in metaColumns and forceRemoveColumns
+                // String columnColumn = CommonUtils.containsAny(metaColumns, forceRemoveColumns);
+                //      if(columnColumn != null) {
+                //          result.addCause(
+                //          "Column - " + columnColumn + " exists both in meta column conf and force remove conf.");
+                // }
 
-                columnColumn = CommonUtils.containsAny(metaColumns, forceSelectColumns);
+                String columnColumn = CommonUtils.containsAny(metaColumns, forceSelectColumns);
                 if(columnColumn != null) {
                     result.addCause(
                             "Column - " + columnColumn + " exists both in meta column conf and force select conf.");
@@ -538,7 +539,7 @@ public class ModelInspector {
         GridSearch gs = new GridSearch(train.getParams(), train.getGridConfigFileContent());
         // such parameter validation only in regression and not grid search mode
         if(modelConfig.isRegression() && !gs.hasHyperParam()) {
-            if(train.getAlgorithm().equalsIgnoreCase("nn")) {
+            if(train.getAlgorithm().equalsIgnoreCase("nn") || train.getAlgorithm().equalsIgnoreCase("wdl")) {
                 Map<String, Object> params = train.getParams();
 
                 Object loss = params.get("Loss");
@@ -641,10 +642,10 @@ public class ModelInspector {
                 Object miniBatchsO = params.get(CommonConstants.MINI_BATCH);
                 if(miniBatchsO != null) {
                     Integer miniBatchs = Integer.valueOf(miniBatchsO.toString());
-                    if(miniBatchs != null && (miniBatchs <= 0 || miniBatchs > 1000)) {
+                    if(miniBatchs != null && (miniBatchs <= 0 || miniBatchs > 100000000)) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("MiniBatchs should be in (0, 1000] if set.");
+                        tmpResult.getCauses().add("MiniBatchs should be in (0, 100000000] if set.");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }

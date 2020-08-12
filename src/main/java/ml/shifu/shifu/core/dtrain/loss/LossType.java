@@ -16,7 +16,7 @@
 package ml.shifu.shifu.core.dtrain.loss;
 
 /**
- * {@link LossType} defines sqaured loss and binary entropy loss in wide and deep.
+ * {@link LossType} defines squared loss and binary entropy loss in wide and deep.
  * 
  * @author pengzhang
  */

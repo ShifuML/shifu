@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 
-import ml.shifu.shifu.util.NormalizationUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.encog.ml.BasicML;
@@ -38,7 +37,9 @@ import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.executor.ExecutorManager;
 import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.NormalizationUtils;
 
 /**
  * ModelRunner class is to load the model and run the model for input data
@@ -85,12 +86,12 @@ public class ModelRunner {
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
             String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex) {
         this(modelConfig, columnConfigList, header, dataDelimiter, models, outputHiddenLayerIndex, false,
-                CategoryMissingNormType.POSRATE);
+                CategoryMissingNormType.POSRATE, null);
     }
 
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
             String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex, boolean isMultiThread,
-            CategoryMissingNormType categoryMissingNormType) {
+            CategoryMissingNormType categoryMissingNormType, PrecisionType pt) {
         this.modelConfig = modelConfig;
         this.columnConfigList = columnConfigList;
         this.header = header;
@@ -98,20 +99,20 @@ public class ModelRunner {
         this.isMultiThread = isMultiThread;
         this.categoryMissingNormType = categoryMissingNormType;
         this.scorer = new Scorer(models, columnConfigList, modelConfig.getAlgorithm(), modelConfig,
-                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex, isMultiThread);
+                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex, isMultiThread, pt);
         this.scorer.setCategoryMissingNormType(categoryMissingNormType);
     }
 
     public ModelRunner(ModelConfig modelConfig, List<List<ColumnConfig>> mtlColumnConfigList, String[] header,
             String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex, boolean isMultiThread,
-            CategoryMissingNormType categoryMissingNormType, boolean isMultiTask) {
+            CategoryMissingNormType categoryMissingNormType, boolean isMultiTask, PrecisionType pt) {
         this.modelConfig = modelConfig;
         this.header = header;
         this.dataDelimiter = dataDelimiter;
         this.isMultiThread = isMultiThread;
         this.categoryMissingNormType = categoryMissingNormType;
         this.scorer = new Scorer(models, mtlColumnConfigList, modelConfig.getAlgorithm(), modelConfig,
-                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex, isMultiThread, isMultiTask);
+                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex, isMultiThread, isMultiTask, pt);
         this.scorer.setCategoryMissingNormType(categoryMissingNormType);
     }
 

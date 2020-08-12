@@ -246,7 +246,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     syncDataToHdfs(super.modelConfig.getDataSet().getSource());
                 }
 
-                if(modelConfig.isRegression()) {
+                if(modelConfig.isRegression() || this.isLinearSEorST()) {
                     String filterBy = this.modelConfig.getVarSelectFilterBy();
                     if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_KS)
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_IV)
@@ -371,6 +371,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         return 0;
     }
 
+    private boolean isLinearSEorST() {
+        boolean isLinearModel = CommonUtils.isLinearTarget(this.modelConfig, this.columnConfigList);
+        String filterBy = this.modelConfig.getVarSelectFilterBy();
+        return isLinearModel && (filterBy.equalsIgnoreCase(Constants.FILTER_BY_SE)
+                || filterBy.equalsIgnoreCase(Constants.FILTER_BY_ST));
+    }
+
     /**
      * Recover auto-filtered variable status from varsel history file
      * 
@@ -483,6 +490,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private void validateSEParameters() {
         if(!CommonConstants.NN_ALG_NAME.equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())
                 && !"LR".equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())
+                && !CommonConstants.WDL_ALG_NAME.equalsIgnoreCase(super.getModelConfig().getTrain().getAlgorithm())
                 && !CommonUtils.isTensorFlowModel(super.getModelConfig().getTrain().getAlgorithm())) {
             throw new IllegalArgumentException(
                     "Currently we only support NN and LR distributed training to do wrapper by analyzing variable selection.");
