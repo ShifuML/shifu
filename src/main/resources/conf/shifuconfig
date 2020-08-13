@@ -40,7 +40,7 @@ guagua.zk.embedbed.isInClient=true
 
 # if over such threshold three times, kill worker; by default is 60000, change it to 30 minutes to avoid failures
 # set worker compute time threshold to 30 minutes, if compute time of 3 iterations >= this value, worker will kill itself.
-guagua.computation.time.threshold=1800000
+# guagua.computation.time.threshold=1800000
 
 ## tuning for rf, in rf, tree models are stored in master memory, if two many models, please tune such parameters 
 mapreduce.map.memory.mb=2048
