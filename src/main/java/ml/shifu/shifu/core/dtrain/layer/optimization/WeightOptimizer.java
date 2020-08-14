@@ -285,7 +285,7 @@ public class WeightOptimizer implements Update {
     }
 
     private double updateWeightBP(int index, double[] weights, double gradient) {
-        double delta = (gradient * this.getLearningRate() / this.getNumTrainSize())
+        double delta = ((gradient / this.getNumTrainSize()) * this.getLearningRate())
                 + (this.lastDelta[index] * this.getMomentum());
         this.lastDelta[index] = delta;
         return delta;
