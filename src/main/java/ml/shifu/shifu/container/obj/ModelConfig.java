@@ -758,11 +758,11 @@ public class ModelConfig {
     }
 
     @JsonIgnore
-    public String getTargetColumnName(EvalConfig evalConfig) {
-        if(StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName())) {
-            return getTargetColumnName(evalConfig.getDataSet().getTargetColumnName());
+    public String getTargetColumnName(EvalConfig evalConfig, String defaultTarget) {
+        if (evalConfig!= null && StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName())) {
+            return evalConfig.getDataSet().getTargetColumnName();
         } else {
-            return getTargetColumnName(dataSet.getTargetColumnName());
+            return defaultTarget;
         }
     }
 

@@ -15,33 +15,11 @@
  */
 package ml.shifu.shifu.core.processor;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Scanner;
-import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.Path;
-import org.apache.pig.tools.pigstats.JobStats;
-import org.apache.pig.tools.pigstats.PigStats;
-import org.encog.ml.BasicML;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.ModelBasicConf;
 import ml.shifu.shifu.container.obj.PerformanceResult;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ConfusionMatrix;
@@ -56,30 +34,42 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.pig.PigExecutor;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
-import ml.shifu.shifu.util.ModelSpecLoaderUtils;
+import ml.shifu.shifu.util.*;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.Path;
+import org.apache.pig.tools.pigstats.JobStats;
+import org.apache.pig.tools.pigstats.PigStats;
+import org.encog.ml.BasicML;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
 
 /**
- * {@link EvalModelProcessor} defines 'shifu eval' step mostly for model performance generation.
- * 
- * <p>
- * Precision-Recall, gain chart, auc and score distribution are generated as csv format or html chart format. Champion
- * model performance is also supported in the same html chart for visualization.
+ * EvalModelProcessor class
  */
 public class EvalModelProcessor extends BasicModelProcessor implements Processor {
 
+    /**
+     * log object
+     */
     private final static Logger LOG = LoggerFactory.getLogger(EvalModelProcessor.class);
 
     /**
-     * Step definition for evaluation
+     * Step for evaluation
      */
     public enum EvalStep {
-        LIST, NEW, DELETE, RUN, PERF, SCORE, CONFMAT, NORM, GAINCHART;
+        LIST, NEW, DELETE, RUN, PERF, SCORE, AUDIT, CONFMAT, NORM, GAINCHART;
     }
 
     public static final String NOSORT = "NOSORT";
+    public static final String EXPECT_AUDIT_CNT = "EXPECT_AUDIT_CNT";
 
     private String evalName = null;
 
@@ -166,6 +156,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 case SCORE:
                     runScore(getEvalConfigListFromInput());
                     break;
+                case AUDIT:
+                    runGenAudit(getEvalConfigListFromInput());
+                    break;
                 case CONFMAT:
                     // FIXME, here should be failed
                     runConfusionMatrix(getEvalConfigListFromInput());
@@ -237,7 +230,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     }
 
     /**
-     * Run scoring only.
+     * run score only
      * 
      * @param evalSetList
      *            eval config list
@@ -327,6 +320,12 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      *             any io exception
      */
     private void runScore(EvalConfig config) throws IOException {
+        // create evalset home directory firstly in local file system
+        // PathFinder pathFinder = new PathFinder(modelConfig);
+        // String evalSetPath = pathFinder.getEvalSetPath(config, SourceType.LOCAL);
+        // FileUtils.forceMkdir(new File(evalSetPath));
+        // syncDataToHdfs(config.getDataSet().getSource());
+
         switch(modelConfig.getBasic().getRunMode()) {
             case DIST:
             case MAPRED:
@@ -387,11 +386,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * 
      * @param evalConfig
      *            the name for evaluation
-     * @param index
-     *            multi-task index, if -1 means not multi-task evaluation
      * @throws IOException
      *             any io exception
      */
+    @SuppressWarnings("deprecation")
     private ScoreStatus runDistScore(EvalConfig evalConfig, int index) throws IOException {
         // clean up output directories
         SourceType sourceType = evalConfig.getDataSet().getSource();
@@ -430,7 +428,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 "tmp" + File.separator + "maxmin_score_" + System.currentTimeMillis() + "_" + RANDOM.nextLong()))
                 .toString();
         confMap.put(Constants.SHIFU_EVAL_MAXMIN_SCORE_OUTPUT, maxMinScoreFolder);
-        if(modelConfig.isClassification() || (isNoSort() && EvalStep.SCORE.equals(this.evalStep))) {
+        if(modelConfig.isClassification() ||
+                (isNoSort() && (EvalStep.SCORE.equals(this.evalStep) || EvalStep.AUDIT.equals(this.evalStep)))) {
             pigScript = "scripts/EvalScore.pig";
         }
         try {
@@ -442,12 +441,6 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             throw new RuntimeException(e);
         }
 
-        return getScoreStatusFromJobStats(sourceType, maxMinScoreFolder, index);
-    }
-
-    @SuppressWarnings("deprecation")
-    private ScoreStatus getScoreStatusFromJobStats(SourceType sourceType, String maxMinScoreFolder, int mtlIndex)
-            throws IOException {
         Iterator<JobStats> iter = PigStats.get().getJobGraph().iterator();
 
         while(iter.hasNext()) {
@@ -569,7 +562,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         paramsMap.put("scale",
                 Environment.getProperty(Constants.SHIFU_SCORE_SCALE, Integer.toString(Scorer.DEFAULT_SCORE_SCALE)));
         paramsMap.put(Constants.STRICT_MODE, Boolean.toString(isStrict()));
-
+        
         String expressionsAsString = super.modelConfig.getSegmentFilterExpressionsAsString();
         Environment.getProperties().put("shifu.segment.expressions", expressionsAsString);
 
@@ -704,9 +697,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                                 LOG.error("Exception in eval:", e);
                             } catch (Exception e) {
                                 LOG.error("Exception in eval:", e);
-                            } finally {
-                                cdl.countDown();
                             }
+                            cdl.countDown();
                         }
                     }, config.getName());
                     // print eval name to log4j console to make each one is easy to be get from logs
@@ -754,43 +746,28 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                     evalConfig.getDataSet().getSource());
         } else {
             String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) // get header delimiter
-                    ? evalConfig.getDataSet().getDataDelimiter()
-                    : evalConfig.getDataSet().getHeaderDelimiter();
+                    ? evalConfig.getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
             String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter,
                     evalConfig.getDataSet().getSource());
-            // if first line contains target column name, we guess it is csv format and first line is header.
-            String evalTargetColumnName = ((StringUtils.isBlank(evalConfig.getDataSet().getTargetColumnName()))
-                    ? modelConfig.getTargetColumnName()
-                    : evalConfig.getDataSet().getTargetColumnName());
-            if(StringUtils.join(fields, "").contains(evalTargetColumnName)) {
-                // first line of data meaning second line in data files excluding first header line
-                String[] dataInFirstLine = CommonUtils.takeFirstTwoLines(evalConfig.getDataSet().getDataPath(),
-                        delimiter, evalConfig.getDataSet().getSource())[1];
-                if(dataInFirstLine != null && fields.length != dataInFirstLine.length) {
-                    throw new IllegalArgumentException(
-                            "Eval header length and eval data length are not consistent, please check you header setting and data set setting in eval.");
-                }
-
-                // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
-                // char or / in its name in shifu will be replaced;
-                for(int i = 0; i < fields.length; i++) {
-                    fields[i] = CommonUtils.normColumnName(fields[i]);
-                }
-                evalColumnNames = fields;
-                // for(int i = 0; i < fields.length; i++) {
-                // evalColumnNames[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
-                // }
-                LOG.warn("No header path is provided, we will try to read first line and detect schema.");
-                LOG.warn("Schema in ColumnConfig.json are named as first line of data set path.");
-            } else {
-                LOG.warn("No header path is provided, we will try to read first line and detect schema.");
-                LOG.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
-                LOG.warn("Please make sure weight column and tag column are also taking index as name.");
-                evalColumnNames = new String[fields.length];
-                for(int i = 0; i < fields.length; i++) {
-                    evalColumnNames[i] = i + "";
-                }
+            // first line of data meaning second line in data files excluding first header line
+            String[] dataInFirstLine = CommonUtils.takeFirstTwoLines(evalConfig.getDataSet().getDataPath(), delimiter,
+                    evalConfig.getDataSet().getSource())[1];
+            if(dataInFirstLine != null && fields.length != dataInFirstLine.length) {
+                throw new IllegalArgumentException(
+                        "Eval header length and eval data length are not consistent, please check you header setting and data set setting in eval.");
             }
+
+            // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
+            // char or / in its name in shifu will be replaced;
+            for(int i = 0; i < fields.length; i++) {
+                fields[i] = CommonUtils.normColumnName(fields[i]);
+            }
+            evalColumnNames = fields;
+            // for(int i = 0; i < fields.length; i++) {
+            // evalColumnNames[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
+            // }
+            LOG.warn("No header path is provided, we will try to read first line and detect schema.");
+            LOG.warn("Schema in ColumnConfig.json are named as first line of data set path.");
         }
 
         Set<NSColumn> names = new HashSet<NSColumn>();
@@ -820,10 +797,11 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             validateFinalColumns(evalConfig, this.modelConfig.getModelSetName(), false, this.columnConfigList, names);
         }
 
-        NSColumn targetColumn = new NSColumn(evalConfig.getDataSet().getTargetColumnName());
-        if(StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName()) && !names.contains(targetColumn)
+        String evalTargetName = modelConfig.getTargetColumnName(evalConfig, null);
+        NSColumn targetColumn = new NSColumn(evalTargetName);
+        if(StringUtils.isNotBlank(evalTargetName) && !names.contains(targetColumn)
                 && !names.contains(new NSColumn(targetColumn.getSimpleName()))) {
-            throw new IllegalArgumentException("Target column " + evalConfig.getDataSet().getTargetColumnName()
+            throw new IllegalArgumentException("Target column " + evalTargetName
                     + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
         }
 
@@ -1256,6 +1234,104 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
     }
 
+    private void runGenAudit(List<EvalConfig> evalSetList) throws IOException{
+        this.params.put(NOSORT, Boolean.TRUE);
+        if (CollectionUtils.isNotEmpty(evalSetList)) {
+            for (EvalConfig evalConfig: evalSetList) {
+                doGenAuditData(evalConfig);
+            }
+        }
+    }
+
+    private void doGenAuditData(EvalConfig evalConfig) throws IOException {
+        // generate audit meta columns
+        List<String> evalMetaColumns = evalConfig.getAllMetaColumns(this.modelConfig);
+        final Set<String> metaColumnSet = new HashSet<>(evalMetaColumns);
+        this.columnConfigList.stream().filter(columnConfig -> columnConfig.isFinalSelect())
+                .map(columnConfig -> columnConfig.getColumnName())
+                .forEach(finalVar -> {
+                    if(!metaColumnSet.contains(finalVar)) {
+                        evalMetaColumns.add(finalVar);
+                    } });
+
+        File columns = new File("columns");
+        columns.mkdirs(); // create folder if it doesn't exist
+        String newEvalMetaFile = "columns" + File.separator + evalConfig.getName() + ".audit.names";
+        ShifuFileUtils.writeLines(evalMetaColumns, newEvalMetaFile, SourceType.LOCAL);
+
+        String originalMetaFileName = evalConfig.getDataSet().getMetaColumnNameFile();
+        String originalScoreFileName = evalConfig.getScoreMetaColumnNameFile();
+
+        evalConfig.getDataSet().setMetaColumnNameFile(newEvalMetaFile);
+        evalConfig.setScoreMetaColumnNameFile(null);
+        saveModelConfig(); // update ModelConfig
+        syncDataToHdfs(Arrays.asList(new EvalConfig[]{evalConfig}));
+        runScore(evalConfig);
+
+        // recover setting
+        evalConfig.getDataSet().setMetaColumnNameFile(originalMetaFileName);
+        evalConfig.setScoreMetaColumnNameFile(originalScoreFileName);
+        saveModelConfig();
+
+        int auditRecordsCount = getExpectAuditCount();
+
+        File auditFile = new File("tmp",
+                modelConfig.getModelSetName() + "_" + evalConfig.getName() + "_audit.data");
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter(new FileWriter(auditFile));
+            if (ModelBasicConf.RunMode.LOCAL.equals(this.modelConfig.getBasic().getRunMode())) {
+                String evalSorePah = this.pathFinder.getEvalScorePath(evalConfig);
+                writeFileLines(writer, evalSorePah, evalConfig.getDataSet().getSource(),
+                        false, auditRecordsCount + 1);
+            } else {
+                String headerPath = this.pathFinder.getEvalScoreHeaderPath(evalConfig);
+                writeFileLines(writer, headerPath, evalConfig.getDataSet().getSource(),
+                        false,1);
+                String evalSorePah = this.pathFinder.getEvalScorePath(evalConfig);
+                writeFileLines(writer, evalSorePah, evalConfig.getDataSet().getSource(),
+                        true, auditRecordsCount);
+            }
+            
+            LOG.info("Generate audit file {} successfully", auditFile.getCanonicalFile());
+        } catch (IOException e) {
+            LOG.error("Error occurred when generating audit file - {}", auditFile.getCanonicalPath());
+        } finally {
+            IOUtils.closeQuietly(writer);
+        }
+    }
+
+    private void writeFileLines(BufferedWriter writer, String filePath, SourceType sourceType,
+            boolean isPartFile, int linesCount) {
+        BufferedReader reader = null;
+        HdfsPartFile hdfsPartFile = null;
+        int currentNumOfLine = 0;
+        try {
+            if (!isPartFile) {
+                reader = ShifuFileUtils.getReader(filePath, sourceType);
+                String line = null;
+                while (currentNumOfLine ++ < linesCount && (line = reader.readLine()) != null) {
+                    writer.write(line);
+                    writer.newLine();
+                }
+            } else {
+                hdfsPartFile = new HdfsPartFile(filePath, sourceType);
+                String line = null;
+                while (currentNumOfLine ++ < linesCount && (line = hdfsPartFile.readLine()) != null) {
+                    writer.write(line);
+                    writer.newLine();
+                }
+            }
+        } catch (IOException e) {
+            LOG.error("Fail to read data from {}.", filePath, e);
+        } finally {
+            IOUtils.closeQuietly(reader);
+            if (hdfsPartFile != null) {
+                hdfsPartFile.close();
+            }
+        }
+    }
+
     /**
      * Run confusion matrix
      * 
@@ -1268,6 +1344,16 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     private void runConfusionMatrix(EvalConfig config) throws IOException {
         runConfusionMatrix(config, null, false, false, -1);
     }
+
+    /**
+     * Check user set the expect audit count or not
+     *
+     * @return the expect audit records count, if user doesn't set, return default value - 10k
+     */
+    private int getExpectAuditCount() {
+        return getIntParam(this.params, EXPECT_AUDIT_CNT, 10000);
+    }
+
 
     /**
      * Check "-nosort" is specified or not

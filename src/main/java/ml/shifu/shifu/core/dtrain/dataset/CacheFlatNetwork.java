@@ -18,6 +18,8 @@ package ml.shifu.shifu.core.dtrain.dataset;
 import org.encog.neural.flat.FlatLayer;
 import org.encog.neural.flat.FlatNetwork;
 
+import java.util.List;
+
 /**
  * In sensitivity computing, the first layer sum values are computed and cached in this class, when reset each input
  * node,
@@ -36,7 +38,7 @@ public class CacheFlatNetwork extends FlatNetwork implements Cloneable {
 
     /**
      * Cache First layer of outputs. This array only is initialized in first call with cacheInputOutput set to true in
-     * {@link #compute(double[], double[], boolean, int)}.
+     * {@link #compute(double[], double[], boolean, int, List)}.
      */
     private double[] firstLayerCache;
 
@@ -79,8 +81,10 @@ public class CacheFlatNetwork extends FlatNetwork implements Cloneable {
      *            if it is to cache first layer output or to use first layer output cache.
      * @param resetInputIndex
      *            if cacheInputOutput is false, resetInputIndex is which item should be removed.
+     * @param missingVals
+     *            missing value for reset
      */
-    public void compute(double[] input, double[] output, boolean cacheInputOutput, int resetInputIndex) {
+    public void compute(double[] input, double[] output, boolean cacheInputOutput, int resetInputIndex, List<Double> missingVals) {
         final int sourceIndex = getLayerOutput().length - getLayerCounts()[getLayerCounts().length - 1];
 
         for(int i = 0; i < getInputCount(); i++) {
@@ -88,7 +92,7 @@ public class CacheFlatNetwork extends FlatNetwork implements Cloneable {
         }
 
         for(int i = this.getLayerIndex().length - 1; i > 0; i--) {
-            computeLayer(i, cacheInputOutput, resetInputIndex);
+            computeLayer(i, cacheInputOutput, resetInputIndex, missingVals);
         }
 
         // update context values
@@ -113,8 +117,10 @@ public class CacheFlatNetwork extends FlatNetwork implements Cloneable {
      *            if it is to cache first layer output or to use first layer output cache.
      * @param resetInputIndex
      *            if cacheInputOutput is false, resetInputIndex is which item should be removed.
+     * @param missingVals
+     *            missing value for reset
      */
-    protected void computeLayer(final int currentLayer, boolean cacheInputOutput, int resetInputIndex) {
+    protected void computeLayer(final int currentLayer, boolean cacheInputOutput, int resetInputIndex, List<Double> missingVals) {
         final int inputIndex = super.getLayerIndex()[currentLayer];
         final int outputIndex = super.getLayerIndex()[currentLayer - 1];
         final int inputSize = super.getLayerCounts()[currentLayer];
@@ -150,8 +156,11 @@ public class CacheFlatNetwork extends FlatNetwork implements Cloneable {
             } else {
                 if(currentLayer == this.getLayerIndex().length - 1) {
                     // to use the cache, use cache_sum - current item value to save computation to save computation
-                    double sum = this.firstLayerCache[x - outputIndex] - super.getWeights()[index + resetInputIndex]
-                            * super.getLayerOutput()[inputIndex + resetInputIndex];
+                    double sum = this.firstLayerCache[x - outputIndex];
+                    for (int i = 0; i < missingVals.size(); i ++) {
+                        sum = sum - super.getWeights()[index + resetInputIndex + i] * super.getLayerOutput()[inputIndex + resetInputIndex + i]
+                                + super.getWeights()[index + resetInputIndex + i] * missingVals.get(i);
+                    }
                     index += inputSize;
                     super.getLayerSums()[x] = sum;
                     super.getLayerOutput()[x] = sum;

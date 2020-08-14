@@ -246,7 +246,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     syncDataToHdfs(super.modelConfig.getDataSet().getSource());
                 }
 
-                if(modelConfig.isRegression()) {
+                if(modelConfig.isRegression() || this.isLinearSEorST()) {
                     String filterBy = this.modelConfig.getVarSelectFilterBy();
                     if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_KS)
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_IV)
@@ -369,6 +369,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
         LOG.info("Step Finished: varselect with {} ms", (System.currentTimeMillis() - start));
         return 0;
+    }
+
+    private boolean isLinearSEorST() {
+        boolean isLinearModel = CommonUtils.isLinearTarget(this.modelConfig, this.columnConfigList);
+        String filterBy = this.modelConfig.getVarSelectFilterBy();
+        return isLinearModel && (filterBy.equalsIgnoreCase(Constants.FILTER_BY_SE)
+                || filterBy.equalsIgnoreCase(Constants.FILTER_BY_ST));
     }
 
     /**

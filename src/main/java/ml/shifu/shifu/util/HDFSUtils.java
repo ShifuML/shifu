@@ -74,7 +74,7 @@ public final class HDFSUtils {
                     try {
                         // initialization
                         // Assign to the hdfs instance after the tmpHdfs instance initialization fully complete.
-                        // Avoid hdfs instance being used before fully initializaion.
+                        // Avoid hdfs instance being used before fully initialization.
                         FileSystem tmpHdfs = FileSystem.get(conf);
                         tmpHdfs.setVerifyChecksum(false);
                         hdfs = tmpHdfs;

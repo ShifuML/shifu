@@ -87,23 +87,18 @@ public class PurifyDataUDF extends AbstractTrainerUDF<Boolean> {
 
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(evalSetName);
         if(evalConfig == null) {
-            dataPurifier = new DataPurifier(modelConfig, this.columnConfigList, isForValidationDataSet);
+            dataPurifier = new DataPurifier(this.modelConfig, this.columnConfigList, isForValidationDataSet);
         } else {
+            dataPurifier = new DataPurifier(this.modelConfig, this.columnConfigList, evalConfig);
             if(modelConfig.isMultiTask()) {
                 String filterExpression = evalConfig.getDataSet().getFilterExpressions();
-                if(StringUtils.isBlank(filterExpression)) {
-                    dataPurifier = new DataPurifier(this.columnConfigList, evalConfig);
-                } else {
+                if(StringUtils.isNotBlank(filterExpression)) {
                     String[] filters = CommonUtils.split(filterExpression, CommonConstants.MTL_DELIMITER);
                     if(filters != null && filters.length > 1) {
-                        dataPurifier = new DataPurifier(modelConfig, columnConfigList,
+                        dataPurifier = new DataPurifier(this.modelConfig, this.columnConfigList,
                                 filters[modelConfig.getMtlIndex()]);
-                    } else {
-                        dataPurifier = new DataPurifier(this.columnConfigList, evalConfig);
                     }
                 }
-            } else {
-                dataPurifier = new DataPurifier(this.columnConfigList, evalConfig);
             }
         }
     }

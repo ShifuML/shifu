@@ -117,6 +117,7 @@ public abstract class AbstractBinning<T> {
         this.expectedBinningNum = binningNum;
         this.missingValSet = new HashSet<String>();
         this.missingValSet.add("");
+        this.missingValSet.add("NaN");
 
         if(CollectionUtils.isNotEmpty(missingValList)) {
             for(String missingVal: missingValList) {

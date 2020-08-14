@@ -30,7 +30,7 @@ import ml.shifu.shifu.core.dtrain.StringUtils;
  * A mixed writable class to wrapper HyperLogLogPlus byte instance and frequent items together.
  * 
  * <p>
- * {@link #frequetItems} is used to check 0-1 variables which is not set to be categorical variables. The size of it is
+ * {@link #frequentItems} is used to check 0-1 variables which is not set to be categorical variables. The size of it is
  * limited to {@link #FREQUET_ITEM_MAX_SIZE}.
  * 
  * @author Zhang David (pengzhang@paypal.com)
@@ -38,6 +38,7 @@ import ml.shifu.shifu.core.dtrain.StringUtils;
 public class CountAndFrequentItemsWritable implements Writable {
 
     public static final int FREQUET_ITEM_MAX_SIZE = 20;
+    public static final int FREQUET_ITEM_MAX_LENGTH = 16384; // the maximum length is 16k
 
     /**
      * Serializing form for HyperLogLogPlus instance.
@@ -48,7 +49,7 @@ public class CountAndFrequentItemsWritable implements Writable {
      * Frequent items for one column, this set is limited to 10 and which is used so far to check 0-1 variables, such
      * 0-1 variables cannot be set to categorical variable.
      */
-    private Set<String> frequetItems;
+    private Set<String> frequentItems;
 
     /**
      * Total input count per each feature in current mapper
@@ -68,18 +69,18 @@ public class CountAndFrequentItemsWritable implements Writable {
     public CountAndFrequentItemsWritable() {
     }
 
-    public CountAndFrequentItemsWritable(byte[] hyperBytes, Set<String> frequetItems) {
+    public CountAndFrequentItemsWritable(byte[] hyperBytes, Set<String> frequentItems) {
         this.hyperBytes = hyperBytes;
-        this.frequetItems = frequetItems;
+        this.frequentItems = frequentItems;
     }
 
     public CountAndFrequentItemsWritable(long count, long invalidCount, long validNumCount, byte[] hyperBytes,
-            Set<String> frequetItems) {
+            Set<String> frequentItems) {
         this.count = count;
         this.invalidCount = invalidCount;
         this.validNumCount = validNumCount;
         this.hyperBytes = hyperBytes;
-        this.frequetItems = frequetItems;
+        this.frequentItems = frequentItems;
     }
 
     /**
@@ -146,12 +147,12 @@ public class CountAndFrequentItemsWritable implements Writable {
                 out.writeByte(hyperBytes[i]);
             }
         }
-        if(frequetItems == null) {
+        if(frequentItems == null) {
             out.writeInt(0);
         } else {
-            int setSize = Math.min(frequetItems.size(), FREQUET_ITEM_MAX_SIZE);
+            int setSize = Math.min(frequentItems.size(), FREQUET_ITEM_MAX_SIZE);
             out.writeInt(setSize);
-            Iterator<String> iter = frequetItems.iterator();
+            Iterator<String> iter = frequentItems.iterator();
             int i = 0;
             while(i < setSize) {
                 String unit = iter.next();
@@ -186,11 +187,11 @@ public class CountAndFrequentItemsWritable implements Writable {
         }
 
         len = in.readInt();
-        frequetItems = new HashSet<String>(len, 1f);
+        frequentItems = new HashSet<String>(len, 1f);
         if(len != 0) {
             for(int i = 0; i < len; i++) {
                 if(in.readBoolean()) {
-                    frequetItems.add(StringUtils.readString(in));
+                    frequentItems.add(StringUtils.readString(in));
                 }
             }
         }
@@ -214,16 +215,16 @@ public class CountAndFrequentItemsWritable implements Writable {
     /**
      * @return the frequetItems
      */
-    public Set<String> getFrequetItems() {
-        return frequetItems;
+    public Set<String> getFrequentItems() {
+        return frequentItems;
     }
 
     /**
-     * @param frequetItems
+     * @param frequentItems
      *            the frequetItems to set
      */
-    public void setFrequetItems(Set<String> frequetItems) {
-        this.frequetItems = frequetItems;
+    public void setFrequentItems(Set<String> frequentItems) {
+        this.frequentItems = frequentItems;
     }
 
 }

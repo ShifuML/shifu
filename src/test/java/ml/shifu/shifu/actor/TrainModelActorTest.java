@@ -136,6 +136,7 @@ public class TrainModelActorTest {
         FileUtils.deleteDirectory(modelsTemp);
         FileUtils.deleteDirectory(models);
         FileUtils.deleteDirectory(tmpDir);
+        FileUtils.deleteDirectory(new File("./logs"));
     }
 
 }

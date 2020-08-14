@@ -16,12 +16,7 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import ml.shifu.shifu.util.NormalizationUtils;
@@ -164,7 +159,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         if (minimumEpochs < 0) {
             double minimumStepsRatio = DTrainUtils.getDouble(context.getProps(), // get # of steps to choose parameters
                     CommonConstants.SHIFU_TRAIN_VAL_STEPS_RATIO, 0.1);
-            minimumEpochs = (int) (modelConfig.getNumTrainEpochs() * minimumStepsRatio) ;
+            minimumEpochs = Math.max((int) (modelConfig.getNumTrainEpochs() * minimumStepsRatio), 5) ;
         }
 
 
@@ -369,9 +364,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
-        boolean isAfterVarSelect = inputOutputIndex[0] != 0;
         // cache all feature list for sampling features
-        List<Integer> allFeatures = NormalizationUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
+        List<Integer> allFeatures = new ArrayList<>(DTrainUtils.generateModelFeatureSet(modelConfig, columnConfigList));
+        // NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
         String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);
         if(StringUtils.isBlank(subsetStr)) {
             this.subFeatures = new HashSet<Integer>(allFeatures);
