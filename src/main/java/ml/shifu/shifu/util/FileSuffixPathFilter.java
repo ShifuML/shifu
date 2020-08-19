@@ -27,6 +27,7 @@ public class FileSuffixPathFilter implements PathFilter {
 
     @Override
     public boolean accept(Path path) {
-        return path.getName().endsWith(fileSuffix);
+        return path.getName().contains(fileSuffix) && !path.getName().startsWith(".")
+                && !path.getName().endsWith(".crc");
     }
 }

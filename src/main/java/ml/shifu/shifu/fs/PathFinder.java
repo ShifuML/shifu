@@ -585,7 +585,7 @@ public class PathFinder {
      *            - Local/HDFS
      * @return path of models
      */
-    public String getNNBinaryModelsPath(SourceType sourceType) {
+    public String getBinaryModelsPath(SourceType sourceType) {
         return getPathBySourceType(new Path("bmodels"), sourceType);
     }
 

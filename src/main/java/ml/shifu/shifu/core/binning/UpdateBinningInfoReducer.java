@@ -290,7 +290,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         if(modelConfig.isRegression()) {
             binPosRate = computePosRate(binCountPos, binCountNeg);
         } else {
-            // for multiple classfication, use rate of categories to compute a value
+            // for multiple classification, use rate of categories to compute a value
             binPosRate = computeRateForMultiClassfication(binCountPos);
         }
         String binBounString = null;

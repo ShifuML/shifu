@@ -54,6 +54,12 @@ public abstract class Impurity {
     protected double minInfoGain = 0d;
 
     /**
+     * For categorical variable, by default sorted by positive rate and then do split, another model can be random
+     * (shuffle) before split between categories.
+     */
+    protected String cateMode;
+
+    /**
      * Compute impurity by feature statistics. Stats array are for all bins.
      * 
      * @param stats
@@ -110,10 +116,11 @@ class Variance extends Impurity {
         super.statsSize = 3;
     }
 
-    public Variance(int minInstancesPerNode, double minInfoGain) {
+    public Variance(int minInstancesPerNode, double minInfoGain, String cateMode) {
         super.statsSize = 3;
         super.minInstancesPerNode = minInstancesPerNode;
         super.minInfoGain = minInfoGain;
+        super.cateMode = cateMode;
     }
 
     @Override
@@ -221,12 +228,16 @@ class Variance extends Impurity {
             // for variance, use predict value to sort
             categoricalOrderList.add(new Pair(i, binPredict));
         }
-        Collections.sort(categoricalOrderList, new Comparator<Pair>() {
-            @Override
-            public int compare(Pair o1, Pair o2) {
-                return Double.valueOf(o1.value).compareTo(Double.valueOf(o2.value));
-            }
-        });
+        if(super.cateMode != null && "shuffle".equalsIgnoreCase(super.cateMode)) {
+            Collections.shuffle(categoricalOrderList);
+        } else {
+            Collections.sort(categoricalOrderList, new Comparator<Pair>() {
+                @Override
+                public int compare(Pair o1, Pair o2) {
+                    return Double.valueOf(o1.value).compareTo(Double.valueOf(o2.value));
+                }
+            });
+        }
         return categoricalOrderList;
     }
 
@@ -259,10 +270,11 @@ class FriedmanMSE extends Variance {
         super.statsSize = 3;
     }
 
-    public FriedmanMSE(int minInstancesPerNode, double minInfoGain) {
+    public FriedmanMSE(int minInstancesPerNode, double minInfoGain, String cateMode) {
         super.statsSize = 3;
         super.minInstancesPerNode = minInstancesPerNode;
         super.minInfoGain = minInfoGain;
+        super.cateMode = cateMode;
     }
 
     @Override
@@ -367,11 +379,12 @@ class FriedmanMSE extends Variance {
  */
 class Entropy extends Impurity {
 
-    public Entropy(int numClasses, int minInstancesPerNode, double minInfoGain) {
+    public Entropy(int numClasses, int minInstancesPerNode, double minInfoGain, String cateMode) {
         assert numClasses > 0;
         super.statsSize = numClasses;
         super.minInstancesPerNode = minInstancesPerNode;
         super.minInfoGain = minInfoGain;
+        super.cateMode = cateMode;
     }
 
     @Override
@@ -425,8 +438,7 @@ class Entropy extends Impurity {
                 continue;
             }
 
-            Predict rightPredict = new Predict(
-                    rightInfo.sumAll == 0d ? 0d : (rightStatByClasses[1] / rightInfo.sumAll),
+            Predict rightPredict = new Predict(rightInfo.sumAll == 0d ? 0d : (rightStatByClasses[1] / rightInfo.sumAll),
                     (byte) rightInfo.indexOfLargestElement);
 
             double leftWeight = info.sumAll == 0d ? 0d : (leftInfo.sumAll / info.sumAll);
@@ -487,12 +499,16 @@ class Entropy extends Impurity {
             }
             categoricalOrderList.add(new Pair(i, binPredict));
         }
-        Collections.sort(categoricalOrderList, new Comparator<Pair>() {
-            @Override
-            public int compare(Pair o1, Pair o2) {
-                return Double.valueOf(o1.value).compareTo(Double.valueOf(o2.value));
-            }
-        });
+        if(super.cateMode != null && "shuffle".equalsIgnoreCase(super.cateMode)) {
+            Collections.shuffle(categoricalOrderList);
+        } else {
+            Collections.sort(categoricalOrderList, new Comparator<Pair>() {
+                @Override
+                public int compare(Pair o1, Pair o2) {
+                    return Double.valueOf(o1.value).compareTo(Double.valueOf(o2.value));
+                }
+            });
+        }
         return categoricalOrderList;
     }
 
@@ -552,11 +568,12 @@ class Entropy extends Impurity {
  */
 class Gini extends Impurity {
 
-    public Gini(int numClasses, int minInstancesPerNode, double minInfoGain) {
+    public Gini(int numClasses, int minInstancesPerNode, double minInfoGain, String cateMode) {
         assert numClasses > 0;
         super.statsSize = numClasses;
         super.minInstancesPerNode = minInstancesPerNode;
         super.minInfoGain = minInfoGain;
+        super.cateMode = cateMode;
     }
 
     @Override
@@ -671,12 +688,16 @@ class Gini extends Impurity {
             }
             categoricalOrderList.add(new Pair(i, binPredict));
         }
-        Collections.sort(categoricalOrderList, new Comparator<Pair>() {
-            @Override
-            public int compare(Pair o1, Pair o2) {
-                return Double.valueOf(o1.value).compareTo(Double.valueOf(o2.value));
-            }
-        });
+        if(super.cateMode != null && "shuffle".equalsIgnoreCase(super.cateMode)) {
+            Collections.shuffle(categoricalOrderList);
+        } else {
+            Collections.sort(categoricalOrderList, new Comparator<Pair>() {
+                @Override
+                public int compare(Pair o1, Pair o2) {
+                    return Double.valueOf(o1.value).compareTo(Double.valueOf(o2.value));
+                }
+            });
+        }
         return categoricalOrderList;
     }
 

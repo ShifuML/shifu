@@ -110,6 +110,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
      * 
      * @see ml.shifu.shifu.core.processor.Processor#run()
      */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     public int run() throws Exception {
         setUp(ModelStep.EXPORT);

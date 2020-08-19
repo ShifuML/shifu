@@ -67,9 +67,9 @@ import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.core.dtrain.mtl.MTLModel;
 import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.exception.ShifuErrorCode;
-import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 
 public class ModelSpecLoaderUtils {
 
@@ -487,8 +487,16 @@ public class ModelSpecLoaderUtils {
                     return BasicML.class.cast(EncogDirectoryPersistence.loadObject(stream));
                 }
             } else if(modelPath.getName().endsWith(CommonConstants.RF_ALG_NAME.toLowerCase()) // RF or GBT
-                    || modelPath.getName().endsWith(CommonConstants.GBT_ALG_NAME.toLowerCase())) {
-                return TreeModel.loadFromStream(stream, gbtConvertToProb, gbtScoreConvertStrategy);
+                    || modelPath.getName().contains(CommonConstants.GBT_ALG_NAME.toLowerCase())) {
+                if(modelPath.toString().endsWith(PrecisionType.FLOAT32.toString().toLowerCase())) {
+                    return TreeModel.loadFromStream(stream, gbtConvertToProb, gbtScoreConvertStrategy,
+                            PrecisionType.FLOAT32);
+                } else if(modelPath.toString().endsWith(PrecisionType.FLOAT16.toString().toLowerCase())) {
+                    return TreeModel.loadFromStream(stream, gbtConvertToProb, gbtScoreConvertStrategy,
+                            PrecisionType.FLOAT16);
+                } else {
+                    return TreeModel.loadFromStream(stream, gbtConvertToProb, gbtScoreConvertStrategy);
+                }
             } else if(modelPath.getName().endsWith(CommonConstants.WDL_ALG_NAME.toLowerCase())) {
                 return WDLModel.loadFromStream(stream);
             } else if(modelPath.getName().endsWith(CommonConstants.MTL_ALG_NAME.toLowerCase())) {
@@ -496,14 +504,20 @@ public class ModelSpecLoaderUtils {
             } else {
                 GzipStreamPair pair = GzipStreamPair.isGZipFormat(stream);
                 if(pair.isGzip()) {
-                    return BasicML.class.cast(NNModel.loadFromStream(pair.getInput()));
+                    if(modelPath.toString().endsWith(PrecisionType.FLOAT32.toString().toLowerCase())) {
+                        return BasicML.class.cast(NNModel.loadFromStream(pair.getInput(), PrecisionType.FLOAT32));
+                    } else if(modelPath.toString().endsWith(PrecisionType.FLOAT16.toString().toLowerCase())) {
+                        return BasicML.class.cast(NNModel.loadFromStream(pair.getInput(), PrecisionType.FLOAT16));
+                    } else {
+                        return BasicML.class.cast(NNModel.loadFromStream(pair.getInput(), PrecisionType.DOUBLE64));
+                    }
                 } else {
                     return BasicML.class.cast(EncogDirectoryPersistence.loadObject(pair.getInput()));
                 }
             }
         } catch (Exception e) {
-            String msg = "the expecting model file is: " + modelPath;
-            throw new ShifuException(ShifuErrorCode.ERROR_FAIL_TO_LOAD_MODEL_FILE, e, msg);
+            String msg = " the expecting model file is: " + modelPath;
+            throw new RuntimeException(ShifuErrorCode.ERROR_FAIL_TO_LOAD_MODEL_FILE.getDescription() + msg, e);
         } finally {
             IOUtils.closeQuietly(br);
             IOUtils.closeQuietly(stream);
@@ -765,11 +779,11 @@ public class ModelSpecLoaderUtils {
                     String fileName = fls.getPath().getName();
 
                     if(algorithm == null) {
-                        if(fileName.endsWith("." + ALGORITHM.NN.name().toLowerCase())) {
+                        if(fileName.contains("." + ALGORITHM.NN.name().toLowerCase())) {
                             algorithm = ALGORITHM.NN;
                         } else if(fileName.endsWith("." + ALGORITHM.LR.name().toLowerCase())) {
                             algorithm = ALGORITHM.LR;
-                        } else if(fileName.endsWith("." + ALGORITHM.GBT.name().toLowerCase())) {
+                        } else if(fileName.contains("." + ALGORITHM.GBT.name().toLowerCase())) {
                             algorithm = ALGORITHM.GBT;
                         }
                     }
@@ -958,14 +972,32 @@ public class ModelSpecLoaderUtils {
                     if(ALGORITHM.NN.equals(alg)) {
                         GzipStreamPair pair = GzipStreamPair.isGZipFormat(is);
                         if(pair.isGzip()) {
-                            models.add(BasicML.class.cast(NNModel.loadFromStream(pair.getInput())));
+                            if(nnf.toString().endsWith(PrecisionType.FLOAT32.toString().toLowerCase())) {
+                                models.add(BasicML.class
+                                        .cast(NNModel.loadFromStream(pair.getInput(), PrecisionType.FLOAT32)));
+                            } else if(nnf.toString().endsWith(PrecisionType.FLOAT16.toString().toLowerCase())) {
+                                models.add(BasicML.class
+                                        .cast(NNModel.loadFromStream(pair.getInput(), PrecisionType.FLOAT16)));
+                            } else {
+                                models.add(BasicML.class
+                                        .cast(NNModel.loadFromStream(pair.getInput(), PrecisionType.DOUBLE64)));
+                            }
                         } else {
                             models.add(BasicML.class.cast(EncogDirectoryPersistence.loadObject(pair.getInput())));
                         }
                     } else if(ALGORITHM.LR.equals(alg)) {
                         models.add(LR.loadFromStream(is));
                     } else if(ALGORITHM.GBT.equals(alg) || ALGORITHM.RF.equals(alg)) {
-                        models.add(TreeModel.loadFromStream(is, isConvertToProb, gbtScoreConvertStrategy));
+                        if(nnf.toString().endsWith(PrecisionType.FLOAT32.toString().toLowerCase())) {
+                            models.add(TreeModel.loadFromStream(is, isConvertToProb, gbtScoreConvertStrategy,
+                                    PrecisionType.FLOAT32));
+                        } else if(nnf.toString().endsWith(PrecisionType.FLOAT16.toString().toLowerCase())) {
+                            models.add(TreeModel.loadFromStream(is, isConvertToProb, gbtScoreConvertStrategy,
+                                    PrecisionType.FLOAT16));
+
+                        } else {
+                            models.add(TreeModel.loadFromStream(is, isConvertToProb, gbtScoreConvertStrategy));
+                        }
                     }
                 } finally {
                     IOUtils.closeQuietly(is);

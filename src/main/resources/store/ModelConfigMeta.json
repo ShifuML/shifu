@@ -769,6 +769,15 @@
                             {"label": "Gini", "value":"gini"}
                         ]
                     }, {
+                        "name" : "CateSortMode",
+                        "type" : "text",
+                        "directive": "select",
+                        "defval" : "sort",
+                        "options": [
+                            {"label": "Sort", "value":"sort"},
+                            {"label": "Shuffle", "value":"shuffle"}
+                        ]
+                    }, {
                         "name" : "FeatureSubsetStrategy",
                         "type" : "text",
                         "directive": "select",

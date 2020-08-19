@@ -93,38 +93,39 @@ public final class BinUtils {
         return getBinIndex(binBoundaries, dval);
     }
 
-	/**
-	 * Get categorical bin index according to string column value.
-	 * 
-	 * @param columnConfig the column config
-	 * @param columnVal    the column value
-	 * @return bin index, -1 if invalid values
-	 */
-	public static int getCategoicalBinIndex(ColumnConfig columnConfig, String columnVal) {
-		if (StringUtils.isBlank(columnVal)) {
-			return -1;
-		}
-		if (columnConfig.getHashSeed() > 0) {
-			columnVal = columnVal.hashCode() % columnConfig.getHashSeed() + "";
-		}
-		if (columnConfig.getColumnBinning().getBinCateMap() != null) {
-			Map<String, Integer> binCateMap = columnConfig.getColumnBinning().getBinCateMap();
-			Integer intIndex = binCateMap.get(columnVal);
-			if (intIndex == null || intIndex < 0) {
-				intIndex = -1;
-			}
-			return intIndex;
-		} else {
-			List<String> binCategories = columnConfig.getColumnBinning().getBinCategory();
-			for (int i = 0; i < binCategories.size(); i++) {
-				if (isCategoricalBinValue(binCategories.get(i), columnVal)) {
-					return i;
-				}
-			}
-		}
-		return -1;
-	}
-
+    /**
+     * Get categorical bin index according to string column value.
+     * 
+     * @param columnConfig
+     *            the column config
+     * @param columnVal
+     *            the column value
+     * @return bin index, -1 if invalid values
+     */
+    public static int getCategoicalBinIndex(ColumnConfig columnConfig, String columnVal) {
+        if(StringUtils.isBlank(columnVal)) {
+            return -1;
+        }
+        if(columnConfig.getHashSeed() > 0) {
+            columnVal = columnVal.hashCode() % columnConfig.getHashSeed() + "";
+        }
+        if(columnConfig.getColumnBinning().getBinCateMap() != null) {
+            Map<String, Integer> binCateMap = columnConfig.getColumnBinning().getBinCateMap();
+            Integer intIndex = binCateMap.get(columnVal);
+            if(intIndex == null || intIndex < 0) {
+                intIndex = -1;
+            }
+            return intIndex;
+        } else {
+            List<String> binCategories = columnConfig.getColumnBinning().getBinCategory();
+            for(int i = 0; i < binCategories.size(); i++) {
+                if(isCategoricalBinValue(binCategories.get(i), columnVal)) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
 
     /**
      * Check some categorical value is in the categorical value group or not
@@ -164,11 +165,16 @@ public final class BinUtils {
      *            bin boundary list which should be sorted.
      * @param dVal
      *            value of column
-     * @return bin index
+     * @return bin index, -1 if dValue is NaN.
      */
     public static int getBinIndex(List<Double> binBoundary, Double dVal) {
         assert binBoundary != null && binBoundary.size() > 0;
         assert dVal != null;
+
+        if(Double.isNaN(dVal.doubleValue())) {
+            return -1;
+        }
+
         int binSize = binBoundary.size();
 
         int low = 0;

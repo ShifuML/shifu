@@ -311,7 +311,7 @@ public interface Constants {
 
     public static final String SHIFU_NN_INDEPENDENT_MODEL = "shifu.nn.independent.model";
 
-    public static final String SHIFU_NN_BINARY_MODEL_PATH = "shifu.nn.binary.model.path";
+    public static final String SHIFU_BINARY_MODEL_PATH = "shifu.binary.model.path";
 
     public static final String HYBRID_BIN_STR_DILIMETER = ";;;";
 
@@ -369,6 +369,8 @@ public interface Constants {
     public static final String SHIFU_NORM_PRECISION_TYPE = "shifu.norm.precision.type";
     
     public static final String SHIFU_PRECISION_TYPE = "shifu.precision.type";
+    
+    public static final String SHIFU_MODELSPEC_PRECISION_TYPE = "shifu.modelspec.precision.type";
 
     public static final String IS_UPDATE_STATS_ONLY = "IS_UPDATE_STATS_ONLY";
 

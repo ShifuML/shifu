@@ -27,6 +27,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ml.shifu.guagua.master.BasicMasterInterceptor;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -37,16 +46,9 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import ml.shifu.shifu.util.Constants;
 
 /**
  * {@link DTOutput} is used to write the model output and error info to file system.
@@ -127,6 +129,19 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
      */
     private Configuration conf;
 
+    /**
+     * Model spec precision, by default some threshold and predict are double to ensure model predict precision, change
+     * to FLOAT32 or FLOAT16 may impact final predict precision but save some space. As already compressed based on
+     * reduce unnessecary fields, category encoding and gzip compression, not too much space saving if FLOAT32 or
+     * FLOAT16, FLOAT16 reuses the same float type to store model spec, size of model spec could be the same as FLOAT32.
+     */
+    private PrecisionType msPt;
+
+    /**
+     * Binary model path: bmodels/mode0.gbt.float32 ...
+     */
+    private Path bModel;
+
     @Override
     public void preApplication(MasterContext<DTMasterParams, DTWorkerParams> context) {
         init(context);
@@ -178,7 +193,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                     int subTreesSize = subTrees.size();
                     if(!isHalt && currentIteration != totalIteration) {
                         Path tmpModelPath = getTmpModelPath(subTreesSize);
-                        writeModelToFileSystem(subTrees, out);
+                        writeModelToFileSystem(subTrees, out, false);
 
                         // in such case tmp model is final model, just copy to tmp models
                         LOG.info("Copy checkpointed model to tmp folder: {}", tmpModelPath.toString());
@@ -218,7 +233,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                 // postApplication, sometimes this conflict will cause model writing failed.
                 if(!isHalt && currentIteration != totalIteration) {
                     Path tmpModelPath = getTmpModelPath(currentIteration);
-                    writeModelToFileSystem(context.getMasterResult().getTrees(), out);
+                    writeModelToFileSystem(context.getMasterResult().getTrees(), out, false);
 
                     // in such case tmp model is final model, just copy to tmp models
                     LOG.info("Copy checkpointed model to tmp folder: {}", tmpModelPath.toString());
@@ -348,7 +363,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             trees = context.getMasterResult().getTmpTrees();
         }
         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-        writeModelToFileSystem(trees, out);
+        writeModelToFileSystem(trees, out, true);
         if(this.isGsMode || this.isKFoldCV) {
             Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
             writeValErrorToFileSystem(
@@ -371,12 +386,27 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         }
     }
 
-    private void writeModelToFileSystem(List<TreeNode> trees, Path out) {
+    private void writeModelToFileSystem(List<TreeNode> trees, Path out, boolean isFinal) {
         List<List<TreeNode>> baggingTrees = new ArrayList<List<TreeNode>>();
         baggingTrees.add(trees);
         try {
             BinaryDTSerializer.save(modelConfig, columnConfigList, baggingTrees,
                     this.validParams.get("Loss").toString(), inputCount, FileSystem.get(this.conf), out);
+            if(isFinal) {
+                if(this.msPt != null) {
+                    switch(this.msPt) {
+                        case FLOAT32:
+                        case FLOAT16:
+                            Path msOut = new Path(this.bModel.toString() + "." + this.msPt.toString().toLowerCase());
+                            BinaryDTSerializer.save(modelConfig, columnConfigList, baggingTrees,
+                                    this.validParams.get("Loss").toString(), inputCount, FileSystem.get(this.conf),
+                                    msOut, this.msPt);
+                            break;
+                        default:
+                            throw new UnsupportedOperationException("Unsupported model spec precision type.");
+                    }
+                }
+            }
         } catch (IOException e) {
             LOG.error("Error in writing model", e);
         }
@@ -387,7 +417,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
      */
     private void saveTmpModelToHDFS(int iteration, List<TreeNode> trees) {
         Path out = getTmpModelPath(iteration);
-        writeModelToFileSystem(trees, out);
+        writeModelToFileSystem(trees, out, false);
     }
 
     private Path getTmpModelPath(int iteration) {
@@ -431,6 +461,14 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                 LOG.error("Error in create progress log:", e);
             }
             this.treeNum = Integer.valueOf(validParams.get("TreeNum").toString());;
+
+            try {
+                this.msPt = PrecisionType.of(context.getProps().getProperty(Constants.SHIFU_MODELSPEC_PRECISION_TYPE));
+            } catch (Exception e) {
+                this.msPt = null;
+            }
+            this.bModel = new Path(context.getProps().getProperty(Constants.SHIFU_BINARY_MODEL_PATH));
+            LOG.info("Model spec precision: " + this.msPt);
         }
     }
 

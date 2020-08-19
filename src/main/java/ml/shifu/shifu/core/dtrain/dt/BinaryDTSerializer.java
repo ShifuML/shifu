@@ -24,19 +24,20 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.zip.GZIPOutputStream;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.DTrainUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.udf.norm.PrecisionType;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 
 /**
  * Binary neural network serializer.
@@ -58,7 +59,20 @@ public class BinaryDTSerializer {
     }
 
     public static void save(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            List<List<TreeNode>> baggingTrees, String loss, int inputCount, FileSystem fs, Path output,
+            PrecisionType pt) throws IOException {
+        LOG.info("Writing trees to {}.", output);
+        save(modelConfig, columnConfigList, baggingTrees, loss, inputCount, fs.create(output), pt);
+    }
+
+    public static void save(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             List<List<TreeNode>> baggingTrees, String loss, int inputCount, OutputStream output) throws IOException {
+        save(modelConfig, columnConfigList, baggingTrees, loss, inputCount, output, PrecisionType.DOUBLE64);
+    }
+
+    public static void save(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            List<List<TreeNode>> baggingTrees, String loss, int inputCount, OutputStream output, PrecisionType pt)
+            throws IOException {
         DataOutputStream fos = null;
 
         try {
@@ -149,7 +163,7 @@ public class BinaryDTSerializer {
                 int treeLength = trees.size();
                 fos.writeInt(treeLength);
                 for(TreeNode treeNode: trees) {
-                    treeNode.write(fos);
+                    treeNode.write(fos, pt);
                 }
             }
         } catch (IOException e) {
