@@ -153,7 +153,7 @@ public class BasicModelProcessor {
                         saveColumnConfigList(pathFinder.getMTLColumnConfigPath(SourceType.LOCAL, i),
                                 this.mtlColumnConfigLists.get(i));
                     }
-                } else {
+                } else if(!ModelStep.EVAL.equals(step)) { // don't update ColumnConfig.json in Eval step
                     saveColumnConfigList();
                 }
 
