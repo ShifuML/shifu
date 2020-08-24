@@ -42,17 +42,17 @@ More details about shifu can be found in our [wiki pages](https://github.com/Shi
 
 ## Contributors
 
- - Zhanghao Hu (zhanhu@paypal.com)
- - Grahame Jastrebski (gjastrebski@paypal.com)
- - Lavar Li (lulli@paypal.com)
- - Mark Liu (yliu15@paypal.com)
- - David Zhang (pengzhang@paypal.com)
- - Xin Zhong (xinzhong@paypal.com)
- - Simon Zhang (jzhang13@paypal.com)
- - Sharma Nitin (nsharma1@paypal.com)
- - Wayne Zhu (wzhu1@paypal.com)
- - Devin Wu (haifwu@paypal.com)
- - Fred Bai (webai@paypal.com)
+ - Zhanghao Hu (zhanhu at paypal.com)
+ - Grahame Jastrebski (gjastrebski at paypal.com)
+ - Lavar Li (lulli at paypal.com)
+ - Mark Liu (yliu15 at paypal.com)
+ - David Zhang (pengzhang at paypal.com)
+ - Xin Zhong (xinzhong at paypal.com)
+ - Simon Zhang (jzhang13 at paypal.com)
+ - Sharma Nitin (nsharma1 at paypal.com)
+ - Wayne Zhu (wzhu1 at paypal.com)
+ - Devin Wu (haifwu at paypal.com)
+ - Fred Bai (webai at paypal.com)
 
 ## Google Group
 
