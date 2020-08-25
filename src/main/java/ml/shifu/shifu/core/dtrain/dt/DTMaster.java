@@ -334,6 +334,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             if(maxGainInfo == null) {
                 // null gain info, set to leaf and continue next stats
                 doneNode.setLeaf(true);
+                doneNode.setPredict(new Predict(0.0d)); // add zero predict, or it will cause NullPointException,
+                                                        // if user enable MinInfoGain or MinInstancesPerNode
                 continue;
             }
             populateGainInfoToNode(treeId, doneNode, maxGainInfo);
