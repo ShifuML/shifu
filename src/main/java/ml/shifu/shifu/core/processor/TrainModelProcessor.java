@@ -1041,7 +1041,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 Path modelPath = fileSystem
                         .makeQualified(new Path(super.getPathFinder().getModelsPath(sourceType), modelName));
                 Path bModelPath = fileSystem
-                        .makeQualified(new Path(super.getPathFinder().getNNBinaryModelsPath(sourceType), modelName));
+                        .makeQualified(new Path(super.getPathFinder().getBinaryModelsPath(sourceType), modelName));
 
                 // check if job is continuous training, this can be set multiple times and we only get last one
                 boolean isContinuous = false;
@@ -1085,7 +1085,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.GUAGUA_OUTPUT,
                         modelPath.toString()));
                 localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                        Constants.SHIFU_NN_BINARY_MODEL_PATH, bModelPath.toString()));
+                        Constants.SHIFU_BINARY_MODEL_PATH, bModelPath.toString()));
 
                 if(gs.hasHyperParam() || isKFoldCV) {
                     // k-fold cv need val error

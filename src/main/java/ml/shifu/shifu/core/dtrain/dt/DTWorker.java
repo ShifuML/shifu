@@ -463,14 +463,22 @@ public class DTWorker extends
         String imStr = validParams.get("Impurity").toString();
         int minInstancesPerNode = Integer.valueOf(validParams.get("MinInstancesPerNode").toString());
         double minInfoGain = Double.valueOf(validParams.get("MinInfoGain").toString());
+        Object csmObj = validParams.get("CateSortMode");
+        String cateSortMode = null;
+        if(csmObj != null) {
+            cateSortMode = csmObj.toString();
+            if(StringUtils.isBlank(cateSortMode)) {
+                cateSortMode = "sort";
+            }
+        }
         if(imStr.equalsIgnoreCase("entropy")) {
-            impurity = new Entropy(numClasses, minInstancesPerNode, minInfoGain);
+            impurity = new Entropy(numClasses, minInstancesPerNode, minInfoGain, cateSortMode);
         } else if(imStr.equalsIgnoreCase("gini")) {
-            impurity = new Gini(numClasses, minInstancesPerNode, minInfoGain);
+            impurity = new Gini(numClasses, minInstancesPerNode, minInfoGain, cateSortMode);
         } else if(imStr.equalsIgnoreCase("friedmanmse")) {
-            impurity = new FriedmanMSE(minInstancesPerNode, minInfoGain);
+            impurity = new FriedmanMSE(minInstancesPerNode, minInfoGain, cateSortMode);
         } else {
-            impurity = new Variance(minInstancesPerNode, minInfoGain);
+            impurity = new Variance(minInstancesPerNode, minInfoGain, cateSortMode);
         }
 
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());

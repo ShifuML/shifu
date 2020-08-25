@@ -83,6 +83,7 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
     /**
      * Final results map, this map is loaded in memory for sum, and will be written by context in cleanup.
      */
+    @SuppressWarnings("unused")
     private Map<Long, ColumnInfo> results = new HashMap<>();
 
     /**
@@ -105,6 +106,7 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
     /**
      * Prevent too many new objects for output key.
      */
+    @SuppressWarnings("unused")
     private LongWritable outputKey;
 
     /**
@@ -284,6 +286,7 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
         return result;
     }
 
+    @SuppressWarnings("unused")
     private Set<Integer> generateModelFeatureSet(List<ColumnConfig> columnConfigList) {
         Set<Integer> columnIdSet = new HashSet<>();
         boolean hasFinalSelectedVars = DTrainUtils.hasFinalSelectedVars(columnConfigList);
@@ -304,6 +307,7 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
         return columnIdSet;
     }
 
+    @SuppressWarnings("unused")
     private int generateFeatureInputInfo(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Set<Integer> featureSet) {
         int vectorLen = 0;
         this.columnMissingInputValues = new HashMap<>();

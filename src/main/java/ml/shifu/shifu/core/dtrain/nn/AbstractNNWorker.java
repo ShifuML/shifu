@@ -64,7 +64,6 @@ import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.MapReduceUtils;
-import ml.shifu.shifu.util.NormalizationUtils;
 
 /**
  * {@link AbstractNNWorker} is refactored as a common class for different NN input format.

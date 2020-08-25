@@ -56,7 +56,6 @@ import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.ModelSpecLoaderUtils;
-import ml.shifu.shifu.util.NormalizationUtils;
 
 /**
  * {@link NNMaster} is used to accumulate all workers NN parameters.
@@ -153,6 +152,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
     /**
      * If variables are selected, if not, select variables with good candidate.
      */
+    @SuppressWarnings("unused")
     private boolean isAfterVarSelect;
 
     /**

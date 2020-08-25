@@ -25,6 +25,7 @@ import java.util.Map;
 
 import ml.shifu.guagua.io.Bytable;
 import ml.shifu.shifu.core.dtrain.FeatureSubsetStrategy;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 
 /**
  * {@link TreeNode} is used to wrapper node and tree index. With tree id and node in {@link TreeNode}.
@@ -200,9 +201,8 @@ public class TreeNode implements Bytable {
         this.learningRate = learningRate;
     }
 
-    @Override
-    public void write(DataOutput out) throws IOException {
-        this.writeWithoutFeatures(out);
+    public void write(DataOutput out, PrecisionType pt) throws IOException {
+        this.writeWithoutFeatures(out, pt);
 
         if(features == null) {
             out.writeInt(0);
@@ -214,18 +214,29 @@ public class TreeNode implements Bytable {
         }
     }
 
+    @Override
+    public void write(DataOutput out) throws IOException {
+        write(out, PrecisionType.DOUBLE64);
+    }
+
+    public void writeWithoutFeatures(DataOutput out) throws IOException {
+        this.writeWithoutFeatures(out, PrecisionType.DOUBLE64);
+    }
+
     /**
      * This is serialization version to serialize TreeNode without sub-sampling features.
      * 
      * @param out
      *            output stream
+     * @param pt
+     *            precision for threshold or split if they can be in float or double in output format
      * @throws IOException
      *             any io exception.
      */
-    public void writeWithoutFeatures(DataOutput out) throws IOException {
+    public void writeWithoutFeatures(DataOutput out, PrecisionType pt) throws IOException {
         out.writeInt(treeId);
         out.writeInt(nodeNum);
-        this.node.write(out);
+        this.node.write(out, pt);
         out.writeDouble(this.learningRate);
 
         if(this.node.getId() == Node.ROOT_INDEX) {
@@ -244,8 +255,8 @@ public class TreeNode implements Bytable {
         }
     }
 
-    public void readFields(DataInput in, int version) throws IOException {
-        this.readFieldsWithoutFeatures(in, version);
+    public void readFields(DataInput in, int version, PrecisionType pt) throws IOException {
+        this.readFieldsWithoutFeatures(in, version, pt);
 
         int len = in.readInt();
         this.features = new ArrayList<Integer>();
@@ -274,11 +285,11 @@ public class TreeNode implements Bytable {
         }
     }
 
-    public void readFieldsWithoutFeatures(DataInput in, int version) throws IOException {
+    public void readFieldsWithoutFeatures(DataInput in, int version, PrecisionType pt) throws IOException {
         this.treeId = in.readInt();
         this.nodeNum = in.readInt();
         this.node = new Node();
-        this.node.readFields(in, version);
+        this.node.readFields(in, version, pt);
         this.learningRate = in.readDouble();
 
         if(this.node.getId() == Node.ROOT_INDEX) {

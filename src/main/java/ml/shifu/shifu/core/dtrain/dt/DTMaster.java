@@ -49,6 +49,8 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
 import ml.shifu.shifu.util.ModelSpecLoaderUtils;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -311,7 +313,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             weightedTrainCount += params.getTrainCount();
             weightedValidationCount += params.getValidationCount();
         }
-        
+
         for(Entry<Integer, NodeStats> entry: nodeStatsMap.entrySet()) {
             NodeStats nodeStats = entry.getValue();
             int treeId = nodeStats.getTreeId();
@@ -1026,12 +1028,20 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         // these two parameters is to stop tree growth parameters
         int minInstancesPerNode = Integer.valueOf(validParams.get("MinInstancesPerNode").toString());
         double minInfoGain = Double.valueOf(validParams.get("MinInfoGain").toString());
+        Object csmObj = validParams.get("CateSortMode");
+        String cateSortMode = null;
+        if(csmObj != null) {
+            cateSortMode = csmObj.toString();
+            if(StringUtils.isBlank(cateSortMode)) {
+                cateSortMode = "sort";
+            }
+        }
         if(imStr.equalsIgnoreCase("entropy")) {
-            impurity = new Entropy(numClasses, minInstancesPerNode, minInfoGain);
+            impurity = new Entropy(numClasses, minInstancesPerNode, minInfoGain, cateSortMode);
         } else if(imStr.equalsIgnoreCase("gini")) {
-            impurity = new Gini(numClasses, minInstancesPerNode, minInfoGain);
+            impurity = new Gini(numClasses, minInstancesPerNode, minInfoGain, cateSortMode);
         } else {
-            impurity = new Variance(minInstancesPerNode, minInfoGain);
+            impurity = new Variance(minInstancesPerNode, minInfoGain, cateSortMode);
         }
 
         // checkpoint folder and interval (every # iterations to do checkpoint)

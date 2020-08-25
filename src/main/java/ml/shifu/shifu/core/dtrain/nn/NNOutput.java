@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import ml.shifu.shifu.util.NormalizationUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -44,6 +43,7 @@ import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
@@ -144,6 +144,12 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      */
     private int minimumEpochs = -1;
 
+    /**
+     * Model spec output precision type, double64 by default would be stored, if float32 or float 16 duplicated model
+     * spec would also be stored.
+     */
+    private PrecisionType msPt;
+
     @Override
     public void preApplication(MasterContext<NNParams, NNParams> context) {
         init(context);
@@ -156,27 +162,27 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             return;
         }
 
-        if (minimumEpochs < 0) {
+        if(minimumEpochs < 0) {
             double minimumStepsRatio = DTrainUtils.getDouble(context.getProps(), // get # of steps to choose parameters
                     CommonConstants.SHIFU_TRAIN_VAL_STEPS_RATIO, 0.1);
-            minimumEpochs = Math.max((int) (modelConfig.getNumTrainEpochs() * minimumStepsRatio), 5) ;
+            minimumEpochs = Math.max((int) (modelConfig.getNumTrainEpochs() * minimumStepsRatio), 5);
         }
 
-
-        if ( context.getCurrentIteration() < minimumEpochs ) {
+        if(context.getCurrentIteration() < minimumEpochs) {
             this.optimizedWeights = context.getMasterResult().getWeights();
         } else {
-            double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON) ? context.getMasterResult()
-                    .getTrainError() : context.getMasterResult().getValidationError());
-            if ( currentError < this.minTestError ) {
+            double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON)
+                    ? context.getMasterResult().getTrainError()
+                    : context.getMasterResult().getValidationError());
+            if(currentError < this.minTestError) {
                 this.minTestError = currentError;
                 // the optimizedWeights are the weights just evaluated, not current weights after applying gradients
                 this.optimizedWeights = context.getMasterResult().getEvaluatedWeights();
                 if(this.optimizedWeights == null) {
                     this.optimizedWeights = context.getMasterResult().getWeights();
                 }
-                LOG.info("change minTestError to {}, and update best weights at {}-th epoch.",
-                        this.minTestError, context.getCurrentIteration());
+                LOG.info("change minTestError to {}, and update best weights at {}-th epoch.", this.minTestError,
+                        context.getCurrentIteration());
             }
         }
 
@@ -242,7 +248,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         if(this.isDry) {
             return;
         }
-        
+
         if(optimizedWeights != null) {
             // TODO do we need to check IOException and retry again to make sure such important model is saved
             // successfully.
@@ -313,7 +319,13 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
                 this.wgtInit = wgtInitObj.toString();
             }
 
-            this.bModel = new Path(context.getProps().getProperty(Constants.SHIFU_NN_BINARY_MODEL_PATH));
+            this.bModel = new Path(context.getProps().getProperty(Constants.SHIFU_BINARY_MODEL_PATH));
+
+            try {
+                this.msPt = PrecisionType.of(context.getProps().getProperty(Constants.SHIFU_MODELSPEC_PRECISION_TYPE));
+            } catch (Exception e) {
+                this.msPt = null;
+            }
 
             initNetwork(context);
         }
@@ -380,7 +392,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
         int featureInputsCnt = DTrainUtils.getFeatureInputsCnt(modelConfig, columnConfigList, this.subFeatures);
 
-        String outputActivationFunc = (String)validParams.get(CommonConstants.OUTPUT_ACTIVATION_FUNC);
+        String outputActivationFunc = (String) validParams.get(CommonConstants.OUTPUT_ACTIVATION_FUNC);
 
         this.network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers, actFunc,
                 hiddenNodeList, false, this.dropoutRate, this.wgtInit,
@@ -421,7 +433,20 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         BasicML basicML = this.network;
         try {
             BinaryNNSerializer.save(modelConfig, columnConfigList, Arrays.asList(basicML),
-                    FileSystem.get(new Configuration()), out);
+                    FileSystem.get(new Configuration()), out, PrecisionType.DOUBLE64);
+            if(this.msPt != null) {
+                switch(this.msPt) {
+                    case FLOAT32:
+                        Path msOut = new Path(out.toString() + "." + this.msPt.toString().toLowerCase());
+                        BinaryNNSerializer.save(modelConfig, columnConfigList, Arrays.asList(basicML),
+                                FileSystem.get(new Configuration()), msOut, this.msPt);
+                        break;
+                    case FLOAT16:
+                        throw new UnsupportedOperationException("TODO: support FLOAT16");
+                    default:
+                        throw new UnsupportedOperationException("Unsupported model spec precision type.");
+                }
+            }
         } catch (IOException e) {
             LOG.error("Error in writing model", e);
         }

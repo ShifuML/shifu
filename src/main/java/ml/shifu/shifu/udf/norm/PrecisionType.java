@@ -69,7 +69,7 @@ public enum PrecisionType {
                 return pt;
             }
         }
-        return FLOAT32;
+        throw new UnsupportedOperationException("Not supported precision: " + precisionType);
     }
 
     // FIXME return as Object need extra cost, see how to reduce the cost

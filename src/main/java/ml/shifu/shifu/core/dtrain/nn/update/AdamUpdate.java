@@ -58,7 +58,7 @@ public class AdamUpdate implements UpdateRule {
             if(fixedWeights.contains(i))
                 continue;
 
-            double avgGrad = gradients[i]/ this.update.getNumTrainSize();
+            double avgGrad = gradients[i] / this.update.getNumTrainSize();
 
             m[i] = (this.beta1 * m[i]) + (1 - this.beta1) * avgGrad;
             v[i] = (this.beta2 * v[i]) + (1 - this.beta2) * avgGrad * avgGrad;

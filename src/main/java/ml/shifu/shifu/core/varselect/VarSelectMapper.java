@@ -297,6 +297,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         return result;
     }
 
+    @SuppressWarnings("unused")
     private Set<Integer> generateModelFeatureSet(List<ColumnConfig> columnConfigList) {
         Set<Integer> columnIdSet = new HashSet<>();
         boolean hasFinalSelectedVars = DTrainUtils.hasFinalSelectedVars(columnConfigList);
@@ -317,6 +318,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         return columnIdSet;
     }
 
+    @SuppressWarnings("unused")
     private int generateFeatureInputInfo(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Set<Integer> featureSet) {
         int vectorLen = 0;
         this.columnMissingInputValues = new HashMap<>();
