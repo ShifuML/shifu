@@ -320,10 +320,10 @@ public class DateStatComputeMapper extends Mapper<LongWritable, Text, Text, Date
     private void populateStats(String[] units, String tag, Double weight, int columnIndex, int newCCIndex) {
         String dateVal = "";
         if(dateColumnNum >= 0) {
-            dateVal = units[dateColumnNum].toLowerCase();
+            dateVal = units[dateColumnNum];
         }
         ColumnConfig columnConfig = this.columnConfigList.get(columnIndex);
-        String variableName = columnConfig.getColumnName().toLowerCase();
+        String variableName = columnConfig.getColumnName();
         DateStatInfoWritable dateStatInfoWritable = this.dailyStatInfo.get(variableName);
         if(dateStatInfoWritable == null) {
             dateStatInfoWritable = new DateStatInfoWritable();
