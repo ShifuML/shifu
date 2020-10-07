@@ -632,7 +632,7 @@ public final class CommonUtils {
             throws IOException {
         if(StringUtils.isEmpty(pathHeader) || StringUtils.isEmpty(delimiter) || sourceType == null) {
             throw new IllegalArgumentException(
-                    String.format("Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", pathHeader,
+                    String.format("Null or empty parameters srcDataPath:%s, delimiter:%s, sourceType:%s", pathHeader,
                             delimiter, sourceType));
         }
         BufferedReader reader = null;

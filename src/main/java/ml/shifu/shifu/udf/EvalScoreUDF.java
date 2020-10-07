@@ -826,11 +826,15 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
      * @return - tuple name with namespace
      */
     private String addModelNameToField(String modelName, String field) {
-        return (StringUtils.isBlank(modelName) ? field : formatPigNS(modelName) + "::" + field);
+        return (StringUtils.isBlank(modelName) ? field : formatPigNS(modelName) + "::" + formatScoreField(field));
     }
 
     private String formatPigNS(String name) {
         return name.replaceAll("-", "_");
+    }
+
+    private String formatScoreField(String field) {
+        return field.replaceAll("\\..*$", "");
     }
 
     private CategoryMissingNormType getCategoryMissingNormType() {

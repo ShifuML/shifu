@@ -15,10 +15,11 @@
  */
 package ml.shifu.shifu.udf;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-
+import ml.shifu.shifu.column.NSColumn;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.util.*;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -26,33 +27,29 @@ import org.apache.hadoop.fs.Path;
 import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
+import org.apache.pig.impl.PigContext;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
 import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
 
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
 
 /**
  * To project only useful columns used in eval sorting. Meta, target, weight and score columns should be included.
  */
 public class ColumnProjector extends AbstractEvalUDF<Tuple> {
 
+    private String[] headers;
     private String scoreMetaColumn;
 
-    private String[] headers;
-
     private int targetColumnIndex = -1;
-
     private int weightColumnIndex = -1;
-
     private int scoreMetaColumnIndex = -1;
 
     private double maxScore = Double.MIN_VALUE;
-
     private double minScore = Double.MAX_VALUE;
 
     /**
@@ -65,45 +62,25 @@ public class ColumnProjector extends AbstractEvalUDF<Tuple> {
         super(source, pathModelConfig, pathColumnConfig, evalSetName);
         this.scoreMetaColumn = columnName;
 
-        // create model runner
-        if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
-            this.headers = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(),
-                    evalConfig.getDataSet().getHeaderDelimiter(), evalConfig.getDataSet().getSource());
-        } else {
-            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter())
-                    ? evalConfig.getDataSet().getDataDelimiter()
-                    : evalConfig.getDataSet().getHeaderDelimiter();
-            String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter,
-                    evalConfig.getDataSet().getSource());
-            if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
-                this.headers = new String[fields.length];
-                for(int i = 0; i < fields.length; i++) {
-                    fields[i] = CommonUtils.normColumnName(fields[i]);
-                    this.headers[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
-                }
-                log.warn("No header path is provided, we will try to read first line and detect schema.");
-                log.warn("Schema in ColumnConfig.json are named as first line of data set path.");
-            } else {
-                log.warn("No header path is provided, we will try to read first line and detect schema.");
-                log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
-                log.warn("Please make sure weight column and tag column are also taking index as name.");
-                this.headers = new String[fields.length];
-                for(int i = 0; i < fields.length; i++) {
-                    this.headers[i] = i + "";
-                }
-            }
-        }
+        PathFinder pathFinder = new PathFinder(this.modelConfig);
+        String scoreHeaderPath = pathFinder.getEvalScoreHeaderPath(this.evalConfig);
+        String delimiter = getUdfProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER);
+        delimiter = Base64Utils.base64DecodeIfEncodedInput(delimiter);
+        Environment.setProperty(Constants.SHIFU_NAMESPACE_STRICT_MODE, Boolean.TRUE.toString());
+        this.headers = CommonUtils.getHeaders(scoreHeaderPath, delimiter, evalConfig.getDataSet().getSource());
+
+        NSColumn target = new NSColumn(modelConfig.getTargetColumnName(evalConfig, modelConfig.getTargetColumnName()));
+        NSColumn scoreMeta = new NSColumn(this.scoreMetaColumn);
+        NSColumn weight = new NSColumn("shifu::weight");
 
         for(int i = 0; i < this.headers.length; i++) {
-            if(this.headers[i].equals(modelConfig.getTargetColumnName(evalConfig, modelConfig.getTargetColumnName()))) {
+            NSColumn nsColumn = new NSColumn(this.headers[i]);
+            if (this.targetColumnIndex < 0 && nsColumn.equals(target)) {
                 this.targetColumnIndex = i;
-            }
-            if(this.headers[i].equals(this.scoreMetaColumn)) {
-                this.scoreMetaColumnIndex = i;
-            }
-            if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())
-                    && this.headers[i].equals(evalConfig.getDataSet().getWeightColumnName())) {
+            } else if (this.weightColumnIndex < 0 && nsColumn.equals(weight)) {
                 this.weightColumnIndex = i;
+            } else if (this.scoreMetaColumnIndex < 0 && nsColumn.equals(scoreMeta)) {
+                this.scoreMetaColumnIndex = i;
             }
         }
     }

@@ -42,6 +42,10 @@ public class Base64UtilsTest {
         String decodeStr = Base64Utils.base64Decode(encodeStr);
         
         Assert.assertEquals(testStr, decodeStr);
+
+        System.out.println(Base64Utils.base64Encode("|"));
+        String srcStr = "fA==";
+        Assert.assertEquals(srcStr, Base64Utils.base64Encode(Base64Utils.base64Decode(srcStr)));
     }
     
 }

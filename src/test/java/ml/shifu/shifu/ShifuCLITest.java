@@ -31,9 +31,13 @@ import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
+import scala.annotation.meta.field;
 
 import java.io.*;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * ManagerTest class
@@ -265,7 +269,7 @@ public class ShifuCLITest {
         FileUtils.copyDirectory(modelsDir, tmpModelsDir);
 
         // run evaluation set
-        ShifuCLI.runEvalSet();
+        ShifuCLI.runEvalSet(new HashMap<String, Object>());
         File evalScore = new File("evals/EvalA/EvalScore");
         Assert.assertTrue(evalScore.exists());
 
@@ -367,5 +371,17 @@ public class ShifuCLITest {
         File file = new File("model0.gbt.fi");
         Assert.assertTrue(file.exists());
         FileUtils.deleteQuietly(file);
+    }
+
+    @Test
+    public void testConvertDate() {
+        long ts = 1601103600l * 1000l;
+        Date date = new Date(ts);
+        System.out.println(date);
+
+        System.out.println("model0".replaceAll("\\..*$", ""));
+        System.out.println("model0.".replaceAll("\\..*$", ""));
+        System.out.println("model0.gbt".replaceAll("\\..*$", ""));
+        System.out.println("model0.nn.zip".replaceAll("\\..*$", ""));
     }
 }
