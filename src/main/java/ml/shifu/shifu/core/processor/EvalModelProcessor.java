@@ -1376,12 +1376,16 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         return getBooleanParam(this.params, NOSORT);
     }
 
+    /**
+     * Add ref models as score column for performance comparision
+     * @param scoreMetaColumns - the score columns to add into
+     */
     private void addReferModelScoreColumns(List<String> scoreMetaColumns) {
         List<String> referModels = getRefModels();
         if (CollectionUtils.isNotEmpty(referModels)) {
             referModels.stream().forEach(referModel -> {
                 File referModelFile = new File(referModel);
-                scoreMetaColumns.add(referModelFile.getName() + "::mean");
+                scoreMetaColumns.add(genRefModelScoreName(referModelFile.getName()) + "::mean");
             });
         }
     }
@@ -1402,7 +1406,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             }
 
             String refModelName = refModelFile.getName();
-            File subModel = new File(Constants.MODELS, refModelName);
+            File subModel = new File(Constants.MODELS, genRefModelScoreName(refModelName));
             subModel.mkdirs(); // create sub model in current project
 
             FileUtils.copyFile(new File(refModelFile, Constants.MODEL_CONFIG_JSON_FILE_NAME),
@@ -1448,6 +1452,15 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                     || EvalStep.SCORE.equals(evalStep)
                     || EvalStep.AUDIT.equals(evalStep)
                     || EvalStep.NORM.equals(evalStep));
+    }
+
+    /**
+     * Add "ref_" as prefix for ref model name to avoid some models start with numbers
+     * @param modelName - ref model name
+     * @return "ref_" + modelName
+     */
+    private String genRefModelScoreName(String modelName) {
+        return "ref_" + StringUtils.trimToEmpty(modelName);
     }
 
     /**
