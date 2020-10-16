@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -107,6 +108,15 @@ public class Environment {
         // check /<user-home>/.shifuconfig, if exists, load it
         String userHome = System.getProperty("user.home");
         loadProperties(properties, userHome + File.separator + ".shifuconfig");
+
+        // check $HOME/.shifuconfig, if exists, load it, it happened very few that the System Property is different
+        // from System Env for home path
+        Map<String, String> env = System.getenv();
+
+        String home = env.getOrDefault("HOME", null);
+        if (home != null) {
+            loadProperties(properties, home + File.separator + ".shifuconfig");
+        }
     }
 
     /*
