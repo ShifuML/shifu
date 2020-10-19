@@ -32,8 +32,10 @@ import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
+import ml.shifu.shifu.util.HDFSUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -94,6 +96,12 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
      */
     private void loadConfigFiles(final Context context) {
         try {
+            // inject fs.defaultFS from UDFContext.getUDFContext().getJobConf()
+            if (context != null && context.getConfiguration() != null) {
+                HDFSUtils.getConf().set(FileSystem.FS_DEFAULT_NAME_KEY,
+                        context.getConfiguration().get(FileSystem.FS_DEFAULT_NAME_KEY));
+            }
+            
             SourceType sourceType = SourceType.valueOf(
                     context.getConfiguration().get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
