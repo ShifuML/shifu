@@ -961,8 +961,9 @@ public class PathFinder {
             case LOCAL:
                 return new Path(getModelSetLocalPath(), path).toString();
             case HDFS:
-                return ShifuFileUtils.getFileSystemBySourceType(sourceType)
-                        .makeQualified(new Path(getModelSetHdfsPath(), path)).toString();
+                Path filePath = new Path(getModelSetHdfsPath(), path);
+                return ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath)
+                        .makeQualified(filePath).toString();
             default:
                 // Others, maybe be we will support S3 in future
                 throw new NotImplementedException("Source type - " + sourceType.name() + " is not supported yet!");

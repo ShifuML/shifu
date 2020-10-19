@@ -582,7 +582,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     private Path getVotedSelectionPath(SourceType sourceType) {
-        return ShifuFileUtils.getFileSystemBySourceType(sourceType)
+        Path filePath = new Path(getPathFinder().getVarSelsPath(sourceType), "VarSels");
+        return ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath)
                 .makeQualified(new Path(getPathFinder().getVarSelsPath(sourceType), "VarSels"));
     }
 
@@ -593,8 +594,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         args.add(addRuntimeJars());
 
         args.add("-i");
-        args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType)
-                .makeQualified(new Path(modelConfig.getDataSetRawPath())).toString());
+        Path filePath = new Path(modelConfig.getDataSetRawPath());
+        args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath).makeQualified(filePath).toString());
 
         String zkServers = Environment.getProperty(Environment.ZOO_KEEPER_SERVERS);
         if(StringUtils.isEmpty(zkServers)) {
@@ -658,12 +659,12 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                 VarSelOutput.class.getName()));
 
         // setting model config column config
+        Path modelConfPath = new Path(super.getPathFinder().getModelConfigPath(sourceType));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_MODEL_CONFIG,
-                ShifuFileUtils.getFileSystemBySourceType(sourceType)
-                        .makeQualified(new Path(super.getPathFinder().getModelConfigPath(sourceType)))));
+                ShifuFileUtils.getFileSystemBySourceType(sourceType, modelConfPath).makeQualified(modelConfPath)));
+        Path columnConfPath = new Path(super.getPathFinder().getColumnConfigPath(sourceType));
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.SHIFU_COLUMN_CONFIG,
-                ShifuFileUtils.getFileSystemBySourceType(sourceType)
-                        .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(sourceType)))));
+                ShifuFileUtils.getFileSystemBySourceType(sourceType, columnConfPath).makeQualified(columnConfPath)));
 
         // source type
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.MODELSET_SOURCE_TYPE,
@@ -806,8 +807,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         job.setMapOutputKeyClass(LongWritable.class);
         job.setMapOutputValueClass(ColumnInfo.class);
         job.setInputFormatClass(CombineInputFormat.class);
-        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.getPathFinder().getNormalizedDataPath())));
+        Path filePath = new Path(super.getPathFinder().getNormalizedDataPath());
+        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source, filePath)
+                .makeQualified(filePath));
 
         job.setReducerClass(VarSelectReducer.class);
         // Only one reducer, no need set combiner because of distinct keys in map outputs.
@@ -845,8 +847,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
         // input
         job.setInputFormatClass(CombineInputFormat.class);
-        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.getPathFinder().getNormalizedDataPath())));
+        Path filePath = new Path(super.getPathFinder().getNormalizedDataPath());
+        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source, filePath)
+                .makeQualified(filePath));
 
         job.setReducerClass(VarSelectSCReducer.class);
         // Only one reducer, no need set combiner because of distinct keys in map outputs.
@@ -876,19 +879,21 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     }
 
     private void prepareSEJobConf(SourceType source, final Configuration conf) throws Exception {
-        String modelConfigPath = ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString();
-        String columnConfigPath = ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString();
+        Path modelConfPath = new Path(super.getPathFinder().getModelConfigPath(source));
+        String modelConfigPath = ShifuFileUtils.getFileSystemBySourceType(source, modelConfPath)
+                .makeQualified(modelConfPath).toString();
+        Path columnConfPath = new Path(super.getPathFinder().getColumnConfigPath(source));
+        String columnConfigPath = ShifuFileUtils.getFileSystemBySourceType(source, columnConfPath)
+                .makeQualified(columnConfPath).toString();
         // only the first model is sued for sensitivity analysis
         String filePath = null;
         if(CommonUtils.isTensorFlowModel(this.modelConfig.getAlgorithm())) {
             filePath = modelConfigPath + "," + columnConfigPath;
         } else {
-            String seModelPath = ShifuFileUtils.getFileSystemBySourceType(source)
-                    .makeQualified(new Path(super.getPathFinder().getModelsPath(),
-                            "model0." + modelConfig.getAlgorithm().toLowerCase()))
-                    .toString();
+            Path modelPath = new Path(super.getPathFinder().getModelsPath(),
+                    "model0." + modelConfig.getAlgorithm().toLowerCase());
+            String seModelPath = ShifuFileUtils.getFileSystemBySourceType(source, modelPath)
+                    .makeQualified(modelPath).toString();
             filePath = modelConfigPath + "," + columnConfigPath + "," + seModelPath;
         }
 
@@ -899,10 +904,10 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_MAP_SPECULATIVE, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_REDUCE_SPECULATIVE, true);
-        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
-        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
+        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source, modelConfPath)
+                .makeQualified(modelConfPath).toString());
+        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source, columnConfPath)
+                .makeQualified(columnConfPath).toString());
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
         // set mapreduce.job.max.split.locations to 100 to suppress warnings
@@ -1022,8 +1027,9 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                         * (1.0f - modelConfig.getVarSelect().getFilterOutRatio()));
             } else {
                 // here only works for 1 reducer
-                FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source)
-                        .globStatus(new Path(outputFilePattern));
+                Path filePath = new Path(outputFilePattern);
+                FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source, filePath)
+                        .globStatus(filePath);
                 if(globStatus == null || globStatus.length == 0) {
                     throw new RuntimeException("Var select MSE stats output file not exist.");
                 }
@@ -1122,7 +1128,8 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
     private Map<Integer, ColumnStatistics> readSEValuesToMap(String seOutputFiles, SourceType source)
             throws IOException {
         // here only works for 1 reducer
-        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source).globStatus(new Path(seOutputFiles));
+        Path filePath = new Path(seOutputFiles);
+        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source, filePath).globStatus(filePath);
         if(globStatus == null || globStatus.length == 0) {
             throw new RuntimeException("Var select MSE stats output file not exist.");
         }

@@ -431,9 +431,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         Map<String, String> confMap = new HashMap<String, String>();
 
         // max min score folder
-        String maxMinScoreFolder = ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(new Path(
-                "tmp" + File.separator + "maxmin_score_" + System.currentTimeMillis() + "_" + RANDOM.nextLong()))
-                .toString();
+        Path path = new Path("tmp" + File.separator
+                + "maxmin_score_" + System.currentTimeMillis() + "_" + RANDOM.nextLong());
+        String maxMinScoreFolder = ShifuFileUtils.getFileSystemBySourceType(sourceType, path)
+                .makeQualified(path).toString();
         confMap.put(Constants.SHIFU_EVAL_MAXMIN_SCORE_OUTPUT, maxMinScoreFolder);
         if(modelConfig.isClassification() ||
                 (isNoSort() && (EvalStep.SCORE.equals(this.evalStep) || EvalStep.AUDIT.equals(this.evalStep)))) {
@@ -1058,9 +1059,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         String pigScript = "scripts/EvalScoreMetaSort.pig";
         Map<String, String> confMap = new HashMap<String, String>();
         // max min score folder
-        String maxMinScoreFolder = ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(new Path(
-                "tmp" + File.separator + "maxmin_score_" + System.currentTimeMillis() + "_" + RANDOM.nextLong()))
-                .toString();
+        Path path = new Path("tmp" + File.separator
+                + "maxmin_score_" + System.currentTimeMillis() + "_" + RANDOM.nextLong());
+        String maxMinScoreFolder = ShifuFileUtils.getFileSystemBySourceType(sourceType, path)
+                .makeQualified(path).toString();
         confMap.put(Constants.SHIFU_EVAL_MAXMIN_SCORE_OUTPUT, maxMinScoreFolder);
         confMap.put(Constants.SHIFU_NAMESPACE_STRICT_MODE, Boolean.TRUE.toString());
         confMap.put(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Base64Utils.base64Encode(

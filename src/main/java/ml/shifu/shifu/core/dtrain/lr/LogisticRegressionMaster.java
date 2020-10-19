@@ -213,7 +213,7 @@ public class LogisticRegressionMaster
         try {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             LR existingModel = (LR) ModelSpecLoaderUtils.loadModel(modelConfig, modelPath,
-                    ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
+                    ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource(), modelPath));
             if(existingModel == null) {
                 params = initWeights();
                 LOG.info("Starting to train model from scratch.");

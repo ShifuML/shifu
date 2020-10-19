@@ -86,7 +86,7 @@ public class HdfsGlobalFile {
         CompressionCodecFactory compressionFactory = new CompressionCodecFactory(new Configuration());
         InputStream is = null;
 
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType, fileStatus.getPath());
         CompressionCodec codec = compressionFactory.getCodec(fileStatus.getPath());
         if (codec != null) {
             is = codec.createInputStream(fs.open(fileStatus.getPath()));

@@ -22,6 +22,7 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.fs.Path;
 import org.easymock.EasyMock;
 import org.powermock.api.easymock.PowerMock;
 import org.powermock.modules.testng.PowerMockObjectFactory;
@@ -379,9 +380,18 @@ public class ShifuCLITest {
         Date date = new Date(ts);
         System.out.println(date);
 
-        System.out.println("model0".replaceAll("\\..*$", ""));
-        System.out.println("model0.".replaceAll("\\..*$", ""));
-        System.out.println("model0.gbt".replaceAll("\\..*$", ""));
-        System.out.println("model0.nn.zip".replaceAll("\\..*$", ""));
+        Assert.assertEquals("model0".replaceAll("\\..*$", ""), "model0");
+        Assert.assertEquals("model0.".replaceAll("\\..*$", ""), "model0");
+        Assert.assertEquals("model0.gbt".replaceAll("\\..*$", ""), "model0");
+        Assert.assertEquals("model0.nn.zip".replaceAll("\\..*$", ""), "model0");
+    }
+
+    @Test
+    public void testPath() {
+        Path filePath = new Path("tmp/354240.log");
+        String schema = filePath.toUri().getScheme();
+        String host = filePath.toUri().getHost();
+        System.out.println("Schema is " + schema);
+        System.out.println("Host is " + host);
     }
 }

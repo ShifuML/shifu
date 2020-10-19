@@ -359,7 +359,7 @@ public class NNMaster extends AbstractMasterComputable<NNParams, NNParams> {
         try {
             Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             BasicML basicML = ModelSpecLoaderUtils.loadModel(modelConfig, modelPath,
-                    ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
+                    ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource(), modelPath));
 
             params = initWeights();
 
