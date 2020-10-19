@@ -24,6 +24,8 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.HDFSUtils;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.pig.EvalFunc;
 import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
@@ -67,6 +69,12 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
      *             throw exceptions when loading configuration
      */
     public AbstractTrainerUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
+        // inject fs.defaultFS from UDFContext.getUDFContext().getJobConf()
+        if (UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            HDFSUtils.getConf().set(FileSystem.FS_DEFAULT_NAME_KEY,
+                    UDFContext.getUDFContext().getJobConf().get(FileSystem.FS_DEFAULT_NAME_KEY));
+        }
+
         SourceType sourceType = SourceType.valueOf(source);
 
         if(pathModelConfig != null) {
