@@ -347,7 +347,7 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
         if(CommonUtils.isTensorFlowModel(modelConfig.getAlgorithm())) {
             candidateModelScore = this.model.compute(inputsMLData).getData(0);
         } else {
-            candidateModelScore = cacheNetwork.compute(inputsMLData, true, -1, null).getData()[0];
+            candidateModelScore = cacheNetwork.compute(inputsMLData, true, -1).getData()[0];
         }
 
         ColumnScore actualScore = new ColumnScore();
@@ -359,8 +359,7 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
         for(ColumnConfig columnConfig : columnConfigList) {
             this.inputsMLData.setData(this.inputs);
             double currentModelScore = cacheNetwork.compute(inputsMLData, false,
-                    this.columnNormDataPosMapping.get(columnConfig.getColumnNum()),
-                    this.columnMissingInputValues.get(columnConfig.getColumnNum())).getData()[0];
+                    this.columnNormDataPosMapping.get(columnConfig.getColumnNum())).getData()[0];
             ColumnScore columnScore = new ColumnScore();
             columnScore.setColumnTag((int) this.outputs[0]);
             columnScore.setWeight(weight);

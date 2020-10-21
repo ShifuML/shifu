@@ -71,7 +71,9 @@ public class ColumnProjector extends AbstractEvalUDF<Tuple> {
 
         NSColumn target = new NSColumn(modelConfig.getTargetColumnName(evalConfig, modelConfig.getTargetColumnName()));
         NSColumn scoreMeta = new NSColumn(this.scoreMetaColumn);
-        NSColumn weight = new NSColumn("shifu::weight");
+        NSColumn weight = new NSColumn("shifu::"
+                + (StringUtils.isBlank(evalConfig.getDataSet().getWeightColumnName()) ? "weight"
+                    : evalConfig.getDataSet().getWeightColumnName()));
 
         for(int i = 0; i < this.headers.length; i++) {
             NSColumn nsColumn = new NSColumn(this.headers[i]);
@@ -210,9 +212,11 @@ public class ColumnProjector extends AbstractEvalUDF<Tuple> {
     public Schema outputSchema(Schema input) {
         try {
             Schema tupleSchema = new Schema();
-            tupleSchema.add(new FieldSchema("target", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema(modelConfig.getTargetColumnName(evalConfig, "target"),
+                    DataType.CHARARRAY));
             tupleSchema.add(new FieldSchema(scoreMetaColumn, DataType.DOUBLE));
-            tupleSchema.add(new FieldSchema("weight", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema(StringUtils.isBlank(evalConfig.getDataSet().getWeightColumnName())
+                    ? "weight" : evalConfig.getDataSet().getWeightColumnName(), DataType.CHARARRAY));
 
             return new Schema(new Schema.FieldSchema("score", tupleSchema, DataType.TUPLE));
         } catch (IOException e) {

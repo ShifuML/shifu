@@ -19,8 +19,6 @@ import org.encog.ml.data.MLData;
 import org.encog.ml.data.basic.BasicMLData;
 import org.encog.neural.NeuralNetworkError;
 
-import java.util.List;
-
 /**
  * {@link CacheBasicFloatNetwork} is to cache first layer of sum and then in sensitivity analysis to use sum minues
  * current remove item. Details, please see {@link CacheFlatNetwork}.
@@ -52,12 +50,10 @@ public class CacheBasicFloatNetwork extends BasicFloatNetwork {
      *            if it is to cache first layer output or to use first layer output cache.
      * @param resetInputIndex
      *            if cacheInputOutput is false, resetInputIndex is which item should be removed.
-     * @param missingVals
-     *            missing value for reset
      */
-    public void compute(double[] input, double[] output, boolean cacheInputOutput, int resetInputIndex, List<Double> missingVals) {
+    public void compute(double[] input, double[] output, boolean cacheInputOutput, int resetInputIndex) {
         CacheFlatNetwork flat = (CacheFlatNetwork) getFlat();
-        flat.compute(input, output, cacheInputOutput, resetInputIndex, missingVals);
+        flat.compute(input, output, cacheInputOutput, resetInputIndex);
     }
 
     /**
@@ -71,14 +67,12 @@ public class CacheBasicFloatNetwork extends BasicFloatNetwork {
      *            if it is to cache first layer output or to use first layer output cache.
      * @param resetInputIndex
      *            if cacheInputOutput is false, resetInputIndex is which item should be removed.
-     * @param missingVals
-     *            missing value for reset
      * @return output value as score.
      */
-    public final MLData compute(final MLData input, boolean cacheInputOutput, int resetInputIndex, List<Double> missingVals) {
+    public final MLData compute(final MLData input, boolean cacheInputOutput, int resetInputIndex) {
         try {
             final MLData result = new BasicMLData(this.network.getStructure().getFlat().getOutputCount());
-            compute(input.getData(), result.getData(), cacheInputOutput, resetInputIndex, missingVals);
+            compute(input.getData(), result.getData(), cacheInputOutput, resetInputIndex);
             return result;
         } catch (final ArrayIndexOutOfBoundsException ex) {
             throw new NeuralNetworkError(

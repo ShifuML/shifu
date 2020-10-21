@@ -358,7 +358,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         if(CommonUtils.isTensorFlowModel(modelConfig.getAlgorithm())) {
             candidateModelScore = this.model.compute(inputsMLData).getData(0);
         } else {
-            candidateModelScore = cacheNetwork.compute(inputsMLData, true, -1, null).getData()[0];
+            candidateModelScore = cacheNetwork.compute(inputsMLData, true, -1).getData()[0];
         }
 
         for (ColumnConfig columnConfig: columnConfigList) {
@@ -373,8 +373,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
                     }
                     currentModelScore = this.model.compute(new BasicMLData(newInputs)).getData(0);
                 } else {
-                    currentModelScore = cacheNetwork.compute(inputsMLData, false, startOps,
-                            missingVals).getData()[0];
+                    currentModelScore = cacheNetwork.compute(inputsMLData, false, startOps).getData()[0];
                 }
 
                 double diff = 0d;
