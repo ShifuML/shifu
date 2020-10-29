@@ -480,7 +480,10 @@ public final class CommonUtils {
             // NPE protection
             return columnName;
         }
-        return columnName.replaceAll("\\.", "_").replaceAll(" ", "_").replaceAll("/", "_").replaceAll("-", "_");
+        return columnName.replaceAll("\\.", "_")
+                .replaceAll(" ", "_")
+                .replaceAll("/", "_")
+                .replaceAll("-", "_");
     }
 
     /**
