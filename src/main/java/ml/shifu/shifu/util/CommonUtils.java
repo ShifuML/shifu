@@ -100,10 +100,10 @@ public final class CommonUtils {
      *             If parameter {@code modelConfig} is null
      */
     public static boolean copyConfFromLocalToHDFS(ModelConfig modelConfig, PathFinder pathFinder) throws IOException {
-        FileSystem hdfs = HDFSUtils.getFS();
         FileSystem localFs = HDFSUtils.getLocalFS();
 
         Path hdfsMSPath = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
+        FileSystem hdfs = HDFSUtils.getFS(hdfsMSPath);
         Path pathModelSet = hdfsMSPath;
         // don't check whether pathModelSet is exists, should be remove by user.
         hdfs.mkdirs(pathModelSet);
@@ -216,12 +216,12 @@ public final class CommonUtils {
     public static void copyEvalDataFromLocalToHDFS(ModelConfig modelConfig, String evalName) throws IOException {
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(evalName);
         if(evalConfig != null) {
-            FileSystem hdfs = HDFSUtils.getFS();
             FileSystem localFs = HDFSUtils.getLocalFS();
             PathFinder pathFinder = new PathFinder(modelConfig);
 
             Path evalDir = new Path(pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL));
             Path dst = new Path(pathFinder.getEvalSetPath(evalConfig, SourceType.HDFS));
+            FileSystem hdfs = HDFSUtils.getFS(dst);
             if(localFs.exists(evalDir) // local evaluation folder exists
                     && localFs.getFileStatus(evalDir).isDir() // is directory
                     && !hdfs.exists(dst)) {
@@ -632,7 +632,7 @@ public final class CommonUtils {
             throws IOException {
         if(StringUtils.isEmpty(pathHeader) || StringUtils.isEmpty(delimiter) || sourceType == null) {
             throw new IllegalArgumentException(
-                    String.format("Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", pathHeader,
+                    String.format("Null or empty parameters srcDataPath:%s, delimiter:%s, sourceType:%s", pathHeader,
                             delimiter, sourceType));
         }
         BufferedReader reader = null;
@@ -1518,8 +1518,9 @@ public final class CommonUtils {
         }
 
         String firstValidFile = null;
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source);
-        FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HiddenPathFilter.getHiddenPathFilter());
+        Path filePath = new Path(dataSetRawPath);
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source, filePath);
+        FileStatus[] globStatus = fs.globStatus(filePath, HiddenPathFilter.getHiddenPathFilter());
         if(globStatus == null || globStatus.length == 0) {
             throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
         } else {
@@ -1629,8 +1630,9 @@ public final class CommonUtils {
         }
 
         String firstValidFile = null;
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source);
-        FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HiddenPathFilter.getHiddenPathFilter());
+        Path filePath = new Path(dataSetRawPath);
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source, filePath);
+        FileStatus[] globStatus = fs.globStatus(filePath, HiddenPathFilter.getHiddenPathFilter());
         if(globStatus == null || globStatus.length == 0) {
             throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
         } else {

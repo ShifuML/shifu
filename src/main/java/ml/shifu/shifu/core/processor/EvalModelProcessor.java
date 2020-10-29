@@ -69,6 +69,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     public static final String NOSORT = "NOSORT";
     public static final String EXPECT_AUDIT_CNT = "EXPECT_AUDIT_CNT";
+    public static final String REF_MODEL = "REF_MODEL";
 
     private String evalName = null;
 
@@ -129,6 +130,13 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         LOG.info("Step Start: eval");
         long start = System.currentTimeMillis();
         try {
+            if (needsToCopyRefModels(evalStep)) {
+                if (!copyRefModels() ) {
+                    LOG.error("Fail to copy refer models.");
+                    return -1;
+                }
+            }
+
             setUp(ModelStep.EVAL);
             syncDataToHdfs(modelConfig.getDataSet().getSource());
 
@@ -423,9 +431,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         Map<String, String> confMap = new HashMap<String, String>();
 
         // max min score folder
-        String maxMinScoreFolder = ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(new Path(
-                "tmp" + File.separator + "maxmin_score_" + System.currentTimeMillis() + "_" + RANDOM.nextLong()))
-                .toString();
+        Path path = new Path("tmp" + File.separator
+                + "maxmin_score_" + System.currentTimeMillis() + "_" + RANDOM.nextLong());
+        String maxMinScoreFolder = ShifuFileUtils.getFileSystemBySourceType(sourceType, path)
+                .makeQualified(path).toString();
         confMap.put(Constants.SHIFU_EVAL_MAXMIN_SCORE_OUTPUT, maxMinScoreFolder);
         if(modelConfig.isClassification() ||
                 (isNoSort() && (EvalStep.SCORE.equals(this.evalStep) || EvalStep.AUDIT.equals(this.evalStep)))) {
@@ -920,6 +929,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         ScoreStatus ss = runDistScore(evalConfig, mtlIndex);
 
         List<String> scoreMetaColumns = evalConfig.getScoreMetaColumns(modelConfig);
+        addReferModelScoreColumns(scoreMetaColumns);
         if(scoreMetaColumns == null || scoreMetaColumns.isEmpty() || !modelConfig.isRegression()) {
             // if no any champion score column set, go to previous evaluation with only challendge model
             runConfusionMatrix(evalConfig, ss, isGBTNotConvertToProb(evalConfig), false, -1);
@@ -1039,19 +1049,24 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         Map<String, String> paramsMap = new HashMap<String, String>();
 
         paramsMap.put(Constants.SOURCE_TYPE, sourceType.toString());
-        paramsMap.put("pathEvalRawData", evalConfig.getDataSet().getDataPath());
+        paramsMap.put("pathEvalScoreData", pathFinder.getEvalScorePath(evalConfig));
         paramsMap.put("pathSortScoreData", pathFinder.getEvalMetaScorePath(evalConfig, metaScore));
         paramsMap.put("eval_set_name", evalConfig.getName());
-        paramsMap.put("delimiter", evalConfig.getDataSet().getDataDelimiter());
+        paramsMap.put("delimiter",
+                Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER));
         paramsMap.put("column_name", metaScore);
 
         String pigScript = "scripts/EvalScoreMetaSort.pig";
         Map<String, String> confMap = new HashMap<String, String>();
         // max min score folder
-        String maxMinScoreFolder = ShifuFileUtils.getFileSystemBySourceType(sourceType).makeQualified(new Path(
-                "tmp" + File.separator + "maxmin_score_" + System.currentTimeMillis() + "_" + RANDOM.nextLong()))
-                .toString();
+        Path path = new Path("tmp" + File.separator
+                + "maxmin_score_" + System.currentTimeMillis() + "_" + RANDOM.nextLong());
+        String maxMinScoreFolder = ShifuFileUtils.getFileSystemBySourceType(sourceType, path)
+                .makeQualified(path).toString();
         confMap.put(Constants.SHIFU_EVAL_MAXMIN_SCORE_OUTPUT, maxMinScoreFolder);
+        confMap.put(Constants.SHIFU_NAMESPACE_STRICT_MODE, Boolean.TRUE.toString());
+        confMap.put(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Base64Utils.base64Encode(
+                Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER)));
 
         try {
             PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath(pigScript), paramsMap,
@@ -1364,6 +1379,101 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     }
 
     /**
+     * Add ref models as score column for performance comparision
+     * @param scoreMetaColumns - the score columns to add into
+     */
+    private void addReferModelScoreColumns(List<String> scoreMetaColumns) {
+        List<String> referModels = getRefModels();
+        if (CollectionUtils.isNotEmpty(referModels)) {
+            referModels.stream().forEach(referModel -> {
+                File referModelFile = new File(referModel);
+                scoreMetaColumns.add(genRefModelScoreName(referModelFile.getName()) + "::mean");
+            });
+        }
+    }
+
+    /**
+     * Copy refer models as sub-models
+     * @return
+     *      true - if copy refer models successfully
+     *      false - if some refer models doesn't exist
+     * @throws IOException
+     */
+    private boolean copyRefModels() throws IOException {
+        List<String> refModels = getRefModels();
+        for (String refModel : refModels) {
+            File refModelFile = new File(refModel);
+            if (!refModelFile.exists()) {
+                return false;
+            }
+
+            String refModelName = refModelFile.getName();
+            File subModel = new File(Constants.MODELS, genRefModelScoreName(refModelName));
+            subModel.mkdirs(); // create sub model in current project
+
+            FileUtils.copyFile(new File(refModelFile, Constants.MODEL_CONFIG_JSON_FILE_NAME),
+                    new File(subModel, Constants.MODEL_CONFIG_JSON_FILE_NAME));
+            FileUtils.copyFile(new File(refModelFile, Constants.COLUMN_CONFIG_JSON_FILE_NAME),
+                    new File(subModel, Constants.COLUMN_CONFIG_JSON_FILE_NAME));
+            subModel.deleteOnExit();
+
+            File modelsDir = new File(refModelFile, Constants.MODELS);
+            if (modelsDir.exists()) {
+                Arrays.stream(modelsDir.listFiles()).forEach(modelFile -> {
+                    try {
+                        FileUtils.copyFile(modelFile, new File(subModel, modelFile.getName()));
+                    } catch (IOException e) {
+                        LOG.error("Fail to copy file {}", modelFile.getAbsolutePath());
+                    }
+                });
+            }
+
+            Runtime.getRuntime().addShutdownHook(new Thread() {
+                @Override
+                public void run() {
+                    try {
+                        FileUtils.deleteDirectory(subModel);
+                    } catch (IOException e) {
+                        LOG.error("Fail to remove file {} after running.", subModel.getAbsolutePath());
+                    }
+                }
+            });
+        }
+        return true;
+    }
+
+    /**
+     * Check whether need to add refer models or not
+     * @param evalStep - current step of Eval
+     * @return
+     *      true - if needs to copy refer models as sub models, else false
+     */
+    private boolean needsToCopyRefModels(EvalStep evalStep) {
+        return CollectionUtils.isNotEmpty(getRefModels())
+                && ( EvalStep.RUN.equals(evalStep)
+                    || EvalStep.SCORE.equals(evalStep)
+                    || EvalStep.AUDIT.equals(evalStep)
+                    || EvalStep.NORM.equals(evalStep));
+    }
+
+    /**
+     * Add "ref_" as prefix for ref model name to avoid some models start with numbers
+     * @param modelName - ref model name
+     * @return "ref_" + modelName
+     */
+    private String genRefModelScoreName(String modelName) {
+        return "ref_" + StringUtils.trimToEmpty(modelName);
+    }
+
+    /**
+     * Get the reference models to run eval step
+      * @return reference models list
+     */
+    private List<String> getRefModels() {
+        return getStringList(this.params, EvalModelProcessor.REF_MODEL, ",");
+    }
+
+    /**
      * Check "-strict" is specified or not. This is used when normalize the evaluation data set.
      * The Strict model - means output the data just as input, and append weight column only.
      * 
@@ -1400,5 +1510,5 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             this.evalRecords = evalRecords;
         }
     }
-
+    
 }

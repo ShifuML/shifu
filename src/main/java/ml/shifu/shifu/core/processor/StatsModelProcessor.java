@@ -341,10 +341,12 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         SourceType source = this.modelConfig.getDataSet().getSource();
         final Configuration conf = new Configuration();
 
-        String modelConfigPath = ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString();
-        String columnConfigPath = ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString();
+        Path mcPath = new Path(super.getPathFinder().getModelConfigPath(source));
+        String modelConfigPath = ShifuFileUtils.getFileSystemBySourceType(source, mcPath)
+                .makeQualified(mcPath).toString();
+        Path ccPath = new Path(super.getPathFinder().getColumnConfigPath(source));
+        String columnConfigPath = ShifuFileUtils.getFileSystemBySourceType(source, ccPath)
+                .makeQualified(ccPath).toString();
 
         // add jars and files to hadoop mapper and reducer
         new GenericOptionsParser(conf,
@@ -354,10 +356,13 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.setInt(GuaguaMapReduceConstants.MAPREDUCE_JOB_MAX_SPLIT_LOCATIONS, 5000);
-        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
-        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
+
+        Path modelConfPath = new Path(super.getPathFinder().getModelConfigPath(source));
+        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source, modelConfPath)
+                .makeQualified(modelConfPath).toString());
+        Path columnConfPath = new Path(super.getPathFinder().getColumnConfigPath(source));
+        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source, columnConfPath)
+                .makeQualified(columnConfPath).toString());
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
 
         // too many data needed to be transfered to reducer, set default completed maps to a smaller one 0.7 to start
@@ -419,8 +424,9 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         job.setMapOutputValueClass(CorrelationWritable.class);
 
         job.setInputFormatClass(CombineInputFormat.class);
-        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.modelConfig.getDataSetRawPath())));
+        Path filePath = new Path(super.modelConfig.getDataSetRawPath());
+        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source, filePath)
+                .makeQualified(filePath));
 
         job.setReducerClass(CorrelationReducer.class);
 
@@ -628,8 +634,9 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
     private SortedMap<Integer, CorrelationWritable> dumpCorrInfo(SourceType source, String outputFilePattern)
             throws IOException, UnsupportedEncodingException {
         SortedMap<Integer, CorrelationWritable> corrMap = new TreeMap<Integer, CorrelationWritable>();
-        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source)
-                .globStatus(new Path(outputFilePattern));
+        Path filePath = new Path(outputFilePattern);
+        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source, filePath)
+                .globStatus(filePath);
         if(globStatus == null || globStatus.length == 0) {
             throw new RuntimeException("Correlation computing output file not exist.");
         }

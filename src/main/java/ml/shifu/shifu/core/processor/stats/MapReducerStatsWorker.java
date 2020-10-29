@@ -300,8 +300,9 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(DateStatInfoWritable.class);
         job.setInputFormatClass(CombineInputFormat.class);
-        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.modelConfig.getDataSetRawPath())));
+        Path filePath = new Path(super.modelConfig.getDataSetRawPath());
+        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source, filePath)
+                .makeQualified(filePath));
 
         job.setReducerClass(DateStatComputeReducer.class);
 
@@ -433,8 +434,9 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(BinningInfoWritable.class);
         job.setInputFormatClass(CombineInputFormat.class);
-        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.modelConfig.getDataSetRawPath())));
+        Path rawDataPath = new Path(super.modelConfig.getDataSetRawPath());
+        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source, rawDataPath)
+                .makeQualified(rawDataPath));
 
         job.setReducerClass(UpdateBinningInfoReducer.class);
 
@@ -509,10 +511,12 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_MAP_SPECULATIVE, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPREDUCE_REDUCE_SPECULATIVE, true);
-        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(this.pathFinder.getModelConfigPath(source))).toString());
-        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(this.pathFinder.getColumnConfigPath(source))).toString());
+        Path modelConfPath = new Path(this.pathFinder.getModelConfigPath(source));
+        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source, modelConfPath)
+                .makeQualified(modelConfPath).toString());
+        Path columnConfPath = new Path(this.pathFinder.getColumnConfigPath(source));
+        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source, columnConfPath)
+                .makeQualified(columnConfPath).toString());
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
 

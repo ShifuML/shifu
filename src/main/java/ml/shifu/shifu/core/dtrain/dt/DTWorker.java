@@ -543,7 +543,7 @@ public class DTWorker extends
             TreeModel existingModel = null;
             try {
                 existingModel = (TreeModel) ModelSpecLoaderUtils.loadModel(modelConfig, modelPath,
-                        ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
+                        ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource(), modelPath));
             } catch (IOException e) {
                 LOG.error("Error in get existing model, will ignore and start from scratch", e);
             }
@@ -1503,7 +1503,7 @@ public class DTWorker extends
                     this.modelConfig.getDataSet().getSource())) {
                 return null;
             }
-            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource());
+            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource(), this.checkpointOutput);
             stream = fs.open(this.checkpointOutput);
             int treeSize = stream.readInt();
             trees = new ArrayList<TreeNode>(treeSize);

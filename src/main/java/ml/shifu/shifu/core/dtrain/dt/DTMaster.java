@@ -336,6 +336,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             if(maxGainInfo == null) {
                 // null gain info, set to leaf and continue next stats
                 doneNode.setLeaf(true);
+                doneNode.setPredict(new Predict(0.0d)); // add zero predict, or it will cause NullPointException,
+                                                        // if user enable MinInfoGain or MinInstancesPerNode
                 continue;
             }
             populateGainInfoToNode(treeId, doneNode, maxGainInfo);
@@ -1095,7 +1097,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     try {
                         Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
                         existingModel = (TreeModel) ModelSpecLoaderUtils.loadModel(modelConfig, modelPath,
-                                ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
+                                ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource(), modelPath));
                         if(existingModel == null) {
                             // null means no existing model file or model file is in wrong format
                             this.trees = new CopyOnWriteArrayList<TreeNode>();
@@ -1128,7 +1130,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
     private void recoverMasterStatus(SourceType sourceType) {
         FSDataInputStream stream = null;
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType, this.checkpointOutput);
         try {
             stream = fs.open(this.checkpointOutput);
             int treeSize = stream.readInt();

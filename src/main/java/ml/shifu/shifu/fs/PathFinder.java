@@ -778,7 +778,7 @@ public class PathFinder {
             scoreMetaPath = new Path(scoreMetaPath, Constants.EVAL_META_SCORE).toString();
         }
 
-        return new Path(scoreMetaPath, metaColumn).toString();
+        return new Path(scoreMetaPath, formatMetaScore(metaColumn)).toString();
     }
 
     /**
@@ -848,9 +848,9 @@ public class PathFinder {
         if(StringUtils.isBlank(evalPerformancePath)) {
             String evalMetaPerfPath = getEvalFilePath(evalConfig.getName(), Constants.EVAL_META_SCORE,
                     evalConfig.getDataSet().getSource());
-            return new Path(evalMetaPerfPath, metaColumn + Constants.EVAL_PERFORMANCE).toString();
+            return new Path(evalMetaPerfPath, formatMetaScore(metaColumn) + Constants.EVAL_PERFORMANCE).toString();
         } else {
-            return new Path(evalPerformancePath, metaColumn + Constants.EVAL_PERFORMANCE).toString();
+            return new Path(evalPerformancePath, formatMetaScore(metaColumn) + Constants.EVAL_PERFORMANCE).toString();
         }
     }
 
@@ -904,7 +904,7 @@ public class PathFinder {
      * @return path of specified file
      */
     public String getEvalFilePath(String evalName, String specifiedFileName, SourceType sourceType) {
-        return (new Path(this.getEvalSetPath(evalName, sourceType), specifiedFileName)).toString();
+        return (new Path(this.getEvalSetPath(evalName, sourceType), formatMetaScore(specifiedFileName))).toString();
     }
 
     public String getEvalLocalMultiMatrixFile(String evalName) {
@@ -961,8 +961,9 @@ public class PathFinder {
             case LOCAL:
                 return new Path(getModelSetLocalPath(), path).toString();
             case HDFS:
-                return ShifuFileUtils.getFileSystemBySourceType(sourceType)
-                        .makeQualified(new Path(getModelSetHdfsPath(), path)).toString();
+                Path filePath = new Path(getModelSetHdfsPath(), path);
+                return ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath)
+                        .makeQualified(filePath).toString();
             default:
                 // Others, maybe be we will support S3 in future
                 throw new NotImplementedException("Source type - " + sourceType.name() + " is not supported yet!");
@@ -1164,5 +1165,9 @@ public class PathFinder {
                             Constants.EVAL_DATA_ENCODE_PREFIX + StringUtils.capitalize(evalConfig.getName())),
                     SourceType.HDFS);
         }
+    }
+
+    private String formatMetaScore(String metaColumn) {
+        return metaColumn.replaceAll("::", "_");
     }
 }
