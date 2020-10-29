@@ -15,24 +15,28 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.StringUtils;
-import ml.shifu.shifu.core.dtrain.nn.NNColumnStats;
-import ml.shifu.shifu.util.CommonUtils;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
-
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.zip.GZIPOutputStream;
+
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.StringUtils;
+import ml.shifu.shifu.core.dtrain.layer.SerializationType;
+import ml.shifu.shifu.core.dtrain.nn.NNColumnStats;
+import ml.shifu.shifu.util.CommonUtils;
 
 /**
  * Binary IndependentWDLModel serializer.
@@ -40,27 +44,6 @@ import java.util.zip.GZIPOutputStream;
  * @author Wu Devin (haifwu@paypal.com)
  */
 public class BinaryWDLSerializer {
-    public static void save(ModelConfig modelConfig, WideAndDeep wideAndDeep, FileSystem fs, Path output)
-            throws IOException {
-        DataOutputStream dos = null;
-        try {
-            dos = new DataOutputStream(new GZIPOutputStream(fs.create(output)));
-            // version
-            dos.writeInt(CommonConstants.WDL_FORMAT_VERSION);
-            dos.writeUTF(modelConfig.getAlgorithm());
-            // Reserved two float field, one double field and one string field
-            dos.writeFloat(0.0f);
-            dos.writeFloat(0.0f);
-            dos.writeDouble(0.0d);
-            dos.writeUTF("Reserved field");
-
-            PersistWideAndDeep.save(wideAndDeep, dos);
-            dos.writeUTF(modelConfig.getNormalizeType().name());
-            dos.writeDouble(modelConfig.getNormalizeStdDevCutOff());
-        } finally {
-            IOUtils.closeStream(dos);
-        }
-    }
 
     public static void save(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, WideAndDeep wideAndDeep,
             FileSystem fs, Path output) throws IOException {
@@ -70,9 +53,9 @@ public class BinaryWDLSerializer {
 
             // version
             fos.writeInt(CommonConstants.WDL_FORMAT_VERSION);
-            // Reserved two float field, one double field and one string field
-            fos.writeFloat(0.0f);
-            fos.writeFloat(0.0f);
+            // Reserved two double field, one double field and one string field
+            fos.writeDouble(0.0f);
+            fos.writeDouble(0.0f);
             fos.writeDouble(0.0d);
             fos.writeUTF("Reserved field");
 
@@ -85,7 +68,7 @@ public class BinaryWDLSerializer {
 
             // write column stats to output
             List<NNColumnStats> csList = new ArrayList<>();
-            for(ColumnConfig cc : columnConfigList) {
+            for(ColumnConfig cc: columnConfigList) {
                 if(columnIndexNameMapping.containsKey(cc.getColumnNum())) {
                     NNColumnStats cs = new NNColumnStats();
                     cs.setCutoff(modelConfig.getNormalizeStdDevCutOff());
@@ -113,12 +96,19 @@ public class BinaryWDLSerializer {
             }
 
             fos.writeInt(csList.size());
-            for(NNColumnStats cs : csList) {
+            for(NNColumnStats cs: csList) {
                 cs.write(fos);
             }
 
+            Map<Integer, Integer> columnMapping = DTrainUtils.getColumnMapping(columnConfigList);
+            fos.writeInt(columnMapping.size());
+            for(Entry<Integer, Integer> entry: columnMapping.entrySet()) {
+                fos.writeInt(entry.getKey());
+                fos.writeInt(entry.getValue());
+            }
+
             // persist WideAndDeep Model
-            wideAndDeep.write(fos);
+            wideAndDeep.write(fos, SerializationType.MODEL_SPEC);
         } finally {
             IOUtils.closeStream(fos);
         }
@@ -126,7 +116,7 @@ public class BinaryWDLSerializer {
 
     private static Map<Integer, String> getIndexNameMapping(List<ColumnConfig> columnConfigList) {
         Map<Integer, String> columnIndexNameMapping = new HashMap<>(columnConfigList.size());
-        for(ColumnConfig columnConfig : columnConfigList) {
+        for(ColumnConfig columnConfig: columnConfigList) {
             if(columnConfig.isFinalSelect()) {
                 columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
             }
@@ -134,7 +124,7 @@ public class BinaryWDLSerializer {
 
         if(columnIndexNameMapping.size() == 0) {
             boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
-            for(ColumnConfig columnConfig : columnConfigList) {
+            for(ColumnConfig columnConfig: columnConfigList) {
                 if(CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
                     columnIndexNameMapping.put(columnConfig.getColumnNum(), columnConfig.getColumnName());
                 }

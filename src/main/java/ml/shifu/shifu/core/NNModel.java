@@ -18,12 +18,13 @@ package ml.shifu.shifu.core;
 import java.io.IOException;
 import java.io.InputStream;
 
-import ml.shifu.shifu.core.dtrain.nn.IndependentNNModel;
-
 import org.encog.ml.BasicML;
 import org.encog.ml.MLRegression;
 import org.encog.ml.data.MLData;
 import org.encog.ml.data.basic.BasicMLData;
+
+import ml.shifu.shifu.core.dtrain.nn.IndependentNNModel;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 
 /**
  * NN model wrappered to Encog interface for evaluation.
@@ -75,6 +76,10 @@ public class NNModel extends BasicML implements MLRegression {
 
     public static NNModel loadFromStream(InputStream input) throws IOException {
         return loadFromStream(input, true);
+    }
+
+    public static NNModel loadFromStream(InputStream input, PrecisionType pt) throws IOException {
+        return new NNModel(IndependentNNModel.loadFromStream(input, true, pt));
     }
 
     public static NNModel loadFromStream(InputStream input, boolean isRemoveNameSpace) throws IOException {

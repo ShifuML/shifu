@@ -21,12 +21,14 @@ public class ColumnConfigUpdater {
      *            - ColumnConfig list to update
      * @param step
      *            - which step is running
+     * @param mtlIndex
+     *            the multi task learning index
      * @throws IOException
      *             - error occur, when create updater
      */
     public static void updateColumnConfigFlags(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-            ModelInspector.ModelStep step) throws IOException {
-        updateColumnConfigFlags(modelConfig, columnConfigList, step, false);
+            ModelInspector.ModelStep step, int mtlIndex) throws IOException {
+        updateColumnConfigFlags(modelConfig, columnConfigList, step, false, mtlIndex);
     }
 
     /**
@@ -40,16 +42,18 @@ public class ColumnConfigUpdater {
      *            - which step is running
      * @param directVoidCall
      *            - if strictly to call VoidUpdater
+     * @param mtlIndex
+     *            the multi task learning index
      * @throws IOException
      *             - error occur, when create updater
      */
     public static void updateColumnConfigFlags(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-            ModelInspector.ModelStep step, boolean directVoidCall) throws IOException {
+            ModelInspector.ModelStep step, boolean directVoidCall, int mtlIndex) throws IOException {
         BasicUpdater updater = null;
         if(directVoidCall) {
-            updater = new VoidUpdater(modelConfig);
+            updater = new VoidUpdater(modelConfig, mtlIndex);
         } else {
-            updater = BasicUpdater.getUpdater(modelConfig, step);
+            updater = BasicUpdater.getUpdater(modelConfig, step, mtlIndex);
         }
 
         for(ColumnConfig config: columnConfigList) {

@@ -45,7 +45,7 @@ public class AutoTypeDistinctCountReducer extends
             count += cfiw.getCount();
             invalidCount += cfiw.getInvalidCount();
             validNumCount += cfiw.getValidNumCount();
-            fis.addAll(cfiw.getFrequetItems());
+            fis.addAll(cfiw.getFrequentItems());
             if(hyperLogLogPlus == null) {
                 hyperLogLogPlus = HyperLogLogPlus.Builder.build(cfiw.getHyperBytes());
             } else {

@@ -93,23 +93,18 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
     @Override
     public List<Double> getDataBin() {
         List<Double> binBorders = new ArrayList<Double>();
-        if(maxVal < minVal) {
+        binBorders.add(Double.NEGATIVE_INFINITY);
+        if(maxVal < minVal || !this.isLegalDouble(this.minVal) || !this.isLegalDouble(this.maxVal)) {
             // no data, just return empty
             return binBorders;
         }
 
-        double delta = (maxVal - minVal) * 0.0005;
-        double startVal = minVal - delta;
-        double endVal = maxVal + delta;
-
-        double binInterval = (endVal - startVal) / super.expectedBinningNum;
-        double val = startVal;
-        for(int i = 0; i < super.expectedBinningNum; i++) {
-            binBorders.add(val);
-            val = val + binInterval;
+        double binInterval = (maxVal - minVal) / (super.expectedBinningNum - 1);
+        double startVal = minVal + binInterval / 2;
+        for(int i = 0; i < super.expectedBinningNum - 1; i++) {
+            binBorders.add(startVal);
+            startVal = startVal + binInterval;
         }
-
-        binBorders.add(endVal);
 
         return binBorders;
     }
@@ -121,6 +116,11 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
      *            double value to be processed
      */
     private void process(double dval) {
+        if ( !this.isLegalDouble(dval) ) {
+            // don't add infinite value
+            return;
+        }
+
         if(dval < this.minVal) {
             this.minVal = dval;
         }
@@ -128,6 +128,15 @@ public class EqualIntervalBinning extends AbstractBinning<Double> {
         if(dval > this.maxVal) {
             this.maxVal = dval;
         }
+    }
+
+    /**
+     * limit value between -1.0E100 and 1.0E100
+     * @param dval
+     * @return
+     */
+    private boolean isLegalDouble(double dval) {
+        return  Math.abs(dval) < 1.0E100;
     }
 
     /*

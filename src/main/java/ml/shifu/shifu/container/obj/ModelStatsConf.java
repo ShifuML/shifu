@@ -32,7 +32,7 @@ public class ModelStatsConf {
      */
     @JsonDeserialize(using = BinningMethodDeserializer.class)
     public static enum BinningMethod {
-        EqualNegtive, EqualInterval, EqualPositive, EqualTotal, WeightEqualNegative, WeightEqualInterval, WeightEqualPositive, WeightEqualTotal
+        EqualNegative, EqualInterval, EqualPositive, EqualTotal, WeightEqualNegative, WeightEqualInterval, WeightEqualPositive, WeightEqualTotal
     }
 
     /**
@@ -93,6 +93,16 @@ public class ModelStatsConf {
      * PSI feature enabled if not empty. In stats, PSI value will be computed.
      */
     private String psiColumnName = "";
+
+    private String dateStatsOutputFileName = "";
+
+    public String getDateStatsOutputFileName() {
+        return dateStatsOutputFileName;
+    }
+
+    public void setDateStatsOutputFileName(String dateStatsOutputFileName) {
+        this.dateStatsOutputFileName = dateStatsOutputFileName;
+    }
 
     public Integer getMaxNumBin() {
         return maxNumBin;

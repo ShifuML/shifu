@@ -43,6 +43,7 @@ import ml.shifu.shifu.container.obj.ModelStatsConf.BinningAlgorithm;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.CommonUtils;
@@ -93,6 +94,12 @@ public class ModelConfig {
      * Eval configurations listed to evaluated trained models.
      */
     private List<EvalConfig> evals = new ArrayList<EvalConfig>();
+
+    /**
+     * If MTL, check mtl index used for get real target and pos & neg tag
+     */
+    @JsonIgnore
+    private int mtlIndex = -1;
 
     public ModelBasicConf getBasic() {
         return basic;
@@ -190,9 +197,9 @@ public class ModelConfig {
         if(enableHadoop) {
             Path dst = new Path(File.separator + "user" + File.separator
                     + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement");
-            if ( !ShifuFileUtils.isFileExists(dst, SourceType.HDFS) ) {
-                HDFSUtils.getFS().mkdirs(dst);
-                HDFSUtils.getFS().copyFromLocalFile(new Path(exampleLocalDSPath), dst);
+            if(!ShifuFileUtils.isFileExists(dst, SourceType.HDFS)) {
+                HDFSUtils.getFS(dst).mkdirs(dst);
+                HDFSUtils.getFS(dst).copyFromLocalFile(new Path(exampleLocalDSPath), dst);
             }
             dataSet.setSource(SourceType.HDFS);
             dataSet.setDataPath(
@@ -294,11 +301,11 @@ public class ModelConfig {
         if(enableHadoop) {
             evalSet.setSource(SourceType.HDFS);
             Path dst = new Path(File.separator + "user" + File.separator
-                    + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement");
-            if ( !ShifuFileUtils.isFileExists(dst, SourceType.HDFS) ) {
-                HDFSUtils.getFS().copyFromLocalFile(new Path(exampleLocalESFolder), dst);
+                    + Environment.getProperty(Environment.SYSTEM_USER) + File.separator + "cancer-judgement"
+                    + File.separator + "EvalSet1");
+            if (!ShifuFileUtils.isFileExists(dst, SourceType.HDFS)) {
+                HDFSUtils.getFS(dst).copyFromLocalFile(new Path(exampleLocalESFolder), dst);
             }
-
             evalSet.setDataPath(
                     new File(File.separator + "user" + File.separator + Environment.getProperty(Environment.SYSTEM_USER)
                             + File.separator + "cancer-judgement" + File.separator + "EvalSet1").toString());
@@ -364,7 +371,41 @@ public class ModelConfig {
 
     @JsonIgnore
     public List<String> getPosTags() {
-        return dataSet.getPosTags();
+        if(this.isMultiTask()) {
+            String subTags = CommonUtils.split(dataSet.getPosTags().get(0),
+                    CommonConstants.MTL_DELIMITER)[this.mtlIndex];
+            return CommonUtils.splitAndReturnList(subTags, CommonConstants.MTL_SUBTAG_DELIMITER);
+        } else {
+            return dataSet.getPosTags();
+        }
+    }
+
+    @JsonIgnore
+    public List<String> getMTLPosTags(int mtlIndex) {
+        if(this.isMultiTask()) {
+            String subTags = CommonUtils.split(dataSet.getPosTags().get(0), CommonConstants.MTL_DELIMITER)[mtlIndex];
+            return CommonUtils.splitAndReturnList(subTags, CommonConstants.MTL_SUBTAG_DELIMITER);
+        } else {
+            return dataSet.getPosTags();
+        }
+    }
+
+    @JsonIgnore
+    public String getMTLFilterExpression(int mtlIndex) {
+        if(this.isMultiTask()) {
+            String[] filters = CommonUtils.split(dataSet.getFilterExpressions(), CommonConstants.MTL_DELIMITER);
+            if(filters.length > 0) {
+                if(filters.length != this.getMultiTaskTargetColumnNames().size()) {
+                    throw new IllegalArgumentException(
+                            "Size of multiple filter are not equals to size of mutiple target columns, please check ModelConfig#dataSet#targetColumnName and ModelConfig#dataSet#filterExpressions.");
+                }
+                return filters[mtlIndex];
+            } else {
+                return dataSet.getFilterExpressions();
+            }
+        } else {
+            return dataSet.getFilterExpressions();
+        }
     }
 
     @JsonIgnore
@@ -374,7 +415,7 @@ public class ModelConfig {
 
     @JsonIgnore
     public boolean isRegression() {
-        return (CollectionUtils.isNotEmpty(dataSet.getPosTags()) && CollectionUtils.isNotEmpty(dataSet.getNegTags()));
+        return CollectionUtils.isNotEmpty(dataSet.getPosTags()) && CollectionUtils.isNotEmpty(dataSet.getNegTags());
     }
 
     @JsonIgnore
@@ -383,13 +424,63 @@ public class ModelConfig {
                 || (CollectionUtils.isEmpty(dataSet.getPosTags()) && CollectionUtils.isNotEmpty(dataSet.getNegTags()));
     }
 
+    /**
+     * If multi-task learning or not.
+     * 
+     * @return true if MTL
+     */
+    @JsonIgnore
+    public boolean isMultiTask() {
+        return this.isMultiTask(dataSet.getTargetColumnName());
+    }
+
+    /**
+     * If has multi-task learning weights or not.
+     * 
+     * @return true if MTL
+     */
+    @JsonIgnore
+    public boolean isMultiWeightsInMTL() {
+        boolean result = this.isMultiTask() && this.getWeightColumnName() != null
+                && this.getWeightColumnName().contains(CommonConstants.MTL_DELIMITER);
+        if(result) {
+            List<String> weights = CommonUtils.splitAndReturnList(dataSet.getWeightColumnName(),
+                    CommonConstants.MTL_DELIMITER);
+            if(this.getMultiTaskTargetColumnNames().size() != weights.size()) {
+                throw new IllegalStateException(
+                        "Size of target columns is not consistent with size of weight columns.");
+            }
+        }
+        return result;
+    }
+
+    /**
+     * If has multi-task learning weights or not.
+     * 
+     * @param wgtColName
+     *            the raw weight column name (may contains multiple weight columns)
+     * @return true if MTL
+     */
+    @JsonIgnore
+    public boolean isMultiWeightsInMTL(String wgtColName) {
+        boolean result = this.isMultiTask() && wgtColName != null && wgtColName.contains(CommonConstants.MTL_DELIMITER);
+        if(result) {
+            List<String> weights = CommonUtils.splitAndReturnList(wgtColName, CommonConstants.MTL_DELIMITER);
+            if(this.getMultiTaskTargetColumnNames().size() != weights.size()) {
+                throw new IllegalStateException(
+                        "Size of target columns is not consistent with size of weight columns.");
+            }
+        }
+        return result;
+    }
+
     /*
      * Flattened tags for multiple classification. '1', '2|3' will be flattened to '1', '2', '3'. While '2' and '3' are
      * combined to one class.
      */
     @JsonIgnore
     public List<String> getFlattenTags() {
-        return getFlattenTags(dataSet.getPosTags(), dataSet.getNegTags());
+        return getFlattenTags(getPosTags(), getNegTags());
     }
 
     @JsonIgnore
@@ -439,7 +530,12 @@ public class ModelConfig {
 
     @JsonIgnore
     public List<String> getTags() {
-        return getTags(dataSet.getPosTags(), dataSet.getNegTags());
+        return getTags(getPosTags(), getNegTags());
+    }
+
+    @JsonIgnore
+    public List<String> getMTLTags(int mtlIndex) {
+        return getTags(getMTLPosTags(mtlIndex), getMTLNegTags(mtlIndex));
     }
 
     @JsonIgnore
@@ -464,29 +560,62 @@ public class ModelConfig {
 
     @JsonIgnore
     public List<Set<String>> getSetTags() {
-        return getSetTags(dataSet.getPosTags(), dataSet.getNegTags());
+        return getSetTags(getPosTags(), getNegTags());
+    }
+
+    @JsonIgnore
+    public List<Set<String>> getMTLSetTags(int mtlIndex) {
+        return getSetTags(getMTLPosTags(mtlIndex), getMTLNegTags(mtlIndex));
     }
 
     @JsonIgnore
     public List<String> getPosTags(EvalConfig evalConfig) {
         if(CollectionUtils.isNotEmpty(evalConfig.getDataSet().getPosTags())) {
-            return evalConfig.getDataSet().getPosTags();
+            if(this.isMultiTask()) {
+                String subTags = CommonUtils.split(evalConfig.getDataSet().getPosTags().get(0),
+                        CommonConstants.MTL_DELIMITER)[this.mtlIndex];
+                return CommonUtils.splitAndReturnList(subTags, CommonConstants.MTL_SUBTAG_DELIMITER);
+            } else {
+                return evalConfig.getDataSet().getPosTags();
+            }
         } else {
-            return dataSet.getPosTags();
+            return getPosTags();
         }
     }
 
     @JsonIgnore
     public List<String> getNegTags() {
-        return dataSet.getNegTags();
+        if(this.isMultiTask()) {
+            String subTags = CommonUtils.split(dataSet.getNegTags().get(0),
+                    CommonConstants.MTL_DELIMITER)[this.mtlIndex];
+            return CommonUtils.splitAndReturnList(subTags, CommonConstants.MTL_SUBTAG_DELIMITER);
+        } else {
+            return dataSet.getNegTags();
+        }
+    }
+
+    @JsonIgnore
+    public List<String> getMTLNegTags(int mtlIndex) {
+        if(this.isMultiTask()) {
+            String subTags = CommonUtils.split(dataSet.getNegTags().get(0), CommonConstants.MTL_DELIMITER)[mtlIndex];
+            return CommonUtils.splitAndReturnList(subTags, CommonConstants.MTL_SUBTAG_DELIMITER);
+        } else {
+            return dataSet.getNegTags();
+        }
     }
 
     @JsonIgnore
     public List<String> getNegTags(EvalConfig evalConfig) {
         if(CollectionUtils.isNotEmpty(evalConfig.getDataSet().getNegTags())) {
-            return evalConfig.getDataSet().getNegTags();
+            if(this.isMultiTask()) {
+                String subTags = CommonUtils.split(evalConfig.getDataSet().getNegTags().get(0),
+                        CommonConstants.MTL_DELIMITER)[this.mtlIndex];
+                return CommonUtils.splitAndReturnList(subTags, CommonConstants.MTL_SUBTAG_DELIMITER);
+            } else {
+                return evalConfig.getDataSet().getNegTags();
+            }
         } else {
-            return dataSet.getNegTags();
+            return getNegTags();
         }
     }
 
@@ -588,15 +717,53 @@ public class ModelConfig {
 
     @JsonIgnore
     public String getTargetColumnName() {
-        return dataSet.getTargetColumnName();
+        return getTargetColumnName(dataSet.getTargetColumnName());
     }
 
     @JsonIgnore
-    public String getTargetColumnName(EvalConfig evalConfig) {
-        if(StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName())) {
+    public List<String> getMultiTaskTargetColumnNames() {
+        if(dataSet.getTargetColumnName() == null) {
+            return null;
+        }
+        return CommonUtils.splitAndReturnList(dataSet.getTargetColumnName(), CommonConstants.MTL_DELIMITER);
+    }
+
+    @JsonIgnore
+    public List<String> getMultiTaskWeightColumnNames() {
+        if(this.isMultiWeightsInMTL()) {
+            return CommonUtils.splitAndReturnList(dataSet.getWeightColumnName(), CommonConstants.MTL_DELIMITER);
+        }
+        return null;
+    }
+
+    @JsonIgnore
+    public List<String> getMultiTaskWeightColumnNames(String wgtNames) {
+        if(this.isMultiWeightsInMTL(wgtNames)) {
+            return CommonUtils.splitAndReturnList(wgtNames, CommonConstants.MTL_DELIMITER);
+        }
+        return null;
+    }
+
+    @JsonIgnore
+    private String getTargetColumnName(String targetColumnName) {
+        if(this.isMultiTask()) {
+            return CommonUtils.split(targetColumnName, CommonConstants.MTL_DELIMITER)[this.mtlIndex];
+        } else {
+            return targetColumnName;
+        }
+    }
+
+    @JsonIgnore
+    public boolean isMultiTask(String targetColumnName) {
+        return targetColumnName != null && targetColumnName.contains(CommonConstants.MTL_DELIMITER);
+    }
+
+    @JsonIgnore
+    public String getTargetColumnName(EvalConfig evalConfig, String defaultTarget) {
+        if (evalConfig!= null && StringUtils.isNotBlank(evalConfig.getDataSet().getTargetColumnName())) {
             return evalConfig.getDataSet().getTargetColumnName();
         } else {
-            return dataSet.getTargetColumnName();
+            return defaultTarget;
         }
     }
 
@@ -660,6 +827,44 @@ public class ModelConfig {
             }
         }
         return CommonUtils.readConfNamesAsList(categoricalColumnNameFile, SourceType.LOCAL, delimiter);
+    }
+
+    @JsonIgnore
+    public Map<String, Integer> getCategoricalColumnHashSeedConf() throws IOException {
+        String delimiter = StringUtils.isBlank(this.getHeaderDelimiter()) ? this.getDataSetDelimiter()
+                : this.getHeaderDelimiter();
+        String categoricalHashSeedConfFile = dataSet.getCategoricalHashSeedConfFile();
+        if(StringUtils.isBlank(categoricalHashSeedConfFile)) {
+            String defaultCategoricalHashFile = Constants.COLUMN_META_FOLDER_NAME + File.separator
+                    + Constants.DEFAULT_CATEGORICAL_HASH_FILE;
+            if(ShifuFileUtils.isFileExists(defaultCategoricalHashFile, SourceType.LOCAL)) {
+                categoricalHashSeedConfFile = defaultCategoricalHashFile;
+                LOG.info(
+                        "'dataSet::categoricalColumnHashSeedConfFile' is not set while default categoricalColumnHashSeedConfFile: {} is found, default categorical hash seed file will be used.",
+                        defaultCategoricalHashFile);
+            } else {
+                LOG.info(
+                        "'dataSet::categoricalColumnHashSeedConfFile' is not set and default categoricalColumnHashSeedConfFile: {} is not found, no categorical hash seed files.",
+                        defaultCategoricalHashFile);
+                return new HashMap<String, Integer>();
+            }
+        }
+
+        List<String> hashPairs = CommonUtils.readConfFileIntoList(categoricalHashSeedConfFile, SourceType.LOCAL);
+        Map<String, Integer> columnHashSeeds = new HashMap<String, Integer>();
+        try {
+            for(String pair: hashPairs) {
+                if(StringUtils.isEmpty(pair))
+                    continue;
+                String[] values = CommonUtils.split(pair, delimiter);
+                if(values != null && values.length == 2) {
+                    columnHashSeeds.put(CommonUtils.normColumnName(values[0]), Integer.parseInt(values[1]));
+                }
+            }
+        } catch (NumberFormatException e) {
+            LOG.error("Hash seed value must be integer", e);
+        }
+        return columnHashSeeds;
     }
 
     @JsonIgnore
@@ -881,6 +1086,11 @@ public class ModelConfig {
     }
 
     @JsonIgnore
+    public String getDateColumnName() {
+        return dataSet.getDateColumnName();
+    }
+
+    @JsonIgnore
     public String getHeaderPath() {
         return dataSet.getHeaderPath();
     }
@@ -921,6 +1131,23 @@ public class ModelConfig {
         }
 
         return null;
+    }
+
+    /**
+     * @return the mtlIndex
+     */
+    @JsonIgnore
+    public int getMtlIndex() {
+        return mtlIndex;
+    }
+
+    /**
+     * @param mtlIndex
+     *            the mtlIndex to set
+     */
+    @JsonIgnore
+    public void setMtlIndex(int mtlIndex) {
+        this.mtlIndex = mtlIndex;
     }
 
     @Override

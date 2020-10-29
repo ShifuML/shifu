@@ -27,13 +27,17 @@ import ml.shifu.shifu.core.ColumnStatsCalculator.ColumnMetrics;
 import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
 import ml.shifu.shifu.core.binning.obj.AbstractBinInfo;
 import ml.shifu.shifu.core.binning.obj.CategoricalBinInfo;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.udf.CalculateStatsUDF;
 import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
+import ml.shifu.shifu.util.HDFSUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -94,12 +98,24 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
      */
     private void loadConfigFiles(final Context context) {
         try {
+            // inject fs.defaultFS from UDFContext.getUDFContext().getJobConf()
+            if (context != null && context.getConfiguration() != null) {
+                HDFSUtils.getConf().set(FileSystem.FS_DEFAULT_NAME_KEY,
+                        context.getConfiguration().get(FileSystem.FS_DEFAULT_NAME_KEY));
+            }
+            
             SourceType sourceType = SourceType.valueOf(
                     context.getConfiguration().get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
                     sourceType);
-            this.columnConfigList = CommonUtils
-                    .loadColumnConfigList(context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+            if(modelConfig.isMultiTask()) {
+                int mtlIndex = context.getConfiguration().getInt(CommonConstants.MTL_INDEX, -1);
+                this.columnConfigList = CommonUtils.loadColumnConfigList(
+                        new PathFinder(this.modelConfig).getMTLColumnConfigPath(SourceType.HDFS, mtlIndex), sourceType);
+            } else {
+                this.columnConfigList = CommonUtils.loadColumnConfigList(
+                        context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -161,7 +177,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             totalCount += cfiw.getCount();
             invalidCount += cfiw.getInvalidCount();
             validNumCount += cfiw.getValidNumCount();
-            fis.addAll(cfiw.getFrequetItems());
+            fis.addAll(cfiw.getFrequentItems());
             if(hyperLogLogPlus == null) {
                 hyperLogLogPlus = HyperLogLogPlus.Builder.build(cfiw.getHyperBytes());
             } else {
@@ -236,21 +252,18 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             int currentCount = 0;
             for(int i = 0; i < binBoundaryList.size(); i++) {
                 double left = getCutoffBoundary(binBoundaryList.get(i), max, min);
-                double right = ((i == binBoundaryList.size() - 1) ?
-                        max : getCutoffBoundary(binBoundaryList.get(i + 1), max, min));
-                if (p25Count >= currentCount && p25Count < currentCount + binCountTotal[i]) {
-                    p25th = ((p25Count - currentCount) / (double) binCountTotal[i])
-                            * ( right - left) + left;
+                double right = ((i == binBoundaryList.size() - 1) ? max
+                        : getCutoffBoundary(binBoundaryList.get(i + 1), max, min));
+                if(p25Count >= currentCount && p25Count < currentCount + binCountTotal[i]) {
+                    p25th = ((p25Count - currentCount) / (double) binCountTotal[i]) * (right - left) + left;
                 }
 
-                if (medianCount >= currentCount && medianCount < currentCount + binCountTotal[i]) {
-                    median = ((medianCount - currentCount) / (double) binCountTotal[i])
-                            * ( right - left) + left;
+                if(medianCount >= currentCount && medianCount < currentCount + binCountTotal[i]) {
+                    median = ((medianCount - currentCount) / (double) binCountTotal[i]) * (right - left) + left;
                 }
 
-                if (p75Count >= currentCount && p75Count < currentCount + binCountTotal[i]) {
-                    p75th = ((p75Count - currentCount) / (double) binCountTotal[i])
-                            * ( right - left) + left;
+                if(p75Count >= currentCount && p75Count < currentCount + binCountTotal[i]) {
+                    p75th = ((p75Count - currentCount) / (double) binCountTotal[i]) * (right - left) + left;
                     // when get 75 percentile stop it
                     break;
                 }
@@ -265,10 +278,9 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 columnConfig.getColumnNum(), columnConfig.getColumnType(), modelConfig.getStats().getCateMaxNumBin(),
                 (CollectionUtils.isNotEmpty(columnConfig.getBinCategory()) ? columnConfig.getBinCategory().size() : 0));
         // To merge categorical binning
-        if(columnConfig.isCategorical()
-                && modelConfig.getStats().getCateMaxNumBin() > 0
+        if(columnConfig.isCategorical() && modelConfig.getStats().getCateMaxNumBin() > 0
                 && CollectionUtils.isNotEmpty(binCategories)
-                && binCategories.size() > modelConfig.getStats().getCateMaxNumBin() ) {
+                && binCategories.size() > modelConfig.getStats().getCateMaxNumBin()) {
             // only category size large then expected max bin number
             CateBinningStats cateBinningStats = rebinCategoricalValues(
                     new CateBinningStats(binCategories, binCountPos, binCountNeg, binWeightPos, binWeightNeg));
@@ -286,22 +298,22 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         if(modelConfig.isRegression()) {
             binPosRate = computePosRate(binCountPos, binCountNeg);
         } else {
-            // for multiple classfication, use rate of categories to compute a value
+            // for multiple classification, use rate of categories to compute a value
             binPosRate = computeRateForMultiClassfication(binCountPos);
         }
         String binBounString = null;
 
         if(columnConfig.isHybrid()) {
-            if(binCategories.size() > this.maxCateSize) {
-                LOG.warn("Column {} {} with invalid bin category size.", key.get(), columnConfig.getColumnName(),
-                        binCategories.size());
+            if(binCategories.size() > (this.maxCateSize + 10)) { // +10 make sure big cate column can be cut and stored
+                LOG.warn("Column {} {} with invalid bin category size (large than maxCateSize {}).", key.get(),
+                        columnConfig.getColumnName(), binCategories.size(), this, maxCateSize);
                 return;
             }
             binBounString = binBoundaryList.toString();
             binBounString += Constants.HYBRID_BIN_STR_DILIMETER + Base64Utils.base64Encode(
                     "[" + StringUtils.join(binCategories, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR) + "]");
         } else if(columnConfig.isCategorical()) {
-            if(binCategories.size() > this.maxCateSize) {
+            if(binCategories.size() > (this.maxCateSize + 1)) { // +1 make sure big cate column can be cut and stored
                 LOG.warn("Column {} {} with invalid bin category size.", key.get(), columnConfig.getColumnName(),
                         binCategories.size());
                 return;
@@ -422,7 +434,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 .append(Constants.DEFAULT_DELIMITER).append(invalidCount) // invalid count
                 .append(Constants.DEFAULT_DELIMITER).append(validNumCount) // valid num count
                 .append(Constants.DEFAULT_DELIMITER).append(hyperLogLogPlus.cardinality()) // cardinality
-                .append(Constants.DEFAULT_DELIMITER).append(Base64Utils.base64Encode(limitedFrequentItems(fis))) // frequent items
+                .append(Constants.DEFAULT_DELIMITER).append(Base64Utils.base64Encode(limitedFrequentItems(fis))) // frequent
+                                                                                                                 // items
                 .append(Constants.DEFAULT_DELIMITER).append(p25th) // the 25 percentile value
                 .append(Constants.DEFAULT_DELIMITER).append(p75th);
 
@@ -449,9 +462,9 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
     }
 
     public double getCutoffBoundary(double val, double max, double min) {
-        if ( val == Double.POSITIVE_INFINITY ) {
+        if(val == Double.POSITIVE_INFINITY) {
             return max;
-        } else if ( val == Double.NEGATIVE_INFINITY ) {
+        } else if(val == Double.NEGATIVE_INFINITY) {
             return min;
         } else {
             return val;

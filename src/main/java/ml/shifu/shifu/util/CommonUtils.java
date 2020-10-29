@@ -15,15 +15,52 @@
  */
 package ml.shifu.shifu.util;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.io.Reader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.Predicate;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.pig.backend.executionengine.ExecException;
+import org.apache.pig.data.Tuple;
+import org.encog.mathutil.BoundMath;
+import org.encog.ml.BasicML;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
+
+import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
-import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -33,23 +70,6 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.Predicate;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.math.NumberUtils;
-import org.apache.commons.lang3.tuple.MutablePair;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.pig.backend.executionengine.ExecException;
-import org.apache.pig.data.Tuple;
-import org.encog.ml.BasicML;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.*;
-import java.util.*;
-import java.util.Map.Entry;
 
 /**
  * {@link CommonUtils} is used to for almost all kinds of utility function in this framework.
@@ -64,7 +84,6 @@ public final class CommonUtils {
 
     private static final Logger log = LoggerFactory.getLogger(CommonUtils.class);
 
-    
     /**
      * Sync up all local configuration files to HDFS.
      *
@@ -81,34 +100,40 @@ public final class CommonUtils {
      *             If parameter {@code modelConfig} is null
      */
     public static boolean copyConfFromLocalToHDFS(ModelConfig modelConfig, PathFinder pathFinder) throws IOException {
-        FileSystem hdfs = HDFSUtils.getFS();
         FileSystem localFs = HDFSUtils.getLocalFS();
 
-        Path pathModelSet = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
+        Path hdfsMSPath = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
+        FileSystem hdfs = HDFSUtils.getFS(hdfsMSPath);
+        Path pathModelSet = hdfsMSPath;
         // don't check whether pathModelSet is exists, should be remove by user.
         hdfs.mkdirs(pathModelSet);
 
         // Copy ModelConfig
         Path srcModelConfig = new Path(pathFinder.getModelConfigPath(SourceType.LOCAL));
-        Path dstModelConfig = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
-        hdfs.copyFromLocalFile(srcModelConfig, dstModelConfig);
+        hdfs.copyFromLocalFile(srcModelConfig, hdfsMSPath);
 
         // Copy GridSearch config file if exists
         String gridConfigFile = modelConfig.getTrain().getGridConfigFile();
         if(gridConfigFile != null && !gridConfigFile.trim().equals("")) {
             Path srcGridConfig = new Path(modelConfig.getTrain().getGridConfigFile());
-            Path dstGridConfig = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
-            hdfs.copyFromLocalFile(srcGridConfig, dstGridConfig);
+            hdfs.copyFromLocalFile(srcGridConfig, hdfsMSPath);
         }
 
         // Copy ColumnConfig
-        Path srcColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.LOCAL));
-        Path dstColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.HDFS));
-        if(ShifuFileUtils.isFileExists(srcColumnConfig.toString(), SourceType.LOCAL)) {
-            hdfs.copyFromLocalFile(srcColumnConfig, dstColumnConfig);
+        if(modelConfig.isMultiTask()) {
+            copyMTLColumnConfigs(modelConfig, hdfs, hdfsMSPath);
+        } else {
+            Path srcColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.LOCAL));
+            Path dstColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.HDFS));
+            if(ShifuFileUtils.isFileExists(srcColumnConfig.toString(), SourceType.LOCAL)) {
+                hdfs.copyFromLocalFile(srcColumnConfig, dstColumnConfig);
+            }
         }
 
-        // copy others
+        // Copy column related config files
+        copyColumnConfigFiles(modelConfig, hdfs, hdfsMSPath);
+
+        // Copy others
         Path srcVersion = new Path(pathFinder.getModelVersion(SourceType.LOCAL));
         if(localFs.exists(srcVersion)) {
             Path dstVersion = new Path(pathFinder.getModelVersion(SourceType.HDFS));
@@ -138,6 +163,45 @@ public final class CommonUtils {
         return true;
     }
 
+    private static void copyMTLColumnConfigs(ModelConfig modelConfig, FileSystem hdfs, Path hdfsMSPath)
+            throws IOException {
+        PathFinder pf = new PathFinder(modelConfig);
+        Path mtlHDFSPath = new Path(pf.getMTLColumnConfigFolder(SourceType.HDFS));
+        hdfs.mkdirs(mtlHDFSPath);
+        List<String> tagColumnNames = modelConfig.getMultiTaskTargetColumnNames();
+        for(int i = 0; i < tagColumnNames.size(); i++) {
+            Path srcPath = new Path(pf.getMTLColumnConfigPath(SourceType.LOCAL, i));
+            hdfs.copyFromLocalFile(srcPath, mtlHDFSPath);
+        }
+    }
+
+    private static void copyColumnConfigFiles(ModelConfig modelConfig, FileSystem hdfs, Path hdfsMSPath)
+            throws IOException {
+        Path colFilePath = new Path(hdfsMSPath, "columns");
+        hdfs.mkdirs(colFilePath);
+        if(StringUtils.isNotBlank(modelConfig.getDataSet().getCategoricalColumnNameFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getDataSet().getCategoricalColumnNameFile()), colFilePath);
+        }
+        if(StringUtils.isNotBlank(modelConfig.getDataSet().getMetaColumnNameFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getDataSet().getMetaColumnNameFile()), colFilePath);
+        }
+        if(StringUtils.isNotBlank(modelConfig.getVarSelect().getForceSelectColumnNameFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getVarSelect().getForceSelectColumnNameFile()), colFilePath);
+        }
+        if(StringUtils.isNotBlank(modelConfig.getVarSelect().getCandidateColumnNameFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getVarSelect().getCandidateColumnNameFile()), colFilePath);
+        }
+        if(StringUtils.isNotBlank(modelConfig.getVarSelect().getForceRemoveColumnNameFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getVarSelect().getForceRemoveColumnNameFile()), colFilePath);
+        }
+        if(StringUtils.isNotBlank(modelConfig.getDataSet().getHybridColumnNameFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getDataSet().getHybridColumnNameFile()), colFilePath);
+        }
+        if(StringUtils.isNotBlank(modelConfig.getDataSet().getSegExpressionFile())) {
+            hdfs.copyFromLocalFile(new Path(modelConfig.getDataSet().getSegExpressionFile()), colFilePath);
+        }
+    }
+
     /**
      * Sync-up the evaluation data into HDFS
      *
@@ -152,12 +216,12 @@ public final class CommonUtils {
     public static void copyEvalDataFromLocalToHDFS(ModelConfig modelConfig, String evalName) throws IOException {
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(evalName);
         if(evalConfig != null) {
-            FileSystem hdfs = HDFSUtils.getFS();
             FileSystem localFs = HDFSUtils.getLocalFS();
             PathFinder pathFinder = new PathFinder(modelConfig);
 
             Path evalDir = new Path(pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL));
             Path dst = new Path(pathFinder.getEvalSetPath(evalConfig, SourceType.HDFS));
+            FileSystem hdfs = HDFSUtils.getFS(dst);
             if(localFs.exists(evalDir) // local evaluation folder exists
                     && localFs.getFileStatus(evalDir).isDir() // is directory
                     && !hdfs.exists(dst)) {
@@ -215,7 +279,7 @@ public final class CommonUtils {
         if(StringUtils.isNotBlank(modelConfig.getTrain().getGridConfigFile())) {
             String gridConfigPath = modelConfig.getTrain().getGridConfigFile().trim();
             if(sourceType == SourceType.HDFS) {
-                // gridsearch config file is uploaded to modelset path
+                // grid-search config file is uploaded to modelset path
                 gridConfigPath = new PathFinder(modelConfig).getPathBySourceType(
                         gridConfigPath.substring(gridConfigPath.lastIndexOf(File.separator) + 1), SourceType.HDFS);
             }
@@ -416,10 +480,10 @@ public final class CommonUtils {
             // NPE protection
             return columnName;
         }
-        return columnName.replaceAll("\\.", "_").
-                          replaceAll(" ", "_").
-                          replaceAll("/", "_").
-                          replaceAll("-", "_");
+        return columnName.replaceAll("\\.", "_")
+                .replaceAll(" ", "_")
+                .replaceAll("/", "_")
+                .replaceAll("-", "_");
     }
 
     /**
@@ -473,7 +537,7 @@ public final class CommonUtils {
         return fields;
     }
 
-    public static String[] getFinalHeaders(EvalConfig evalConfig) throws IOException {
+    public static String[] getFinalHeaders(ModelConfig modelConfig, EvalConfig evalConfig) throws IOException {
         String[] fields = null;
         boolean isSchemaProvided = true;
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getHeaderPath())) {
@@ -488,8 +552,18 @@ public final class CommonUtils {
                             ? evalConfig.getDataSet().getDataDelimiter()
                             : evalConfig.getDataSet().getHeaderDelimiter(),
                     evalConfig.getDataSet().getSource());
-            // TODO - if there is no target column in eval, it may fail to check it is schema or not
-            if(StringUtils.join(fields, "").contains(evalConfig.getDataSet().getTargetColumnName())) {
+            if(evalConfig.isMultiTask()) {
+                List<String> tarColumns = evalConfig.getMultiTaskTargetColumnNames();
+                if (CollectionUtils.isNotEmpty(tarColumns)) {
+                    for(String column : tarColumns) {
+                        if(!StringUtils.join(fields, "").contains(column)) {
+                            isSchemaProvided = false;
+                            break;
+                        }
+                    }
+                }
+            } else if(StringUtils.join(fields, "").contains(
+                    modelConfig.getTargetColumnName(evalConfig, ""))) {
                 // if first line contains target column name, we guess it is csv format and first line is header.
                 isSchemaProvided = true;
                 log.warn("No header path is provided, we will try to read first line and detect schema.");
@@ -561,7 +635,7 @@ public final class CommonUtils {
             throws IOException {
         if(StringUtils.isEmpty(pathHeader) || StringUtils.isEmpty(delimiter) || sourceType == null) {
             throw new IllegalArgumentException(
-                    String.format("Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", pathHeader,
+                    String.format("Null or empty parameters srcDataPath:%s, delimiter:%s, sourceType:%s", pathHeader,
                             delimiter, sourceType));
         }
         BufferedReader reader = null;
@@ -805,51 +879,56 @@ public final class CommonUtils {
         return rawDataMap;
     }
 
-    /**
-     * Return all parameters for pig execution.
-     *
-     * @param modelConfig
-     *            model config
-     * @param sourceType
-     *            source type
-     * @return map of configurations
-     * @throws IOException
-     *             any io exception
-     * @throws IllegalArgumentException
-     *             if modelConfig is null.
-     */
-    public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType)
-            throws IOException {
-        if(modelConfig == null) {
-            throw new IllegalArgumentException("modelConfig should not be null.");
-        }
-        PathFinder pathFinder = new PathFinder(modelConfig);
+    // /**
+    // * Return all parameters for pig execution.
+    // *
+    // * @param modelConfig
+    // * model config
+    // * @param sourceType
+    // * source type
+    // * @return map of configurations
+    // * @throws IOException
+    // * any io exception
+    // * @throws IllegalArgumentException
+    // * if modelConfig is null.
+    // */
+    // public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType)
+    // throws IOException {
+    // if(modelConfig == null) {
+    // throw new IllegalArgumentException("modelConfig should not be null.");
+    // }
+    // PathFinder pathFinder = new PathFinder(modelConfig);
+    //
+    // Map<String, String> pigParamMap = new HashMap<String, String>();
+    // pigParamMap.put(Constants.NUM_PARALLEL, Environment.getInt(Environment.HADOOP_NUM_PARALLEL, 400).toString());
+    // log.info("jar path is {}", pathFinder.getJarPath());
+    // pigParamMap.put(Constants.PATH_JAR, pathFinder.getJarPath());
+    //
+    // pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
+    // pigParamMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedDataPath(sourceType));
+    // // default norm is not for clean, so set it to false, this will be overrided in Train#Norm for tree models
+    // pigParamMap.put(Constants.IS_NORM_FOR_CLEAN, Boolean.FALSE.toString());
+    // pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS, pathFinder.getPreTrainingStatsPath(sourceType));
+    // pigParamMap.put(Constants.PATH_STATS_BINNING_INFO, pathFinder.getUpdatedBinningInfoPath(sourceType));
+    // pigParamMap.put(Constants.PATH_STATS_PSI_INFO, pathFinder.getPSIInfoPath(sourceType));
+    //
+    // pigParamMap.put(Constants.WITH_SCORE, Boolean.FALSE.toString());
+    // pigParamMap.put(Constants.STATS_SAMPLE_RATE, modelConfig.getBinningSampleRate().toString());
+    // pigParamMap.put(Constants.PATH_MODEL_CONFIG, pathFinder.getModelConfigPath(sourceType));
+    // pigParamMap.put(Constants.PATH_COLUMN_CONFIG, pathFinder.getColumnConfigPath(sourceType));
+    // pigParamMap.put(Constants.PATH_SELECTED_RAW_DATA, pathFinder.getSelectedRawDataPath(sourceType));
+    // pigParamMap.put(Constants.PATH_BIN_AVG_SCORE, pathFinder.getBinAvgScorePath(sourceType));
+    // pigParamMap.put(Constants.PATH_TRAIN_SCORE, pathFinder.getTrainScoresPath(sourceType));
+    //
+    // pigParamMap.put(Constants.SOURCE_TYPE, sourceType.toString());
+    // pigParamMap.put(Constants.JOB_QUEUE,
+    // Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE));
+    // return pigParamMap;
+    // }
 
-        Map<String, String> pigParamMap = new HashMap<String, String>();
-        pigParamMap.put(Constants.NUM_PARALLEL, Environment.getInt(Environment.HADOOP_NUM_PARALLEL, 400).toString());
-        log.info("jar path is {}", pathFinder.getJarPath());
-        pigParamMap.put(Constants.PATH_JAR, pathFinder.getJarPath());
-
-        pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
-        pigParamMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedDataPath(sourceType));
-        // default norm is not for clean, so set it to false, this will be overrided in Train#Norm for tree models
-        pigParamMap.put(Constants.IS_NORM_FOR_CLEAN, Boolean.FALSE.toString());
-        pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS, pathFinder.getPreTrainingStatsPath(sourceType));
-        pigParamMap.put(Constants.PATH_STATS_BINNING_INFO, pathFinder.getUpdatedBinningInfoPath(sourceType));
-        pigParamMap.put(Constants.PATH_STATS_PSI_INFO, pathFinder.getPSIInfoPath(sourceType));
-
-        pigParamMap.put(Constants.WITH_SCORE, Boolean.FALSE.toString());
-        pigParamMap.put(Constants.STATS_SAMPLE_RATE, modelConfig.getBinningSampleRate().toString());
-        pigParamMap.put(Constants.PATH_MODEL_CONFIG, pathFinder.getModelConfigPath(sourceType));
-        pigParamMap.put(Constants.PATH_COLUMN_CONFIG, pathFinder.getColumnConfigPath(sourceType));
-        pigParamMap.put(Constants.PATH_SELECTED_RAW_DATA, pathFinder.getSelectedRawDataPath(sourceType));
-        pigParamMap.put(Constants.PATH_BIN_AVG_SCORE, pathFinder.getBinAvgScorePath(sourceType));
-        pigParamMap.put(Constants.PATH_TRAIN_SCORE, pathFinder.getTrainScoresPath(sourceType));
-
-        pigParamMap.put(Constants.SOURCE_TYPE, sourceType.toString());
-        pigParamMap.put(Constants.JOB_QUEUE,
-                Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE));
-        return pigParamMap;
+    public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType,
+            PathFinder pathFinder) throws IOException {
+        return getPigParamMap(modelConfig, sourceType, pathFinder, -1);
     }
 
     /**
@@ -861,6 +940,8 @@ public final class CommonUtils {
      *            source type
      * @param pathFinder
      *            path finder instance
+     * @param mtlIndex
+     *            the multi task learning index
      * @return map of configurations
      * @throws IOException
      *             any io exception
@@ -868,7 +949,7 @@ public final class CommonUtils {
      *             if modelConfig is null.
      */
     public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType,
-            PathFinder pathFinder) throws IOException {
+            PathFinder pathFinder, int mtlIndex) throws IOException {
         if(modelConfig == null) {
             throw new IllegalArgumentException("modelConfig should not be null.");
         }
@@ -882,14 +963,26 @@ public final class CommonUtils {
 
         pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
         pigParamMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedDataPath(sourceType));
-        pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS, pathFinder.getPreTrainingStatsPath(sourceType));
-        pigParamMap.put(Constants.PATH_STATS_BINNING_INFO, pathFinder.getUpdatedBinningInfoPath(sourceType));
+
+        if(modelConfig.isMultiTask()) {
+            pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS,
+                    pathFinder.getPreTrainingStatsPath(sourceType, mtlIndex));
+            pigParamMap.put(Constants.PATH_STATS_BINNING_INFO,
+                    pathFinder.getUpdatedBinningInfoPath(sourceType, mtlIndex));
+            pigParamMap.put(Constants.PATH_STATS_PSI_INFO, pathFinder.getPSIInfoPath(sourceType, mtlIndex));
+            pigParamMap.put(Constants.PATH_COLUMN_CONFIG, pathFinder.getMTLColumnConfigPath(sourceType, mtlIndex));
+        } else {
+            pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS, pathFinder.getPreTrainingStatsPath(sourceType));
+            pigParamMap.put(Constants.PATH_STATS_BINNING_INFO, pathFinder.getUpdatedBinningInfoPath(sourceType));
+            pigParamMap.put(Constants.PATH_STATS_PSI_INFO, pathFinder.getPSIInfoPath(sourceType));
+            pigParamMap.put(Constants.PATH_COLUMN_CONFIG, pathFinder.getColumnConfigPath(sourceType));
+        }
+
         pigParamMap.put(Constants.PATH_STATS_PSI_INFO, pathFinder.getPSIInfoPath(sourceType));
 
         pigParamMap.put(Constants.WITH_SCORE, Boolean.FALSE.toString());
         pigParamMap.put(Constants.STATS_SAMPLE_RATE, modelConfig.getBinningSampleRate().toString());
         pigParamMap.put(Constants.PATH_MODEL_CONFIG, pathFinder.getModelConfigPath(sourceType));
-        pigParamMap.put(Constants.PATH_COLUMN_CONFIG, pathFinder.getColumnConfigPath(sourceType));
         pigParamMap.put(Constants.PATH_SELECTED_RAW_DATA, pathFinder.getSelectedRawDataPath(sourceType));
         pigParamMap.put(Constants.PATH_BIN_AVG_SCORE, pathFinder.getBinAvgScorePath(sourceType));
         pigParamMap.put(Constants.PATH_TRAIN_SCORE, pathFinder.getTrainScoresPath(sourceType));
@@ -1011,12 +1104,29 @@ public final class CommonUtils {
         return CommonConstants.RF_ALG_NAME.equalsIgnoreCase(alg) || CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
     }
 
+    public static boolean isTensorFlowModel(String alg) {
+        return CommonConstants.TF_ALG_NAME.equalsIgnoreCase(alg);
+    }
+
     public static boolean isNNModel(String alg) {
         return "nn".equalsIgnoreCase(alg);
     }
 
     public static boolean isLRModel(String alg) {
         return "lr".equalsIgnoreCase(alg);
+    }
+
+    public static boolean isWDLModel(String alg) {
+        return "wdl".equalsIgnoreCase(alg);
+    }
+
+    public static boolean isMTLModel(String alg) {
+        return "mtl".equalsIgnoreCase(alg);
+    }
+
+    public static boolean isWeightColumn(String weightColumnName, ColumnConfig columnConfig) {
+        return StringUtils.isNotBlank(weightColumnName) // weight is set && equals with name of ColumnConfig
+                && StringUtils.equals(StringUtils.trim(weightColumnName), columnConfig.getColumnName());
     }
 
     public static boolean isRandomForestAlgorithm(String alg) {
@@ -1026,7 +1136,6 @@ public final class CommonUtils {
     public static boolean isGBDTAlgorithm(String alg) {
         return CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(alg);
     }
-
 
     /*
      * Expanding score by expandingFactor
@@ -1066,110 +1175,6 @@ public final class CommonUtils {
             return File.separator;
         } else {
             return Constants.BACK_SLASH + File.separator;
-        }
-    }
-
-    /**
-     * Update target, listMeta, listForceSelect, listForceRemove
-     *
-     * @param modelConfig
-     *            model config list
-     * @param columnConfigList
-     *            the column config list
-     * @throws IOException
-     *             any io exception
-     *
-     * @throws IllegalArgumentException
-     *             if modelConfig is null or columnConfigList is null.
-     */
-    public static void updateColumnConfigFlags(ModelConfig modelConfig, List<ColumnConfig> columnConfigList)
-            throws IOException {
-        String targetColumnName = modelConfig.getTargetColumnName();
-        String weightColumnName = modelConfig.getWeightColumnName();
-
-        Set<NSColumn> setCategorialColumns = new HashSet<NSColumn>();
-        List<String> categoricalColumnNames = modelConfig.getCategoricalColumnNames();
-        if(CollectionUtils.isNotEmpty(categoricalColumnNames)) {
-            for(String column: categoricalColumnNames) {
-                setCategorialColumns.add(new NSColumn(column));
-            }
-        }
-
-        Set<NSColumn> setHybridColumns = new HashSet<NSColumn>();
-        Map<String, Double> hybridColumnNames = modelConfig.getHybridColumnNames();
-        if(hybridColumnNames != null && hybridColumnNames.size() > 0) {
-            for(Entry<String, Double> entry: hybridColumnNames.entrySet()) {
-                setHybridColumns.add(new NSColumn(entry.getKey()));
-            }
-        }
-
-        Set<NSColumn> setMeta = new HashSet<NSColumn>();
-        if(CollectionUtils.isNotEmpty(modelConfig.getMetaColumnNames())) {
-            for(String meta: modelConfig.getMetaColumnNames()) {
-                setMeta.add(new NSColumn(meta));
-            }
-        }
-
-        Set<NSColumn> setForceRemove = new HashSet<NSColumn>();
-        if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())
-                && CollectionUtils.isNotEmpty(modelConfig.getListForceRemove())) {
-            // if we need to update force remove, only and if one the force is enabled
-            for(String forceRemoveName: modelConfig.getListForceRemove()) {
-                setForceRemove.add(new NSColumn(forceRemoveName));
-            }
-        }
-
-        Set<NSColumn> setForceSelect = new HashSet<NSColumn>(512);
-        if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())
-                && CollectionUtils.isNotEmpty(modelConfig.getListForceSelect())) {
-            // if we need to update force select, only and if one the force is enabled
-            for(String forceSelectName: modelConfig.getListForceSelect()) {
-                setForceSelect.add(new NSColumn(forceSelectName));
-            }
-        }
-
-        for(ColumnConfig config: columnConfigList) {
-            String varName = config.getColumnName();
-
-            // reset it
-            config.setColumnFlag(null);
-
-            if(NSColumnUtils.isColumnEqual(weightColumnName, varName)) {
-                config.setColumnFlag(ColumnFlag.Weight);
-                config.setFinalSelect(false); // reset final select
-            } else if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
-                config.setColumnFlag(ColumnFlag.Target);
-                config.setFinalSelect(false); // reset final select
-            } else if(setMeta.contains(new NSColumn(varName))) {
-                config.setColumnFlag(ColumnFlag.Meta);
-                config.setFinalSelect(false); // reset final select
-            } else if(setForceRemove.contains(new NSColumn(varName))) {
-                config.setColumnFlag(ColumnFlag.ForceRemove);
-                config.setFinalSelect(false); // reset final select
-            } else if(setForceSelect.contains(new NSColumn(varName))) {
-                config.setColumnFlag(ColumnFlag.ForceSelect);
-            }
-
-            if(NSColumnUtils.isColumnEqual(weightColumnName, varName)) {
-                // weight column is numerical
-                config.setColumnType(ColumnType.N);
-            } else if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
-                // target column is set to categorical column
-                config.setColumnType(ColumnType.C);
-            } else if(setHybridColumns.contains(new NSColumn(varName))) {
-                config.setColumnType(ColumnType.H);
-                String newVarName = null;
-                if(Environment.getBoolean(Constants.SHIFU_NAMESPACE_STRICT_MODE, false)) {
-                    newVarName = new NSColumn(varName).getFullColumnName();
-                } else {
-                    newVarName = new NSColumn(varName).getSimpleName();
-                }
-                config.setHybridThreshold(hybridColumnNames.get(newVarName));
-            } else if(setCategorialColumns.contains(new NSColumn(varName))) {
-                config.setColumnType(ColumnType.C);
-            } else {
-                config.setColumnType(ColumnType.N);
-            }
         }
     }
 
@@ -1516,8 +1521,9 @@ public final class CommonUtils {
         }
 
         String firstValidFile = null;
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source);
-        FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HiddenPathFilter.getHiddenPathFilter());
+        Path filePath = new Path(dataSetRawPath);
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source, filePath);
+        FileStatus[] globStatus = fs.globStatus(filePath, HiddenPathFilter.getHiddenPathFilter());
         if(globStatus == null || globStatus.length == 0) {
             throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
         } else {
@@ -1563,6 +1569,49 @@ public final class CommonUtils {
     }
 
     /**
+     * Simple name without name space part. For segment expansion, only retain raw column name but not current column
+     * name.
+     *
+     * @param columnConfig
+     *            the column configuration
+     * @param columnConfigList
+     *            the column config list inculding all segment expansion columns if have
+     * @param segmentExpansions
+     *            segment expansion expressions
+     * @param dataSetHeaders
+     *            data set headers for all raw columns
+     * @return the simple name not including name space part
+     */
+    public static String getSimpleColumnName(ColumnConfig columnConfig, List<ColumnConfig> columnConfigList,
+            List<String> segmentExpansions, String[] dataSetHeaders) {
+        if(segmentExpansions == null || segmentExpansions.size() == 0) {
+            return getSimpleColumnName(columnConfig.getColumnName());
+        }
+
+        // if(columnConfigList.size() != dataSetHeaders.size() * (segmentExpansions.size() + 1)) {
+        // throw new IllegalStateException(
+        // "Segment expansion enabled but # of columns in ColumnConfig.json is not consistent with segment expansion
+        // files.");
+        // }
+
+        if(columnConfig.getColumnNum() >= dataSetHeaders.length) {
+            return getSimpleColumnName(
+                    columnConfigList.get(columnConfig.getColumnNum() % dataSetHeaders.length).getColumnName());
+        } else {
+            return getSimpleColumnName(columnConfig.getColumnName());
+        }
+    }
+
+    public static String getSimpleColumnName(String columnName) {
+        // remove name-space in column name to make it be called by simple name
+        if(columnName.contains(CommonConstants.NAMESPACE_DELIMITER)) {
+            columnName = columnName.substring(columnName.lastIndexOf(CommonConstants.NAMESPACE_DELIMITER)
+                    + CommonConstants.NAMESPACE_DELIMITER.length(), columnName.length());
+        }
+        return columnName;
+    }
+
+    /**
      * Return first two lines split string array. This is used to detect data schema and check if data
      * schema is the
      * same as data.
@@ -1584,8 +1633,9 @@ public final class CommonUtils {
         }
 
         String firstValidFile = null;
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source);
-        FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HiddenPathFilter.getHiddenPathFilter());
+        Path filePath = new Path(dataSetRawPath);
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source, filePath);
+        FileStatus[] globStatus = fs.globStatus(filePath, HiddenPathFilter.getHiddenPathFilter());
         if(globStatus == null || globStatus.length == 0) {
             throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
         } else {
@@ -1736,7 +1786,6 @@ public final class CommonUtils {
         }
     }
 
-
     /**
      * Check whether candidates are set or not
      *
@@ -1755,7 +1804,6 @@ public final class CommonUtils {
 
         return (candidateCnt > 0);
     }
-
 
     /**
      * flatten categorical value group into values list
@@ -1814,11 +1862,72 @@ public final class CommonUtils {
         }
 
         double[] output = new double[src.length];
-
         for(int i = 0; i < src.length; i++) {
             output[i] = src[i];
         }
+        return output;
+    }
 
+    public static float[] doubleToFloat(double[] src) {
+        if(src == null) {
+            return null;
+        }
+
+        float[] output = new float[src.length];
+        for(int i = 0; i < src.length; i++) {
+            output[i] = (float) src[i];
+        }
+        return output;
+    }
+
+    public static double[] minus(double[] src, double[] target) {
+        if(src == null || target == null) {
+            return null;
+        }
+        assert src.length == target.length;
+
+        double[] output = new double[src.length];
+        for(int i = 0; i < src.length; i++) {
+            output[i] = src[i] - target[i];
+        }
+        return output;
+    }
+
+    public static double[] plus(double[] src, double[] target) {
+        if(src == null || target == null) {
+            return null;
+        }
+        assert src.length == target.length;
+
+        double[] output = new double[src.length];
+        for(int i = 0; i < src.length; i++) {
+            output[i] = src[i] + target[i];
+        }
+        return output;
+    }
+
+    public static double[] minus(double[] src, float[] target) {
+        if(src == null || target == null) {
+            return null;
+        }
+        assert src.length == target.length;
+
+        double[] output = new double[src.length];
+        for(int i = 0; i < src.length; i++) {
+            output[i] = src[i] - target[i];
+        }
+        return output;
+    }
+
+    public static double[] sigmoid(double[] src) {
+        if(src == null) {
+            return null;
+        }
+
+        double[] output = new double[src.length];
+        for(int i = 0; i < src.length; i++) {
+            output[i] = sigmoid(src[i]);
+        }
         return output;
     }
 
@@ -1854,4 +1963,46 @@ public final class CommonUtils {
                 || key.startsWith("io") || key.startsWith("hadoop") || key.startsWith("yarn") || key.startsWith("pig")
                 || key.startsWith("hive") || key.startsWith("job");
     }
+
+    public static boolean getBooleanValue(Object object, boolean defaultValue) {
+        if(object == null) {
+            return defaultValue;
+        }
+        return Boolean.TRUE.toString().equalsIgnoreCase(object.toString());
+    }
+
+    /**
+     * Return float value parsed from input string, NaN by default changed to 0.
+     * 
+     * @param input
+     *            the input string
+     * @return parsed float value
+     */
+    public static float getFloatValue(String input) {
+        float floatValue = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(input, 0f);
+        return (Double.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
+    }
+
+    /**
+     * Sigmoid function definition.
+     * 
+     * @param logit
+     *            the logit value
+     * @return sigmoid value
+     */
+    public static double sigmoid(double logit) {
+        return 1.0d / (1.0d + BoundMath.exp(-1 * logit));
+    }
+
+    /**
+     * Derived function for sigmoid function.
+     * 
+     * @param result
+     *            logit result
+     * @return sigmoid derived value
+     */
+    public static double sigmoidDerivedFunction(double result) {
+        return result * (1d - result);
+    }
+
 }

@@ -72,7 +72,7 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> implements
                 || modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualTotal)
                 || modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualInterval)
                 || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualPositive) && isPostive)
-                || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualNegtive) && !isPostive)
+                || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualNegative) && !isPostive)
                 || modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightEqualTotal)
                 || modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightEqualInterval)
                 || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightEqualPositive) && isPostive)
@@ -90,7 +90,7 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> implements
             }
         } else {
             binning = new CategoricalBinning(this.scaleFactor, super.modelConfig.getMissingOrInvalidValues(),
-                    this.maxCategorySize);
+                    this.maxCategorySize,columnConfig.getHashSeed());
         }
 
         return binning;

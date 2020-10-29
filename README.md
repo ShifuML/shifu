@@ -24,7 +24,7 @@ Shifu provides a simple command-line interface for each step of the model buildi
 * [Distributed neural network model training](https://github.com/ShifuML/shifu/wiki/Distributed%20Neural%20Network%20Training%20in%20Shifu)
 * [Distributed tree ensemble model training](https://github.com/ShifuML/shifu/wiki/Distributed%20Tree%20Ensemble%20Model%20Training%20in%20Shifu)
 * Post training analysis & model evaluation
-* [Distributed Tensorflow on SHIFU] {https://github.com/ShifuML/shifu/wiki/Distributed-Tensorflow-Support-On-SHIFU)
+* [Distributed Tensorflow on Shifu](https://github.com/ShifuML/shifu/wiki/Distributed-Tensorflow-Support-On-Shifu)
 
 Shifu’s fast Hadoop-based, distributed neural network / logistic regression / gradient boosted trees training can reduce model training time from days to hours on TB data sets. Shifu integrates with Pig workflows on Hadoop, and Shifu-trained models can be integrated into production code with a simple Java API. Shifu leverages Pig, Akka, Encog and other open source projects.
 
@@ -42,17 +42,17 @@ More details about shifu can be found in our [wiki pages](https://github.com/Shi
 
 ## Contributors
 
- - Zhanghao Hu (zhanhu@paypal.com)
- - Grahame Jastrebski (gjastrebski@paypal.com)
- - Lavar Li (lulli@paypal.com)
- - Mark Liu (yliu15@paypal.com)
- - David Zhang (pengzhang@paypal.com)
- - Xin Zhong (xinzhong@paypal.com)
- - Simon Zhang (jzhang13@paypal.com)
- - Sharma Nitin (nsharma1@paypal.com)
- - Wayne Zhu (wzhu1@paypal.com)
- - Devin Wu (haifwu@paypal.com)
- - Fred Bai (webai@paypal.com)
+ - Zhanghao Hu (zhanhu at paypal.com)
+ - Grahame Jastrebski (gjastrebski at paypal.com)
+ - Lavar Li (lulli at paypal.com)
+ - Mark Liu (yliu15 at paypal.com)
+ - David Zhang (pengzhang at paypal.com)
+ - Xin Zhong (xinzhong at paypal.com)
+ - Simon Zhang (jzhang13 at paypal.com)
+ - Sharma Nitin (nsharma1 at paypal.com)
+ - Wayne Zhu (wzhu1 at paypal.com)
+ - Devin Wu (haifwu at paypal.com)
+ - Fred Bai (webai at paypal.com)
 
 ## Google Group
 

@@ -25,8 +25,6 @@ package ml.shifu.shifu.core.dtrain.nn.update;
 
 import java.util.Set;
 
-import ml.shifu.shifu.core.dtrain.Weight;
-
 /**
  * Created by jeffh on 7/15/2016.
  * 
@@ -35,7 +33,7 @@ import ml.shifu.shifu.core.dtrain.Weight;
  */
 public interface UpdateRule {
 
-    void init(Weight weight);
+    void init(Update update);
 
     void update(double[] gradients, double[] weights, int iteration, Set<Integer> fixedWeights);
 }

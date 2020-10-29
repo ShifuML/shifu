@@ -28,12 +28,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import ml.shifu.shifu.util.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.pig.impl.util.UDFContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +49,9 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.core.autotype.AutoTypeDistinctCountMapper.CountAndFrequentItems;
 import ml.shifu.shifu.core.autotype.CountAndFrequentItemsWritable;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
@@ -70,8 +76,14 @@ import ml.shifu.shifu.util.MapReduceUtils;
  */
 public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWritable, BinningInfoWritable> {
 
+
     private final static Logger LOG = LoggerFactory.getLogger(UpdateBinningInfoMapper.class);
 
+    /**
+     * Minimal bin gap, if two adjacent bin boundaries with gap smaller than such value, they will be merged into one.
+     */
+    private static final double MINIMAL_BIN_GAP = 0.00000001d;
+    
     /**
      * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
      */
@@ -145,17 +157,36 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     private List<DataPurifier> expressionDataPurifiers;
     private boolean isForExpressions = false;
 
+    private int mtlIndex = -1;
+
+    private List<Integer> newTagIndexes;
+
+    private PrecisionType precisionType;
+
     /**
      * Load model config and column config files.
      */
     private void loadConfigFiles(final Context context) {
         try {
+            // inject fs.defaultFS from UDFContext.getUDFContext().getJobConf()
+            if (context != null && context.getConfiguration() != null) {
+                HDFSUtils.getConf().set(FileSystem.FS_DEFAULT_NAME_KEY,
+                        context.getConfiguration().get(FileSystem.FS_DEFAULT_NAME_KEY));
+            }
+
             SourceType sourceType = SourceType.valueOf(
                     context.getConfiguration().get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
                     sourceType);
-            this.columnConfigList = CommonUtils
-                    .loadColumnConfigList(context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+            if(modelConfig.isMultiTask()) {
+                mtlIndex = context.getConfiguration().getInt(CommonConstants.MTL_INDEX, -1);
+                this.modelConfig.setMtlIndex(mtlIndex);
+                this.columnConfigList = CommonUtils.loadColumnConfigList(
+                        new PathFinder(this.modelConfig).getMTLColumnConfigPath(SourceType.HDFS, mtlIndex), sourceType);
+            } else {
+                this.columnConfigList = CommonUtils.loadColumnConfigList(
+                        context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -168,17 +199,32 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
 
+        String precision = context.getConfiguration().get(Constants.SHIFU_PRECISION_TYPE);
+        if(StringUtils.isNotBlank(precision)) {
+            this.precisionType = PrecisionType.of(
+                    context.getConfiguration().get(Constants.SHIFU_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
+        }
+
         this.dataSetDelimiter = this.modelConfig.getDataSetDelimiter();
 
-        this.dataPurifier = new DataPurifier(this.modelConfig, false);
+        this.dataPurifier = new DataPurifier(this.modelConfig, this.columnConfigList, false);
 
         String filterExpressions = context.getConfiguration().get(Constants.SHIFU_STATS_FILTER_EXPRESSIONS);
         if(StringUtils.isNotBlank(filterExpressions)) {
             this.isForExpressions = true;
             String[] splits = CommonUtils.split(filterExpressions, Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER);
             this.expressionDataPurifiers = new ArrayList<DataPurifier>(splits.length);
+            this.newTagIndexes = new ArrayList<>();
             for(String split: splits) {
-                this.expressionDataPurifiers.add(new DataPurifier(modelConfig, split, false));
+                DataPurifier dataPurifier = new DataPurifier(modelConfig, this.columnConfigList, split, false);
+                if(dataPurifier.isNewTag()) {
+                    ColumnConfig cc = CommonUtils.findColumnConfigByName(columnConfigList,
+                            dataPurifier.getNewTagColumnName());
+                    this.newTagIndexes.add(cc == null ? -1 : cc.getColumnNum());
+                } else {
+                    this.newTagIndexes.add(-1);
+                }
+                this.expressionDataPurifiers.add(dataPurifier);
             }
         }
 
@@ -193,7 +239,12 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         String delimiter = context.getConfiguration().get(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
         this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
 
-        loadColumnBinningInfo();
+        boolean isUpdateStatsOnly = context.getConfiguration().getBoolean(Constants.IS_UPDATE_STATS_ONLY, false);
+        if(isUpdateStatsOnly) {
+            loadColumnBinningInfoFromCC();
+        } else {
+            loadColumnBinningInfo();
+        }
 
         this.outputKey = new IntWritable();
 
@@ -213,14 +264,86 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 && CommonUtils.getTargetColumnConfig(columnConfigList).isNumerical());
     }
 
+    private void loadColumnBinningInfoFromCC() {
+        for(ColumnConfig cc: columnConfigList) {
+            BinningInfoWritable binningInfo = new BinningInfoWritable();
+            binningInfo.setColumnNum(cc.getColumnNum());
+            int binSize = 0;
+            if(cc.isHybrid()) {
+                binningInfo.setNumeric(true);
+                binningInfo.setBinBoundaries(cc.getBinBoundary());
+                Map<String, Integer> map = this.categoricalBinMap.get(cc.getColumnNum());
+                if(map == null) {
+                    map = new HashMap<String, Integer>();
+                    this.categoricalBinMap.put(cc.getColumnNum(), map);
+                }
+                if(cc.getBinCategory() != null) {
+                    for(int k = 0; k < cc.getBinCategory().size(); k++) {
+                        String currCate = cc.getBinCategory().get(k);
+                        if(currCate.contains(Constants.CATEGORICAL_GROUP_VAL_DELIMITER)) {
+                            String[] splits = StringUtils.split(currCate, Constants.CATEGORICAL_GROUP_VAL_DELIMITER);
+                            for(String str: splits) {
+                                map.put(str, k);
+                            }
+                        } else {
+                            map.put(currCate, k);
+                        }
+                    }
+                }
+                binningInfo.setBinCategories(cc.getBinCategory());
+                binSize = cc.getBinBoundary().size() + cc.getBinCategory().size();
+            } else if(cc.isNumerical()) {
+                binningInfo.setNumeric(true);
+                binningInfo.setBinBoundaries(cc.getBinBoundary());
+                binSize = cc.getBinBoundary().size();
+            } else {
+                binningInfo.setNumeric(false);
+                Map<String, Integer> map = this.categoricalBinMap.get(cc.getColumnNum());
+                if(map == null) {
+                    map = new HashMap<String, Integer>();
+                    this.categoricalBinMap.put(cc.getColumnNum(), map);
+                }
+                if(cc.getBinCategory() != null) {
+                    for(int k = 0; k < cc.getBinCategory().size(); k++) {
+                        String currCate = cc.getBinCategory().get(k);
+                        if(currCate.contains(Constants.CATEGORICAL_GROUP_VAL_DELIMITER)) {
+                            String[] splits = StringUtils.split(currCate, Constants.CATEGORICAL_GROUP_VAL_DELIMITER);
+                            for(String str: splits) {
+                                map.put(str, k);
+                            }
+                        } else {
+                            map.put(currCate, k);
+                        }
+                    }
+                }
+                binningInfo.setBinCategories(cc.getBinCategory());
+                binSize = cc.getBinCategory().size();
+            }
+
+            long[] binCountPos = new long[binSize + 1];
+            binningInfo.setBinCountPos(binCountPos);
+            long[] binCountNeg = new long[binSize + 1];
+            binningInfo.setBinCountNeg(binCountNeg);
+            double[] binWeightPos = new double[binSize + 1];
+            binningInfo.setBinWeightPos(binWeightPos);
+            double[] binWeightNeg = new double[binSize + 1];
+            binningInfo.setBinWeightNeg(binWeightNeg);
+            this.columnBinningInfo.put(cc.getColumnNum(), binningInfo);
+        }
+    }
+
     /**
      * Load and initialize column binning info object.
      */
     private void loadColumnBinningInfo() throws FileNotFoundException, IOException {
         BufferedReader reader = null;
         try {
-            reader = new BufferedReader(new InputStreamReader(new FileInputStream(Constants.BINNING_INFO_FILE_NAME),
-                    Charset.forName("UTF-8")));
+            String fileName = Constants.BINNING_INFO_FILE_NAME;
+
+            if(this.modelConfig.isMultiTask()) {
+                fileName = Constants.BINNING_INFO_FILE_NAME + "." + this.mtlIndex;
+            }
+            reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName), Charset.forName("UTF-8")));
             String line = reader.readLine();
             while(line != null && line.length() != 0) {
                 LOG.debug("line is {}", line);
@@ -240,10 +363,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                         binningInfo.setNumeric(true);
                         String[] splits = CommonUtils.split(cols[1], Constants.HYBRID_BIN_STR_DILIMETER);
 
-                        List<Double> list = new ArrayList<Double>();
-                        for(String startElement: BIN_BOUNDARY_SPLITTER.split(splits[0])) {
-                            list.add(Double.valueOf(startElement));
-                        }
+                        List<Double> list = extractBinBoundaryList(splits[0]);
                         binningInfo.setBinBoundaries(list);
 
                         List<String> cateList = new ArrayList<String>();
@@ -263,10 +383,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                         binSize = list.size() + cateList.size();
                     } else if(columnConfig.isNumerical()) {
                         binningInfo.setNumeric(true);
-                        List<Double> list = new ArrayList<Double>();
-                        for(String startElement: BIN_BOUNDARY_SPLITTER.split(cols[1])) {
-                            list.add(Double.valueOf(startElement));
-                        }
+                        List<Double> list = extractBinBoundaryList(cols[1]);
                         binningInfo.setBinBoundaries(list);
                         binSize = list.size();
                     } else {
@@ -310,6 +427,24 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         }
     }
 
+    public List<Double> extractBinBoundaryList(String cols) {
+        List<Double> list = new ArrayList<Double>();
+        double lastBinValue = Double.POSITIVE_INFINITY;
+        for(String startElement: BIN_BOUNDARY_SPLITTER.split(cols)) {
+            double binValue = Double.valueOf(startElement);
+            if(lastBinValue == Double.POSITIVE_INFINITY) { // fist one in iteration
+                list.add(binValue);
+                lastBinValue = binValue;
+            } else {
+                if(Math.abs(binValue - lastBinValue) > MINIMAL_BIN_GAP) { // if gap < MINIMAL_BIN_GAP, merge the two into one
+                    list.add(binValue);
+                    lastBinValue = binValue;
+                } // else no need set lastBinValue because of merge into one
+            }
+        }
+        return list;
+    }
+
     /**
      * Load tag weight index field.
      */
@@ -332,6 +467,9 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     private void loadWeightColumnNum() {
         String weightColumnName = this.modelConfig.getDataSet().getWeightColumnName();
         if(weightColumnName != null && weightColumnName.length() != 0) {
+            if(this.modelConfig.isMultiTask() && this.modelConfig.isMultiWeightsInMTL()) {
+                weightColumnName = this.modelConfig.getMultiTaskWeightColumnNames().get(this.modelConfig.getMtlIndex());
+            }
             for(int i = 0; i < this.columnConfigList.size(); i++) {
                 ColumnConfig config = this.columnConfigList.get(i);
                 if(config.getColumnName().equals(weightColumnName)) {
@@ -412,19 +550,36 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
         // valid data process
         for(int i = 0; i < units.length; i++) {
-            populateStats(units, tag, weight, i, i);
+            populateStats(units, this.posTags, this.negTags, tag, weight, i, i);
             if(this.isForExpressions) {
                 for(int j = 0; j < this.expressionDataPurifiers.size(); j++) {
                     Boolean filter = filterResults.get(j);
+                    DataPurifier dataPurifier = this.expressionDataPurifiers.get(j);
                     if(filter != null && filter) {
-                        populateStats(units, tag, weight, i, (j + 1) * units.length + i);
+                        if(dataPurifier.isNewTag()) {
+                            Integer index = this.newTagIndexes.get(j);
+                            String newTag = units[index].trim();
+                            Set<String> newPosTags = dataPurifier.getNewPosTags();
+                            Set<String> newNegTags = dataPurifier.getNewNegTags();
+                            if(newTag == null || (!newPosTags.contains(newTag) && !newNegTags.contains(newTag))) {
+                                context.getCounter(Constants.SHIFU_GROUP_COUNTER, "INVALID_EXTENSION_TAG")
+                                        .increment(1L);
+                            } else {
+                                populateStats(units, newPosTags, newNegTags, newTag, weight, i,
+                                        (j + 1) * units.length + i);
+                            }
+                        } else {
+                            populateStats(units, this.posTags, this.negTags, tag, weight, i,
+                                    (j + 1) * units.length + i);
+                        }
                     }
                 }
             }
         }
     }
 
-    private void populateStats(String[] units, String tag, Double weight, int columnIndex, int newCCIndex) {
+    private void populateStats(String[] units, Set<String> posTags, Set<String> negTags, String tag, Double weight,
+            int columnIndex, int newCCIndex) {
         ColumnConfig columnConfig = this.columnConfigList.get(columnIndex);
 
         CountAndFrequentItems countAndFrequentItems = this.variableCountMap.get(newCCIndex);
@@ -477,6 +632,10 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     binNum += binningInfoWritable.getBinBoundaries().size();;
                 }
             } else if(isNumber) {
+                if(precisionType != null) {
+                    // mimic like cur precision
+                    douVal = ((Number) this.precisionType.to(douVal)).doubleValue();
+                }
                 binNum = getBinNum(binningInfoWritable.getBinBoundaries(), douVal);
                 if(binNum == -1) {
                     throw new RuntimeException("binNum should not be -1 to this step.");
@@ -511,6 +670,9 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 isMissingValue = true;
             } else {
                 String str = units[columnIndex];
+                if(columnConfig.getHashSeed() > 0) {
+                    str = str.hashCode() % columnConfig.getHashSeed() + "";
+                }
                 binNum = quickLocateCategoricalBin(this.categoricalBinMap.get(newCCIndex), str);
                 if(binNum < 0) {
                     isInvalidValue = true;
@@ -547,6 +709,11 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 } catch (Exception e) {
                     isInvalidValue = true;
                 }
+            }
+
+            if(precisionType != null) {
+                // mimic like cut precision
+                douVal = ((Number) this.precisionType.to(douVal)).doubleValue();
             }
 
             // add logic the same as CalculateNewStatsUDF

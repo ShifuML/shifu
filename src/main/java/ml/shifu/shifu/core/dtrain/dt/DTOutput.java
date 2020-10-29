@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright [2012-2014] PayPal Software Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,18 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.dt;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
-
 import ml.shifu.guagua.master.BasicMasterInterceptor;
 import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -37,16 +25,24 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
-
-import org.apache.hadoop.conf.Configuration;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.HDFSUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 /**
  * {@link DTOutput} is used to write the model output and error info to file system.
@@ -123,9 +119,17 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
     private boolean isKFoldCV;
 
     /**
-     * Use the same one conf instance
+     * Model spec precision, by default some threshold and predict are double to ensure model predict precision, change
+     * to FLOAT32 or FLOAT16 may impact final predict precision but save some space. As already compressed based on
+     * reduce unnessecary fields, category encoding and gzip compression, not too much space saving if FLOAT32 or
+     * FLOAT16, FLOAT16 reuses the same float type to store model spec, size of model spec could be the same as FLOAT32.
      */
-    private Configuration conf;
+    private PrecisionType msPt;
+
+    /**
+     * Binary model path: bmodels/mode0.gbt.float32 ...
+     */
+    private Path bModel;
 
     @Override
     public void preApplication(MasterContext<DTMasterParams, DTWorkerParams> context) {
@@ -144,87 +148,13 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         if(isRF) {
             if(currentIteration % (tmpModelFactor * 2) == 0) {
                 // save tmp models
-                Thread tmpModelPersistThread = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        // save model results for continue model training, if current job is failed, then next
-                        // running
-                        // we can start from this point to save time.
-                        // another case for master recovery, if master is failed, read such checkpoint model
-                        Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-
-                        // if current iteration is the last iteration, or it is halted by early stop condition, no
-                        // need to save checkpoint model here as it is replicated with postApplicaiton.
-                        // There is issue here if saving the same model in this thread and another thread in
-                        // postApplication, sometimes this conflict will cause model writing failed.
-                        if(!isHalt && currentIteration != totalIteration) {
-                            Path tmpModelPath = getTmpModelPath(currentIteration);
-                            writeModelToFileSystem(context.getMasterResult().getTrees(), out);
-
-                            // in such case tmp model is final model, just copy to tmp models
-                            LOG.info("Copy checkpointed model to tmp folder: {}", tmpModelPath.toString());
-                            try {
-                                DataOutputStream outputStream = new DataOutputStream(new GZIPOutputStream(FileSystem
-                                        .get(DTOutput.this.conf).create(tmpModelPath)));
-                                FSDataInputStream inputStream = FileSystem.get(DTOutput.this.conf).open(out);
-                                DataInputStream dis = new DataInputStream(new GZIPInputStream(inputStream));
-                                IOUtils.copyBytes(dis, outputStream, DTOutput.this.conf);
-                            } catch (IOException e) {
-                                LOG.warn("Error in copy models to tmp", e);
-                            }
-                        } else {
-                            // last one only save tmp models
-                            saveTmpModelToHDFS(currentIteration, context.getMasterResult().getTrees());
-                        }
-                    }
-                }, "saveTmpModelToHDFS thread");
-                tmpModelPersistThread.setDaemon(true);
-                tmpModelPersistThread.start();
+                tmpRFModelSave(context, currentIteration, totalIteration, isHalt);
             }
         } else if(isGBDT) {
             // for gbdt, only store trees are all built well
             if(this.treeNum >= 10 && context.getMasterResult().isSwitchToNextTree()
                     && (context.getMasterResult().getTmpTrees().size() - 1) % (this.treeNum / 10) == 0) {
-                final List<TreeNode> trees = context.getMasterResult().getTmpTrees();
-                if(trees.size() > 1) {
-                    Thread tmpModelPersistThread = new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            List<TreeNode> subTrees = trees.subList(0, trees.size() - 1);
-                            // save model results for continue model training, if current job is failed, then next
-                            // running we can start from this point to save time.
-                            // another case for master recovery, if master is failed, read such checkpoint model
-                            Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-
-                            // if current iteration is the last iteration, or it is halted by early stop condition, no
-                            // need to save checkpoint model here as it is replicated with postApplicaiton.
-                            // There is issue here if saving the same model in this thread and another thread in
-                            // postApplication, sometimes this conflict will cause model writing failed.
-                            int subTreesSize = subTrees.size();
-                            if(!isHalt && currentIteration != totalIteration) {
-                                Path tmpModelPath = getTmpModelPath(subTreesSize);
-                                writeModelToFileSystem(subTrees, out);
-
-                                // in such case tmp model is final model, just copy to tmp models
-                                LOG.info("Copy checkpointed model to tmp folder: {}", tmpModelPath.toString());
-                                try {
-                                    DataOutputStream outputStream = new DataOutputStream(new GZIPOutputStream(
-                                            FileSystem.get(DTOutput.this.conf).create(tmpModelPath)));
-                                    FSDataInputStream inputStream = FileSystem.get(DTOutput.this.conf).open(out);
-                                    DataInputStream dis = new DataInputStream(new GZIPInputStream(inputStream));
-                                    IOUtils.copyBytes(dis, outputStream, DTOutput.this.conf);
-                                } catch (IOException e) {
-                                    LOG.warn("Error in copy models to tmp", e);
-                                }
-                            } else {
-                                // last one is newest one with only ROOT node, should be excluded
-                                saveTmpModelToHDFS(subTreesSize, subTrees);
-                            }
-                        }
-                    }, "saveTmpModelToHDFS thread");
-                    tmpModelPersistThread.setDaemon(true);
-                    tmpModelPersistThread.start();
-                }
+                tmpGBDTModelSave(context, currentIteration, totalIteration, isHalt);
             }
         }
 
@@ -232,66 +162,104 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         LOG.debug("DT output post iteration time is {}ms", (System.currentTimeMillis() - start));
     }
 
+    private void tmpGBDTModelSave(final MasterContext<DTMasterParams, DTWorkerParams> context,
+            final int currentIteration, final int totalIteration, final boolean isHalt) {
+        final List<TreeNode> trees = context.getMasterResult().getTmpTrees();
+        if(trees.size() > 1) {
+            Thread tmpModelPersistThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    List<TreeNode> subTrees = trees.subList(0, trees.size() - 1);
+                    // save model results for continue model training, if current job is failed, then next
+                    // running we can start from this point to save time.
+                    // another case for master recovery, if master is failed, read such checkpoint model
+                    Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
+
+                    // if current iteration is the last iteration, or it is halted by early stop condition, no
+                    // need to save checkpoint model here as it is replicated with postApplicaiton.
+                    // There is issue here if saving the same model in this thread and another thread in
+                    // postApplication, sometimes this conflict will cause model writing failed.
+                    int subTreesSize = subTrees.size();
+                    if(!isHalt && currentIteration != totalIteration) {
+                        Path tmpModelPath = getTmpModelPath(subTreesSize);
+                        writeModelToFileSystem(subTrees, out, false);
+
+                        // in such case tmp model is final model, just copy to tmp models
+                        LOG.info("Copy checkpointed model to tmp folder: {}", tmpModelPath.toString());
+                        try {
+                            DataOutputStream outputStream = new DataOutputStream(
+                                    new GZIPOutputStream(HDFSUtils.getFS(tmpModelPath).create(tmpModelPath)));
+                            FSDataInputStream inputStream = HDFSUtils.getFS(out).open(out);
+                            DataInputStream dis = new DataInputStream(new GZIPInputStream(inputStream));
+                            IOUtils.copyBytes(dis, outputStream, HDFSUtils.getConf());
+                        } catch (IOException e) {
+                            LOG.warn("Error in copy models to tmp", e);
+                        }
+                    } else {
+                        // last one is newest one with only ROOT node, should be excluded
+                        saveTmpModelToHDFS(subTreesSize, subTrees);
+                    }
+                }
+            }, "saveTmpModelToHDFS thread");
+            tmpModelPersistThread.setDaemon(true);
+            tmpModelPersistThread.start();
+        }
+    }
+
+    private void tmpRFModelSave(final MasterContext<DTMasterParams, DTWorkerParams> context, final int currentIteration,
+            final int totalIteration, final boolean isHalt) {
+        Thread tmpModelPersistThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // save model results for continue model training, if current job is failed, then next
+                // running we can start from this point to save time. Another case for master recovery, if master is
+                // failed, read such checkpoint model
+                Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
+
+                // if current iteration is the last iteration, or it is halted by early stop condition, no
+                // need to save checkpoint model here as it is replicated with postApplicaiton.
+                // There is issue here if saving the same model in this thread and another thread in
+                // postApplication, sometimes this conflict will cause model writing failed.
+                if(!isHalt && currentIteration != totalIteration) {
+                    Path tmpModelPath = getTmpModelPath(currentIteration);
+                    writeModelToFileSystem(context.getMasterResult().getTrees(), out, false);
+
+                    // in such case tmp model is final model, just copy to tmp models
+                    LOG.info("Copy checkpointed model to tmp folder: {}", tmpModelPath.toString());
+                    try {
+                        DataOutputStream outputStream = new DataOutputStream(
+                                new GZIPOutputStream(HDFSUtils.getFS(tmpModelPath).create(tmpModelPath)));
+                        FSDataInputStream inputStream = HDFSUtils.getFS(out).open(out);
+                        DataInputStream dis = new DataInputStream(new GZIPInputStream(inputStream));
+                        IOUtils.copyBytes(dis, outputStream, HDFSUtils.getConf());
+                    } catch (IOException e) {
+                        LOG.warn("Error in copy models to tmp", e);
+                    }
+                } else {
+                    // last one only save tmp models
+                    saveTmpModelToHDFS(currentIteration, context.getMasterResult().getTrees());
+                }
+            }
+        }, "saveTmpModelToHDFS thread");
+        tmpModelPersistThread.setDaemon(true);
+        tmpModelPersistThread.start();
+    }
+
     @SuppressWarnings("deprecation")
     private void updateProgressLog(final MasterContext<DTMasterParams, DTWorkerParams> context) {
         int currentIteration = context.getCurrentIteration();
         if(context.isFirstIteration()) {
-            // first iteration is used for training preparation
+            // first iteration is used for training preparation, no need update progress
             return;
         }
         double trainError = context.getMasterResult().getTrainError() / context.getMasterResult().getTrainCount();
-        double validationError = context.getMasterResult().getValidationCount() == 0d ? 0d : context.getMasterResult()
-                .getValidationError() / context.getMasterResult().getValidationCount();
+        double validationError = context.getMasterResult().getValidationCount() == 0d ? 0d
+                : context.getMasterResult().getValidationError() / context.getMasterResult().getValidationCount();
         String info = "";
         if(this.isGBDT) {
-            int treeSize = 0;
-            if(context.getMasterResult().isSwitchToNextTree() || context.getMasterResult().isHalt()) {
-                treeSize = context.getMasterResult().isSwitchToNextTree() ? (context.getMasterResult().getTmpTrees()
-                        .size() - 1) : (context.getMasterResult().getTmpTrees().size());
-                info = new StringBuilder(200)
-                        .append("Trainer ")
-                        .append(this.trainerId)
-                        .append(" Iteration #")
-                        .append(currentIteration - 1)
-                        .append(" Training Error: ")
-                        .append((Double.isNaN(trainError) || trainError == 0d) ? "N/A" : String.format("%.10f",
-                                trainError)).append(" Validation Error: ")
-                        .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
-                        .append("; Tree ").append(treeSize).append(" is finished. \n").toString();
-            } else {
-                int nextDepth = context.getMasterResult().getTreeDepth().get(0);
-                info = new StringBuilder(200)
-                        .append("Trainer ")
-                        .append(this.trainerId)
-                        .append(" Iteration #")
-                        .append(currentIteration - 1)
-                        .append(" Training Error: ")
-                        .append((Double.isNaN(trainError) || trainError == 0d) ? "N/A" : String.format("%.10f",
-                                trainError)).append(" Validation Error: ")
-                        .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
-                        .append("; will work on depth ").append(nextDepth).append(". \n").toString();
-            }
-        }
-
-        if(this.isRF) {
-            if(trainError != 0d) {
-                List<Integer> treeDepth = context.getMasterResult().getTreeDepth();
-                if(treeDepth.size() == 0) {
-                    info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
-                            .append(currentIteration - 1).append(" Training Error: ")
-                            .append(trainError == 0d ? "N/A" : String.format("%.10f", trainError))
-                            .append(" Validation Error: ")
-                            .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
-                            .append("\n").toString();
-                } else {
-                    info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
-                            .append(currentIteration - 1).append(" Training Error: ")
-                            .append(trainError == 0d ? "N/A" : String.format("%.10f", trainError))
-                            .append(" Validation Error: ")
-                            .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
-                            .append("; will work on depth ").append(toListString(treeDepth)).append(". \n").toString();
-                }
-            }
+            info = buildGBDTProgressInfo(context, currentIteration, trainError, validationError);
+        } else if(this.isRF) {
+            info = buildRFProgressInfo(context, currentIteration, trainError, validationError);
         }
 
         if(info.length() > 0) {
@@ -299,11 +267,61 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                 LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), info.toString());
                 this.progressOutput.write(info.getBytes("UTF-8"));
                 this.progressOutput.flush();
-                this.progressOutput.sync();
+                this.progressOutput.hflush();
             } catch (IOException e) {
                 LOG.error("Error in write progress log:", e);
             }
         }
+    }
+
+    private String buildRFProgressInfo(final MasterContext<DTMasterParams, DTWorkerParams> context,
+            int currentIteration, double trainError, double validationError) {
+        String info = "";
+        if(trainError != 0d) {
+            List<Integer> treeDepth = context.getMasterResult().getTreeDepth();
+            if(treeDepth.size() == 0) {
+                info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
+                        .append(currentIteration - 1).append(" Training Error: ")
+                        .append(trainError == 0d ? "N/A" : String.format("%.10f", trainError))
+                        .append(" Validation Error: ")
+                        .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError)).append("\n")
+                        .toString();
+            } else {
+                info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
+                        .append(currentIteration - 1).append(" Training Error: ")
+                        .append(trainError == 0d ? "N/A" : String.format("%.10f", trainError))
+                        .append(" Validation Error: ")
+                        .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
+                        .append("; will work on depth ").append(toListString(treeDepth)).append(". \n").toString();
+            }
+        }
+        return info;
+    }
+
+    private String buildGBDTProgressInfo(final MasterContext<DTMasterParams, DTWorkerParams> context,
+            int currentIteration, double trainError, double validationError) {
+        String info;
+        int treeSize = 0;
+        if(context.getMasterResult().isSwitchToNextTree() || context.getMasterResult().isHalt()) {
+            treeSize = context.getMasterResult().isSwitchToNextTree()
+                    ? (context.getMasterResult().getTmpTrees().size() - 1)
+                    : (context.getMasterResult().getTmpTrees().size());
+            info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
+                    .append(currentIteration - 1).append(" Training Error: ")
+                    .append((Double.isNaN(trainError) || trainError == 0d) ? "N/A" : String.format("%.10f", trainError))
+                    .append(" Validation Error: ")
+                    .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError)).append("; Tree ")
+                    .append(treeSize).append(" is finished. \n").toString();
+        } else {
+            int nextDepth = context.getMasterResult().getTreeDepth().get(0);
+            info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
+                    .append(currentIteration - 1).append(" Training Error: ")
+                    .append((Double.isNaN(trainError) || trainError == 0d) ? "N/A" : String.format("%.10f", trainError))
+                    .append(" Validation Error: ")
+                    .append(validationError == 0d ? "N/A" : String.format("%.10f", validationError))
+                    .append("; will work on depth ").append(nextDepth).append(". \n").toString();
+        }
+        return info;
     }
 
     /**
@@ -333,15 +351,13 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         if(this.isGBDT) {
             trees = context.getMasterResult().getTmpTrees();
         }
-        if(LOG.isDebugEnabled()) {
-            LOG.debug("final trees", trees.toString());
-        }
         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
-        writeModelToFileSystem(trees, out);
+        writeModelToFileSystem(trees, out, true);
         if(this.isGsMode || this.isKFoldCV) {
             Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
-            writeValErrorToFileSystem(context.getMasterResult().getValidationError()
-                    / context.getMasterResult().getValidationCount(), valErrOutput);
+            writeValErrorToFileSystem(
+                    context.getMasterResult().getValidationError() / context.getMasterResult().getValidationCount(),
+                    valErrOutput);
         }
         IOUtils.closeStream(this.progressOutput);
     }
@@ -349,7 +365,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
     private void writeValErrorToFileSystem(double valError, Path out) {
         FSDataOutputStream fos = null;
         try {
-            fos = FileSystem.get(new Configuration()).create(out);
+            fos = HDFSUtils.getFS(out).create(out);
             LOG.info("Writing valerror to {}", out);
             fos.write((valError + "").getBytes("UTF-8"));
         } catch (IOException e) {
@@ -359,12 +375,27 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         }
     }
 
-    private void writeModelToFileSystem(List<TreeNode> trees, Path out) {
+    private void writeModelToFileSystem(List<TreeNode> trees, Path out, boolean isFinal) {
         List<List<TreeNode>> baggingTrees = new ArrayList<List<TreeNode>>();
         baggingTrees.add(trees);
         try {
-            BinaryDTSerializer.save(modelConfig, columnConfigList, baggingTrees, this.validParams.get("Loss")
-                    .toString(), inputCount, FileSystem.get(this.conf), out);
+            BinaryDTSerializer.save(modelConfig, columnConfigList, baggingTrees,
+                    this.validParams.get("Loss").toString(), inputCount, HDFSUtils.getFS(out), out);
+            if(isFinal) {
+                if(this.msPt != null) {
+                    switch(this.msPt) {
+                        case FLOAT32:
+                        case FLOAT16:
+                            Path msOut = new Path(this.bModel.toString() + "." + this.msPt.toString().toLowerCase());
+                            BinaryDTSerializer.save(modelConfig, columnConfigList, baggingTrees,
+                                    this.validParams.get("Loss").toString(), inputCount, HDFSUtils.getFS(msOut),
+                                    msOut, this.msPt);
+                            break;
+                        default:
+                            throw new UnsupportedOperationException("Unsupported model spec precision type.");
+                    }
+                }
+            }
         } catch (IOException e) {
             LOG.error("Error in writing model", e);
         }
@@ -375,20 +406,20 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
      */
     private void saveTmpModelToHDFS(int iteration, List<TreeNode> trees) {
         Path out = getTmpModelPath(iteration);
-        writeModelToFileSystem(trees, out);
+        writeModelToFileSystem(trees, out, false);
     }
 
     private Path getTmpModelPath(int iteration) {
-        return new Path(DTrainUtils.getTmpModelName(this.tmpModelsFolder, this.trainerId, iteration, modelConfig
-                .getTrain().getAlgorithm().toLowerCase()));
+        return new Path(DTrainUtils.getTmpModelName(this.tmpModelsFolder, this.trainerId, iteration,
+                modelConfig.getTrain().getAlgorithm().toLowerCase()));
     }
 
     private void init(MasterContext<DTMasterParams, DTWorkerParams> context) {
         if(isInit.compareAndSet(false, true)) {
-            this.conf = new Configuration();
             loadConfigFiles(context.getProps());
             this.trainerId = context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID);
-            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
+            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(),
+                    modelConfig.getTrain().getGridConfigFileContent());
             this.isGsMode = gs.hasHyperParam();
 
             this.validParams = modelConfig.getParams();
@@ -397,9 +428,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             }
 
             Integer kCrossValidation = this.modelConfig.getTrain().getNumKFold();
-            if(kCrossValidation != null && kCrossValidation > 0) {
-                isKFoldCV = true;
-            }
+            this.isKFoldCV = kCrossValidation != null && kCrossValidation > 0;
 
             this.tmpModelsFolder = context.getProps().getProperty(CommonConstants.SHIFU_TMP_MODELS_FOLDER);
             this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
@@ -412,16 +441,23 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                 // if the progressLog already exists, that because the master failed, and fail-over
                 // we need to append the log, so that client console can get refreshed. Or console will appear stuck.
                 if(ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
-                    this.progressOutput = FileSystem.get(new Configuration()).append(progressLog);
+                    this.progressOutput = HDFSUtils.getFS(progressLog).append(progressLog);
                 } else {
-                    this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
+                    this.progressOutput = HDFSUtils.getFS(progressLog).create(progressLog);
                 }
             } catch (IOException e) {
                 LOG.error("Error in create progress log:", e);
             }
             this.treeNum = Integer.valueOf(validParams.get("TreeNum").toString());;
-        }
 
+            try {
+                this.msPt = PrecisionType.of(context.getProps().getProperty(Constants.SHIFU_MODELSPEC_PRECISION_TYPE));
+            } catch (Exception e) {
+                this.msPt = null;
+            }
+            this.bModel = new Path(context.getProps().getProperty(Constants.SHIFU_BINARY_MODEL_PATH));
+            LOG.info("Model spec precision: " + this.msPt);
+        }
     }
 
     /**
@@ -430,12 +466,12 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
      */
     private void loadConfigFiles(final Properties props) {
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
-                    SourceType.HDFS.toString()));
+            SourceType sourceType = SourceType
+                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(props.getProperty(CommonConstants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

@@ -37,6 +37,7 @@ import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.JSONUtils;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -183,8 +184,8 @@ public class PerformanceEvaluator {
         PathFinder pathFinder = new PathFinder(modelConfig);
 
         // bucketing
-        PerformanceResult result = bucketing(matrixList, records, evalConfig.getPerformanceBucketNum(), evalConfig
-                .getDataSet().getWeightColumnName() != null);
+        PerformanceResult result = bucketing(matrixList, records, evalConfig.getPerformanceBucketNum(),
+                StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName()));
 
         Writer writer = null;
         try {
@@ -236,6 +237,11 @@ public class PerformanceEvaluator {
         po.weightedFpr = confMatObject.getWeightedFp()
                 / (confMatObject.getWeightedFp() + confMatObject.getWeightedTn());
 
+        // FTPR, False True Positive Rate (fp/tp)
+        po.ftpr = confMatObject.getFp() / confMatObject.getTp();
+
+        po.weightedFtpr = confMatObject.getWeightedFp() / confMatObject.getWeightedTp();
+
         // Lift tp / (number_action * (number_postive / all_unit))
         po.liftUnit = confMatObject.getTp()
                 / ((confMatObject.getTp() + confMatObject.getFp()) * (confMatObject.getTp() + confMatObject.getFn()) / confMatObject
@@ -278,6 +284,10 @@ public class PerformanceEvaluator {
                 po.liftUnit = 0.0;
                 po.weightLiftUnit = 0.0;
 
+                // ftp = NaN
+                po.ftpr = 0.0;
+                po.weightedFtpr = 0.0;
+                
                 FPRList.add(po);
                 catchRateList.add(po);
                 gainList.add(po);
@@ -317,7 +327,6 @@ public class PerformanceEvaluator {
                         * binCapacity) {
                     po.binNum = gainWeightBin++;
                     gainWeightList.add(po);
-
                 }
             }
             i++;
@@ -374,17 +383,21 @@ public class PerformanceEvaluator {
     static void logResult(List<PerformanceObject> list, String info) {
         DecimalFormat df = new DecimalFormat("#.####");
 
-        String formatString = "%10s %18s %10s %18s %15s %18s %10s %11s %10s";
+        String formatString = "%10s %13s %8s %11s %9s %12s %8s %8s %8s %8s %11s";
 
         log.info("Start print: " + info);
 
-        log.info(String.format(formatString, "ActionRate", "WeightedActionRate", "Recall", "WeightedRecall",
-                "Precision", "WeightedPrecision", "FPR", "WeightedFPR", "BinLowestScore"));
+        log.info(String.format(formatString, "ActionRate", "WgtActionRate", "Recall", "WgtRecall",
+                "Precision", "WgtPrecision", "FPR", "WgtFPR", "FTPR", "WgtFTPR", "CutOffScore"));
 
         for(PerformanceObject po: list) {
-            log.info(String.format(formatString, df.format(po.actionRate), df.format(po.weightedActionRate),
-                    df.format(po.recall), df.format(po.weightedRecall), df.format(po.precision),
-                    df.format(po.weightedPrecision), df.format(po.fpr), df.format(po.weightedFpr), po.binLowestScore));
+            log.info(String.format(formatString,
+                    df.format(po.actionRate), df.format(po.weightedActionRate),
+                    df.format(po.recall), df.format(po.weightedRecall),
+                    df.format(po.precision), df.format(po.weightedPrecision),
+                    df.format(po.fpr), df.format(po.weightedFpr),
+                    df.format(po.ftpr), df.format(po.weightedFtpr),
+                    df.format(po.binLowestScore)));
         }
 
     }

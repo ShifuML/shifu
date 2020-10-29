@@ -15,20 +15,14 @@
  */
 package ml.shifu.shifu.core.dtrain;
 
-import java.util.HashSet;
-import java.util.Set;
-
+import ml.shifu.shifu.core.dtrain.nn.update.*;
+import ml.shifu.shifu.util.ClassUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import ml.shifu.shifu.core.dtrain.nn.update.AdaGradUpdate;
-import ml.shifu.shifu.core.dtrain.nn.update.AdamUpdate;
-import ml.shifu.shifu.core.dtrain.nn.update.MomentumUpdate;
-import ml.shifu.shifu.core.dtrain.nn.update.NesterovUpdate;
-import ml.shifu.shifu.core.dtrain.nn.update.RMSPropUpdate;
-import ml.shifu.shifu.core.dtrain.nn.update.UpdateRule;
-import ml.shifu.shifu.util.ClassUtils;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * {@link Weight} is used to update NN weights according to propagation option. Which is also copied from Encog.
@@ -36,7 +30,7 @@ import ml.shifu.shifu.util.ClassUtils;
  * <p>
  * We'd like to reuse code from Encog but unfortunately the methods are private:(.
  */
-public class Weight {
+public class Weight implements Update {
 
     protected static final Logger LOG = LoggerFactory.getLogger(Weight.class);
 
@@ -119,7 +113,7 @@ public class Weight {
      * Layer IDs which are not updated at all (used for fine tuning)
      */
     private Set<Integer> fixedWeights = new HashSet<Integer>();
-    
+
     public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl) {
         this(numWeight, numTrainSize, rate, algorithm, reg, rl, null);
     }
@@ -129,16 +123,18 @@ public class Weight {
         this(numWeight, numTrainSize, rate, algorithm, reg, rl, propagation, 0.5d, 0d, 0.9d, 0.999d);
     }
 
-    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl, String propagation, double momentum, double learningDecay, double adamBeta1,
-            double adamBeta2, Set<Integer> fixedWeights) {
-        this(numWeight, numTrainSize, rate, algorithm, reg, rl, propagation, momentum,learningDecay, adamBeta1,adamBeta2);
-        if ( CollectionUtils.isNotEmpty(fixedWeights) ) {
+    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl,
+            String propagation, double momentum, double learningDecay, double adamBeta1, double adamBeta2,
+            Set<Integer> fixedWeights) {
+        this(numWeight, numTrainSize, rate, algorithm, reg, rl, propagation, momentum, learningDecay, adamBeta1,
+                adamBeta2);
+        if(CollectionUtils.isNotEmpty(fixedWeights)) {
             this.fixedWeights = fixedWeights;
         }
     }
-    
-    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl, String propagation, double momentum, double learningDecay, double adamBeta1,
-            double adamBeta2) {
+
+    public Weight(int numWeight, double numTrainSize, double rate, String algorithm, double reg, RegulationLevel rl,
+            String propagation, double momentum, double learningDecay, double adamBeta1, double adamBeta2) {
         this.numWeight = numWeight;
         this.lastDelta = new double[numWeight];
         this.lastGradient = new double[numWeight];
@@ -221,11 +217,11 @@ public class Weight {
     }
 
     private double updateWeight(int index, double[] weights, double[] gradients) {
-        if (this.fixedWeights.contains(index)) {
+        if(this.fixedWeights.contains(index)) {
             // we do not update fixed weight for fine tune
             return 0.0d;
         }
-        
+
         if(this.algorithm.equalsIgnoreCase(DTrainUtils.BACK_PROPAGATION)) {
             return updateWeightBP(index, weights, gradients);
         } else if(this.algorithm.equalsIgnoreCase(DTrainUtils.QUICK_PROPAGATION)) {
@@ -242,7 +238,8 @@ public class Weight {
     }
 
     private double updateWeightBP(int index, double[] weights, double[] gradients) {
-        double delta = (gradients[index] * this.getLearningRate()) + (this.lastDelta[index] * this.getMomentum());
+        double delta = (gradients[index] * this.getLearningRate() / this.getNumTrainSize())
+                + (this.lastDelta[index] * this.getMomentum());
         this.lastDelta[index] = delta;
         return delta;
     }
@@ -345,6 +342,7 @@ public class Weight {
     /**
      * @return the learningRate
      */
+    @Override
     public double getLearningRate() {
         return learningRate;
     }
@@ -376,6 +374,7 @@ public class Weight {
     /**
      * @return the numWeight
      */
+    @Override
     public int getNumWeight() {
         return numWeight;
     }
@@ -391,6 +390,7 @@ public class Weight {
     /**
      * @return the momentum
      */
+    @Override
     public double getMomentum() {
         return momentum;
     }
@@ -406,6 +406,7 @@ public class Weight {
     /**
      * @return the learningDecay
      */
+    @Override
     public double getLearningDecay() {
         return learningDecay;
     }
@@ -421,6 +422,7 @@ public class Weight {
     /**
      * @return the adamBeta1
      */
+    @Override
     public double getAdamBeta1() {
         return adamBeta1;
     }
@@ -436,6 +438,7 @@ public class Weight {
     /**
      * @return the adamBeta2
      */
+    @Override
     public double getAdamBeta2() {
         return adamBeta2;
     }

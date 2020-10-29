@@ -1,17 +1,18 @@
 package ml.shifu.shifu.util;
 
-import ml.shifu.shifu.container.obj.EvalConfig;
-import ml.shifu.shifu.container.obj.ModelConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.fs.FileStatus;
-import org.testng.Assert;
-import org.testng.annotations.Test;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.fs.Path;
+import org.testng.Assert;
+import org.testng.annotations.Test;
+
+import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 
 /**
  * Copyright [2013-2018] PayPal Software Foundation
@@ -39,44 +40,54 @@ public class ModelSpecLoaderUtilsTest {
         File dstModels = new File("models");
         FileUtils.copyDirectory(srcModels, dstModels);
 
-        List<FileStatus> modelFiles = ModelSpecLoaderUtils.findModels(modelConfig, null, SourceType.LOCAL);
-        Assert.assertEquals(5, modelFiles.size());
+        List<Path> modelFiles = ModelSpecLoaderUtils.findModels(modelConfig, null, SourceType.LOCAL);
+        Assert.assertEquals(modelFiles.size(), 5);
 
         EvalConfig evalConfig = modelConfig.getEvalConfigByName("EvalA");
         evalConfig.setCustomPaths(new HashMap<String, String>());
         evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH, null);
         modelFiles = ModelSpecLoaderUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
-        Assert.assertEquals(5, modelFiles.size());
+        Assert.assertEquals(modelFiles.size(), 5);
 
         evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH, "  ");
         modelFiles = ModelSpecLoaderUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
-        Assert.assertEquals(5, modelFiles.size());
+        Assert.assertEquals(modelFiles.size(), 5);
 
         FileUtils.deleteDirectory(dstModels);
 
         evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH,
                 "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models");
         modelFiles = ModelSpecLoaderUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
-        Assert.assertEquals(5, modelFiles.size());
+        Assert.assertEquals(modelFiles.size(), 5);
 
         evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH,
                 "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models/model0.nn");
         modelFiles = ModelSpecLoaderUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
-        Assert.assertEquals(1, modelFiles.size());
+        Assert.assertEquals(modelFiles.size(), 1);
 
         evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH, "not-exists");
         modelFiles = ModelSpecLoaderUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
-        Assert.assertEquals(0, modelFiles.size());
+        Assert.assertEquals(modelFiles.size(), 0);
 
         evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH,
                 "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/models/*.nn");
         modelFiles = ModelSpecLoaderUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
-        Assert.assertEquals(5, modelFiles.size());
+        Assert.assertEquals(modelFiles.size(), 5);
 
         evalConfig.getCustomPaths().put(Constants.KEY_MODELS_PATH,
                 "./src/test/resources/example/cancer-judgement/ModelStore/ModelSet{0,1,9}/*/*.nn");
         modelFiles = ModelSpecLoaderUtils.findModels(modelConfig, evalConfig, SourceType.LOCAL);
-        Assert.assertEquals(5, modelFiles.size());
+        Assert.assertEquals(modelFiles.size(), 5);
     }
 
+
+    @Test
+    public void testFormatModelScoreName() {
+        Assert.assertEquals(ModelSpecLoaderUtils.formatModelScoreName("model0.nn"), "model0");
+        Assert.assertEquals(ModelSpecLoaderUtils.formatModelScoreName("model0-120.nn"), "model0_120");
+        Assert.assertEquals(ModelSpecLoaderUtils.formatModelScoreName(" model0-120.nn "), "model0_120");
+        Assert.assertEquals(ModelSpecLoaderUtils.formatModelScoreName("model0.1.gbt"), "model0_1");
+        Assert.assertEquals(ModelSpecLoaderUtils.formatModelScoreName("askfxk983*&*&().cb"), "askfxk983");
+        Assert.assertEquals(ModelSpecLoaderUtils.formatModelScoreName("^^&askfxk983*&*&()0.cb"), "askfxk983_0");
+    }
 }

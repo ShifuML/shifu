@@ -59,8 +59,6 @@ public class NNConstants {
 
     public static final String LIB_PATH_NAME = "lib";
 
-    public static final String NN_ALG_NAME = "NN";
-
     public static final String JAVA_IO_TMPDIR = "java.io.tmpdir";
 
     public static final int NN_BAGGING_THRESHOLD = 50;

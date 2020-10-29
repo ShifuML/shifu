@@ -35,6 +35,7 @@ import java.util.List;
 public class ColumnConfig {
 
     // add weight column and weight column is treated the same as meta
+    // add Weight back for back-compatible
     public static enum ColumnFlag {
         ForceSelect, ForceRemove, Candidate, Meta, Target, Weight
     }
@@ -97,6 +98,11 @@ public class ColumnConfig {
      * Sample values of such column.
      */
     private List<String> sampleValues;
+    
+    /**
+     * hash seed for categorical column enabled hash feature.
+     */
+    private int hashSeed = 0;
 
     /*
      * ---------------------------------------------------------------------------
@@ -104,7 +110,15 @@ public class ColumnConfig {
      * ---------------------------------------------------------------------------
      */
 
-    public Integer getColumnNum() {
+    public int getHashSeed() {
+		return hashSeed;
+	}
+
+	public void setHashSeed(int hashSeed) {
+		this.hashSeed = hashSeed;
+	}
+
+	public Integer getColumnNum() {
         return columnNum;
     }
 
@@ -167,12 +181,6 @@ public class ColumnConfig {
      * 
      * ---------------------------------------------------------------------------
      */
-
-    @JsonIgnore
-    public boolean isWeight() {
-        return ColumnFlag.Weight == columnFlag;
-    }
-
     @JsonIgnore
     public boolean isTarget() {
         return ColumnFlag.Target.equals(columnFlag);
@@ -210,7 +218,7 @@ public class ColumnConfig {
     // weigt column is also treated as meta column
     @JsonIgnore
     public boolean isMeta() {
-        return ColumnFlag.Meta == columnFlag || ColumnFlag.Weight == columnFlag;
+        return ColumnFlag.Meta == columnFlag;
     }
 
     @JsonIgnore
@@ -274,12 +282,16 @@ public class ColumnConfig {
 
     public void setBinBoundary(List<Double> binBoundary) {
         columnBinning.setBinBoundary(binBoundary);
-        columnBinning.setLength(binBoundary == null ? 0 : binBoundary.size());
+        if (binBoundary != null) {
+            setBinLength(binBoundary.size() + 1);
+        }
     }
 
     public void setBinCategory(List<String> binCategory) {
         columnBinning.setBinCategory(binCategory);
-        columnBinning.setLength(binCategory == null ? 0 : binCategory.size());
+        if (binCategory != null) {
+            setBinLength(binCategory.size() + 1);
+        }
     }
 
     public void setBinCountNeg(List<Integer> binCountNeg) {
@@ -532,6 +544,7 @@ public class ColumnConfig {
         output.writeUTF(columnFlag.toString());
         output.writeBoolean(finalSelect);
         output.writeDouble(hybridThreshold);
+        output.writeInt(hashSeed);
         columnStats.write(output);
         columnBinning.write(output);
         if (sampleValues == null || sampleValues.isEmpty()) {
@@ -557,6 +570,7 @@ public class ColumnConfig {
         columnFlag = ColumnFlag.valueOf(input.readUTF());
         finalSelect = input.readBoolean();
         hybridThreshold = input.readDouble();
+        hashSeed = input.readInt();
         columnStats = new ColumnStats();
         columnStats.read(input);
         columnBinning = new ColumnBinning();

@@ -15,6 +15,8 @@
  */
 package ml.shifu.shifu.udf;
 
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
@@ -23,8 +25,7 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import ml.shifu.shifu.udf.NormalizeUDF.PrecisionType;
-import java.io.IOException;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 
 /**
  * NormalizeUDFTest class
@@ -61,7 +62,7 @@ public class NormalizeUDFTest {
 
         Assert.assertEquals(32, instance.exec(input).size());
         Assert.assertEquals(
-                "(1,-3.374538,-4,-3.697376,-1.870673,4,4,4,4,4,4,2.473354,-0.350425,-1.006885,-1.073463,4,4,4,4,4,4,-3.143228,-4,-3.127431,-1.575238,4,4,3.485806,4,4,4,2.1)",
+                "(1,-3.3745382,-4.0,-3.697376,-1.8706726,4.0,4.0,4.0,4.0,4.0,4.0,2.473354,-0.3504254,-1.0068849,-1.0734632,4.0,4.0,4.0,4.0,4.0,4.0,-3.1432278,-4.0,-3.127431,-1.5752382,4.0,4.0,3.485806,4.0,4.0,4.0,2.1)",
                 instance.exec(input).toString());
     }
 
@@ -77,14 +78,15 @@ public class NormalizeUDFTest {
 
         Assert.assertEquals(32, instance.exec(input).size());
         Assert.assertEquals(
-                "0|-0.669222|-0.360155|-0.655541|-0.665245|0.760396|-0.131633|-0.42296|-0.106827|-0.776776|0.605251|0.180771|1.365906|0.187499|-0.2242|-0.113539|-0.405283|-0.496319|0.243497|-0.263792|-0.641144|-0.570226|0.435128|-0.554922|-0.586301|0.119237|-0.440279|-0.620615|-0.207681|-0.705196|-0.339793|11.75",
+                "0|-0.66922235|-0.36015487|-0.65554094|-0.6652448|0.76039577|-0.13163291|-0.42296025|-0.106827006|-0.77677613|0.6052514|0.18077102|1.3659062|0.18749943|-0.22420046|-0.113538824|-0.40528342|-0.49631938|0.24349733|-0.26379234|-0.64114404|-0.57022554|0.43512848|-0.5549224|-0.5863008|0.11923738|-0.44027883|-0.62061524|-0.2076809|-0.70519555|-0.3397934|11.75",
                 instance.exec(input).toDelimitedString("|"));
     }
 
-    // @Test
+    @Test
     public void testGetSchema() {
-        Assert.assertEquals(
-                "{Normalized: (diagnosis: int,column_3: float,column_4: float,column_5: float,column_6: float,column_7: float,column_8: float,column_9: float,column_10: float,column_11: float,column_12: float,column_13: float,column_14: float,column_15: float,column_16: float,column_17: float,column_18: float,column_19: float,column_20: float,column_21: float,column_22: float,column_23: float,column_24: float,column_25: float,column_26: float,column_27: float,column_28: float,column_29: float,column_30: float,column_31: float,column_32: float,weight: float)}",
-                instance.outputSchema(null).toString());
+        Assert.assertEquals(instance.outputSchema(null).toString(),
+                "{Normalized: (diagnosis: double,column_3: float,column_4: float,column_5: float,column_6: float,column_7: float,column_8: float,column_9: float,column_10: float,column_11: float,column_12: float,column_13: float,column_14: float,column_15: float,column_16: float,column_17: float,column_18: float,column_19: float,column_20: float,column_21: float,column_22: float,column_23: float,column_24: float,column_25: float,column_26: float,column_27: float,column_28: float,column_29: float,column_30: float,column_31: float,column_32: float,shifu::weight: float)}"
+        );
     }
+
 }

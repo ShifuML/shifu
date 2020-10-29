@@ -17,7 +17,7 @@ package ml.shifu.shifu.core;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
-import ml.shifu.shifu.udf.NormalizeUDF.CategoryMissingNormType;
+import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
 import ml.shifu.shifu.util.BinUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -255,6 +255,8 @@ public class Normalizer {
                 return OneHotNormalize(config, raw);
             case ZSCALE_ONEHOT:
                 return zscaleOneHotNormalize(config, raw, cutoff, categoryMissingNormType);
+            case ZSCALE_ORDINAL:
+                return zscaleOrdinalNormalize(config, raw, cutoff, categoryMissingNormType);
             case DISCRETE_ZSCORE:
             case DISCRETE_ZSCALE:
                 return discreteZScoreNormalize(config, raw, cutoff, categoryMissingNormType);
@@ -270,18 +272,19 @@ public class Normalizer {
 
     /**
      * Adding new API with cateIndeMap parameter without change normalize API.
+     * 
      * @param config
-     *              the ColumnConfig
+     *            the ColumnConfig
      * @param raw
-     *              the raw input
+     *            the raw input
      * @param cutoff
-     *              the cutoff value
+     *            the cutoff value
      * @param type
-     *              normalize type
+     *            normalize type
      * @param categoryMissingNormType
-     *              the category missing normal type
+     *            the category missing normal type
      * @param cateIndexMap
-     *              the cateIndexMap map from category to index
+     *            the cateIndexMap map from category to index
      * @return normalized value
      */
     public static List<Double> fullNormalize(ColumnConfig config, Object raw, Double cutoff,
@@ -295,7 +298,7 @@ public class Normalizer {
                 if(config.isNumerical()) {
                     return woeNormalize(config, raw, false);
                 } else if(config.isCategorical()) {
-                    Integer index = cateIndexMap.get(raw == null ? "" : raw.toString());
+                    Integer index = cateIndexMap == null ? null : cateIndexMap.get(raw == null ? "" : raw.toString());
                     if(index == null || index == -1) {
                         // last index for null category
                         index = config.getBinCategory().size();
@@ -306,7 +309,22 @@ public class Normalizer {
                 if(config.isNumerical()) {
                     return woeZScoreNormalize(config, raw, cutoff, false);
                 } else if(config.isCategorical()) {
-                    Integer index = cateIndexMap.get(raw == null ? "" : raw.toString());
+                    Integer index = cateIndexMap == null ? null : cateIndexMap.get(raw == null ? "" : raw.toString());
+                    if(index == null || index == -1) {
+                        // last index for null category
+                        index = config.getBinCategory().size();
+                    }
+                    return Arrays.asList((double) index);
+                }
+            case INDEX:
+                if(config.isNumerical()) {
+                    int binIndex = BinUtils.getBinNum(config, raw);
+                    if(binIndex < 0 ) {
+                        binIndex = config.getBinBoundary().size();
+                    } 
+                    return Arrays.asList((double) binIndex);
+                } else if(config.isCategorical()) {
+                    Integer index = cateIndexMap == null ? null : cateIndexMap.get(raw == null ? "" : raw.toString());
                     if(index == null || index == -1) {
                         // last index for null category
                         index = config.getBinCategory().size();
@@ -328,7 +346,7 @@ public class Normalizer {
      *            input column value
      * @param cutoff
      *            standard deviation cut off
-     * @param categoryMissingNormType
+     * @param cateIndexMap
      *            missing categorical value norm type
      * @return normalized value for ZScore method.
      */
@@ -339,7 +357,7 @@ public class Normalizer {
             double value = parseRawValue(config, raw, null);
             return Arrays.asList(computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff));
         } else if(config.isCategorical()) {
-            Integer index = cateIndexMap.get(raw == null ? "" : raw.toString());
+            Integer index = cateIndexMap == null ? null : cateIndexMap.get(raw == null ? "" : raw.toString());
             if(index == null || index == -1) {
                 // last index for null category
                 index = config.getBinCategory().size();
@@ -386,6 +404,20 @@ public class Normalizer {
         }
         normData[binNum] = 1.0d;
         return Arrays.asList(normData);
+    }
+
+    private static List<Double> zscaleOrdinalNormalize(ColumnConfig config, Object raw, Double cutoff,
+            CategoryMissingNormType categoryMissingNormType) {
+        if(config.isNumerical()) {
+            return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, false);
+        } else {
+            int binNum = BinUtils.getBinNum(config, raw);
+            if (binNum < 0) {
+                binNum = config.getBinCategory().size();
+            }
+            Double[] normVals = new Double[]{(double) binNum};
+            return Arrays.asList(normVals);
+        }
     }
 
     private static List<Double> zscaleOneHotNormalize(ColumnConfig config, Object raw, Double cutoff,

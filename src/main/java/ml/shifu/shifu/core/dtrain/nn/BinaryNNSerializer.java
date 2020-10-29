@@ -31,6 +31,7 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -45,6 +46,11 @@ public class BinaryNNSerializer {
 
     public static void save(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, List<BasicML> basicNetworks,
             FileSystem fs, Path output) throws IOException {
+        save(modelConfig, columnConfigList, basicNetworks, fs, output, PrecisionType.DOUBLE64);
+    }
+
+    public static void save(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, List<BasicML> basicNetworks,
+            FileSystem fs, Path output, PrecisionType pt) throws IOException {
         DataOutputStream fos = null;
         try {
             fos = new DataOutputStream(new GZIPOutputStream(fs.create(output)));
@@ -94,7 +100,7 @@ public class BinaryNNSerializer {
             }
 
             // write column index mapping
-            Map<Integer, Integer> columnMapping = getColumnMapping(columnConfigList);
+            Map<Integer, Integer> columnMapping = DTrainUtils.getColumnMapping(columnConfigList);
             fos.writeInt(columnMapping.size());
             for(Entry<Integer, Integer> entry: columnMapping.entrySet()) {
                 fos.writeInt(entry.getKey());
@@ -104,7 +110,7 @@ public class BinaryNNSerializer {
             // persist network, set it as list
             fos.writeInt(basicNetworks.size());
             for(BasicML network: basicNetworks) {
-                new PersistBasicFloatNetwork().saveNetwork(fos, (BasicFloatNetwork) network);
+                new PersistBasicFloatNetwork().saveNetwork(fos, (BasicFloatNetwork) network, pt);
             }
         } finally {
             IOUtils.closeStream(fos);
@@ -128,31 +134,6 @@ public class BinaryNNSerializer {
             }
         }
         return columnIndexNameMapping;
-    }
-
-    private static Map<Integer, Integer> getColumnMapping(List<ColumnConfig> columnConfigList) {
-        Map<Integer, Integer> columnMapping = new HashMap<Integer, Integer>(columnConfigList.size(), 1f);
-        int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(columnConfigList);
-        boolean isAfterVarSelect = inputOutputIndex[3] == 1 ? true : false;
-        boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
-        int index = 0;
-        for(int i = 0; i < columnConfigList.size(); i++) {
-            ColumnConfig columnConfig = columnConfigList.get(i);
-            if(!isAfterVarSelect) {
-                if(!columnConfig.isMeta() && !columnConfig.isTarget()
-                        && CommonUtils.isGoodCandidate(columnConfig, hasCandidates)) {
-                    columnMapping.put(columnConfig.getColumnNum(), index);
-                    index += 1;
-                }
-            } else {
-                if(columnConfig != null && !columnConfig.isMeta() && !columnConfig.isTarget()
-                        && columnConfig.isFinalSelect()) {
-                    columnMapping.put(columnConfig.getColumnNum(), index);
-                    index += 1;
-                }
-            }
-        }
-        return columnMapping;
     }
 
 }

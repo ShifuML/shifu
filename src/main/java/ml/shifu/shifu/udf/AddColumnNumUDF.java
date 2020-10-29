@@ -20,6 +20,7 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.*;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
@@ -65,9 +66,15 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
         super(source, pathModelConfig, pathColumnConfig);
         negTags = new HashSet<String>(modelConfig.getNegTags());
         // get weight column ID
+        String wgtColName = null;
         if(StringUtils.isNotBlank(this.modelConfig.getWeightColumnName())) {
+            if(this.modelConfig.isMultiTask() && this.modelConfig.isMultiWeightsInMTL()) {
+                wgtColName = this.modelConfig.getMultiTaskWeightColumnNames().get(this.modelConfig.getMtlIndex());
+            } else {
+                wgtColName = modelConfig.getWeightColumnName();
+            }
             for(ColumnConfig columnConfig: columnConfigList) {
-                if(columnConfig.getColumnName().equalsIgnoreCase(modelConfig.getWeightColumnName().trim())) {
+                if(columnConfig.getColumnName().equalsIgnoreCase(wgtColName.trim())) {
                     this.weightColumnId = columnConfig.getColumnNum();
                 }
             }
@@ -143,7 +150,8 @@ public class AddColumnNumUDF extends AbstractTrainerUDF<DataBag> {
             }
 
             // add random seed for distribution
-            tuple.set(COLUMN_SEED_INDX, Math.abs(random.nextInt() % 300));
+            tuple.set(COLUMN_SEED_INDX, Math.abs(random.nextInt() % Environment
+                    .getInt("shifu.psi.distribution.salt", 300)));
 
             // get weight value
             tuple.set(COLUMN_WEIGHT_INDX, getWeightColumnVal(input));

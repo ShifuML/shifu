@@ -20,15 +20,19 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
+import ml.shifu.shifu.util.HDFSUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.pig.ExecType;
 import org.apache.pig.PigServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ml.shifu.guagua.hadoop.util.HDPUtils;
+import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Environment;
@@ -131,8 +135,19 @@ public class PigExecutor {
                 pigServer.getPigContext().getProperties().put(entry.getKey(), entry.getValue());
             }
         }
+        
+        Map<String, String> pigParamsMap = null;
+        if(modelConfig.isMultiTask()) {
+            if(paramsMap != null) {
+                int mtlIndex = NumberFormatUtils.getInt(paramsMap.get(CommonConstants.MTL_INDEX), true);
+                // need append such parameter to UDF for UDF modelconfig loading
+                pigServer.getPigContext().getProperties().put(CommonConstants.MTL_INDEX, paramsMap.get(CommonConstants.MTL_INDEX));
+                pigParamsMap = CommonUtils.getPigParamMap(modelConfig, sourceType, pathFinder, mtlIndex);
+            }
+        } else {
+            pigParamsMap = CommonUtils.getPigParamMap(modelConfig, sourceType, pathFinder);
+        }
 
-        Map<String, String> pigParamsMap = CommonUtils.getPigParamMap(modelConfig, sourceType, pathFinder);
         if(paramsMap != null) {
             pigParamsMap.putAll(paramsMap);
         }
@@ -181,10 +196,6 @@ public class PigExecutor {
             if(StringUtils.isNotBlank(hdpVersion)) {
                 // for hdp 2.2.4, hdp.version should be set and configuration files should be added to container class
                 pigServer.getPigContext().getProperties().put("hdp.version", hdpVersion);
-                pigServer.getPigContext().addJar(HDPUtils.findContainingFile("hdfs-site.xml"));
-                pigServer.getPigContext().addJar(HDPUtils.findContainingFile("core-site.xml"));
-                pigServer.getPigContext().addJar(HDPUtils.findContainingFile("mapred-site.xml"));
-                pigServer.getPigContext().addJar(HDPUtils.findContainingFile("yarn-site.xml"));
             }
         } else {
             log.info("ExecType: LOCAL");

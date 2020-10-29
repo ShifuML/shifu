@@ -21,7 +21,7 @@ import ml.shifu.shifu.container.obj.ColumnBinning;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
-import ml.shifu.shifu.udf.NormalizeUDF.CategoryMissingNormType;
+import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -200,6 +200,33 @@ public class NormalizerTest {
         // Assert.assertEquals(Normalizer.normalize(config, "b", 22.0, NormType.WEIGHT_WOE_ZSCORE), 0.2);
         // Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 23.0, NormType.WEIGHT_WOE_ZSCORE), -1.6);
         // Assert.assertEquals(Normalizer.normalize(config, null, 23.0, NormType.WEIGHT_WOE_ZSCORE), -1.6);
+    }
+
+    @Test
+    public void testZscaleOrdinalNorm() {
+        // Input setting
+        ColumnConfig config = new ColumnConfig();
+        config.setMean(0.2);
+        config.setStdDev(1.0);
+        config.setColumnType(ColumnType.C);
+
+        ColumnBinning cbin = new ColumnBinning();
+        cbin.setBinCountWoe(Arrays.asList(new Double[] { 10.0, 11.0, 12.0, 13.0, 6.5 }));
+        cbin.setBinWeightedWoe(Arrays.asList(new Double[] { 20.0, 21.0, 22.0, 23.0, 16.5 }));
+        cbin.setBinCategory(Arrays.asList(new String[] { "a", "b", "c", "d" }));
+        cbin.setBinPosRate(Arrays.asList(new Double[] { 0.2, 0.4, 0.8, 1.0 }));
+        cbin.setBinCountNeg(Arrays.asList(1, 2, 3, 4, 5));
+        cbin.setBinCountPos(Arrays.asList(5, 4, 3, 2, 1));
+        cbin.setLength(5);
+        config.setColumnBinning(cbin);
+
+        Double cutoff = 4.0d;
+
+        Assert.assertEquals(Normalizer.normalize(config, "b", cutoff, NormType.ZSCALE_ORDINAL).get(0), 1.0);
+        Assert.assertEquals(Normalizer.normalize(config, "d", cutoff, NormType.ZSCALE_ORDINAL).get(0), 3.0);
+        Assert.assertEquals(Normalizer.normalize(config, "a", cutoff, NormType.ZSCALE_ORDINAL).get(0), 0.0);
+        Assert.assertEquals(Normalizer.normalize(config, null, cutoff, NormType.ZSCALE_ORDINAL).get(0), 4.0);
+        Assert.assertEquals(Normalizer.normalize(config, "e", cutoff, NormType.ZSCALE_ORDINAL).get(0), 4.0);
     }
 
     @Test

@@ -42,7 +42,6 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.FeatureSubsetStrategy;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
@@ -114,9 +113,11 @@ public class ModelInspector {
             // in INIT, only check if data or header are there or not
             result = ValidateResult.mergeResult(result, checkRawData(modelConfig.getDataSet(), "Train Set:"));
         } else if(ModelStep.STATS.equals(modelStep)) {
-            result = ValidateResult.mergeResult(result,
-                    checkFile("ColumnConfig.json", SourceType.LOCAL, "ColumnConfig.json : "));
-            result = ValidateResult.mergeResult(result, checkStatsConf(modelConfig));
+            if(!modelConfig.isMultiTask()) {
+                result = ValidateResult.mergeResult(result,
+                        checkFile("ColumnConfig.json", SourceType.LOCAL, "ColumnConfig.json : "));
+                result = ValidateResult.mergeResult(result, checkStatsConf(modelConfig));
+            }
             // verify categorical name file
             if(StringUtils.isNotBlank(modelConfig.getDataSet().getCategoricalColumnNameFile())) {
                 result = ValidateResult.mergeResult(result,
@@ -212,6 +213,9 @@ public class ModelInspector {
      */
     private ValidateResult checkColumnConf(ModelConfig modelConfig) throws IOException {
         ValidateResult result = new ValidateResult(true);
+        if(modelConfig.isMultiTask()) {
+            return result;
+        }
 
         if(StringUtils.isBlank(modelConfig.getTargetColumnName())) {
             result.addCause("The target column name is null or empty.");
@@ -221,7 +225,8 @@ public class ModelInspector {
             List<String> forceSelectColumns = modelConfig.getListForceSelect();
 
             if(CollectionUtils.isNotEmpty(metaColumns) && metaColumns.contains(modelConfig.getTargetColumnName())) {
-                result.addCause("The target column name shouldn't be in the meta column conf.");
+                // target column can be meta column but being ignored in meta
+                LOG.warn("The target column is in the meta column conf (meta config for tag column is ignored).");
             }
 
             if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())
@@ -237,13 +242,14 @@ public class ModelInspector {
             }
 
             if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())) {
-                String columnColumn = CommonUtils.containsAny(metaColumns, forceRemoveColumns);
-                if(columnColumn != null) {
-                    result.addCause(
-                            "Column - " + columnColumn + " exists both in meta column conf and force remove conf.");
-                }
+                // It's fine, if user put both variables both in metaColumns and forceRemoveColumns
+                // String columnColumn = CommonUtils.containsAny(metaColumns, forceRemoveColumns);
+                //      if(columnColumn != null) {
+                //          result.addCause(
+                //          "Column - " + columnColumn + " exists both in meta column conf and force remove conf.");
+                // }
 
-                columnColumn = CommonUtils.containsAny(metaColumns, forceSelectColumns);
+                String columnColumn = CommonUtils.containsAny(metaColumns, forceSelectColumns);
                 if(columnColumn != null) {
                     result.addCause(
                             "Column - " + columnColumn + " exists both in meta column conf and force select conf.");
@@ -264,7 +270,7 @@ public class ModelInspector {
         ValidateResult result = new ValidateResult(true);
 
         if(modelConfig.isClassification() && (modelConfig.getBinningMethod() == BinningMethod.EqualPositive
-                || modelConfig.getBinningMethod() == BinningMethod.EqualNegtive
+                || modelConfig.getBinningMethod() == BinningMethod.EqualNegative
                 || modelConfig.getBinningMethod() == BinningMethod.WeightEqualPositive
                 || modelConfig.getBinningMethod() == BinningMethod.WeightEqualNegative)) {
             ValidateResult tmpResult = new ValidateResult(false,
@@ -284,18 +290,16 @@ public class ModelInspector {
                     new ValidateResult(false, Arrays.asList("stats#maxNumBin should be in [0, 32767].")));
         }
 
-        if(CollectionUtils.isEmpty(modelConfig.getTags())) {
+        if(!modelConfig.isMultiTask() && CollectionUtils.isEmpty(modelConfig.getTags())) {
             if(!(BinningMethod.EqualInterval.equals(modelConfig.getStats().getBinningMethod())
                     || BinningMethod.EqualTotal.equals(modelConfig.getStats().getBinningMethod()))) {
-                result = ValidateResult.mergeResult(result,
-                        new ValidateResult(false,
-                                Arrays.asList("For numerical target, only EqualInterval and EqualTotal are allowed")));
+                result = ValidateResult.mergeResult(result, new ValidateResult(false,
+                        Arrays.asList("For numerical target, only EqualInterval and EqualTotal are allowed")));
             }
 
             if(BinningAlgorithm.DynamicBinning.equals(modelConfig.getBinningAlgorithm())) {
-                result = ValidateResult.mergeResult(result,
-                        new ValidateResult(false,
-                                Arrays.asList("For numerical target, DynamicBinning is not allowed")));
+                result = ValidateResult.mergeResult(result, new ValidateResult(false,
+                        Arrays.asList("For numerical target, DynamicBinning is not allowed")));
             }
         }
 
@@ -535,7 +539,7 @@ public class ModelInspector {
         GridSearch gs = new GridSearch(train.getParams(), train.getGridConfigFileContent());
         // such parameter validation only in regression and not grid search mode
         if(modelConfig.isRegression() && !gs.hasHyperParam()) {
-            if(train.getAlgorithm().equalsIgnoreCase("nn")) {
+            if(train.getAlgorithm().equalsIgnoreCase("nn") || train.getAlgorithm().equalsIgnoreCase("wdl")) {
                 Map<String, Object> params = train.getParams();
 
                 Object loss = params.get("Loss");
@@ -557,7 +561,7 @@ public class ModelInspector {
                     tmpResult.getCauses().add("Loss should be in [log,squared,absolute].");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
-                
+
                 Object TFOptimizer = params.get("TF.optimizer");
                 if(TFOptimizer != null && !"adam".equalsIgnoreCase(TFOptimizer.toString())
                         && !"gradientDescent".equalsIgnoreCase(TFOptimizer.toString())
@@ -567,7 +571,7 @@ public class ModelInspector {
                     tmpResult.getCauses().add("tensorflow optimizer should be in [RMSProp,gradientDescent,adam].");
                     result = ValidateResult.mergeResult(result, tmpResult);
                 }
-                
+
                 int layerCnt = (Integer) params.get(CommonConstants.NUM_HIDDEN_LAYERS);
                 if(layerCnt < 0) {
                     ValidateResult tmpResult = new ValidateResult(true);
@@ -621,26 +625,27 @@ public class ModelInspector {
                 }
 
                 Object fixedLayersObj = params.get(CommonConstants.FIXED_LAYERS);
-                if (fixedLayersObj != null) {
+                if(fixedLayersObj != null) {
                     List<Integer> fixedLayers = (List<Integer>) fixedLayersObj;
-                    for (int layer : fixedLayers) {
-                        if (layer <= 0 || layer > (layerCnt+1)) {
+                    for(int layer: fixedLayers) {
+                        if(layer <= 0 || layer > (layerCnt + 1)) {
                             ValidateResult tmpResult = new ValidateResult(true);
                             tmpResult.setStatus(false);
-                            tmpResult.getCauses().add("Fixed layer id " + layer +
-                                    " is invaild. It should be between 0 and hidden layer cnt +  output layer:" + (layerCnt + 1));
+                            tmpResult.getCauses().add("Fixed layer id " + layer
+                                    + " is invaild. It should be between 0 and hidden layer cnt +  output layer:"
+                                    + (layerCnt + 1));
                             result = ValidateResult.mergeResult(result, tmpResult);
                         }
                     }
                 }
-                
+
                 Object miniBatchsO = params.get(CommonConstants.MINI_BATCH);
                 if(miniBatchsO != null) {
                     Integer miniBatchs = Integer.valueOf(miniBatchsO.toString());
-                    if(miniBatchs != null && (miniBatchs <= 0 || miniBatchs > 1000)) {
+                    if(miniBatchs != null && (miniBatchs <= 0 || miniBatchs > 100000000)) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("MiniBatchs should be in (0, 1000] if set.");
+                        tmpResult.getCauses().add("MiniBatchs should be in (0, 100000000] if set.");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }
@@ -681,7 +686,7 @@ public class ModelInspector {
 
             if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)
                     || train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)
-                    || train.getAlgorithm().equalsIgnoreCase(NNConstants.NN_ALG_NAME)) {
+                    || train.getAlgorithm().equalsIgnoreCase(CommonConstants.NN_ALG_NAME)) {
                 Map<String, Object> params = train.getParams();
                 Object fssObj = params.get("FeatureSubsetStrategy");
 

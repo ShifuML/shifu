@@ -20,8 +20,7 @@ public interface CommonConstants {
     public static final double DEFAULT_SIGNIFICANCE_VALUE = 1.0d;
     public static final String MAPREDUCE_PARAM_FORMAT = "-D%s=%s";
 
-
-    /* --------------   Other Constants  ---------------------- */
+    /* -------------- Other Constants ---------------------- */
     public static final String DEFAULT_COLUMN_SEPARATOR = "|";
 
     public static final String NAMESPACE_DELIMITER = "::";
@@ -32,8 +31,7 @@ public interface CommonConstants {
 
     public static final int PART_FILE_COUNT_THRESHOLD = 20;
 
-
-    /* --------------   Shifu setting Constants  ---------------------- */
+    /* -------------- Shifu setting Constants ---------------------- */
     public static final String MODELSET_SOURCE_TYPE = "shifu.source.type";
 
     public static final String SHIFU_COLUMN_CONFIG = "shifu.column.config";
@@ -63,6 +61,8 @@ public interface CommonConstants {
 
     public static final String SHIFU_UPDATEBINNING_REDUCER = "shifu.updatebinning.reducer";
 
+    public static final String SHIFU_DAILYSTAT_REDUCER = "shifu.datestat.reducer";
+
     public static final String SHIFU_NN_FEATURE_SUBSET = "shifu.nn.feature.subset";
 
     public static final String SHIFU_TREE_CHECKPOINT_INTERVAL = "shifu.tree.checkpoint.interval";
@@ -71,23 +71,22 @@ public interface CommonConstants {
 
     public static final String SHIFU_TRAIN_EARLYSTOP_WINDOW_SIZE = "shifu.train.earlystop.window.size";
 
-    /* --------------   Other setting Constants  ---------------------- */
+    /* -------------- Other setting Constants ---------------------- */
     public static final String MAPREDUCE_MAP_CPU_VCORES = "mapreduce.map.cpu.vcores";
 
     public static final String GS_VALIDATION_ERROR = "gridsearch.validation.error";
 
     public static final String GUAGUA_OUTPUT = "guagua.output";
 
-
-    /* --------------   Train Configuration Constants  ---------------------- */
+    /* -------------- Train Configuration Constants ---------------------- */
     public static final String RF_ALG_NAME = "RF";
 
     public static final String GBT_ALG_NAME = "GBT";
 
     public static final String NUM_HIDDEN_LAYERS = "NumHiddenLayers";
 
-    public static final String WDL_L2_REG = "WDLL2Reg";
-
+    public static final String L2_REG = "L2Reg";
+    
     public static final String CHECKPOINT_INTERVAL = "CheckpointInterval";
 
     public static final String ACTIVATION_FUNC = "ActivationFunc";
@@ -101,12 +100,12 @@ public interface CommonConstants {
     public static final String PROPAGATION = "Propagation";
 
     public static final String OUTPUT_ACTIVATION_FUNC = "OutputActivationFunc";
-    
+
     public static final String NUM_EMBED_COLUMN_IDS = "NumEmbedColumnIds";
-    
+
     public static final String NUM_EMBED_OUTPUTS = "NumEmbedOuputs";
 
-    /* --------------   Train Param Constants  ---------------------- */
+    /* -------------- Train Param Constants ---------------------- */
     public static final String REGULARIZED_CONSTANT = "RegularizedConstant";
 
     public static final String FIXED_LAYERS = "FixedLayers";
@@ -115,6 +114,8 @@ public interface CommonConstants {
 
     public static final String ENABLE_EARLY_STOP = "EnableEarlyStop";
 
+    public static final String EARLY_STOP_IGNORE_VALUE = "early.stop.ignore.value";
+
     public static final String VALIDATION_TOLERANCE = "ValidationTolerance";
 
     public static final String REG_LEVEL_KEY = "L1orL2";
@@ -122,16 +123,23 @@ public interface CommonConstants {
     public static final String LEARNING_DECAY = "LearningDecay";
 
     public static final String WEIGHT_INITIALIZER = "WeightInitializer";
-    
+
     public static final String MINI_BATCH = "MiniBatchs";
-    
-    /* --------------   TF Constants  ---------------------- */
+
+    /* -------------- TF Constants ---------------------- */
     public static final String TF_OPTIMIZER = "TF.optimizer";
 
     public static final String TF_LOSS = "TF.loss";
 
     public static final String TF_ALG = "TF.alg";
 
+    public static final String TF_Version = "TF.version";
+
+    public static final String TF_V2 = "2.0";
+
+    /* -------------- varsel Constants ---------------------- */
+    public static final String OP_METRIC = "OpMetric";
+    public static final String OP_UNIT = "OpUnit";
 
     /**
      * Version 2: support final selected columns
@@ -144,6 +152,40 @@ public interface CommonConstants {
 
     public static final int WDL_FORMAT_VERSION = 1;
 
-    public static final int DEFAULT_EMBEDING_OUTPUT = 16;
+    public static final int MTL_FORMAT_VERSION = 1;
+
+    public static final int DEFAULT_EMBEDING_OUTPUT = 8;
+
+    public static final String WIDE_ENABLE = "wideEnable";
+
+    public static final String DEEP_ENABLE = "deepEnable";
+
+    public static final String EMBED_ENABLE = "embedEnable";
+
+    public static final String WIDE_DENSE_ENABLE = "wideDenseEnable";
+
+    /**
+     * Mult-Task Learning delimiter to split multiple target columns.
+     */
+    public static final String MTL_DELIMITER = "|||";
+
+    public static final String MTL_SUBTAG_DELIMITER = "||";
+
+    public static final String MTL_INDEX = "shifu_mtl_index";
+
+    public static final String SQUARED_LOSS = "squared";
+
+    public static final String MTL_ALG_NAME = "MTL";
+
+    public static final String NN_ALG_NAME = "NN";
+
+    public static final String TF_ALG_NAME = "TensorFlow";
+
+    public static final String LR_ALG_NAME = "LR";
+
+    /**
+     * Wide and deep model name
+     */
+    public static final String WDL_ALG_NAME = "WDL";
 
 }

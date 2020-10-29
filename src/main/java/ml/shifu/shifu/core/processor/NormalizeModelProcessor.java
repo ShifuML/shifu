@@ -22,11 +22,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.pig.tools.pigstats.JobStats;
+import org.apache.pig.tools.pigstats.PigStats;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ml.shifu.shifu.actor.AkkaSystemExecutor;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.shuffle.MapReduceShuffle;
 import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
@@ -35,12 +40,6 @@ import ml.shifu.shifu.pig.PigExecutor;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.pig.tools.pigstats.JobStats;
-import org.apache.pig.tools.pigstats.PigStats;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Normalize processor, scaling data
@@ -74,22 +73,23 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
             switch(modelConfig.getBasic().getRunMode()) {
                 case DIST:
                 case MAPRED:
-                    runPigNormalize();
-
-                    try {
-                        autoCheckShuffleAndShuffleSize();
-                    } catch (Exception e) {
-                        log.warn("warn: exception in auto check shuffle size, can be ignored as no big impact", e);
-                    }
-
-                    if(this.isToShuffleData) {
-                        // shuffling normalized data, to make data random
-                        MapReduceShuffle shuffler = new MapReduceShuffle(this.modelConfig);
-                        shuffler.run(this.pathFinder.getNormalizedDataPath());
-                    }
-
                     if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
-                        runDataClean(this.isToShuffleData);
+                        runDataClean(this.isToShuffleData, getExpectPosRatio(), getIsRblUpdateWeight());
+                    } else {
+                        runPigNormalize();
+                        if(!this.modelConfig.isMultiTask()) {
+                            try {
+                                autoCheckShuffleAndShuffleSize();
+                            } catch (Exception e) {
+                                log.warn("warn: exception in auto check shuffle size, can be ignored as no big impact", e);
+                            }
+                        }
+
+                        if(this.isToShuffleData) {
+                            runDataShuffle(this.modelConfig, this.columnConfigList, this.pathFinder.getNormalizedDataPath(),
+                                    this.pathFinder.getNormalizedDataHeaderPath(),
+                                    this.modelConfig.getDataSet().getSource(), getExpectPosRatio(), getIsRblUpdateWeight());
+                        }
                     }
                     break;
                 case LOCAL:
@@ -193,6 +193,10 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         paramsMap.put("is_csv", String.valueOf(Boolean.TRUE.toString()
                 .equalsIgnoreCase(Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_CSV, Boolean.FALSE.toString()))));
 
+        // Norm UDF to specify the 1st CC.json for data filter, for NormlizeDF, this is not being used because of
+        // loading all CC.json files.
+        paramsMap.put(CommonConstants.MTL_INDEX, "0");
+
         String expressionsAsString = super.modelConfig.getSegmentFilterExpressionsAsString();
         Environment.getProperties().put("shifu.segment.expressions", expressionsAsString);
 
@@ -246,10 +250,14 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
             if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
                 ShifuFileUtils.deleteFile(pathFinder.getNormalizedValidationDataPath(), sourceType);
                 paramsMap.put(Constants.IS_COMPRESS, "false");
-                paramsMap.put(Constants.IS_VALIDATION_DATASET, "true");
                 paramsMap.put(Constants.PATH_RAW_DATA, modelConfig.getValidationDataSetRawPath());
                 paramsMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedValidationDataPath());
-                PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap);
+
+                Map<String, String> confMap = new HashMap<>();
+                // validation data set is sent to UDF by MapReduce configuration
+                confMap.put(Constants.IS_VALIDATION_DATASET, "true");
+                PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap,
+                        modelConfig.getDataSet().getSource(), confMap, pathFinder);
             }
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
@@ -260,6 +268,14 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
 
     public boolean getIsToShuffleData() {
         return getBooleanParam(this.otherConfigs, Constants.IS_TO_SHUFFLE_DATA);
+    }
+
+    public boolean getIsRblUpdateWeight() {
+        return getBooleanParam(this.otherConfigs, Constants.RBL_UPDATE_WEIGHT);
+    }
+
+    public double getExpectPosRatio() {
+        return getDoubleParam(this.otherConfigs, Constants.EXPECT_POS_RATIO, -1.0d);
     }
 
 }

@@ -21,12 +21,6 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.core.binning.AbstractBinning;
-import ml.shifu.shifu.core.binning.CategoricalBinning;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.DataType;
@@ -34,6 +28,12 @@ import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
 import org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.core.binning.AbstractBinning;
+import ml.shifu.shifu.core.binning.CategoricalBinning;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 
 /**
  * MergeBinningDataUDF class
@@ -58,7 +58,7 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
         Integer columnId = (Integer) input.get(0);
         DataBag databag = (DataBag) input.get(1);
         int corrColumnId = columnId;
-        if(corrColumnId >= super.columnConfigList.size()){
+        if(corrColumnId >= super.columnConfigList.size()) {
             corrColumnId = corrColumnId % super.columnConfigList.size();
         }
         ColumnConfig columnConfig = super.columnConfigList.get(corrColumnId);
@@ -86,7 +86,7 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
                 hybridCateValStr = splits[1];
             }
             AbstractBinning<?> partialBinning = AbstractBinning.constructBinningFromStr(modelConfig, columnConfig,
-                    objValStr);
+                    objValStr, this.maxCategorySize);
             AbstractBinning<?> partialBackupBinning = null;
             if(columnConfig.isHybrid()) {
                 partialBackupBinning = new CategoricalBinning();
@@ -113,12 +113,11 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
         output.set(0, columnId);
         List<?> binFields = binning.getDataBin();
 
-        // Do check here. It's because if there are too many value for categorical variable,
-        // it will consume too much memory when join them together, that will cause OOM exception
         if(columnConfig.isCategorical() && binFields.size() > this.maxCategorySize) {
             log.warn(columnId + " " + columnConfig.getColumnName() + " is over maximal categorical size: "
-                    + this.maxCategorySize);
-            output.set(1, "");
+                    + this.maxCategorySize + "only keep random " + this.maxCategorySize
+                    + "category, better to use hash column or check if it is numerical variable.");
+            output.set(1, StringUtils.join(binFields, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
         } else {
             if(columnConfig.isHybrid()) {
                 String finalBinStr = StringUtils.join(binFields, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);

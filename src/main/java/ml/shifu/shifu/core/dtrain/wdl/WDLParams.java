@@ -15,12 +15,13 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
-import ml.shifu.guagua.io.Combinable;
-import ml.shifu.guagua.io.HaltBytable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import ml.shifu.guagua.io.Combinable;
+import ml.shifu.guagua.io.HaltBytable;
+import ml.shifu.shifu.core.dtrain.layer.SerializationType;
 
 /**
  * {@link WDLParams} is message sent between master and workers for wide and deep model training.
@@ -28,10 +29,6 @@ import java.io.IOException;
  * <p>
  * In worker, it will collect combined gradients and then send to master for merging. While in master when model weights
  * are updated, master will send model new weights to all works for next epoch iterations.
- * 
- * <p>
- * TODO define wide, dnn, embedding different weights/gradients parameters
- * TODO add model arch graph here
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -42,10 +39,20 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
     /**
      * # of weighted training records per such worker.
      */
+    private double trainSize;
+
+    /**
+     * # of weighted validation records per such worker.
+     */
+    private double validationSize;
+
+    /**
+     * # of training records per such worker.
+     */
     private double trainCount;
 
     /**
-     * # of weighted training records per such worker.
+     * # of weighted validation records per such worker.
      */
     private double validationCount;
 
@@ -65,8 +72,6 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
     private SerializationType serializationType = SerializationType.MODEL_SPEC;
 
     private WideAndDeep wnd;
-
-    // TODO: add wide. dnn, embedding weights/gradients here
 
     public void update(WideAndDeep wnd) {
         this.getWnd().updateWeights(wnd);
@@ -153,7 +158,12 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
         this.trainError += from.trainError;
         this.validationCount += from.validationCount;
         this.validationError += from.validationError;
-        this.wnd = this.wnd.combine(from.getWnd());
+        this.trainSize += from.trainSize;
+        this.validationSize += from.validationSize;
+        // In the first iteration, the worker may send a empty WDLParams without WideAndDeep Init
+        if(from.getWnd() != null) {
+            this.wnd = this.wnd.combine(from.getWnd());
+        }
         return this;
     }
 
@@ -171,13 +181,15 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
         out.writeDouble(this.validationCount);
         out.writeDouble(this.trainError);
         out.writeDouble(this.validationError);
+        out.writeDouble(this.trainSize);
+        out.writeDouble(this.validationSize);
         out.writeInt(this.serializationType.getValue());
     }
 
     @Override
     public void doReadFields(DataInput in) throws IOException {
         boolean wdlIsNull = in.readBoolean();
-        if (!wdlIsNull) {
+        if(!wdlIsNull) {
             if(this.wnd == null) {
                 this.wnd = new WideAndDeep();
             }
@@ -187,6 +199,8 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
         this.validationCount = in.readDouble();
         this.trainError = in.readDouble();
         this.validationError = in.readDouble();
+        this.trainSize = in.readDouble();
+        this.validationSize = in.readDouble();
         this.serializationType = SerializationType.getSerializationType(in.readInt());
     }
 
@@ -203,6 +217,36 @@ public class WDLParams extends HaltBytable implements Combinable<WDLParams> {
      */
     public void setWnd(WideAndDeep wnd) {
         this.wnd = wnd;
+    }
+
+    /**
+     * @return the trainSize
+     */
+    public double getTrainSize() {
+        return trainSize;
+    }
+
+    /**
+     * @param trainSize
+     *            the trainSize to set
+     */
+    public void setTrainSize(double trainSize) {
+        this.trainSize = trainSize;
+    }
+
+    /**
+     * @return the validationSize
+     */
+    public double getValidationSize() {
+        return validationSize;
+    }
+
+    /**
+     * @param validationSize
+     *            the validationSize to set
+     */
+    public void setValidationSize(double validationSize) {
+        this.validationSize = validationSize;
     }
 
 }

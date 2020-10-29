@@ -18,13 +18,16 @@ package ml.shifu.shifu.udf;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.SortedMap;
 
-import ml.shifu.shifu.util.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
@@ -40,15 +43,25 @@ import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.tools.pigstats.PigStatusReporter;
 import org.encog.ml.BasicML;
 
+import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.container.CaseScoreResult;
+import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.ModelRunner;
 import ml.shifu.shifu.core.Scorer;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.core.model.ModelSpec;
+import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
+import ml.shifu.shifu.udf.norm.PrecisionType;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
+import ml.shifu.shifu.util.MultiClsTagPredictor;
 
 /**
  * Calculate the score for each evaluation data
@@ -69,8 +82,8 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
     private double maxScore = Double.MIN_VALUE;
     private double minScore = Double.MAX_VALUE;
 
-    private Map<String, Integer> subModelsCnt;
-    private int modelCnt;
+    private List<String> modelScoreNames;
+    private Map<String, List<String>> subModelScoreNames;
     private String scale;
 
     /**
@@ -112,6 +125,27 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
 
     private MultiClsTagPredictor mcPredictor;
 
+    private int[] mtlTagColumnNums;
+    @SuppressWarnings("rawtypes")
+    private Set[] mtlPosTagSet;
+    @SuppressWarnings("rawtypes")
+    private Set[] mtlNegTagSet;
+    @SuppressWarnings("rawtypes")
+    private Set[] mtlTagSet;
+    private List<Map<Integer, Map<String, Integer>>> mtlCiMapList;
+    private List<List<Set<String>>> mtlSetTagsList;
+    protected List<List<ColumnConfig>> mtlColumnConfigLists;
+    private boolean isMultiTask = false;
+
+    private int modelCnt;
+
+    @SuppressWarnings("rawtypes")
+    private Map subModelsCnt;
+
+    private String currWgtNameInMTL;
+
+    private PrecisionType precisionType;
+
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
         this(source, pathModelConfig, pathColumnConfig, evalSetName, Integer.toString(Scorer.DEFAULT_SCORE_SCALE));
@@ -127,9 +161,9 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
         }
 
         this.isCsvFormat = StringUtils.isBlank(evalConfig.getDataSet().getHeaderPath());
-        this.headers = CommonUtils.getFinalHeaders(evalConfig);
+        this.headers = CommonUtils.getFinalHeaders(modelConfig, evalConfig);
 
-        String filterExpressions = "";
+        String filterExpressions;
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
             filterExpressions = UDFContext.getUDFContext().getJobConf().get(Constants.SHIFU_SEGMENT_EXPRESSIONS);
         } else {
@@ -141,28 +175,38 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
                     Constants.SHIFU_STATS_FILTER_EXPRESSIONS_DELIMETER).length;
         }
 
+        String precision = getUdfProperty(Constants.SHIFU_PRECISION_TYPE);
+        if(StringUtils.isNotBlank(precision)) {
+            this.precisionType = PrecisionType
+                    .of(getUdfProperty(Constants.SHIFU_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
+        }
+
         // move model runner construction in exec to avoid OOM error in client side if model is too big like RF
         // TODO not to load model but only to check model file cnt
-        this.modelCnt = ModelSpecLoaderUtils.getBasicModelsCnt(modelConfig, evalConfig, evalConfig.getDataSet().getSource());
-        this.subModelsCnt = ModelSpecLoaderUtils.getSubModelsCnt(modelConfig, this.columnConfigList, evalConfig,
+        this.modelScoreNames = ModelSpecLoaderUtils.getBasicModelScoreNames(modelConfig, evalConfig,
                 evalConfig.getDataSet().getSource());
+        this.modelCnt = this.modelScoreNames.size();
+        this.subModelScoreNames = ModelSpecLoaderUtils.getSubModelScoreNames(modelConfig, this.columnConfigList,
+                evalConfig, evalConfig.getDataSet().getSource());
+        if(this.subModelScoreNames != null && this.subModelScoreNames.size() > 0) {
+            this.subModelsCnt = new HashMap<>();
+            for(Entry<String, List<String>> entry: this.subModelScoreNames.entrySet()) {
+                this.subModelsCnt.put(entry.getKey(), entry.getValue().size());
+            }
+        }
 
         if(modelConfig.isClassification()) {
             if(modelConfig.getTrain().isOneVsAll()) {
                 if(modelConfig.getTags().size() == 2) {
-                    // onevsall, modelcnt is 1
-                    this.modelCnt = 1;
+                    // one vs all, just return first model score name
+                    this.modelScoreNames = this.modelScoreNames.subList(0, 1);
                 } else {
-                    this.modelCnt = modelConfig.getTags().size();
+                    this.modelScoreNames = this.modelScoreNames.subList(0, modelConfig.getTags().size());
                 }
             } else {
                 if(modelConfig.getTags().size() == 2) {
                     // native binary
-                    this.modelCnt = 1;
-                } else {
-                    // native multiple classification model cnt is bagging num
-                    this.modelCnt = (this.modelCnt >= modelConfig.getBaggingNum()
-                            ? modelConfig.getBaggingNum() : this.modelCnt);
+                    this.modelScoreNames = this.modelScoreNames.subList(0, 1);
                 }
             }
             this.mcPredictor = new MultiClsTagPredictor(this.modelConfig);
@@ -170,7 +214,7 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
 
         this.scale = scale;
 
-        log.info("Run eval " + evalConfig.getName() + " with " + modelCnt + " model(s).");
+        log.info("Run eval " + evalConfig.getName() + " with " + this.modelScoreNames.size() + " model(s).");
 
         // only check if output first hidden layer in regression and NN
         if(modelConfig.isRegression() && Constants.NN.equalsIgnoreCase(modelConfig.getAlgorithm())) {
@@ -220,13 +264,77 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
         }
 
         this.isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
+
+        this.isMultiTask = modelConfig.isMultiTask();
+        this.currWgtNameInMTL = evalConfig.getDataSet().getWeightColumnName();
+        if(this.isMultiTask) {
+            int mtlIndex = -1;
+            if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+                mtlIndex = NumberFormatUtils
+                        .getInt(UDFContext.getUDFContext().getJobConf().get(CommonConstants.MTL_INDEX), -1);
+            } else {
+                // "when do local initilization mtlIndex is -1, set to 0 to pass");
+                mtlIndex = 0;
+            }
+            modelConfig.setMtlIndex(mtlIndex);
+            boolean multiWeightsInMTL = modelConfig.isMultiWeightsInMTL(evalConfig.getDataSet().getWeightColumnName());
+            if(multiWeightsInMTL) {
+                this.currWgtNameInMTL = modelConfig
+                        .getMultiTaskWeightColumnNames(evalConfig.getDataSet().getWeightColumnName())
+                        .get(this.modelConfig.getMtlIndex());
+            }
+            initMultTaskConfigs();
+        }
+    }
+
+    private void initMultTaskConfigs() throws IOException {
+        this.mtlColumnConfigLists = new ArrayList<>();
+        List<String> tagColumns = this.modelConfig.getMultiTaskTargetColumnNames();
+        mtlTagColumnNums = new int[tagColumns.size()];
+        mtlPosTagSet = new Set[tagColumns.size()];
+        mtlNegTagSet = new Set[tagColumns.size()];
+        mtlTagSet = new Set[tagColumns.size()];
+        mtlCiMapList = new ArrayList<>();
+        mtlSetTagsList = new ArrayList<>();
+
+        for(int i = 0; i < tagColumns.size(); i++) {
+            List<ColumnConfig> ccList = CommonUtils.loadColumnConfigList(
+                    new PathFinder(this.modelConfig).getMTLColumnConfigPath(SourceType.HDFS, i), SourceType.HDFS);
+            this.mtlColumnConfigLists.add(ccList);
+            // FIXME, from eval config ???
+            mtlTagColumnNums[i] = CommonUtils.getTargetColumnNum(ccList);
+            mtlPosTagSet[i] = new HashSet<>(this.modelConfig.getMTLPosTags(i));
+            mtlNegTagSet[i] = new HashSet<>(this.modelConfig.getMTLNegTags(i));
+            mtlTagSet[i] = new HashSet<>(this.modelConfig.getMTLTags(i));
+            mtlCiMapList.add(buildCateIndeMap(ccList));
+            mtlSetTagsList.add(modelConfig.getMTLSetTags(i));
+        }
+    }
+
+    private Map<Integer, Map<String, Integer>> buildCateIndeMap(List<ColumnConfig> columnConfigList) {
+        Map<Integer, Map<String, Integer>> categoricalIndexMap = new HashMap<Integer, Map<String, Integer>>();
+        for(ColumnConfig config: columnConfigList) {
+            if(config.isCategorical()) {
+                Map<String, Integer> map = new HashMap<String, Integer>();
+                if(config.getBinCategory() != null) {
+                    for(int i = 0; i < config.getBinCategory().size(); i++) {
+                        List<String> catValues = CommonUtils.flattenCatValGrp(config.getBinCategory().get(i));
+                        for(String cval: catValues) {
+                            map.put(cval, i);
+                        }
+                    }
+                }
+                categoricalIndexMap.put(config.getColumnNum(), map);
+            }
+        }
+        return categoricalIndexMap;
     }
 
     @SuppressWarnings("deprecation")
     public Tuple exec(Tuple input) throws IOException {
-        if (isCsvFormat) {
+        if(isCsvFormat) {
             String firstCol = ((input.get(0) == null) ? "" : input.get(0).toString());
-            if (this.headers[0].equals(CommonUtils.normColumnName(firstCol))) {
+            if(this.headers[0].equals(CommonUtils.normColumnName(firstCol))) {
                 // Column value == Column Header? It's the first line of file?
                 // TODO what to do if the column value == column name? ...
                 return null;
@@ -240,48 +348,54 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
             List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(modelConfig, evalConfig,
                     evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb(),
                     evalConfig.getGbtScoreConvertStrategy());
-            this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,
-                    evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,this.isMultiThreadScoring);
+            if(this.isMultiTask) {
+                this.modelRunner = new ModelRunner(modelConfig, mtlColumnConfigLists, this.headers,
+                        evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,
+                        this.isMultiThreadScoring, this.getCategoryMissingNormType(), this.isMultiTask,
+                        this.precisionType);
+            } else {
+                this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,
+                        evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,
+                        this.isMultiThreadScoring, this.getCategoryMissingNormType(), this.precisionType);
+            }
 
-            List<ModelSpec> subModels = ModelSpecLoaderUtils.loadSubModels(modelConfig, this.columnConfigList, evalConfig,
-                    evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb(),
+            // FIXME MTL not supported in sub models
+            List<ModelSpec> subModels = ModelSpecLoaderUtils.loadSubModels(modelConfig, this.columnConfigList,
+                    evalConfig, evalConfig.getDataSet().getSource(), evalConfig.getGbtConvertToProb(),
                     evalConfig.getGbtScoreConvertStrategy());
             if(CollectionUtils.isNotEmpty(subModels)) {
                 for(ModelSpec modelSpec: subModels) {
                     this.modelRunner.addSubModels(modelSpec, this.isMultiThreadScoring);
-                    this.subModelsCnt.put(modelSpec.getModelName(), modelSpec.getModels().size());
                 }
             }
 
-            this.modelCnt = models.size();
-
-            // reset models in classfication case
+            // reset models in classification case
             if(modelConfig.isClassification()) {
+                int modelsCnt = 0;
                 if(modelConfig.getTrain().isOneVsAll()) {
                     if(modelConfig.getTags().size() == 2) {
-                        // onevsall, modelcnt is 1
-                        this.modelCnt = 1;
+                        // one vs. all, modelCnt is 1
+                        modelsCnt = 1;
                     } else {
-                        this.modelCnt = modelConfig.getTags().size();
+                        modelsCnt = modelConfig.getTags().size();
                     }
                 } else {
                     if(modelConfig.getTags().size() == 2) {
                         // native binary
-                        this.modelCnt = 1;
-                    } else {
-                        // native multiple classification model cnt is bagging num
-                        this.modelCnt = (this.modelCnt >= modelConfig.getBaggingNum() ? modelConfig.getBaggingNum()
-                                : this.modelCnt);
+                        modelsCnt = 1;
                     }
                 }
                 // reset models to
-                models = models.subList(0, this.modelCnt);
+                if(modelsCnt > 0) {
+                    models = models.subList(0, modelsCnt);
+                }
                 this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,
                         evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,
-                        this.isMultiThreadScoring);
+                        this.isMultiThreadScoring, this.getCategoryMissingNormType(), this.precisionType);
             }
             this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
-            log.info("DEBUG: model cnt " + this.modelCnt + " sub models cnt " + modelRunner.getSubModelsCnt());
+            log.info("DEBUG: model cnt " + this.modelScoreNames.size() + " sub models cnt "
+                    + modelRunner.getSubModelsCnt());
         }
 
         Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.headers, this.segFilterSize);
@@ -289,24 +403,10 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
             return null;
         }
 
-        String tag = CommonUtils.trimTag(rawDataNsMap.get(new NSColumn(modelConfig.getTargetColumnName(evalConfig))));
+        String tag = CommonUtils.trimTag(rawDataNsMap.get(
+                new NSColumn(modelConfig.getTargetColumnName(evalConfig, modelConfig.getTargetColumnName()))));
 
-        // filter invalid tag record out
-        // disable the tag check, since there is no bad tag in eval data set
-        // and user just want to score the data, but don't run performance evaluation
-        /*
-         * if(!tagSet.contains(tag)) {
-         * if(System.currentTimeMillis() % 100 == 0) {
-         * log.warn("Invalid tag: " + tag);
-         * }
-         * if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, "INVALID_TAG")) {
-         * PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)
-         * .increment(1);
-         * }
-         * return null;
-         * }
-         */
-
+        // run model scoring
         long startTime = System.nanoTime();
         CaseScoreResult cs = modelRunner.computeNsData(rawDataNsMap);
         long runInterval = (System.nanoTime() - startTime) / 1000L;
@@ -318,23 +418,20 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
             return null;
         }
 
-        Tuple tuple = TupleFactory.getInstance().newTuple();
-        tuple.append(tag);
-
-        String weight = null;
-        if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())) {
-            weight = rawDataNsMap.get(new NSColumn(evalConfig.getDataSet().getWeightColumnName()));
-        } else {
-            weight = "1.0";
+        String weight = "1.0";
+        if(StringUtils.isNotBlank(this.currWgtNameInMTL)) {
+            weight = rawDataNsMap.get(new NSColumn(this.currWgtNameInMTL));
         }
 
         incrementTagCounters(tag, weight, runInterval);
 
         Map<String, CaseScoreResult> subModelScores = cs.getSubModelScores();
 
+        Tuple tuple = TupleFactory.getInstance().newTuple();
+        tuple.append(tag);
         tuple.append(weight);
 
-        if(this.isLinearTarget || modelConfig.isRegression()) {
+        if(this.isLinearTarget || modelConfig.isMultiTask() || modelConfig.isRegression()) {
             if(CollectionUtils.isNotEmpty(cs.getScores())) {
                 appendModelScore(tuple, cs, true);
                 if(this.outputHiddenLayerIndex != 0) {
@@ -378,6 +475,17 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
             log.info("running time is " + (System.currentTimeMillis() - start) + " ms.");
         }
         return tuple;
+    }
+
+    @SuppressWarnings({ "unchecked", "unused" })
+    private void incrementCounters(List<String> mtlTagValues, String weight, long runInterval) {
+        assert mtlTagValues != null;
+        incrementCommonCounters(runInterval);
+
+        for(int i = 0; i < mtlTagValues.size(); i++) {
+            incrementTagCounters(mtlTagValues.get(i), weight, runInterval, this.mtlPosTagSet[i], this.mtlNegTagSet[i],
+                    i);
+        }
     }
 
     private void appendFirstHiddenOutputScore(Tuple tuple, SortedMap<String, Double> hiddenLayerScores, boolean b) {
@@ -424,7 +532,7 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
      * @param tuple
      *            - Tuple to append
      * @param cs
-     *            - CaseScoreResult
+     *            - CaseScoreResulto
      */
     private void appendSimpleScore(Tuple tuple, CaseScoreResult cs) {
         for(int i = 0; i < cs.getScores().size(); i++) {
@@ -473,12 +581,18 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
         }
     }
 
-    @SuppressWarnings("deprecation")
     private void incrementTagCounters(String tag, String weight, long runModelInterval) {
+        incrementCommonCounters(runModelInterval);
+        incrementTagCounters(tag, weight, runModelInterval, posTagSet, negTagSet, -1);
+    }
+
+    @SuppressWarnings("deprecation")
+    private void incrementTagCounters(String tag, String weight, long runModelInterval, Set<String> posTagSet,
+            Set<String> negTagSet, int postfix) {
         if(tag == null || weight == null) {
-            if ( System.currentTimeMillis() % 50 == 0 ) {
-                log.warn("tag is empty " + tag + " or weight is empty " + weight
-                        + ". And execution time - " + runModelInterval);
+            if(System.currentTimeMillis() % 50 == 0) {
+                log.warn("tag is empty " + tag + " or weight is empty " + weight + ". And execution time - "
+                        + runModelInterval);
             }
             return;
         }
@@ -500,37 +614,47 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
         }
         long weightLong = (long) (dWeight * Constants.EVAL_COUNTER_WEIGHT_SCALE);
 
-        // update model run time for stats
-        if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.TOTAL_MODEL_RUNTIME)) {
-            PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.TOTAL_MODEL_RUNTIME)
-                    .increment(runModelInterval);
-        }
-
-        if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)) {
-            PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)
-                    .increment(1);
-        }
-
         if(posTagSet.contains(tag)) {
             if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_POSTAGS)) {
-                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_POSTAGS)
+                PigStatusReporter.getInstance()
+                        .getCounter(Constants.SHIFU_GROUP_COUNTER,
+                                postfix == -1 ? Constants.COUNTER_POSTAGS : Constants.COUNTER_POSTAGS + "_" + postfix)
                         .increment(1);
             }
             if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_WPOSTAGS)) {
-                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_WPOSTAGS)
+                PigStatusReporter.getInstance()
+                        .getCounter(Constants.SHIFU_GROUP_COUNTER,
+                                postfix == -1 ? Constants.COUNTER_WPOSTAGS : Constants.COUNTER_WPOSTAGS + "_" + postfix)
                         .increment(weightLong);
             }
         }
 
         if(negTagSet.contains(tag)) {
             if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_NEGTAGS)) {
-                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_NEGTAGS)
+                PigStatusReporter.getInstance()
+                        .getCounter(Constants.SHIFU_GROUP_COUNTER,
+                                postfix == -1 ? Constants.COUNTER_NEGTAGS : Constants.COUNTER_NEGTAGS + "_" + postfix)
                         .increment(1);
             }
             if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_WNEGTAGS)) {
-                PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_WNEGTAGS)
+                PigStatusReporter.getInstance()
+                        .getCounter(Constants.SHIFU_GROUP_COUNTER,
+                                postfix == -1 ? Constants.COUNTER_WNEGTAGS : Constants.COUNTER_WNEGTAGS + "_" + postfix)
                         .increment(weightLong);
             }
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private void incrementCommonCounters(long runModelInterval) {
+        // update model run time for stats
+        if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.TOTAL_MODEL_RUNTIME)) {
+            PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.TOTAL_MODEL_RUNTIME)
+                    .increment(runModelInterval);
+        }
+        if(isPigEnabled(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)) {
+            PigStatusReporter.getInstance().getCounter(Constants.SHIFU_GROUP_COUNTER, Constants.COUNTER_RECORDS)
+                    .increment(1);
         }
     }
 
@@ -540,8 +664,8 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
     public Schema outputSchema(Schema input) {
         try {
             Schema tupleSchema = new Schema();
-            tupleSchema.add(
-                    new FieldSchema(SCHEMA_PREFIX + modelConfig.getTargetColumnName(evalConfig), DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + modelConfig.getTargetColumnName(evalConfig,
+                            modelConfig.getTargetColumnName()), DataType.CHARARRAY));
 
             String weightName = StringUtils.isBlank(evalConfig.getDataSet().getWeightColumnName()) ? "weight"
                     : evalConfig.getDataSet().getWeightColumnName();
@@ -549,51 +673,55 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
 
             boolean isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
 
-            if(isLinearTarget || modelConfig.isRegression()) {
-                if (this.modelCnt > 0) {
-                    addModelSchema(tupleSchema, this.modelCnt, "");
+            if(isLinearTarget || this.isMultiTask || modelConfig.isRegression()) {
+                if(this.modelCnt > 0) {
+                    if(this.isMultiTask) {
+                        // TODO REMOVEME
+                        addModelSchema(tupleSchema, this.modelConfig.getMultiTaskTargetColumnNames().size(), "");
+                    } else {
+                        addModelSchema(tupleSchema, this.modelCnt, "");
+                    }
                 } else if(MapUtils.isEmpty(this.subModelsCnt)) {
                     throw new IllegalStateException("No any model found!");
                 }
 
                 if(this.outputHiddenLayerIndex != 0) {
-                    for(int i = 0; i < this.modelCnt; i++) {
+                    for(int i = 0; i < this.modelScoreNames.size(); i++) {
                         // +1 to add bias neuron
                         for(int j = 0; j < (hiddenNodeList.get(outputHiddenLayerIndex - 1) + 1); j++) {
-                            tupleSchema.add(new FieldSchema(
-                                    SCHEMA_PREFIX + "model_" + i + "_" + outputHiddenLayerIndex + "_" + j,
-                                    DataType.DOUBLE));
+                            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + this.modelScoreNames.get(i) + "_"
+                                    + outputHiddenLayerIndex + "_" + j, DataType.DOUBLE));
                         }
                     }
                 }
 
-                if(MapUtils.isNotEmpty(this.subModelsCnt)) {
-                    Iterator<Map.Entry<String, Integer>> iterator = this.subModelsCnt.entrySet().iterator();
+                if(MapUtils.isNotEmpty(this.subModelScoreNames)) {
+                    Iterator<Map.Entry<String, List<String>>> iterator = this.subModelScoreNames.entrySet().iterator();
                     while(iterator.hasNext()) {
-                        Map.Entry<String, Integer> entry = iterator.next();
+                        Map.Entry<String, List<String>> entry = iterator.next();
                         String modelName = entry.getKey();
-                        Integer smCnt = entry.getValue();
-                        if(smCnt > 0) {
-                            addModelSchema(tupleSchema, smCnt, modelName);
+                        List<String> subModelNames = entry.getValue();
+                        if(CollectionUtils.isNotEmpty(subModelNames)) {
+                            addModelSchema(tupleSchema, subModelNames, modelName);
                         }
                     }
                 }
             } else {
-                if(this.modelCnt > 0) {
-                    addModelTagSchema(tupleSchema, modelCnt, "");
+                if(CollectionUtils.isNotEmpty(this.modelScoreNames)) {
+                    addModelTagSchema(tupleSchema, this.modelScoreNames, "");
                     tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + "predict_tag", DataType.CHARARRAY));
-                } else if(MapUtils.isEmpty(this.subModelsCnt)) {
+                } else if(MapUtils.isEmpty(this.subModelScoreNames)) {
                     throw new IllegalStateException("No any model found!");
                 }
 
-                if(MapUtils.isNotEmpty(this.subModelsCnt)) {
-                    Iterator<Map.Entry<String, Integer>> iterator = this.subModelsCnt.entrySet().iterator();
+                if(MapUtils.isNotEmpty(this.subModelScoreNames)) {
+                    Iterator<Map.Entry<String, List<String>>> iterator = this.subModelScoreNames.entrySet().iterator();
                     while(iterator.hasNext()) {
-                        Map.Entry<String, Integer> entry = iterator.next();
+                        Map.Entry<String, List<String>> entry = iterator.next();
                         String modelName = entry.getKey();
-                        Integer smCnt = entry.getValue();
-                        if(smCnt > 0) {
-                            addModelTagSchema(tupleSchema, smCnt, modelName);
+                        List<String> subScoreNames = entry.getValue();
+                        if(CollectionUtils.isNotEmpty(subScoreNames)) {
+                            addModelTagSchema(tupleSchema, subScoreNames, modelName);
                         }
                     }
                 }
@@ -610,6 +738,58 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
         } catch (IOException e) {
             log.error("Error in outputSchema", e);
             return null;
+        }
+    }
+
+    /**
+     * Add model(Regression) schema into tuple schema, if the modelCount > 0
+     * 
+     * @param tupleSchema
+     *            - schema for Tuple
+     * @param scoreNames
+     *            - model score names
+     * @param modelName
+     *            - model name
+     */
+    private void addModelSchema(Schema tupleSchema, List<String> scoreNames, String modelName) {
+        if(CollectionUtils.isNotEmpty(scoreNames)) {
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "mean"), DataType.DOUBLE));
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "max"), DataType.DOUBLE));
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "min"), DataType.DOUBLE));
+            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "median"), DataType.DOUBLE));
+            for(int i = 0; i < scoreNames.size(); i++) {
+                tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, scoreNames.get(i)),
+                        DataType.DOUBLE));
+            }
+        }
+    }
+
+    /**
+     * Add model(Classification) schema into tuple schema, if the modelCount > 0
+     * 
+     * @param tupleSchema
+     *            - schema for Tuple
+     * @param scoreNames
+     *            - model score names
+     * @param modelName
+     *            - model name
+     */
+    private void addModelTagSchema(Schema tupleSchema, List<String> scoreNames, String modelName) {
+        if(modelConfig.isClassification() && !modelConfig.getTrain().isOneVsAll()) {
+            for(int i = 0; i < scoreNames.size(); i++) {
+                for(int j = 0; j < modelConfig.getTags().size(); j++) {
+                    tupleSchema.add(new FieldSchema(
+                            SCHEMA_PREFIX + addModelNameToField(modelName, scoreNames.get(i) + "_tag_" + j),
+                            DataType.DOUBLE));
+                }
+            }
+        } else {
+            // one vs all
+            for(int i = 0; i < scoreNames.size(); i++) {
+                tupleSchema.add(
+                        new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, scoreNames.get(i) + "_tag_" + i),
+                                DataType.DOUBLE));
+            }
         }
     }
 
@@ -637,34 +817,6 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
     }
 
     /**
-     * Add model(Classification) schema into tuple schema, if the modelCount > 0
-     * 
-     * @param tupleSchema
-     *            - schema for Tuple
-     * @param modelCount
-     *            - model count
-     * @param modelName
-     *            - model name
-     */
-    private void addModelTagSchema(Schema tupleSchema, Integer modelCount, String modelName) {
-        if(modelConfig.isClassification() && !modelConfig.getTrain().isOneVsAll()) {
-            for(int i = 0; i < modelCount; i++) {
-                for(int j = 0; j < modelConfig.getTags().size(); j++) {
-                    tupleSchema.add(
-                            new FieldSchema(SCHEMA_PREFIX + addModelNameToField(modelName, "model_" + i + "_tag_" + j),
-                                    DataType.DOUBLE));
-                }
-            }
-        } else {
-            // one vs all
-            for(int i = 0; i < modelCount; i++) {
-                tupleSchema.add(new FieldSchema(
-                        SCHEMA_PREFIX + addModelNameToField(modelName, "model_" + i + "_tag_" + i), DataType.DOUBLE));
-            }
-        }
-    }
-
-    /**
      * Add model name as the namespace of field
      * 
      * @param modelName
@@ -674,10 +826,26 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
      * @return - tuple name with namespace
      */
     private String addModelNameToField(String modelName, String field) {
-        return (StringUtils.isBlank(modelName) ? field : formatPigNS(modelName) + "::" + field);
+        return (StringUtils.isBlank(modelName) ? field : CommonUtils.normColumnName(modelName) + "::" + formatScoreField(field));
     }
 
-    private String formatPigNS(String name) {
-        return name.replaceAll("-", "_");
+    private String formatScoreField(String field) {
+        return field.replaceAll("\\..*$", "");
+    }
+
+    private CategoryMissingNormType getCategoryMissingNormType() {
+        CategoryMissingNormType categoryMissingNormType = null;
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            categoryMissingNormType = CategoryMissingNormType
+                    .of(UDFContext.getUDFContext().getJobConf().get(Constants.SHIFU_NORM_CATEGORY_MISSING_NORM));
+        } else {
+            categoryMissingNormType = CategoryMissingNormType
+                    .of(Environment.getProperty(Constants.SHIFU_NORM_CATEGORY_MISSING_NORM));
+        }
+        if(categoryMissingNormType == null) {
+            categoryMissingNormType = CategoryMissingNormType.POSRATE;
+        }
+        log.info("'categoryMissingNormType' is set to: " + categoryMissingNormType);
+        return categoryMissingNormType;
     }
 }
