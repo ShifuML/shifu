@@ -1462,7 +1462,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * @return "ref_" + modelName
      */
     private String genRefModelScoreName(String modelName) {
-        return "ref_" + StringUtils.trimToEmpty(modelName);
+        return "ref_" + CommonUtils.normColumnName(StringUtils.trimToEmpty(modelName));
     }
 
     /**
