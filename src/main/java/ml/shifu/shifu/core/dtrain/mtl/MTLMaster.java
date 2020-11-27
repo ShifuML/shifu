@@ -225,7 +225,7 @@ public class MTLMaster extends AbstractMasterComputable<MTLParams, MTLParams> {
      * @return {@link MultiTaskModel} instance.
      */
     private MultiTaskModel loadModel(Path modelPath) {
-        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS);
+        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS, modelPath);
         InputStream inputStream = null;
         try {
             inputStream = fileSystem.open(modelPath);

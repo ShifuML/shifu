@@ -331,11 +331,12 @@ public class ShifuCLI {
                     p.run();
                 } else if(cleanedArgs[0].equals(EVAL_CMD)) {
                     Map<String, Object> params = new HashMap<String, Object>();
+                    params.put(EvalModelProcessor.REF_MODEL, cmd.getOptionValue(REF));
 
                     // eval step
                     if(cleanedArgs.length == 1) {
                         // run everything
-                        status = runEvalSet();
+                        status = runEvalSet(params);
                         if(status == 0) {
                             log.info("Run eval performance with all eval sets successfully.");
                         } else {
@@ -347,7 +348,7 @@ public class ShifuCLI {
                         log.info(
                                 "Create eval set successfully. You can configure EvalConfig.json or directly run 'shifu eval -run <evalSetName>' to get performance info.");
                     } else if(cmd.hasOption(EVAL_CMD_RUN)) {
-                        runEvalSet(cmd.getOptionValue(EVAL_CMD_RUN));
+                        runEvalSet(cmd.getOptionValue(EVAL_CMD_RUN), params);
                         log.info("Finish run eval performance with eval set {}.", cmd.getOptionValue(EVAL_CMD_RUN));
                     } else if(cmd.hasOption(SCORE)) {
                         params.put(EvalModelProcessor.NOSORT, cmd.hasOption(NOSORT));
@@ -369,7 +370,8 @@ public class ShifuCLI {
                         // delete some evaluation set
                         deleteEvalSet(cmd.getOptionValue(DELETE));
                     } else if(cmd.hasOption(NORM)) {
-                        runEvalNorm(cmd.getOptionValue(NORM), cmd.hasOption(STRICT));
+                        params.put(Constants.STRICT_MODE, cmd.hasOption(STRICT));
+                        runEvalNorm(cmd.getOptionValue(NORM), params);
                     } else if (cmd.hasOption(AUDIT)) {
                         params.put(EvalModelProcessor.EXPECT_AUDIT_CNT, cmd.getOptionValue(N));
                         runAuditEval(cmd.getOptionValue(AUDIT), params);
@@ -568,14 +570,14 @@ public class ShifuCLI {
         return p.run();
     }
 
-    public static int runEvalSet() throws Exception {
-        EvalModelProcessor p = new EvalModelProcessor(EvalStep.RUN);
+    public static int runEvalSet(Map<String, Object> params) throws Exception {
+        EvalModelProcessor p = new EvalModelProcessor(EvalStep.RUN, params);
         return p.run();
     }
 
-    public static int runEvalSet(String evalSetName) throws Exception {
+    public static int runEvalSet(String evalSetName, Map<String, Object> params) throws Exception {
         log.info("Run evaluation set with {}", evalSetName);
-        EvalModelProcessor p = new EvalModelProcessor(EvalStep.RUN, evalSetName);
+        EvalModelProcessor p = new EvalModelProcessor(EvalStep.RUN, evalSetName, params);
         return p.run();
     }
 
@@ -599,9 +601,7 @@ public class ShifuCLI {
         return p.run();
     }
 
-    private static int runEvalNorm(String evalSetNames, boolean strictMode) throws Exception {
-        Map<String, Object> params = new HashMap<>();
-        params.put(Constants.STRICT_MODE, strictMode);
+    private static int runEvalNorm(String evalSetNames, Map<String, Object> params) throws Exception {
         EvalModelProcessor p = new EvalModelProcessor(EvalStep.NORM, evalSetNames, params);
         return p.run();
     }

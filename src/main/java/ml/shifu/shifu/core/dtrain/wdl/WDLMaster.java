@@ -265,7 +265,7 @@ public class WDLMaster extends AbstractMasterComputable<WDLParams, WDLParams> {
     }
 
     private WideAndDeep loadModel(Path modelPath) {
-        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS);
+        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS, modelPath);
         InputStream inputStream = null;
         try {
             inputStream = fileSystem.open(modelPath);

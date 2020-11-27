@@ -28,12 +28,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import ml.shifu.shifu.util.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.pig.impl.util.UDFContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -175,6 +178,12 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
      */
     private void loadConfigFiles(final Context context) {
         try {
+            // inject fs.defaultFS from UDFContext.getUDFContext().getJobConf()
+            if (context != null && context.getConfiguration() != null) {
+                HDFSUtils.getConf().set(FileSystem.FS_DEFAULT_NAME_KEY,
+                        context.getConfiguration().get(FileSystem.FS_DEFAULT_NAME_KEY));
+            }
+
             SourceType sourceType = SourceType.valueOf(
                     context.getConfiguration().get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
