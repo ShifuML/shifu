@@ -551,16 +551,15 @@ public final class CommonUtils {
                     evalConfig.getDataSet().getSource());
             if(evalConfig.isMultiTask()) {
                 List<String> tarColumns = evalConfig.getMultiTaskTargetColumnNames();
-                if (CollectionUtils.isNotEmpty(tarColumns)) {
-                    for(String column : tarColumns) {
+                if(CollectionUtils.isNotEmpty(tarColumns)) {
+                    for(String column: tarColumns) {
                         if(!StringUtils.join(fields, "").contains(column)) {
                             isSchemaProvided = false;
                             break;
                         }
                     }
                 }
-            } else if(StringUtils.join(fields, "").contains(
-                    modelConfig.getTargetColumnName(evalConfig, ""))) {
+            } else if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName(evalConfig, ""))) {
                 // if first line contains target column name, we guess it is csv format and first line is header.
                 isSchemaProvided = true;
                 log.warn("No header path is provided, we will try to read first line and detect schema.");
@@ -767,6 +766,29 @@ public final class CommonUtils {
         }
         List<String> headerList = new ArrayList<String>();
         for(String str: Splitter.on(delimiter).split(raw)) {
+            headerList.add(str);
+        }
+        return headerList;
+    }
+
+    /**
+     * Common split function to ignore special character like '|'.
+     *
+     * @param raw
+     *            raw string
+     * @param splitter
+     *            the splitter to split the string
+     * @return list of split Strings
+     * @throws IllegalArgumentException
+     *             {@code raw} and {@code splitter} is null or empty.
+     */
+    public static List<String> splitAndReturnList(String raw, Splitter splitter) {
+        if(StringUtils.isEmpty(raw) || splitter == null) {
+            throw new IllegalArgumentException(
+                    String.format("raw and delimeter should not be null or empty, raw:%s, splitter:%s", raw, splitter));
+        }
+        List<String> headerList = new ArrayList<String>();
+        for(String str: splitter.split(raw)) {
             headerList.add(str);
         }
         return headerList;

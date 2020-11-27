@@ -505,9 +505,11 @@ public class Scorer {
                 }
             } else if(model instanceof WDLModel) {
                 final WDLModel wdl = (WDLModel) model;
-                if(wdl.getInputCount() != pair.getInput().size()) {
+                if(wdl.getInputCount() != pair.getInput().size()
+                        && wdl.getAllIndexedInputCount() != pair.getInput().size()) {
                     throw new RuntimeException("WDL and input size mismatch: wdl input Size = " + wdl.getInputCount()
-                            + "; data input Size = " + pair.getInput().size());
+                            + "; data input Size = " + pair.getInput().size() + "; all indexed input count: "
+                            + wdl.getAllIndexedInputCount());
                 }
 
                 Callable<MLData> callable = new Callable<MLData>() {

@@ -411,7 +411,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(Constants.WDL.equalsIgnoreCase(alg) && this.modelConfig.getNormalize().getNormType() != NormType.ZSCALE_INDEX
                 && this.modelConfig.getNormalize().getNormType() != NormType.ZSCORE_INDEX
                 && this.modelConfig.getNormalize().getNormType() != NormType.WOE_INDEX
-                && this.modelConfig.getNormalize().getNormType() != NormType.WOE_ZSCALE_INDEX) {
+                && this.modelConfig.getNormalize().getNormType() != NormType.WOE_ZSCALE_INDEX
+                && this.modelConfig.getNormalize().getNormType() != NormType.ZSCALE_APPEND_INDEX
+                && this.modelConfig.getNormalize().getNormType() != NormType.ZSCORE_APPEND_INDEX
+                && this.modelConfig.getNormalize().getNormType() != NormType.WOE_APPEND_INDEX
+                && this.modelConfig.getNormalize().getNormType() != NormType.WOE_ZSCALE_APPEND_INDEX
+                ) {
             throw new IllegalArgumentException(
                     "WDL only supports normalize#normType with ZSCALE_INDEX/ZSCORE_INDEX/WOE_INDEX/WOE_ZSCALE_INDEX, please reset and run 'shifu norm' again.");
         }
@@ -1432,7 +1437,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private String getProgressLogFile(int i) {
-        return String.format("tmp/%s_%s.log", System.currentTimeMillis(), i);
+        long currTimeMillis = System.currentTimeMillis();
+        return String.format("tmp_%s/%s_%s.log", currTimeMillis, currTimeMillis, i);
     }
 
     private void stopTailThread(TailThread thread) throws IOException {

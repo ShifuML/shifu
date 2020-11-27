@@ -77,7 +77,7 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
                     mtlIndex = NumberFormatUtils
                             .getInt(UDFContext.getUDFContext().getJobConf().get(CommonConstants.MTL_INDEX), -1);
                 } else {
-                   //"when do local initilization mtlIndex is -1, set to 0 to pass");
+                    // "when do local initilization mtlIndex is -1, set to 0 to pass");
                     mtlIndex = 0;
                 }
                 modelConfig.setMtlIndex(mtlIndex);
@@ -185,6 +185,10 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
                 normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_" + i);
             }
             normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_missing");
+        } else if(NormType.ZSCALE_APPEND_INDEX.equals(normType) || NormType.ZSCORE_APPEND_INDEX.equals(normType)
+                || NormType.WOE_APPEND_INDEX.equals(normType) || NormType.WOE_ZSCALE_APPEND_INDEX.equals(normType)) {
+            normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()));
+            normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()) + "_index");
         } else {
             normalizedNames.add(CommonUtils.normColumnName(config.getColumnName()));
         }

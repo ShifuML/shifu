@@ -765,6 +765,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                                 default:
                                     // all these types are actually float in Java/Pig
                                     tupleSchema.add(new Schema.FieldSchema(normName, DataType.FLOAT));
+                                    break;
                             }
                         }
                     } else {
@@ -786,6 +787,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                                 default:
                                     // all these types are actually float in Java/Pig
                                     tupleSchema.add(new Schema.FieldSchema(normName, DataType.FLOAT));
+                                    break;
                             }
                         }
                     }

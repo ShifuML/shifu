@@ -45,6 +45,10 @@ public class ModelNormalizeConf {
         ZSCALE_INDEX, ZSCORE_INDEX, // numerical variable using zscale, categorical variable, using cate index
         WOE_INDEX, // numerical variable using woe, categorical variable, using cate index
         WOE_ZSCALE_INDEX, // numerical variable using zscaled woe, categorical variable using cate index
+        ZSCALE_APPEND_INDEX,
+        ZSCORE_APPEND_INDEX,
+        WOE_APPEND_INDEX,
+        WOE_ZSCALE_APPEND_INDEX,
         INDEX; // both numerical and categorical norm to index, numerical index is from binBoundry, categorical index is from binCategory 
 
         public boolean isWoe() {

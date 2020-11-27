@@ -319,9 +319,9 @@ public class Normalizer {
             case INDEX:
                 if(config.isNumerical()) {
                     int binIndex = BinUtils.getBinNum(config, raw);
-                    if(binIndex < 0 ) {
+                    if(binIndex < 0 || binIndex > config.getBinBoundary().size()) {
                         binIndex = config.getBinBoundary().size();
-                    } 
+                    }
                     return Arrays.asList((double) binIndex);
                 } else if(config.isCategorical()) {
                     Integer index = cateIndexMap == null ? null : cateIndexMap.get(raw == null ? "" : raw.toString());
@@ -330,6 +330,55 @@ public class Normalizer {
                         index = config.getBinCategory().size();
                     }
                     return Arrays.asList((double) index);
+                }
+            case ZSCORE_APPEND_INDEX:
+            case ZSCALE_APPEND_INDEX:
+                List<Double> zscores = numZScoreAndCateIndexNorm(config, raw, cutoff, cateIndexMap);
+                if(config.isNumerical()) {
+                    int binIndex = BinUtils.getBinNum(config, raw);
+                    if(binIndex < 0 || binIndex > config.getBinBoundary().size()) {
+                        binIndex = config.getBinBoundary().size();
+                    }
+                    return Arrays.asList(zscores.get(0), (double) binIndex);
+                } else if(config.isCategorical()) {
+                    Integer index = cateIndexMap == null ? null : cateIndexMap.get(raw == null ? "" : raw.toString());
+                    if(index == null || index == -1) {
+                        // last index for null category
+                        index = config.getBinCategory().size();
+                    }
+                    return Arrays.asList(zscores.get(0), (double) index);
+                }
+            case WOE_APPEND_INDEX:
+                List<Double> zWoeScores = woeNormalize(config, raw, false);
+                if(config.isNumerical()) {
+                    int binIndex = BinUtils.getBinNum(config, raw);
+                    if(binIndex < 0 || binIndex > config.getBinBoundary().size()) {
+                        binIndex = config.getBinBoundary().size();
+                    }
+                    return Arrays.asList(zWoeScores.get(0), (double) binIndex);
+                } else if(config.isCategorical()) {
+                    Integer index = cateIndexMap == null ? null : cateIndexMap.get(raw == null ? "" : raw.toString());
+                    if(index == null || index == -1) {
+                        // last index for null category
+                        index = config.getBinCategory().size();
+                    }
+                    return Arrays.asList(zWoeScores.get(0), (double) index);
+                }
+            case WOE_ZSCALE_APPEND_INDEX:
+                List<Double> zWoeZScores = woeZScoreNormalize(config, raw, cutoff, false);
+                if(config.isNumerical()) {
+                    int binIndex = BinUtils.getBinNum(config, raw);
+                    if(binIndex < 0 || binIndex > config.getBinBoundary().size()) {
+                        binIndex = config.getBinBoundary().size();
+                    }
+                    return Arrays.asList(zWoeZScores.get(0), (double) binIndex);
+                } else if(config.isCategorical()) {
+                    Integer index = cateIndexMap == null ? null : cateIndexMap.get(raw == null ? "" : raw.toString());
+                    if(index == null || index == -1) {
+                        // last index for null category
+                        index = config.getBinCategory().size();
+                    }
+                    return Arrays.asList(zWoeZScores.get(0), (double) index);
                 }
             default:
                 // others use old normalize API to reuse code
@@ -412,10 +461,10 @@ public class Normalizer {
             return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, false);
         } else {
             int binNum = BinUtils.getBinNum(config, raw);
-            if (binNum < 0) {
+            if(binNum < 0) {
                 binNum = config.getBinCategory().size();
             }
-            Double[] normVals = new Double[]{(double) binNum};
+            Double[] normVals = new Double[] { (double) binNum };
             return Arrays.asList(normVals);
         }
     }

@@ -73,21 +73,20 @@ import ml.shifu.shifu.util.MapReduceUtils;
  */
 public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWritable, BinningInfoWritable> {
 
-
     private final static Logger LOG = LoggerFactory.getLogger(UpdateBinningInfoMapper.class);
 
     /**
      * Minimal bin gap, if two adjacent bin boundaries with gap smaller than such value, they will be merged into one.
      */
     private static final double MINIMAL_BIN_GAP = 0.00000001d;
-    
+
     /**
      * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
      */
     private String dataSetDelimiter;
 
     /**
-     * Model Config read from HDFS
+     * Model configuration read from HDFS
      */
     private ModelConfig modelConfig;
 
@@ -159,6 +158,17 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     private List<Integer> newTagIndexes;
 
     private PrecisionType precisionType;
+
+    /**
+     * Max category size configured, by default 10k.
+     */
+    private int maxCategorySize;
+
+    /**
+     * Enable auto hash for high cardinality categorical variables, by default true, any variable with
+     * cardinality count {@link #maxCategorySize} could be enabled by hash.
+     */
+    private boolean enableAutoHash = true;
 
     /**
      * Load model config and column config files.
@@ -253,6 +263,14 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
         LOG.debug("Column binning info: {}", this.columnBinningInfo);
         this.isLinearTarget = (CollectionUtils.isEmpty(modelConfig.getTags())
                 && CommonUtils.getTargetColumnConfig(columnConfigList).isNumerical());
+
+        this.enableAutoHash = context.getConfiguration().getBoolean(Constants.SHIFU_ENABLE_AUTO_HASH, false);
+        this.maxCategorySize = context.getConfiguration().getInt(Constants.SHIFU_MAX_CATEGORY_SIZE,
+                Constants.MAX_CATEGORICAL_BINC_COUNT);
+
+        if(this.maxCategorySize <= 0) {
+            throw new IllegalArgumentException("Max category size " + this.maxCategorySize + " is invalid.");
+        }
     }
 
     private void loadColumnBinningInfoFromCC() {
@@ -386,10 +404,25 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                             this.categoricalBinMap.put(rawColumnNum, map);
                         }
                         int index = 0;
-                        if(!StringUtils.isBlank(cols[1])) {
-                            for(String startElement: BIN_BOUNDARY_SPLITTER.split(cols[1])) {
-                                list.add(startElement);
-                                map.put(startElement, index++);
+
+                        long cardinity = -1;
+                        if(cols.length > 2 && !StringUtils.isBlank(cols[2])) {
+                            cardinity = Long.parseLong(cols[2]);
+                        }
+
+                        if(this.enableAutoHash && cardinity > this.maxCategorySize && columnConfig.getHashSeed() <= 0) {
+                            // auto convert to hash categories, by default 0-999 categories after hash
+                            int hashSeed = this.maxCategorySize / 10;
+                            for(int i = 0; i < hashSeed; i++) {
+                                list.add(i + "");
+                            }
+                            columnConfig.setHashSeed(hashSeed);
+                        } else {
+                            if(!StringUtils.isBlank(cols[1])) {
+                                for(String startElement: BIN_BOUNDARY_SPLITTER.split(cols[1])) {
+                                    list.add(startElement);
+                                    map.put(startElement, index++);
+                                }
                             }
                         }
                         binningInfo.setBinCategories(list);
@@ -406,6 +439,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
                     double[] binWeightNeg = new double[binSize + 1];
                     binningInfo.setBinWeightNeg(binWeightNeg);
+                    binningInfo.setHashSeed(columnConfig.getHashSeed());
+
                     LOG.debug("column num {}  and info {}", rawColumnNum, binningInfo);
                     this.columnBinningInfo.put(rawColumnNum, binningInfo);
                 }
@@ -427,7 +462,8 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 list.add(binValue);
                 lastBinValue = binValue;
             } else {
-                if(Math.abs(binValue - lastBinValue) > MINIMAL_BIN_GAP) { // if gap < MINIMAL_BIN_GAP, merge the two into one
+                if(Math.abs(binValue - lastBinValue) > MINIMAL_BIN_GAP) { // if gap < MINIMAL_BIN_GAP, merge the two
+                                                                          // into one
                     list.add(binValue);
                     lastBinValue = binValue;
                 } // else no need set lastBinValue because of merge into one

@@ -381,9 +381,11 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         File file = new File(StringUtils.isEmpty(dateStatsOutputFileName) ? LOCAL_DATE_STATS_CSV_FILE_NAME
                 : dateStatsOutputFileName);
         OutputStream out = org.apache.commons.io.FileUtils.openOutputStream(file);
-        //add title in csv file
-        IOUtils.write("variable name|date|column type|max|min|mean|median value|count|missing count|standard deviation|missing ratio|WOE|KS|IV|weighted WOE|weighted KS|weighted IV|skewness|kurtosis|cardinality|P25th|P75th\n", out);
-        for(Path p : list){
+        // add title in csv file
+        IOUtils.write(
+                "variable name|date|column type|max|min|mean|median value|count|missing count|standard deviation|missing ratio|WOE|KS|IV|weighted WOE|weighted KS|weighted IV|skewness|kurtosis|cardinality|P25th|P75th\n",
+                out);
+        for(Path p: list) {
             FSDataInputStream in = hdfs.open(p);
             GZIPInputStream gzin = new GZIPInputStream(in);
             IOUtils.copy(gzin, out);
@@ -439,7 +441,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         job.setReducerClass(UpdateBinningInfoReducer.class);
 
         int mapperSize = new CombineInputFormat().getSplits(job).size();
-        LOG.info("DEBUG: Test mapper size is {} ", mapperSize);
+        LOG.info("Mapper size is {} ", mapperSize);
         Integer reducerSize = Environment.getInt(CommonConstants.SHIFU_UPDATEBINNING_REDUCER);
         if(reducerSize != null) {
             job.setNumReduceTasks(Environment.getInt(CommonConstants.SHIFU_UPDATEBINNING_REDUCER, 20));
@@ -571,6 +573,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         return StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR);
     }
+
     /**
      * update the max/min/mean/std/binning information from stats step
      * 
@@ -717,6 +720,9 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 }
                 if(raw.length >= 34) {
                     config.getColumnStats().set75th(parseDouble(raw[33]));
+                }
+                if(raw.length >= 35) {
+                    config.setHashSeed((int) parseLong(raw[34]));
                 }
             } catch (Exception e) {
                 LOG.error(String.format("Fail to process following column : %s name: %s error: %s", columnNum,

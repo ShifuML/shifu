@@ -109,7 +109,7 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
             log.info("mergeBin: " + (System.currentTimeMillis() - start) + "ms");
         }
 
-        Tuple output = TupleFactory.getInstance().newTuple(2);
+        Tuple output = TupleFactory.getInstance().newTuple(3);
         output.set(0, columnId);
         List<?> binFields = binning.getDataBin();
 
@@ -129,6 +129,12 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
+        if(columnConfig.isCategorical()) {
+            output.set(2, ((CategoricalBinning) binning).cardinality());
+        } else {
+            output.set(2, -1L);
+        }
+
         log.info("Finish merging bin info for columnId - " + columnId);
 
         return output;
@@ -140,6 +146,7 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
             Schema tupleSchema = new Schema();
             tupleSchema.add(new FieldSchema("columnId", DataType.INTEGER));
             tupleSchema.add(new FieldSchema("binningDataInfo", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("cardinality", DataType.LONG));
 
             return new Schema(new Schema.FieldSchema("BinningDataInfo", tupleSchema, DataType.TUPLE));
         } catch (IOException e) {

@@ -71,6 +71,8 @@ public class BinningInfoWritable implements Writable {
 
     private double[] xMultiY = null;
 
+    private int hashSeed = -1;
+
     private CountAndFrequentItemsWritable cfiw = new CountAndFrequentItemsWritable();
 
     /**
@@ -354,6 +356,7 @@ public class BinningInfoWritable implements Writable {
 
         this.cfiw.write(out);
         out.writeBoolean(this.isEmpty);
+        out.writeInt(this.hashSeed);
     }
 
     @Override
@@ -425,6 +428,7 @@ public class BinningInfoWritable implements Writable {
         this.cfiw = new CountAndFrequentItemsWritable();
         this.cfiw.readFields(in);
         this.isEmpty = in.readBoolean();
+        this.hashSeed = in.readInt();
     }
 
     /**
@@ -500,6 +504,21 @@ public class BinningInfoWritable implements Writable {
      */
     public void setEmpty(boolean isEmpty) {
         this.isEmpty = isEmpty;
+    }
+
+    /**
+     * @return the hashSeed
+     */
+    public int getHashSeed() {
+        return hashSeed;
+    }
+
+    /**
+     * @param hashSeed
+     *            the hashSeed to set
+     */
+    public void setHashSeed(int hashSeed) {
+        this.hashSeed = hashSeed;
     }
 
     /*
