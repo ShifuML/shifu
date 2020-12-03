@@ -632,10 +632,10 @@ public final class CommonUtils {
      */
     public static String[] getHeaders(String pathHeader, String delimiter, SourceType sourceType, boolean isFull)
             throws IOException {
-        if(StringUtils.isEmpty(pathHeader) || StringUtils.isEmpty(delimiter) || sourceType == null) {
+        if (StringUtils.isEmpty(pathHeader) || StringUtils.isEmpty(delimiter) || sourceType == null) {
             throw new IllegalArgumentException(
-                    String.format("Null or empty parameters srcDataPath:%s, delimiter:%s, sourceType:%s", pathHeader,
-                            delimiter, sourceType));
+                String.format("Null or empty parameters srcDataPath:%s, delimiter:%s, sourceType:%s", pathHeader,
+                    delimiter, sourceType));
         }
         BufferedReader reader = null;
         String pigHeaderStr = null;
@@ -643,19 +643,22 @@ public final class CommonUtils {
         try {
             reader = ShifuFileUtils.getReader(pathHeader, sourceType);
             pigHeaderStr = reader.readLine();
-            if(StringUtils.isEmpty(pigHeaderStr)) {
+            if (StringUtils.isEmpty(pigHeaderStr)) {
                 throw new RuntimeException(
-                        String.format("Cannot reade header info from the first line of file: %s", pathHeader));
+                    String.format("Cannot reade header info from the first line of file: %s", pathHeader));
             }
         } catch (Exception e) {
             log.error(
-                    "Error in getReader, this must be catched in this method to make sure the next reader can be returned.",
-                    e);
+                "Error in getReader, this must be catched in this method to make sure the next reader can be returned.",
+                e);
             throw new ShifuException(ShifuErrorCode.ERROR_HEADER_NOT_FOUND);
         } finally {
             IOUtils.closeQuietly(reader);
         }
+        return calculateHeaders(pigHeaderStr, delimiter, isFull);
+    }
 
+    public static String[] calculateHeaders(String pigHeaderStr, String delimiter, boolean isFull) {
         List<String> headerList = new ArrayList<String>();
         Set<String> headerSet = new HashSet<String>();
         int index = 0;
@@ -671,16 +674,33 @@ public final class CommonUtils {
              * columnName = getRelativePigHeaderColumnName(str);
              * }
              */
-            if(headerSet.contains(columnName)) {
-                columnName = columnName + "_" + index;
+            columnName = normColumnName(columnName);
+            if (headerSet.contains(columnName)) {
+                columnName = getUniqueName(headerSet, columnName + "_dup" + index);
             }
 
-            columnName = normColumnName(columnName);
             headerSet.add(columnName);
             index++;
             headerList.add(columnName);
         }
         return headerList.toArray(new String[0]);
+    }
+
+    /**
+     * Get the unique name.
+     *
+     * @return name if name set doesn't contains it. If name exist in name set, it will check name_1, name_2, name_n to find one which doesn't
+     * exist in the set.
+     */
+    public static String getUniqueName(Set<String> nameSet, String name) {
+        if (nameSet == null || name == null) {
+            return name;
+        }
+        String newName = name;
+        for (int i = 1; nameSet.contains(newName); i++) {
+            newName = name + "_" + i;
+        }
+        return newName;
     }
 
     /**

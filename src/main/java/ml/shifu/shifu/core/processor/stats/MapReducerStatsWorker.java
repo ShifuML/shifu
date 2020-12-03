@@ -29,9 +29,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.codec.binary.Base64;
@@ -609,6 +611,17 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         });
     }
 
+    private Set<String> getColumnNames(List<ColumnConfig> columnConfigs) {
+        Set<String> columnNames = new HashSet<>();
+        if (columnConfigs == null) {
+            return columnNames;
+        }
+        for (ColumnConfig columnConfig : columnConfigs) {
+            columnNames.add(columnConfig.getColumnName());
+        }
+        return columnNames;
+    }
+
     /**
      * Scan the stats result and save them into column configure
      * 
@@ -616,6 +629,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
      *            the scanners to be read
      */
     private void scanStatsResult(Scanner scanner, int ccInitSize) {
+        Set<String> columnNames = getColumnNames(this.columnConfigList);
         while(scanner.hasNextLine()) {
             String[] raw = scanner.nextLine().trim().split("\\|");
 
@@ -642,11 +656,18 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 if(columnNum >= ccInitSize) {
                     config = new ColumnConfig();
                     config.setColumnNum(columnNum);
-                    config.setColumnName(basicConfig.getColumnName() + "_" + (columnNum / ccInitSize));
                     config.setVersion(basicConfig.getVersion());
                     config.setColumnType(basicConfig.getColumnType());
                     config.setColumnFlag(basicConfig.getColumnFlag() == ColumnFlag.Target ? ColumnFlag.Meta
                             : basicConfig.getColumnFlag());
+                    // If we have 30 features and column number is 31, we got column name "columnname_seg1"
+                    String columnName = basicConfig.getColumnName() + "_seg" + (columnNum / ccInitSize);
+                    if (columnNames.contains(columnName)) {
+                        // If "columnname_seg1" exists, we will find a unique one.
+                        columnName = CommonUtils.getUniqueName(columnNames, columnName);
+                    }
+                    config.setColumnName(columnName);
+                    columnNames.add(columnName);
 
                     LOG.debug("basicConfig is - " + basicConfig.getColumnName() + " corrColumnNum:" + corrColumnNum
                             + ", currColumnName: " + columnNum + ", currColumnType:" + config.getColumnType());

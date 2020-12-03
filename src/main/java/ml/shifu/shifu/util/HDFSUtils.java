@@ -70,12 +70,19 @@ public final class HDFSUtils {
     }
 
     /**
+     * Get HDFS FileSystem.
+     */
+    public static FileSystem getFS() {
+        return getFS(null);
+    }
+
+    /**
      * Get HDFS FileSystem according the Path
      * @param path - file path to access
      * @return file system for specified path
      */
     public static FileSystem getFS(Path path) {
-        String host = (path.toUri() == null || StringUtils.isBlank(path.toUri().getHost())) ?
+        String host = (path == null || path.toUri() == null || StringUtils.isBlank(path.toUri().getHost())) ?
                 DEFAULT_HOST : path.toUri().getHost();
         FileSystem fs = hdfs.getOrDefault(host, null);
         if (fs == null) {
