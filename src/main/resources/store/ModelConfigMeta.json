@@ -234,6 +234,11 @@
                 "directive": "input",
                 "defval" : 0
             }, {
+                "name": "cateMinCnt",
+                "type": "integer",
+                "directive": "input",
+                "defval" : 0
+            }, {
                 "name": "binningAlgorithm",
                 "type": "text",
                 "directive": "select",
