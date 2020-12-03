@@ -37,9 +37,6 @@ import java.util.Map;
  */
 public class PathFinder {
 
-    /**
-     * 
-     */
     private static final String MTL_FOLDER = "mtl";
     public static final String FEATURE_IMPORTANCE_FILE = "all.fi";
     private static final String CORRELATION_CSV = "correlation.csv";

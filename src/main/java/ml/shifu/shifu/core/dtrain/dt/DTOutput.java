@@ -245,7 +245,6 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
         tmpModelPersistThread.start();
     }
 
-    @SuppressWarnings("deprecation")
     private void updateProgressLog(final MasterContext<DTMasterParams, DTWorkerParams> context) {
         int currentIteration = context.getCurrentIteration();
         if(context.isFirstIteration()) {

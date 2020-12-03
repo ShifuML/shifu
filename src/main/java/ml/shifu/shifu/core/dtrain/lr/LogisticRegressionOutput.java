@@ -163,7 +163,6 @@ public class LogisticRegressionOutput
         updateProgressLog(context);
     }
 
-    @SuppressWarnings("deprecation")
     private void updateProgressLog(final MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         int currentIteration = context.getCurrentIteration();
         if(currentIteration == 1) {

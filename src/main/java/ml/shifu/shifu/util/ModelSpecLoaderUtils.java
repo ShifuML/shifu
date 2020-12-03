@@ -574,7 +574,7 @@ public class ModelSpecLoaderUtils {
 
         return paths;
     }
-
+    
     /**
      * Load the generic model config and parse it to java object.
      * Similar as {@link #findModels(ModelConfig, EvalConfig, RawSourceData.SourceType)}

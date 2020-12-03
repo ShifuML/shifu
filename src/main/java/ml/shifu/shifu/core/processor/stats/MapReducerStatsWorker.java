@@ -23,6 +23,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -72,10 +73,10 @@ import ml.shifu.guagua.mapreduce.GuaguaMapReduceConstants;
 import ml.shifu.guagua.util.FileUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.binning.BinningInfoWritable;
 import ml.shifu.shifu.core.binning.UpdateBinningInfoMapper;
 import ml.shifu.shifu.core.binning.UpdateBinningInfoReducer;
@@ -98,6 +99,7 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.JSONUtils;
+import ml.shifu.shifu.util.NumberUtils;
 import ml.shifu.shifu.util.ValueVisitor;
 
 /**
@@ -301,8 +303,8 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         job.setMapOutputValueClass(DateStatInfoWritable.class);
         job.setInputFormatClass(CombineInputFormat.class);
         Path filePath = new Path(super.modelConfig.getDataSetRawPath());
-        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source, filePath)
-                .makeQualified(filePath));
+        FileInputFormat.setInputPaths(job,
+                ShifuFileUtils.getFileSystemBySourceType(source, filePath).makeQualified(filePath));
 
         job.setReducerClass(DateStatComputeReducer.class);
 
@@ -399,7 +401,10 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
     protected void updateBinningInfoWithMRJob() throws IOException, InterruptedException, ClassNotFoundException {
         RawSourceData.SourceType source = this.modelConfig.getDataSet().getSource();
 
-        String filePath = Constants.BINNING_INFO_FILE_NAME;
+        String shortFilePath = Constants.BINNING_INFO_FILE_NAME;
+        String filePath = URLEncoder.encode(shortFilePath, "UTF-8");
+        File binInfoFile = null;
+
         BufferedWriter writer = null;
         List<Scanner> scanners = null;
         try {
@@ -411,8 +416,9 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 scanners = ShifuFileUtils.getDataScanners(pathFinder.getUpdatedBinningInfoPath(source), source);
                 filePath = Constants.BINNING_INFO_FILE_NAME;
             }
+            binInfoFile = new File(pathFinder.getModelSetPath(SourceType.LOCAL), filePath);
             writer = new BufferedWriter(
-                    new OutputStreamWriter(new FileOutputStream(new File(filePath)), Charset.forName("UTF-8")));
+                    new OutputStreamWriter(new FileOutputStream(binInfoFile), Charset.forName("UTF-8")));
             for(Scanner scanner: scanners) {
                 while(scanner.hasNextLine()) {
                     String line = scanner.nextLine();
@@ -426,7 +432,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         }
 
         Configuration conf = new Configuration();
-        prepareJobConf(source, conf, filePath);
+        prepareJobConf(source, conf, binInfoFile.toString());
         conf.set(CommonConstants.MTL_INDEX, this.getMtlIndex() + "");
 
         @SuppressWarnings("deprecation")
@@ -437,8 +443,8 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         job.setMapOutputValueClass(BinningInfoWritable.class);
         job.setInputFormatClass(CombineInputFormat.class);
         Path rawDataPath = new Path(super.modelConfig.getDataSetRawPath());
-        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source, rawDataPath)
-                .makeQualified(rawDataPath));
+        FileInputFormat.setInputPaths(job,
+                ShifuFileUtils.getFileSystemBySourceType(source, rawDataPath).makeQualified(rawDataPath));
 
         job.setReducerClass(UpdateBinningInfoReducer.class);
 
@@ -676,42 +682,42 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 // config.setBinAvgScore(CommonUtils.stringToIntegerList(raw[4]));
                 config.setBinPosCaseRate(CommonUtils.stringToDoubleList(raw[5]));
                 config.setBinLength(config.getBinCountNeg().size());
-                config.setKs(parseDouble(raw[6]));
-                config.setIv(parseDouble(raw[7]));
-                config.setMax(parseDouble(raw[8]));
-                config.setMin(parseDouble(raw[9]));
-                config.setMean(parseDouble(raw[10]));
-                config.setStdDev(parseDouble(raw[11], Double.NaN));
+                config.setKs(NumberUtils.parseDouble(raw[6]));
+                config.setIv(NumberUtils.parseDouble(raw[7]));
+                config.setMax(NumberUtils.parseDouble(raw[8]));
+                config.setMin(NumberUtils.parseDouble(raw[9]));
+                config.setMean(NumberUtils.parseDouble(raw[10]));
+                config.setStdDev(NumberUtils.parseDouble(raw[11], Double.NaN));
 
                 // magic?
                 config.setColumnType(ColumnType.of(raw[12]));
 
-                config.setMedian(parseDouble(raw[13]));
+                config.setMedian(NumberUtils.parseDouble(raw[13]));
 
-                config.setMissingCnt(parseLong(raw[14]));
-                config.setTotalCount(parseLong(raw[15]));
-                config.setMissingPercentage(parseDouble(raw[16]));
+                config.setMissingCnt(NumberUtils.parseLong(raw[14]));
+                config.setTotalCount(NumberUtils.parseLong(raw[15]));
+                config.setMissingPercentage(NumberUtils.parseDouble(raw[16]));
 
                 config.setBinWeightedNeg(CommonUtils.stringToDoubleList(raw[17]));
                 config.setBinWeightedPos(CommonUtils.stringToDoubleList(raw[18]));
-                config.getColumnStats().setWoe(parseDouble(raw[19]));
-                config.getColumnStats().setWeightedWoe(parseDouble(raw[20]));
-                config.getColumnStats().setWeightedKs(parseDouble(raw[21]));
-                config.getColumnStats().setWeightedIv(parseDouble(raw[22]));
+                config.getColumnStats().setWoe(NumberUtils.parseDouble(raw[19]));
+                config.getColumnStats().setWeightedWoe(NumberUtils.parseDouble(raw[20]));
+                config.getColumnStats().setWeightedKs(NumberUtils.parseDouble(raw[21]));
+                config.getColumnStats().setWeightedIv(NumberUtils.parseDouble(raw[22]));
                 config.getColumnBinning().setBinCountWoe(CommonUtils.stringToDoubleList(raw[23]));
                 config.getColumnBinning().setBinWeightedWoe(CommonUtils.stringToDoubleList(raw[24]));
                 // TODO magic code?
                 if(raw.length >= 26) {
-                    config.getColumnStats().setSkewness(parseDouble(raw[25]));
+                    config.getColumnStats().setSkewness(NumberUtils.parseDouble(raw[25]));
                 }
                 if(raw.length >= 27) {
-                    config.getColumnStats().setKurtosis(parseDouble(raw[26]));
+                    config.getColumnStats().setKurtosis(NumberUtils.parseDouble(raw[26]));
                 }
                 if(raw.length >= 30) {
-                    config.getColumnStats().setValidNumCount(parseLong(raw[29]));
+                    config.getColumnStats().setValidNumCount(NumberUtils.parseLong(raw[29]));
                 }
                 if(raw.length >= 31) {
-                    config.getColumnStats().setDistinctCount(parseLong(raw[30]));
+                    config.getColumnStats().setDistinctCount(NumberUtils.parseLong(raw[30]));
                 }
                 if(raw.length >= 32) {
                     if(raw[31] != null) {
@@ -720,43 +726,19 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                     }
                 }
                 if(raw.length >= 33) {
-                    config.getColumnStats().set25th(parseDouble(raw[32]));
+                    config.getColumnStats().set25th(NumberUtils.parseDouble(raw[32]));
                 }
                 if(raw.length >= 34) {
-                    config.getColumnStats().set75th(parseDouble(raw[33]));
+                    config.getColumnStats().set75th(NumberUtils.parseDouble(raw[33]));
                 }
                 if(raw.length >= 35) {
-                    config.setHashSeed((int) parseLong(raw[34]));
+                    config.setHashSeed((int) NumberUtils.parseLong(raw[34]));
                 }
             } catch (Exception e) {
                 LOG.error(String.format("Fail to process following column : %s name: %s error: %s", columnNum,
                         this.columnConfigList.get(corrColumnNum).getColumnName(), e.getMessage()), e);
                 continue;
             }
-        }
-    }
-
-    private static double parseDouble(String str) {
-        return parseDouble(str, 0d);
-    }
-
-    private static double parseDouble(String str, double dVal) {
-        try {
-            return Double.parseDouble(str);
-        } catch (Exception e) {
-            return dVal;
-        }
-    }
-
-    private static long parseLong(String str) {
-        return parseLong(str, 0L);
-    }
-
-    private static long parseLong(String str, long lVal) {
-        try {
-            return Long.parseLong(str);
-        } catch (Exception e) {
-            return lVal;
         }
     }
 
