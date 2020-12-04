@@ -414,7 +414,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 scanners = ShifuFileUtils.getDataScanners(pathFinder.getUpdatedBinningInfoPath(source), source);
                 filePath = Constants.BINNING_INFO_FILE_NAME;
             }
-            binInfoFile = new File(pathFinder.getModelSetPath(SourceType.LOCAL), filePath);
+            binInfoFile = new File(filePath);
             writer = new BufferedWriter(
                     new OutputStreamWriter(new FileOutputStream(binInfoFile), Charset.forName("UTF-8")));
             for(Scanner scanner: scanners) {
