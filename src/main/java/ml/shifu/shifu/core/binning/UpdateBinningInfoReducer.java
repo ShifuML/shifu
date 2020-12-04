@@ -99,11 +99,11 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
     private void loadConfigFiles(final Context context) {
         try {
             // inject fs.defaultFS from UDFContext.getUDFContext().getJobConf()
-            if (context != null && context.getConfiguration() != null) {
+            if(context != null && context.getConfiguration() != null) {
                 HDFSUtils.getConf().set(FileSystem.FS_DEFAULT_NAME_KEY,
                         context.getConfiguration().get(FileSystem.FS_DEFAULT_NAME_KEY));
             }
-            
+
             SourceType sourceType = SourceType.valueOf(
                     context.getConfiguration().get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
@@ -323,6 +323,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             }
             binBounString = Base64Utils.base64Encode(
                     "[" + StringUtils.join(binCategories, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR) + "]");
+
             // recompute such value for categorical variables
             min = Double.MAX_VALUE;
             max = Double.MIN_VALUE;
@@ -347,7 +348,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
 
                 indexMap.put(i - smallCategories.size(), i); // keep new index and old index mappings, including last
                                                              // one: missing column
-                if(i < binPosRate.length - 1 && binCount < this.modelConfig.getStats().getCateMinCnt()) {
+                if(this.modelConfig.getStats().getCateMinCnt() > 0 && i < binPosRate.length - 1
+                        && binCount < this.modelConfig.getStats().getCateMinCnt()) {
                     smallCategories.add(i);
                 }
 
