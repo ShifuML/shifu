@@ -658,6 +658,17 @@ public final class CommonUtils {
         return calculateHeaders(pigHeaderStr, delimiter, isFull);
     }
 
+    /**
+     * Return header column array from header string.
+     *
+     * @param pigHeaderStr
+     *            header string
+     * @param delimiter
+     *            the delimiter of headers
+     * @param isFull
+     *            if full header name including name space
+     * @return headers array
+     */
     public static String[] calculateHeaders(String pigHeaderStr, String delimiter, boolean isFull) {
         List<String> headerList = new ArrayList<String>();
         Set<String> headerSet = new HashSet<String>();
