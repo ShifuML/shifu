@@ -170,7 +170,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
      * Enable auto hash for high cardinality categorical variables, by default true, any variable with
      * cardinality count {@link #maxCategorySize} could be enabled by hash.
      */
-    private boolean enableAutoHash = true;
+    private boolean enableAutoHash = false;
 
     /**
      * Load model config and column config files.
@@ -178,7 +178,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
     private void loadConfigFiles(final Context context) {
         try {
             // inject fs.defaultFS from UDFContext.getUDFContext().getJobConf()
-            if (context != null && context.getConfiguration() != null) {
+            if(context != null && context.getConfiguration() != null) {
                 HDFSUtils.getConf().set(FileSystem.FS_DEFAULT_NAME_KEY,
                         context.getConfiguration().get(FileSystem.FS_DEFAULT_NAME_KEY));
             }
@@ -426,7 +426,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                             }
                             columnConfig.setHashSeed(hashSeed);
                         } else {
-                            if(!StringUtils.isBlank(cols[1])) {
+                            if(StringUtils.isNotBlank(cols[1])) {
                                 for(String startElement: BIN_BOUNDARY_SPLITTER.split(cols[1])) {
                                     list.add(startElement);
                                     map.put(startElement, index++);
