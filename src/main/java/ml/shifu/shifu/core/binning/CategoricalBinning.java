@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import com.clearspring.analytics.stream.cardinality.CardinalityMergeException;
 import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
 
+import ml.shifu.shifu.util.Base64Utils;
 import ml.shifu.shifu.util.CommonUtils;
 
 /**
@@ -187,7 +188,7 @@ public class CategoricalBinning extends AbstractBinning<String> {
 
         if(objStrArr.length > 6 && StringUtils.isNotBlank(objStrArr[6])) {
             try {
-                this.hyper = HyperLogLogPlus.Builder.build(objStrArr[6].getBytes(Constants.UTF_8));
+                this.hyper = HyperLogLogPlus.Builder.build(Base64Utils.base64DecodeToBytes((objStrArr[6])));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -201,7 +202,7 @@ public class CategoricalBinning extends AbstractBinning<String> {
         try {
             return super.objToString() + Character.toString(FIELD_SEPARATOR) + Boolean.toString(isValid)
                     + Character.toString(FIELD_SEPARATOR) + StringUtils.join(categoricalVals, SETLIST_SEPARATOR)
-                    + Character.toString(FIELD_SEPARATOR) + new String(this.hyper.getBytes(), Constants.UTF_8);
+                    + Character.toString(FIELD_SEPARATOR) + Base64Utils.base64EncodeFromBytes(this.hyper.getBytes());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -209,6 +210,8 @@ public class CategoricalBinning extends AbstractBinning<String> {
 
     /**
      * Categorical variable in first 2 stats job to get cardinality, if too large, hash trick can be enabled.
+     * 
+     * @return cardinality of categories
      */
     public long cardinality() {
         return this.hyper.cardinality();

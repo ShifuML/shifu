@@ -23,7 +23,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -403,8 +402,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
     protected void updateBinningInfoWithMRJob() throws IOException, InterruptedException, ClassNotFoundException {
         RawSourceData.SourceType source = this.modelConfig.getDataSet().getSource();
 
-        String shortFilePath = Constants.BINNING_INFO_FILE_NAME;
-        String filePath = URLEncoder.encode(shortFilePath, "UTF-8");
+        String filePath = Constants.BINNING_INFO_FILE_NAME;
         File binInfoFile = null;
 
         BufferedWriter writer = null;
@@ -418,7 +416,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 scanners = ShifuFileUtils.getDataScanners(pathFinder.getUpdatedBinningInfoPath(source), source);
                 filePath = Constants.BINNING_INFO_FILE_NAME;
             }
-            binInfoFile = new File(pathFinder.getModelSetPath(SourceType.LOCAL), filePath);
+            binInfoFile = new File(filePath);
             writer = new BufferedWriter(
                     new OutputStreamWriter(new FileOutputStream(binInfoFile), Charset.forName("UTF-8")));
             for(Scanner scanner: scanners) {
