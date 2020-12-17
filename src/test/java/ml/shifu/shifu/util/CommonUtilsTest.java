@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.util;
 
+import com.google.common.collect.Sets;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -23,6 +24,7 @@ import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -477,6 +479,21 @@ public class CommonUtilsTest {
         Assert.assertEquals(CommonUtils.trimTag(" "), "");
         Assert.assertEquals(CommonUtils.trimTag(null), "");
         Assert.assertEquals(CommonUtils.trimTag("1.0B"), "1.0B");
+    }
+
+    @Test
+    public void testGetUniqueName() {
+        Assert.assertNull(CommonUtils.getUniqueName(null, null));
+        Assert.assertEquals(CommonUtils.getUniqueName(null, "abc"), "abc");
+        Assert.assertEquals(CommonUtils.getUniqueName(Collections.singleton("a"), "abc"), "abc");
+        Assert.assertEquals(CommonUtils.getUniqueName(Collections.singleton("abc"), "abc"), "abc_1");
+        Assert.assertEquals(CommonUtils.getUniqueName(Sets.newHashSet("abc", "abc_1"), "abc"), "abc_2");
+    }
+
+    @Test
+    public void testCalculateHeaders() {
+        Assert.assertEquals(new String[]{"a", "a_dup1", "a_dup2", "a_dup3"}, CommonUtils.calculateHeaders("a,a,a,a", ",", false));
+        Assert.assertEquals(new String[]{"a_dup2", "a", "a_dup2_1", "a_dup3"}, CommonUtils.calculateHeaders("a_dup2,a,a,a", ",", false));
     }
 
     @AfterClass
