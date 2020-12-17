@@ -226,13 +226,6 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         // isCompact now only works in non-tree model norm output
         this.isCompactNorm = (hasColumnSelected && this.isCompactNorm);
 
-        if (precision == null && this.isCompactNorm) {
-            // For compact norm mode, we enable precision and set it to float7.
-            this.enablePrecision = true;
-            this.precisionType = PrecisionType.FLOAT7;
-            log.info("Due to compact norm, output precision type is re-set to: " + this.precisionType);
-        }
-
         // store schema list with format: <tag, meta columns, selected feature list, weight>
         if(this.isCompactNorm) {
             this.normVarNamesMapping = new HashMap<>();
@@ -579,7 +572,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                                 this.categoryMissingNormType, categoricalIndexMap.get(config.getColumnNum()));
                         List<String> formatNormVals = new ArrayList<>();
                         for(Double normVal: normVals) {
-                            String formatVal = getOutputValue(normVal, this.enablePrecision);
+                            String formatVal = getOutputValue(normVal, true);
                             formatNormVals.add(formatVal);
                         }
 

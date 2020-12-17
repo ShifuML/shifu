@@ -111,6 +111,6 @@ public class NormalizeUDFTest {
         Tuple output = instance2.exec(input);
         // Target, 3 selected columns, and weight, are 5 in total.
         Assert.assertEquals(5, output.size());
-        Assert.assertEquals("(1,-3.374538,-4,-3.697376,2.1)", output.toString());
+        Assert.assertEquals("(1,-3.3745382,-4.0,-3.697376,2.1)", output.toString());
     }
 }
