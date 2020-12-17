@@ -915,6 +915,22 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     }
 
     /**
+     * Configure the {@link AbstractNNWorker#isCompactMode}.
+     *
+     * @param columnAmountInData is the column amount in data file.
+     */
+    protected void configureCompactMode(int columnAmountInData) {
+        // Not final selected variables, it is not compact mode.
+        if (!DTrainUtils.hasFinalSelectedVars(this.columnConfigList)) {
+            return;
+        }
+        // In compact mode, column amount in data should be equal to feature input amount + 1 target column + 1 weight column.
+        if (columnAmountInData == featureInputsCnt + 2) {
+            isCompactMode = true;
+        }
+    }
+
+    /**
      * Only baggingWithReplacement is set and size over NNConstants.NN_BAGGING_THRESHOLD, and random value <= 1/size. We
      * choose use existing data to add training data set and testing data set.
      */
