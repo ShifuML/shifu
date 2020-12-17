@@ -226,6 +226,13 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         // isCompact now only works in non-tree model norm output
         this.isCompactNorm = (hasColumnSelected && this.isCompactNorm);
 
+        if (precision == null && this.isCompactNorm) {
+            // For compact norm mode, we enable precision and set it to float7.
+            this.enablePrecision = true;
+            this.precisionType = PrecisionType.FLOAT7;
+            log.info("Due to compact norm, output precision type is re-set to: " + this.precisionType);
+        }
+
         // store schema list with format: <tag, meta columns, selected feature list, weight>
         if(this.isCompactNorm) {
             this.normVarNamesMapping = new HashMap<>();
@@ -405,7 +412,14 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         // for compact norm mode, output to tuple at here
         if(this.isCompactNorm) {
             for(int i = 0; i < this.outputCompactColumns.size(); i++) {
-                tuple.append(compactVarMap.get(this.outputCompactColumns.get(i)));
+                String columnName = this.outputCompactColumns.get(i);
+                Object normVal = compactVarMap.get(columnName);
+                if ("weight".equals(columnName) && normVal == null) {
+                    // If the weight value is empty, we append weight.
+                    tuple.append(buildAndAppendWeight(input, this.weightColumnId));
+                } else {
+                    tuple.append(normVal);
+                }
             }
         }
 
@@ -427,7 +441,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     }
                 }
             }
-        } else {
+        } else if (!this.isCompactNorm) {
             tuple.append(buildAndAppendWeight(input, this.weightColumnId));
         }
 
@@ -565,12 +579,11 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                                 this.categoryMissingNormType, categoricalIndexMap.get(config.getColumnNum()));
                         List<String> formatNormVals = new ArrayList<>();
                         for(Double normVal: normVals) {
-                            String formatVal = getOutputValue(normVal, true);
+                            String formatVal = getOutputValue(normVal, this.enablePrecision);
                             formatNormVals.add(formatVal);
                         }
 
                         List<String> normVarNames = this.normVarNamesMapping.get(config.getColumnName());
-                        assert formatNormVals.size() != normVarNames.size();
                         for(int k = 0; k < normVarNames.size(); k++) {
                             compactVarMap.put(normVarNames.get(k), formatNormVals.get(k));
                         }
