@@ -16,8 +16,8 @@ import org.apache.commons.collections.CollectionUtils;
  */
 public class VarSelUpdater extends BasicUpdater {
 
-    public VarSelUpdater(ModelConfig modelConfig, int mtlIndex) throws IOException {
-        super(modelConfig, mtlIndex);
+    public VarSelUpdater(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, int mtlIndex) throws IOException {
+        super(modelConfig, columnConfigList, mtlIndex);
     }
 
     @Override
