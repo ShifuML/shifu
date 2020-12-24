@@ -113,4 +113,16 @@ public class NormalizeUDFTest {
         Assert.assertEquals(5, output.size());
         Assert.assertEquals("(1,-3.3745382,-4.0,-3.697376,2.1)", output.toString());
     }
+
+    @Test
+    public void testColumnConfigCache() throws Exception {
+        String modelConfigPath = "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json";
+        String columnConfigPath = "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json";
+        String compactColumnConfigPath = "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfigCompact.json";
+        NormalizeUDF normUDF1 = new NormalizeUDF("LOCAL", modelConfigPath, columnConfigPath);
+        NormalizeUDF normUDF2 = new NormalizeUDF("LOCAL", modelConfigPath, columnConfigPath);
+        NormalizeUDF normUDF3 = new NormalizeUDF("LOCAL", modelConfigPath, compactColumnConfigPath);
+        Assert.assertTrue(normUDF1.columnConfigList == normUDF2.columnConfigList);
+        Assert.assertFalse(normUDF1.columnConfigList == normUDF3.columnConfigList);
+    }
 }
