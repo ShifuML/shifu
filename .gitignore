@@ -6,3 +6,4 @@ target
 .settings
 .DS_Store
 test-output
+logs

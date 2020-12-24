@@ -208,14 +208,16 @@ public class BasicUpdater {
      */
     private void initColumnConfigMapForSegs() {
         if (isForSegs) {
-            int totalColumnAmount = columnConfigList.size();
-            originalColumnAmount = totalColumnAmount / (segs.size() + 1);
-            LOG.info("Init column config map in updater, totalColumnAmount={}, originalColumnAmount={}, segAmount={}.", totalColumnAmount,
-                originalColumnAmount, segs.size());
+            originalColumnAmount = 0;
             columnConfigMap = new HashMap<>(columnConfigList.size());
             for (ColumnConfig config : columnConfigList) {
                 columnConfigMap.put(config.getColumnName(), config);
+                if (config.isSegment() != null && !config.isSegment()) {
+                    originalColumnAmount++;
+                }
             }
+            LOG.info("Init column config map in updater, totalColumnAmount={}, originalColumnAmount={}, segAmount={}.",
+                columnConfigList.size(), originalColumnAmount, segs.size());
         }
     }
 
@@ -236,6 +238,9 @@ public class BasicUpdater {
             for (int i = 0; i < segs.size(); i++) {
                 // Calculate the segment's column config number(index), and put it into the set.
                 int segColumnConfigNum = originalColumnConfig.getColumnNum() + (i + 1) * originalColumnAmount;
+                if (segColumnConfigNum >= columnConfigList.size()) {
+                    break;
+                }
                 ColumnConfig segColumnConfig = columnConfigList.get(segColumnConfigNum);
                 segColumnSet.add(new NSColumn(segColumnConfig.getColumnName()));
                 LOG.debug("Add {}({})'s segment {}({}).", columnName, originalColumnConfig.getColumnNum(), segColumnConfig.getColumnName(),
