@@ -664,6 +664,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                     config.setColumnType(basicConfig.getColumnType());
                     config.setColumnFlag(basicConfig.getColumnFlag() == ColumnFlag.Target ? ColumnFlag.Meta
                             : basicConfig.getColumnFlag());
+                    config.setSegment(true);
                     // If we have 30 features and column number is 31, we got column name "columnname_seg1"
                     String columnName = basicConfig.getColumnName() + "_seg" + (columnNum / ccInitSize);
                     if (columnNames.contains(columnName)) {
