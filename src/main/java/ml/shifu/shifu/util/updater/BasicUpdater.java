@@ -231,8 +231,7 @@ public class BasicUpdater {
         // Only do it when segment exists.
         if (this.isForSegs) {
             ColumnConfig originalColumnConfig = columnConfigMap.get(columnName);
-            // We need make sure the original column exist and the bound is within [0, originalColumnAmount).
-            if (originalColumnConfig == null && originalColumnConfig.getColumnNum() < originalColumnAmount) {
+            if (originalColumnConfig == null) {
                 return;
             }
             for (int i = 0; i < segs.size(); i++) {
