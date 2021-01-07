@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import ml.shifu.shifu.core.stability.ChaosFactory;
 import org.apache.commons.collections.CollectionUtils;
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.basic.BasicMLData;
@@ -119,7 +120,7 @@ public class NormalizationUtils {
             } else {
                 if(!noVarSel) {
                     if(config != null && !config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
-                        String val = getNSVariableVal(rawNsDataMap, key);
+                        String val = getChaosValue(getNSVariableVal(rawNsDataMap, key), config);
                         if(CommonUtils.isTreeModel(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                             if(index == null) {
@@ -140,7 +141,7 @@ public class NormalizationUtils {
                     }
                 } else {
                     if(!config.isMeta() && !config.isTarget() && CommonUtils.isGoodCandidate(config, hasCandidates)) {
-                        String val = getNSVariableVal(rawNsDataMap, key);
+                        String val = getChaosValue(getNSVariableVal(rawNsDataMap, key), config);
                         if(CommonUtils.isTreeModel(alg) && config.isCategorical()) {
                             Integer index = binCategoryMap.get(config.getColumnNum()).get(val == null ? "" : val);
                             if(index == null) {
@@ -163,6 +164,13 @@ public class NormalizationUtils {
             }
         }
         return inputList;
+    }
+
+    private static String getChaosValue(String originValue, ColumnConfig config) {
+        if(ChaosFactory.getInstance().needInjectChaos(config)) {
+            return ChaosFactory.getInstance().getChaosType().getChaosAlgorithm().generateChaosValue(originValue, config);
+        }
+        return originValue;
     }
 
     /**

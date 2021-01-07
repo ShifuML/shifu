@@ -697,13 +697,15 @@ public final class CommonUtils {
         return headerList.toArray(new String[0]);
     }
 
-    /**
-     * Get the unique name.
-     *
-     * @return name if name set doesn't contains it. If name exist in name set, it will check name_1, name_2, name_n to find one which doesn't
-     * exist in the set.
-     */
-    public static String getUniqueName(Set<String> nameSet, String name) {
+  /**
+   * Get the unique name.
+   *
+   * @param nameSet name set
+   * @param name the origin name
+   * @return name if name set doesn't contains it. If name exist in name set, it will check name_1,
+   *     name_2, name_n to find one which doesn't * exist in the set.
+   */
+  public static String getUniqueName(Set<String> nameSet, String name) {
         if (nameSet == null || name == null) {
             return name;
         }

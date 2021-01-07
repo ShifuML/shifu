@@ -378,4 +378,10 @@ public interface Constants {
     
     public static final String UTF_8 = "utf-8";
 
+    /**
+     * For chaos config
+     */
+    public static final String CHAOS_TYPE = "type";
+    public static final String CHAOS_COLUMNS = "cols";
+
 }
