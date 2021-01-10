@@ -463,6 +463,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             paramsMap.put(CHAOS_COLUMNS, this.params.get(CHAOS_COLUMNS).toString());
             pigScript = "scripts/EvalChaosScore.pig";
         }
+        LOG.info("run dist score with pigScript {}, parameters: {}", pigScript, paramsMap.toString());
 
         try {
             PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath(pigScript), paramsMap,
