@@ -812,6 +812,9 @@ public class ShifuCLI {
         Option opt_score = OptionBuilder.hasOptionalArg().create(SCORE);
         Option opt_confmat = OptionBuilder.hasArg().create(CONFMAT);
         Option opt_perf = OptionBuilder.hasArg().create(PERF);
+        Option opt_stab = OptionBuilder.hasArg(false).create(STABILITY);
+        Option opt_chaos_type = OptionBuilder.hasArg().create(CHAOS_TYPE);
+        Option opt_chaos_cols = OptionBuilder.hasArg().create(CHAOS_COLUMNS);
         Option opt_norm = OptionBuilder.hasArg().create(NORM);
         Option opt_eval = OptionBuilder.hasArg(false).create(EVAL_CMD);
         Option opt_init = OptionBuilder.hasArg(false).create(INIT_CMD);
@@ -851,6 +854,9 @@ public class ShifuCLI {
         opts.addOption(opt_type);
         opts.addOption(opt_run);
         opts.addOption(opt_perf);
+        opts.addOption(opt_stab);
+        opts.addOption(opt_chaos_type);
+        opts.addOption(opt_chaos_cols);
         opts.addOption(opt_norm);
         opts.addOption(opt_model);
         opts.addOption(opt_concise);
@@ -951,6 +957,8 @@ public class ShifuCLI {
         System.out.println("\teval -confmat <EvalSetName>             Compute the TP/FP/TN/FN based on scoring.");
         System.out
                 .println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat.");
+        System.out.println("\teval -stab <EvalSetName> -type <chaosType> -cols <column names list join with ','>  " +
+                "Score evaluation dataset with injection on specific columns.");
         System.out.println("\teval -audit [-n <#numofrecords>]        Score eval data and generate audit dataset.");
         System.out.println("\texport [-t pmml|columnstats|woemapping|bagging|baggingpmml|corr|woe|ume|baggingume|normume]");
         System.out.println("\t       [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>] [-name <modelName>] [-postfix <postfix>] [-strategy <max|min|mean>] [-mapping <variable_mapping.conf>]");
