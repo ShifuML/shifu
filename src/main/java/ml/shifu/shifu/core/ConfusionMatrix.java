@@ -865,6 +865,8 @@ public class ConfusionMatrix {
 
         LOG.info("The size of scanner is {}", scanners.size());
 
+        Splitter splitter = Splitter.on(this.delimiter).trimResults();
+
         int cnt = 0;
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
@@ -872,7 +874,7 @@ public class ConfusionMatrix {
                     LOG.info("Loaded " + cnt + " records.");
                 }
 
-                String[] raw = scanner.nextLine().split("\\|");
+                String[] raw = CommonUtils.readIterableToArray(splitter.split(scanner.nextLine()));
                 if((!isDir) && cnt == 1) {
                     // if the evaluation score file is the local file, skip the
                     // first line since we add

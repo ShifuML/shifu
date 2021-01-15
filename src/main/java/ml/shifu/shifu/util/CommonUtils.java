@@ -2005,4 +2005,16 @@ public final class CommonUtils {
         return result * (1d - result);
     }
 
+    /**
+     * Read the iterable into String array
+     * @param split - iterable of text elements
+     * @return - elements of text
+     */
+    public static String[] readIterableToArray(Iterable<String> split) {
+        List<String> fields = new ArrayList<>();
+        for (String str : split) {
+            fields.add(str);
+        }
+        return fields.toArray(new String[0]);
+    }
 }
