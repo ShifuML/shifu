@@ -34,6 +34,7 @@ import ml.shifu.shifu.message.ScanTrainDataMessage;
 import ml.shifu.shifu.message.StatsPartRawDataMessage;
 import ml.shifu.shifu.message.TrainPartDataMessage;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 
 import org.encog.ml.data.MLDataPair;
@@ -57,7 +58,9 @@ public class DataLoadWorker extends AbstractWorkerActor {
     /**
      * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
      */
-    private static final Splitter DEFAULT_SPLITTER = Splitter.on(CommonConstants.DEFAULT_COLUMN_SEPARATOR);
+    private static String delimiter = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER,
+            Constants.DEFAULT_DELIMITER);
+    private static final Splitter DEFAULT_SPLITTER = Splitter.on(delimiter);
 
     /**
      * Basic input node count for NN model

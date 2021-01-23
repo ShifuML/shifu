@@ -18,12 +18,14 @@ package ml.shifu.shifu.core;
 import ml.shifu.shifu.container.ValueObject;
 import ml.shifu.shifu.container.obj.ModelStatsConf.BinningMethod;
 import ml.shifu.shifu.core.Binning.BinningDataType;
+import org.apache.commons.collections.map.HashedMap;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.io.Serializable;
 import java.util.*;
-
+import java.util.stream.Collectors;
 
 public class BinningTest {
 
@@ -149,5 +151,41 @@ public class BinningTest {
         binA.doBinning();
 
         //TODO test case
+    }
+
+    @Test
+    public void testSortMap() {
+        Map<String, Double> categoryFraudRateMap = new HashedMap();
+        categoryFraudRateMap.put("a", 10.0);
+        categoryFraudRateMap.put("b", 10.0);
+        categoryFraudRateMap.put("c", 10.0);
+
+        MapComparator cmp = new MapComparator(categoryFraudRateMap);
+        Map<String, Double> sortedCategoryFraudRateMap = new TreeMap<String, Double>(cmp);
+        sortedCategoryFraudRateMap.putAll(categoryFraudRateMap);
+        Assert.assertEquals(sortedCategoryFraudRateMap.keySet().size(), 1);
+
+        sortedCategoryFraudRateMap = categoryFraudRateMap.entrySet().stream().sorted(Map.Entry.comparingByValue()).collect(
+                Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+                        (e1, e2) -> e1, LinkedHashMap::new));
+        Assert.assertEquals(sortedCategoryFraudRateMap.keySet().size(), 3);
+    }
+
+    /**
+     * comparator for map
+     */
+    public static class MapComparator implements Comparator<String>, Serializable {
+
+        private static final long serialVersionUID = 2178035954425107063L;
+
+        Map<String, Double> base;
+
+        public MapComparator(Map<String, Double> base) {
+            this.base = base;
+        }
+
+        public int compare(String a, String b) {
+            return base.get(a).compareTo(base.get(b));
+        }
     }
 }
