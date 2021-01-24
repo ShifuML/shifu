@@ -151,6 +151,13 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
         this(source, pathModelConfig, pathColumnConfig, evalSetName, Integer.toString(Scorer.DEFAULT_SCORE_SCALE));
     }
 
+    public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName,
+                        String scale, String chaosType, String chaosColumns) throws IOException {
+        this(source, pathModelConfig, pathColumnConfig, evalSetName, scale);
+        Environment.setProperty(Constants.CHAOS_TYPE, chaosType);
+        Environment.setProperty(Constants.CHAOS_COLUMNS, chaosColumns);
+    }
+
     @SuppressWarnings("unchecked")
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName,
             String scale) throws IOException {
