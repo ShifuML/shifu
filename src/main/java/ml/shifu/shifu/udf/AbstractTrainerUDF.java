@@ -115,7 +115,7 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
 
         this.hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
     }
-
+    
     /**
      * Constructor with SourceType, and ColumnConfig path
      * 

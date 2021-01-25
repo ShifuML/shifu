@@ -944,6 +944,16 @@
                             {"label": "Tensor", "value":"Tensor"},
                             {"label": "Keras_to_estimator", "value":"Keras_to_estimator"}
                         ]
+                    }, {
+                        "name" : "WeightPolicy",
+                        "type" : "text",
+                        "directive": "select",
+                        "defval" : "RAW",
+                        "options": [
+                            {"label": "Raw weight", "value":"RAW"},
+                            {"label": "Positive weight", "value":"POSITIVE"},
+                            {"label": "No weight set( weight is 1)", "value":"NO"}
+                        ]
                     }
                 ]
             }, {
