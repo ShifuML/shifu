@@ -84,6 +84,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     public static final String CORRELATION = "corr";
     public static final String UME = "ume";
     public static final String BAGGING_UME = "baggingume";
+    public static final String NORM_UME = "normume";
 
     public static final String IS_CONCISE = "IS_CONCISE";
     public static final String REQUEST_VARS = "REQUEST_VARS";
@@ -231,13 +232,14 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 return 2;
             }
             return exportVariableCorr();
-        } else if(type.equalsIgnoreCase(UME) || type.equalsIgnoreCase(BAGGING_UME)) {
+        } else if(type.equalsIgnoreCase(UME) || type.equalsIgnoreCase(BAGGING_UME) || type.equalsIgnoreCase(NORM_UME)) {
             Class cls = null;
             try {
                 cls = Class.forName("com.paypal.gds.art.UmeExporter");
                 Object umeExporter = cls.getConstructor(ModelConfig.class).newInstance(modelConfig);
-                cls.getMethod("translate", String.class, Boolean.class)
-                        .invoke(umeExporter, getExportModelName(), type.equalsIgnoreCase(BAGGING_UME));
+                cls.getMethod("translate", String.class, Boolean.class, Boolean.class)
+                        .invoke(umeExporter, getExportModelName(), type.equalsIgnoreCase(BAGGING_UME),
+                                type.equalsIgnoreCase(NORM_UME));
             } catch (ClassNotFoundException e) {
                 log.error("UMEExporter doesn't support!", e);
                 return 3;

@@ -15,6 +15,8 @@
  */
 package ml.shifu.shifu.udf;
 
+import java.util.HashMap;
+import java.util.Map;
 import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -41,6 +43,9 @@ import java.util.Set;
  * It will load and host @ModelConfig and @ColumnConfig, and find target column id
  */
 public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
+
+    // This cache aims to decrease the memory usage when column config is very large.
+    private static Map<String, List<ColumnConfig>> columnConfigCache = new HashMap<>(1);
 
     protected ModelConfig modelConfig;
     protected List<ColumnConfig> columnConfigList;
@@ -92,7 +97,7 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
             }
         }
 
-        columnConfigList = CommonUtils.loadColumnConfigList(pathColumnConfig, sourceType);
+        columnConfigList = loadColumnConfigList(pathColumnConfig, sourceType);
         tagColumnNum = CommonUtils.getTargetColumnNum(columnConfigList);
 
         if(modelConfig != null && modelConfig.getPosTags() != null) {
@@ -116,6 +121,25 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
         this.hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
     }
     
+    /**
+     * Load column config list.
+     *
+     * @param pathColumnConfig is the column config file path.
+     * @param sourceType       is the source type: HDFS, LOCAL, etc.
+     * @return the column config list.
+     * @throws IOException if load column config failed.
+     */
+    private static synchronized List<ColumnConfig> loadColumnConfigList(String pathColumnConfig, SourceType sourceType) throws IOException {
+        // Return the cached column config if it exists. This action will avoid loading same column config file more times.
+        String key = pathColumnConfig + "," + sourceType;
+        List<ColumnConfig> cachedColumnConfigList = columnConfigCache.get(key);
+        if (cachedColumnConfigList == null) {
+            cachedColumnConfigList = CommonUtils.loadColumnConfigList(pathColumnConfig, sourceType);
+            columnConfigCache.put(key, cachedColumnConfigList);
+        }
+        return cachedColumnConfigList;
+    }
+
     /**
      * Constructor with SourceType, and ColumnConfig path
      * 

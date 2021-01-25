@@ -43,12 +43,12 @@ guagua.zk.embedbed.isInClient=true
 # guagua.computation.time.threshold=1800000
 
 ## tuning for rf, in rf, tree models are stored in master memory, if two many models, please tune such parameters 
-mapreduce.map.memory.mb=2048
-mapreduce.map.java.opts=-Xms1700m -Xmx1700m -server -XX:MaxPermSize=64m -XX:PermSize=64m -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
+mapreduce.map.memory.mb=4096
+mapreduce.map.java.opts=-Xms1700m -Xmx3584m -server -XX:MaxPermSize=64m -XX:PermSize=64m -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGC
 
 ## specified reduce memory to avoid default memory too big or too small
-mapreduce.reduce.memory.mb=2048
-mapreduce.reduce.java.opts=-Xms1700m -Xmx1700m -server -XX:MaxPermSize=64m -XX:PermSize=64m
+mapreduce.reduce.memory.mb=4096
+mapreduce.reduce.java.opts=-Xms1700m -Xmx3276m -server -XX:MaxPermSize=64m -XX:PermSize=64m
 mapreduce.reduce.shuffle.input.buffer.percent=0.2
 
 ## set io buffer in mapper to 400mb to avoid too many memory consumption in mapper heap

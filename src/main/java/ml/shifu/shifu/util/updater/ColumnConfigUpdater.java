@@ -51,9 +51,9 @@ public class ColumnConfigUpdater {
             ModelInspector.ModelStep step, boolean directVoidCall, int mtlIndex) throws IOException {
         BasicUpdater updater = null;
         if(directVoidCall) {
-            updater = new VoidUpdater(modelConfig, mtlIndex);
+            updater = new VoidUpdater(modelConfig, columnConfigList, mtlIndex);
         } else {
-            updater = BasicUpdater.getUpdater(modelConfig, step, mtlIndex);
+            updater = BasicUpdater.getUpdater(modelConfig, columnConfigList, step, mtlIndex);
         }
 
         for(ColumnConfig config: columnConfigList) {
