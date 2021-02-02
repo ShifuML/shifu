@@ -920,8 +920,8 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
      * @param columnAmountInData is the column amount in data file.
      */
     protected void configureCompactMode(int columnAmountInData) {
-        // In compact mode, column amount in data should be equal to feature input amount + 1 target column + 1 weight column.
-        isCompactMode = DTrainUtils.hasFinalSelectedVars(this.columnConfigList) && columnAmountInData == featureInputsCnt + 2;
+        // In compact mode, column amount in data should be equal to feature input amount + meta input amount + 1 target column + 1 weight column.
+        isCompactMode = DTrainUtils.hasFinalSelectedVars(this.columnConfigList) && columnAmountInData == featureInputsCnt + DTrainUtils.getMetaInputsCnt(columnConfigList) + 2;
     }
 
     /**

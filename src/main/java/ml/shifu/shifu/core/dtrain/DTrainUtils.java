@@ -476,6 +476,16 @@ public final class DTrainUtils {
         return new Random();
     }
 
+    public static int getMetaInputsCnt(List<ColumnConfig> columnConfigList) {
+        int cnt = 0;
+        for (ColumnConfig config : columnConfigList) {
+            if (config.isMeta()) {
+                cnt++;
+            }
+        }
+        return cnt;
+    }
+
     public static int getFeatureInputsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Set<Integer> featureSet) {
         if(modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)) {

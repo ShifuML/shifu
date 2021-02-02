@@ -290,24 +290,30 @@ public class WDLWorker extends
             return;
         }
 
-        int selectMetaAmt = 0;
-        int selectNonMetaAmt = 0;
+        int targetAmt = 0;
+        int metaAmt = 0;
+        int selectAmt = 0;
         for (ColumnConfig config : columnConfigList) {
-            if (!config.isTarget() && config.isFinalSelect()) {
-                if (config.isMeta()) {
-                    selectMetaAmt++;
-                } else {
-                    selectNonMetaAmt++;
-                }
+            if (config.isTarget()) {
+                targetAmt++;
+            } else if (config.isMeta()) {
+                metaAmt++;
+            } else if (config.isFinalSelect()) {
+                selectAmt++;
             }
         }
 
+        // Only support 1 target column in compact mode now.
+        if (targetAmt != 1) {
+            return;
+        }
+
         if (this.isNormWithIndex) {
-            // selected meta column + selected non-meta column * 2 + 1 target + 1 weight
-            isCompactMode = columnAmountInData == selectMetaAmt + selectNonMetaAmt * 2 + 2;
+            // meta column + selected column * 2 + 1 target + 1 weight
+            isCompactMode = columnAmountInData == metaAmt + selectAmt * 2 + targetAmt + 1;
         } else {
-            // selected meta column + selected non-meta column + 1 target + 1 weight
-            isCompactMode = columnAmountInData == selectMetaAmt + selectNonMetaAmt + 2;
+            // meta column + selected column + 1 target + 1 weight
+            isCompactMode = columnAmountInData == metaAmt + selectAmt + targetAmt + 1;
         }
     }
 
@@ -345,7 +351,7 @@ public class WDLWorker extends
                 ideal = getDoubleValue(fields.get(index++));
             } else if (config.isMeta()) {
                 // In compact mode, the data column will be missing if it is not selected.
-                index += !isCompactMode || config.isFinalSelect() ? 1 : 0;
+                index += 1;
             } else if (validColumn(config)) {
                 // valid column should have data whether it is compact mode or not.
                 if (this.isNormWithIndex) {

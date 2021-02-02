@@ -148,7 +148,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
                         dataPos++;
                     }
                     hashcode = hashcode * 31 + Double.valueOf(fval).hashCode();
-                } else if (!isCompactMode){ // It is not compact mode, just skip unused data in normalized data. No unused data will exist in compact mode.
+                } else if (!isCompactMode || columnConfig.isMeta()){ // It is not compact mode or it is meta column, just skip unused data in normalized data. No unused data will exist in compact mode.
                     if(!CommonUtils.isToNormVariable(columnConfig, hasCandidates, modelConfig.isRegression())) {
                         dataPos += 1;
                     } else if(columnConfig.isNumerical()

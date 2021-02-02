@@ -73,7 +73,7 @@
       "wideEnable" : true,
       "deepEnable" : true,
       "embedEnable" : true,
-      "NumEmbedColumnIds": [3],
+      "NumEmbedColumnIds": [1,4],
       "L2Reg": 0.01,
       "Propagation" : "R",
       "LearningRate" : 0.01,
