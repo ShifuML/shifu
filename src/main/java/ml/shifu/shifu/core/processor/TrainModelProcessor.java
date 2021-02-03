@@ -552,24 +552,27 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
     }
 
-    private void setSelectedTargetAndWeightColumnNumber(Configuration globalConf) {
+    private void setSelectedTargetMetaAndWeightColumnNumber(Configuration globalConf) {
         int targetColumnNum = -1, weightColumnNum = -1;
-        List<Integer> seletectedColumnNums = new ArrayList<Integer>();
+        List<Integer> selectedColumnNums = new ArrayList<>();
+        List<Integer> metaColumnNums = new ArrayList<>();
         String weightColumnName = this.modelConfig.getDataSet().getWeightColumnName();
 
         for(int i = 0; i < columnConfigList.size(); i++) {
             ColumnConfig cc = columnConfigList.get(i);
             if(cc.isTarget()) {
                 targetColumnNum = i;
-            } else if(cc.isFinalSelect()) {
-                seletectedColumnNums.add(i);
+            } else if (cc.isMeta()) {
+                metaColumnNums.add(i);
+            } else if (cc.isFinalSelect()) {
+                selectedColumnNums.add(i);
             }
 
             if(weightColumnName.equalsIgnoreCase(cc.getColumnName())) {
                 weightColumnNum = i;
             }
         }
-        if(seletectedColumnNums.size() == 0) {
+        if(selectedColumnNums.size() == 0) {
             boolean hasCandidate = CommonUtils.hasCandidateColumns(columnConfigList);
             for(int i = 0; i < columnConfigList.size(); i++) {
                 ColumnConfig cc = columnConfigList.get(i);
@@ -577,14 +580,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     continue;
                 }
                 if(CommonUtils.isGoodCandidate(cc, hasCandidate)) {
-                    seletectedColumnNums.add(i);
+                    selectedColumnNums.add(i);
                 }
             }
         }
 
         globalConf.set("shifu.application.target-column-number", Integer.toString(targetColumnNum));
         globalConf.set("shifu.application.weight-column-number", Integer.toString(weightColumnNum));
-        globalConf.set("shifu.application.selected-column-numbers", StringUtils.join(seletectedColumnNums, ' '));
+        globalConf.set("shifu.application.selected-column-numbers", StringUtils.join(selectedColumnNums, ' '));
+        globalConf.set("shifu.application.meta-column-numbers", StringUtils.join(metaColumnNums, " "));
     }
 
     private void setSelectedColumnForWideDeep(Configuration globalConf) {
@@ -700,8 +704,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             }
             globalConf.set("shifu.application.python-script-path", currScriptPath);
 
-            // set selected column number; target column number; weight column number
-            setSelectedTargetAndWeightColumnNumber(globalConf);
+            // set selected column number; target column number; meta column number; weight column number
+            setSelectedTargetMetaAndWeightColumnNumber(globalConf);
 
             // set shell to lauch python
             globalConf.set("shifu.application.python-shell-path",
