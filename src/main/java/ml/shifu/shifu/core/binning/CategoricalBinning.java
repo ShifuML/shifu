@@ -155,6 +155,8 @@ public class CategoricalBinning extends AbstractBinning<String> {
                     this.categoricalVals.add(cate);
                 } else {
                     log.warn("Categorical variables binning merge over max category size ({}).", this.maxCategorySize);
+                    this.categoricalVals.clear();
+                    this.isValid = false;
                     break;
                 }
             }

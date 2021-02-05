@@ -31,24 +31,17 @@ import java.util.Set;
 public class ActivationFactory {
 
     private static final Logger LOG = LoggerFactory.getLogger(ActivationFactory.class);
-    private static final Activation DEFAULT_ACTIVATION = new ReLU();
 
     private static ActivationFactory activationFactory;
 
-    private static Map<String, Activation> actionList = new HashMap<String, Activation>() {
+    private static Map<String, Class<? extends Activation>> actionList = new HashMap<String, Class<? extends Activation>>() {
 
         private static final long serialVersionUID = -7080829888400897248L;
         {
-            Reflections reflections = new Reflections("ml.shifu.shifu.core.dtrain.wdl");
+            Reflections reflections = new Reflections("ml.shifu.shifu.core");
             Set<Class<? extends Activation>> classes = reflections.getSubTypesOf(Activation.class);
             for(Class<? extends Activation> activation: classes) {
-                try {
-                    put(activation.getSimpleName().toLowerCase(), activation.newInstance());
-                } catch (InstantiationException e) {
-                    LOG.error("Don't have empty construction method for " + activation.getName(), e);
-                } catch (IllegalAccessException e) {
-                    LOG.error("Don't have public construction method for " + activation.getName(), e);
-                }
+                put(activation.getSimpleName().toLowerCase(), activation);
             }
         }
     };
@@ -76,14 +69,22 @@ public class ActivationFactory {
      * @param name
      *            the activation name.
      * @return
-     *         Activation if matched, else {@link #DEFAULT_ACTIVATION}
+     *         Activation if matched, else {@link #newDefaultActiveFunction()}
      */
     public Activation getActivation(String name) {
-        if(name == null) {
-            LOG.error("Input activation name is null, return default activation " + DEFAULT_ACTIVATION);
-            return DEFAULT_ACTIVATION;
+        if(name == null || actionList.get(name.trim().toLowerCase()) == null) {
+            LOG.error("Input activation name is null, return default activation");
+            return newDefaultActiveFunction();
         }
-        return actionList.getOrDefault(name.trim().toLowerCase(), DEFAULT_ACTIVATION);
+        try {
+            return actionList.get(name.trim().toLowerCase()).newInstance();
+        } catch (InstantiationException | IllegalAccessException e) {
+            LOG.error("Exception when create new activation, return default activation", e);
+            return newDefaultActiveFunction();
+        }
     }
 
+    private Activation newDefaultActiveFunction() {
+        return new ReLU();
+    }
 }

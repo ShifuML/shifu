@@ -28,6 +28,8 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.message.EvalResultMessage;
 import ml.shifu.shifu.message.RunModelResultMessage;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -54,6 +56,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
     private String[] header;
     private BufferedWriter scoreWriter;
     // private Reasoner reasoner;
+    private String delimiter;
     private int receivedStreamCnt;
     private Map<Integer, StreamBulletin> resultMap;
     private Map<String, Integer> subModelsCnt;
@@ -93,6 +96,8 @@ public class ScoreModelWorker extends AbstractWorkerActor {
             }
         }
 
+        this.delimiter = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER);
+
         writeScoreHeader();
     }
 
@@ -128,9 +133,9 @@ public class ScoreModelWorker extends AbstractWorkerActor {
                 // append weight column value
                 if(StringUtils.isNotBlank(evalConfig.getDataSet().getWeightColumnName())) {
                     String metric = rawDataMap.get(evalConfig.getDataSet().getWeightColumnName());
-                    buf.append("|" + StringUtils.trimToEmpty(metric));
+                    buf.append(this.delimiter + StringUtils.trimToEmpty(metric));
                 } else {
-                    buf.append("|" + "1.0");
+                    buf.append(this.delimiter + "1.0");
                 }
 
                 if ( CollectionUtils.isNotEmpty(csResult.getScores()) ) {
@@ -152,7 +157,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
                 if(CollectionUtils.isNotEmpty(metaColumns)) {
                     for(String columnName: metaColumns) {
                         String value = rawDataMap.get(columnName);
-                        buf.append("|" + StringUtils.trimToEmpty(value));
+                        buf.append(this.delimiter + StringUtils.trimToEmpty(value));
                     }
                 }
 
@@ -186,15 +191,15 @@ public class ScoreModelWorker extends AbstractWorkerActor {
     private void addModelScoreData(StringBuilder buf, CaseScoreResult cs) {
         if ( !(modelConfig.isClassification()
                 && ModelTrainConf.MultipleClassification.NATIVE.equals(modelConfig.getTrain().getMultiClassifyMethod())) ) {
-            buf.append("|" + cs.getAvgScore());
-            buf.append("|" + cs.getMaxScore());
-            buf.append("|" + cs.getMinScore());
-            buf.append("|" + cs.getMedianScore());
+            buf.append(this.delimiter + cs.getAvgScore());
+            buf.append(this.delimiter + cs.getMaxScore());
+            buf.append(this.delimiter + cs.getMinScore());
+            buf.append(this.delimiter + cs.getMedianScore());
         }
 
         // score
         for (Double score : cs.getScores()) {
-            buf.append("|" + score);
+            buf.append(this.delimiter + score);
         }
     }
 
@@ -208,7 +213,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
         StringBuilder buf = new StringBuilder();
         buf.append(modelConfig.getTargetColumnName(evalConfig, "tag"));
 
-        buf.append("|" + (StringUtils.isBlank(evalConfig.getDataSet().getWeightColumnName())
+        buf.append(this.delimiter + (StringUtils.isBlank(evalConfig.getDataSet().getWeightColumnName())
                 ? "weight" : evalConfig.getDataSet().getWeightColumnName()));
 
         List<BasicML> models = ModelSpecLoaderUtils.loadBasicModels(modelConfig, evalConfig, SourceType.LOCAL);
@@ -232,7 +237,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
         List<String> metaColumns = evalConfig.getAllMetaColumns(modelConfig);
         if(CollectionUtils.isNotEmpty(metaColumns)) {
             for(String columnName: metaColumns) {
-                buf.append("|" + columnName);
+                buf.append(this.delimiter + columnName);
             }
         }
 
@@ -244,16 +249,16 @@ public class ScoreModelWorker extends AbstractWorkerActor {
                 && ModelTrainConf.MultipleClassification.NATIVE.equals(modelConfig.getTrain().getMultiClassifyMethod())) {
             for (int i = 0; i < modelCnt; i++) {
                 for (int j = 0; j < modelConfig.getTags().size(); j ++ ) {
-                    buf.append("|" + ((StringUtils.isNotBlank(modelName) ? modelName : "model") + i + "_tag_" + j));
+                    buf.append(this.delimiter + ((StringUtils.isNotBlank(modelName) ? modelName : "model") + i + "_tag_" + j));
                 }
             }
         } else {
-            buf.append("|" + addModelNameAsNS(modelName, "mean"));
-            buf.append("|" + addModelNameAsNS(modelName, "max"));
-            buf.append("|" + addModelNameAsNS(modelName, "min"));
-            buf.append("|" + addModelNameAsNS(modelName, "median"));
+            buf.append(this.delimiter + addModelNameAsNS(modelName, "mean"));
+            buf.append(this.delimiter + addModelNameAsNS(modelName, "max"));
+            buf.append(this.delimiter + addModelNameAsNS(modelName, "min"));
+            buf.append(this.delimiter + addModelNameAsNS(modelName, "median"));
             for (int i = 0; i < modelCnt; i++) {
-                buf.append("|" + addModelNameAsNS(modelName, "model" + i));
+                buf.append(this.delimiter + addModelNameAsNS(modelName, "model" + i));
             }
         }
     }
