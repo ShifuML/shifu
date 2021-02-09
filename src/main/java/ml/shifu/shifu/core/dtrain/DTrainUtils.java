@@ -476,6 +476,12 @@ public final class DTrainUtils {
         return new Random();
     }
 
+    /**
+     * Get the meta column amount among the column config list.
+     *
+     * @param columnConfigList is the column config list.
+     * @return the number of meta column amount.
+     */
     public static int getMetaInputsCnt(List<ColumnConfig> columnConfigList) {
         int cnt = 0;
         for (ColumnConfig config : columnConfigList) {
