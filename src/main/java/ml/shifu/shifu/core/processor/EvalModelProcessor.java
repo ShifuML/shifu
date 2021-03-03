@@ -861,9 +861,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     }
 
     private void validateFinalColumns(EvalConfig evalConfig, String modelName, boolean isSubModel,
-            List<ColumnConfig> columnConfigs, Set<NSColumn> names) {
+            List<ColumnConfig> columnConfigs, Set<NSColumn> names) throws IOException {
+        List<String> segments = this.modelConfig.getSegmentFilterExpressions();
         for(ColumnConfig config: columnConfigs) {
-            NSColumn nsColumn = new NSColumn(config.getColumnName());
+            NSColumn nsColumn = new NSColumn(CommonUtils.getSimpleColumnName(config, columnConfigList, segments));
             if(config.isFinalSelect() && !names.contains(nsColumn)
                     && !names.contains(new NSColumn(nsColumn.getSimpleName()))) {
                 throw new IllegalArgumentException(

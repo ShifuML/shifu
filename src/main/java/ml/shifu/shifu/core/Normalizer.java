@@ -257,6 +257,8 @@ public class Normalizer {
                 return zscaleOneHotNormalize(config, raw, cutoff, categoryMissingNormType);
             case ZSCALE_ORDINAL:
                 return zscaleOrdinalNormalize(config, raw, cutoff, categoryMissingNormType);
+            case MAXMIN_INDEX:
+                return maxMinOrdinalNormalize(config, raw, categoryMissingNormType);
             case DISCRETE_ZSCORE:
             case DISCRETE_ZSCALE:
                 return discreteZScoreNormalize(config, raw, cutoff, categoryMissingNormType);
@@ -469,6 +471,20 @@ public class Normalizer {
         }
     }
 
+    private static List<Double> maxMinOrdinalNormalize(ColumnConfig config, Object raw,
+            CategoryMissingNormType categoryMissingNormType) {
+        if(config.isNumerical()) {
+            return maxMinNormalize(config, raw, categoryMissingNormType);
+        } else {
+            int binNum = BinUtils.getBinNum(config, raw);
+            if(binNum < 0) {
+                binNum = config.getBinCategory().size();
+            }
+            Double[] normVals = new Double[] { (double) binNum };
+            return Arrays.asList(normVals);
+        }
+    }
+
     private static List<Double> zscaleOneHotNormalize(ColumnConfig config, Object raw, Double cutoff,
             CategoryMissingNormType categoryMissingNormType) {
         if(config.isNumerical()) {
@@ -530,6 +546,30 @@ public class Normalizer {
             return Arrays.asList(value);
         }
         return Arrays.asList(computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff));
+    }
+
+    /**
+     * Compute the normalized data for @NormalizeMethod.MAXMIN_INDEX
+     *
+     * @param config
+     *          ColumnConfig info
+     * @param raw
+     *          input column value
+     * @param categoryMissingNormType
+     *          missing categorical value norm type
+     * @return normalized value for MAXMIN method.
+     */
+    private static List<Double> maxMinNormalize(ColumnConfig config, Object raw,
+            CategoryMissingNormType categoryMissingNormType) {
+        double value = parseRawValue(config, raw, categoryMissingNormType);
+        double normalizedValue = 0.0;
+        if (config.getColumnStats().getMax() != null
+                && config.getColumnStats().getMin() != null
+                && (config.getColumnStats().getMax() - config.getColumnStats().getMin()) > 1e-7) {
+            normalizedValue = (value - config.getColumnStats().getMin())
+                    / (config.getColumnStats().getMax() - config.getColumnStats().getMin());
+        }
+        return Arrays.asList(new Double[]{normalizedValue});
     }
 
     /**

@@ -1631,6 +1631,28 @@ public final class CommonUtils {
      *            the column config list inculding all segment expansion columns if have
      * @param segmentExpansions
      *            segment expansion expressions
+     * @return the simple name not including name space part
+     */
+    public static String getSimpleColumnName(ColumnConfig columnConfig, List<ColumnConfig> columnConfigList,
+            List<String> segmentExpansions) {
+        if(CollectionUtils.isEmpty(segmentExpansions)) {
+            return getSimpleColumnName(columnConfig.getColumnName());
+        }
+
+        int originalLen = columnConfigList.size() / (segmentExpansions.size() + 1);
+        return getSimpleColumnName(columnConfigList.get(columnConfig.getColumnNum() % originalLen).getColumnName());
+    }
+
+    /**
+     * Simple name without name space part. For segment expansion, only retain raw column name but not current column
+     * name.
+     *
+     * @param columnConfig
+     *            the column configuration
+     * @param columnConfigList
+     *            the column config list inculding all segment expansion columns if have
+     * @param segmentExpansions
+     *            segment expansion expressions
      * @param dataSetHeaders
      *            data set headers for all raw columns
      * @return the simple name not including name space part
