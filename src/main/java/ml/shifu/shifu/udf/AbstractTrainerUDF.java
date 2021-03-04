@@ -120,7 +120,7 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
 
         this.hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
     }
-
+    
     /**
      * Load column config list.
      *

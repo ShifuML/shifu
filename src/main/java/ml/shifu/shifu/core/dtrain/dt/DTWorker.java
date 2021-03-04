@@ -56,6 +56,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.TreeModel;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.WeightPolicy;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
@@ -334,6 +335,11 @@ public class DTWorker extends
 
     private boolean hasCandidates;
 
+    /**
+     * Weight policy set in params, by default RAW if not set.
+     */
+    private WeightPolicy wp;
+
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
@@ -501,6 +507,18 @@ public class DTWorker extends
                 this.loss = new SquaredLoss();
             }
         }
+        LOG.info("Loss is set to {}.", this.loss);
+
+        Object wpObj = validParams.get("WeightPolicy");
+        String wpObjStr = null;
+        if(wpObj != null) {
+            wpObjStr = wpObj.toString();
+            if(StringUtils.isBlank(wpObjStr)) {
+                wpObjStr = "RAW";
+            }
+        }
+        this.wp = WeightPolicy.of(wpObjStr);
+        LOG.info("Weight policy is set to {}.", this.wp);
 
         if(this.isGBDT) {
             this.learningRate = Double.valueOf(validParams.get(CommonConstants.LEARNING_RATE).toString());
@@ -1230,6 +1248,10 @@ public class DTWorker extends
             index += 1;
         }
 
+        // re weight according to weight policy
+        boolean isPositive = (int) (ideal + 0.01d) == 1;
+        significance = this.wp.weight(isPositive, significance);
+
         // output delimiter in norm can be set by user now and if user set a special one later changed, this exception
         // is helped to quick find such issue.
         if(inputIndex != inputs.length) {
@@ -1503,7 +1525,8 @@ public class DTWorker extends
                     this.modelConfig.getDataSet().getSource())) {
                 return null;
             }
-            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource(), this.checkpointOutput);
+            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource(),
+                    this.checkpointOutput);
             stream = fs.open(this.checkpointOutput);
             int treeSize = stream.readInt();
             trees = new ArrayList<TreeNode>(treeSize);

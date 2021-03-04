@@ -433,8 +433,8 @@ public final class CommonUtils {
      * @throws IllegalArgumentException
      *             if {@code path} is null or empty, if sourceType is null.
      */
-    public static List<ColumnConfig> loadColumnConfigList(String path, SourceType sourceType, boolean nullSampleValues)
-            throws IOException {
+    public static synchronized List<ColumnConfig> loadColumnConfigList(String path, SourceType sourceType,
+            boolean nullSampleValues) throws IOException {
         ColumnConfig[] configList = loadJSON(path, sourceType, ColumnConfig[].class);
         List<ColumnConfig> columnConfigList = new ArrayList<ColumnConfig>();
         for(ColumnConfig columnConfig: configList) {
@@ -481,10 +481,7 @@ public final class CommonUtils {
             // NPE protection
             return columnName;
         }
-        return columnName.replaceAll("\\.", "_")
-                .replaceAll(" ", "_")
-                .replaceAll("/", "_")
-                .replaceAll("-", "_");
+        return columnName.replaceAll("\\.", "_").replaceAll(" ", "_").replaceAll("/", "_").replaceAll("-", "_");
     }
 
     /**
@@ -633,10 +630,10 @@ public final class CommonUtils {
      */
     public static String[] getHeaders(String pathHeader, String delimiter, SourceType sourceType, boolean isFull)
             throws IOException {
-        if (StringUtils.isEmpty(pathHeader) || StringUtils.isEmpty(delimiter) || sourceType == null) {
+        if(StringUtils.isEmpty(pathHeader) || StringUtils.isEmpty(delimiter) || sourceType == null) {
             throw new IllegalArgumentException(
-                String.format("Null or empty parameters srcDataPath:%s, delimiter:%s, sourceType:%s", pathHeader,
-                    delimiter, sourceType));
+                    String.format("Null or empty parameters srcDataPath:%s, delimiter:%s, sourceType:%s", pathHeader,
+                            delimiter, sourceType));
         }
         BufferedReader reader = null;
         String pigHeaderStr = null;
@@ -644,14 +641,14 @@ public final class CommonUtils {
         try {
             reader = ShifuFileUtils.getReader(pathHeader, sourceType);
             pigHeaderStr = reader.readLine();
-            if (StringUtils.isEmpty(pigHeaderStr)) {
+            if(StringUtils.isEmpty(pigHeaderStr)) {
                 throw new RuntimeException(
-                    String.format("Cannot reade header info from the first line of file: %s", pathHeader));
+                        String.format("Cannot reade header info from the first line of file: %s", pathHeader));
             }
         } catch (Exception e) {
             log.error(
-                "Error in getReader, this must be catched in this method to make sure the next reader can be returned.",
-                e);
+                    "Error in getReader, this must be catched in this method to make sure the next reader can be returned.",
+                    e);
             throw new ShifuException(ShifuErrorCode.ERROR_HEADER_NOT_FOUND);
         } finally {
             IOUtils.closeQuietly(reader);
@@ -687,7 +684,7 @@ public final class CommonUtils {
              * }
              */
             columnName = normColumnName(columnName);
-            if (headerSet.contains(columnName)) {
+            if(headerSet.contains(columnName)) {
                 columnName = getUniqueName(headerSet, columnName + "_dup" + index);
             }
 
@@ -706,11 +703,11 @@ public final class CommonUtils {
      *      If name exist in name set, it will check name_1, name_2, name_n to find one which doesn't
      */
     public static String getUniqueName(Set<String> nameSet, String name) {
-        if (nameSet == null || name == null) {
+        if(nameSet == null || name == null) {
             return name;
         }
         String newName = name;
-        for (int i = 1; nameSet.contains(newName); i++) {
+        for(int i = 1; nameSet.contains(newName); i++) {
             newName = name + "_" + i;
         }
         return newName;
