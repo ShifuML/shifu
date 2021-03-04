@@ -70,6 +70,7 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import scala.annotation.meta.param;
 
 /**
  * {@link CommonUtils} is used to for almost all kinds of utility function in this framework.
@@ -698,10 +699,11 @@ public final class CommonUtils {
     }
 
     /**
-     * Get the unique name.
-     *
-     * @return name if name set doesn't contains it. If name exist in name set, it will check name_1, name_2, name_n to find one which doesn't
-     * exist in the set.
+     * Create the unique name to avoid duplication by appending "_1,2,3,4" postfix
+     * @param nameSet - existing name set
+     * @param name - name that needs to be unique
+     * @return name if name set doesn't contains it.
+     *      If name exist in name set, it will check name_1, name_2, name_n to find one which doesn't
      */
     public static String getUniqueName(Set<String> nameSet, String name) {
         if (nameSet == null || name == null) {

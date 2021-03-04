@@ -71,6 +71,7 @@ public final class HDFSUtils {
 
     /**
      * Get HDFS FileSystem.
+     * @return HDFS FileSystem handler
      */
     public static FileSystem getFS() {
         return getFS(null);
