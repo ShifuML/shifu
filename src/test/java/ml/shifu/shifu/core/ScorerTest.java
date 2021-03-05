@@ -15,11 +15,6 @@
  */
 package ml.shifu.shifu.core;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
 import ml.shifu.shifu.container.ScoreObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnType;
@@ -28,7 +23,6 @@ import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.alg.SVMTrainer;
 import ml.shifu.shifu.util.Constants;
-
 import org.apache.commons.io.FileUtils;
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLDataPair;
@@ -39,6 +33,11 @@ import org.encog.ml.data.basic.BasicMLDataSet;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ScorerTest {
 

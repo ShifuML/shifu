@@ -861,9 +861,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     }
 
     private void validateFinalColumns(EvalConfig evalConfig, String modelName, boolean isSubModel,
-            List<ColumnConfig> columnConfigs, Set<NSColumn> names) {
+            List<ColumnConfig> columnConfigs, Set<NSColumn> names) throws IOException {
+        List<String> segments = this.modelConfig.getSegmentFilterExpressions();
         for(ColumnConfig config: columnConfigs) {
-            NSColumn nsColumn = new NSColumn(config.getColumnName());
+            NSColumn nsColumn = new NSColumn(CommonUtils.getSimpleColumnName(config, columnConfigList, segments));
             if(config.isFinalSelect() && !names.contains(nsColumn)
                     && !names.contains(new NSColumn(nsColumn.getSimpleName()))) {
                 throw new IllegalArgumentException(
@@ -1291,9 +1292,12 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         // generate audit meta columns
         List<String> evalMetaColumns = evalConfig.getAllMetaColumns(this.modelConfig);
         final Set<String> metaColumnSet = new HashSet<>(evalMetaColumns);
+        List<String> segments = this.modelConfig.getSegmentFilterExpressions();
         this.columnConfigList.stream().filter(columnConfig -> columnConfig.isFinalSelect())
-                .map(columnConfig -> columnConfig.getColumnName()).forEach(finalVar -> {
+                .forEach(columnConfig -> {
+                    String finalVar = CommonUtils.getSimpleColumnName(columnConfig, columnConfigList, segments);
                     if(!metaColumnSet.contains(finalVar)) {
+                        metaColumnSet.add(finalVar);
                         evalMetaColumns.add(finalVar);
                     }
                 });
