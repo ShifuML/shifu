@@ -99,11 +99,11 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
     private void loadConfigFiles(final Context context) {
         try {
             // inject fs.defaultFS from UDFContext.getUDFContext().getJobConf()
-            if (context != null && context.getConfiguration() != null) {
+            if(context != null && context.getConfiguration() != null) {
                 HDFSUtils.getConf().set(FileSystem.FS_DEFAULT_NAME_KEY,
                         context.getConfiguration().get(FileSystem.FS_DEFAULT_NAME_KEY));
             }
-            
+
             SourceType sourceType = SourceType.valueOf(
                     context.getConfiguration().get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
@@ -168,6 +168,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         Set<String> fis = new HashSet<String>();
         long totalCount = 0, invalidCount = 0, validNumCount = 0;
         int binSize = 0;
+        int hashSeed = 0;
         for(BinningInfoWritable info: values) {
             if(info.isEmpty()) {
                 // mapper has no stats, skip it
@@ -215,6 +216,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 binWeightNeg = new double[binSize + 1];
                 binCountTotal = new long[binSize + 1];
             }
+
+            hashSeed = info.getHashSeed();// hash seed in every one could be the same
 
             count += info.getTotalCount();
             missingCount += info.getMissingCount();
@@ -320,13 +323,88 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             }
             binBounString = Base64Utils.base64Encode(
                     "[" + StringUtils.join(binCategories, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR) + "]");
+
             // recompute such value for categorical variables
             min = Double.MAX_VALUE;
             max = Double.MIN_VALUE;
             sum = 0d;
             squaredSum = 0d;
+            List<Integer> smallCategories = new ArrayList<Integer>();
+
+            Map<Integer, Integer> indexMap = new HashMap<Integer, Integer>(binPosRate.length, 1f);
             for(int i = 0; i < binPosRate.length; i++) {
-                if(!Double.isNaN(binPosRate[i])) {
+                if(Double.isNaN(binPosRate[i])) {
+                    continue;
+                }
+
+                if(Double.compare(max, binPosRate[i]) < 0) {
+                    max = binPosRate[i];
+                }
+
+                if(Double.compare(min, binPosRate[i]) > 0) {
+                    min = binPosRate[i];
+                }
+                long binCount = binCountPos[i] + binCountNeg[i];
+
+                indexMap.put(i - smallCategories.size(), i); // keep new index and old index mappings, including last
+                                                             // one: missing column
+                if(this.modelConfig.getStats().getCateMinCnt() > 0 && i < binPosRate.length - 1
+                        && binCount < this.modelConfig.getStats().getCateMinCnt()) {
+                    smallCategories.add(i);
+                }
+
+                sum += binPosRate[i] * binCount;
+                double squaredVal = binPosRate[i] * binPosRate[i];
+                squaredSum += squaredVal * binCount;
+                tripleSum += squaredVal * binPosRate[i] * binCount;
+                quarticSum += squaredVal * squaredVal * binCount;
+            }
+            if(smallCategories.size() > 0) {
+                for(int i = 0; i < smallCategories.size(); i++) {
+                    binCategories.remove((int) smallCategories.get(i));
+                }
+
+                long[] newBinCountPos = new long[binCountPos.length - smallCategories.size()];
+                long[] newBinCountNeg = new long[binCountNeg.length - smallCategories.size()];
+                double[] newBinWeightPos = new double[binWeightPos.length - smallCategories.size()];
+                double[] newBinWeightNeg = new double[binWeightNeg.length - smallCategories.size()];
+                for(int i = 0; i < newBinCountPos.length; i++) {
+                    newBinCountPos[i] = binCountPos[indexMap.get(i)];
+                    newBinCountNeg[i] = binCountNeg[indexMap.get(i)];
+                    newBinWeightPos[i] = binWeightPos[indexMap.get(i)];
+                    newBinWeightNeg[i] = binWeightNeg[indexMap.get(i)];
+                }
+
+                // apend removed ones to missing column (last one)
+                for(int i = 0; i < smallCategories.size(); i++) {
+                    int oldIndex = (int) smallCategories.get(i);
+                    binCategories.remove(oldIndex);
+                    newBinCountPos[newBinCountPos.length - 1] += binCountPos[oldIndex];
+                    newBinCountNeg[newBinCountPos.length - 1] += binCountNeg[oldIndex];
+                    newBinWeightPos[newBinCountPos.length - 1] += binWeightPos[oldIndex];
+                    newBinWeightNeg[newBinCountPos.length - 1] += binWeightNeg[oldIndex];
+                }
+
+                binCountPos = newBinCountPos;
+                binCountNeg = newBinCountNeg;
+                binWeightPos = newBinWeightPos;
+                binWeightNeg = newBinWeightNeg;
+
+                double[] newBinPosRate = new double[binCountPos.length - smallCategories.size()];
+                for(int i = 0; i < newBinCountPos.length; i++) {
+                    long newCount = newBinCountPos[i] + newBinCountNeg[i];
+                    if(newCount > 0) {
+                        newBinPosRate[i] = newBinCountPos[i] * 1d / newCount;
+                    }
+                }
+                binPosRate = newBinPosRate;
+
+                // redo new stats TODO refine the same logic
+                for(int i = 0; i < binPosRate.length; i++) {
+                    if(Double.isNaN(binPosRate[i])) {
+                        continue;
+                    }
+
                     if(Double.compare(max, binPosRate[i]) < 0) {
                         max = binPosRate[i];
                     }
@@ -335,6 +413,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                         min = binPosRate[i];
                     }
                     long binCount = binCountPos[i] + binCountNeg[i];
+
                     sum += binPosRate[i] * binCount;
                     double squaredVal = binPosRate[i] * binPosRate[i];
                     squaredSum += squaredVal * binCount;
@@ -427,7 +506,9 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 // bin WOE
                 .append(Constants.DEFAULT_DELIMITER)
                 .append(columnWeightMetrics == null ? Arrays.toString(new double[binSize + 1])
-                        : columnWeightMetrics.getBinningWoe().toString()) // bin weighted WOE
+                        : columnWeightMetrics.getBinningWoe().toString()) // bin
+                                                                          // weighted
+                                                                          // WOE
                 .append(Constants.DEFAULT_DELIMITER).append(skewness) // skewness
                 .append(Constants.DEFAULT_DELIMITER).append(kurtosis) // kurtosis
                 .append(Constants.DEFAULT_DELIMITER).append(totalCount) // total count
@@ -437,7 +518,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 .append(Constants.DEFAULT_DELIMITER).append(Base64Utils.base64Encode(limitedFrequentItems(fis))) // frequent
                                                                                                                  // items
                 .append(Constants.DEFAULT_DELIMITER).append(p25th) // the 25 percentile value
-                .append(Constants.DEFAULT_DELIMITER).append(p75th);
+                .append(Constants.DEFAULT_DELIMITER).append(p75th) // the 75 percentile value
+                .append(Constants.DEFAULT_DELIMITER).append(hashSeed); // the final hashSeed
 
         outputValue.set(sb.toString());
         context.write(NullWritable.get(), outputValue);

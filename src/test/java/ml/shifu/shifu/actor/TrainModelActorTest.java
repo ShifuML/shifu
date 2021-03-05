@@ -37,7 +37,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
-
 /**
  * TrainModelActorTest class
  */
@@ -49,8 +48,10 @@ public class TrainModelActorTest {
 
     @BeforeClass
     public void setUp() throws IOException {
-        modelConfig = CommonUtils.loadModelConfig("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json", SourceType.LOCAL);
-        columnConfigList = CommonUtils.loadColumnConfigList("src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json", SourceType.LOCAL);
+        modelConfig = CommonUtils.loadModelConfig(
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json", SourceType.LOCAL);
+        columnConfigList = CommonUtils.loadColumnConfigList(
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json", SourceType.LOCAL);
     }
 
     @Test
@@ -68,11 +69,11 @@ public class TrainModelActorTest {
             }
         }), "normalize-calculator");
 
-
-        List<Scanner> scanners = ShifuFileUtils.getDataScanners("src/test/resources/example/cancer-judgement/DataStore/DataSet1", SourceType.LOCAL);
+        List<Scanner> scanners = ShifuFileUtils
+                .getDataScanners("src/test/resources/example/cancer-judgement/DataStore/DataSet1", SourceType.LOCAL);
         normalizeRef.tell(new AkkaActorInputMessage(scanners), normalizeRef);
 
-        while (!normalizeRef.isTerminated()) {
+        while(!normalizeRef.isTerminated()) {
             Thread.sleep(5000);
         }
 
@@ -85,13 +86,13 @@ public class TrainModelActorTest {
         FileUtils.forceMkdir(models);
 
         final List<AbstractTrainer> trainers = new ArrayList<AbstractTrainer>();
-        for (int i = 0; i < 5; i++) {
+        for(int i = 0; i < 5; i++) {
             AbstractTrainer trainer;
-            if (modelConfig.getAlgorithm().equalsIgnoreCase("NN")) {
+            if(modelConfig.getAlgorithm().equalsIgnoreCase("NN")) {
                 trainer = new NNTrainer(this.modelConfig, i, false);
-            } else if (modelConfig.getAlgorithm().equalsIgnoreCase("SVM")) {
+            } else if(modelConfig.getAlgorithm().equalsIgnoreCase("SVM")) {
                 trainer = new SVMTrainer(this.modelConfig, i, false);
-            } else if (modelConfig.getAlgorithm().equalsIgnoreCase("LR")) {
+            } else if(modelConfig.getAlgorithm().equalsIgnoreCase("LR")) {
                 trainer = new LogisticRegressionTrainer(this.modelConfig, i, false);
             } else {
                 throw new RuntimeException("unsupport algorithm");
@@ -111,11 +112,11 @@ public class TrainModelActorTest {
         scanners = ShifuFileUtils.getDataScanners("./tmp/NormalizedData", SourceType.LOCAL);
         modelTrainRef.tell(new AkkaActorInputMessage(scanners), modelTrainRef);
 
-        while (!modelTrainRef.isTerminated()) {
+        while(!modelTrainRef.isTerminated()) {
             Thread.sleep(5000);
         }
 
-        for (Scanner scanner : scanners) {
+        for(Scanner scanner: scanners) {
             scanner.close();
         }
 
@@ -133,10 +134,14 @@ public class TrainModelActorTest {
 
         File modelsTemp = new File("./modelsTmp");
 
-        FileUtils.deleteDirectory(modelsTemp);
-        FileUtils.deleteDirectory(models);
-        FileUtils.deleteDirectory(tmpDir);
-        FileUtils.deleteDirectory(new File("./logs"));
+        try {
+            FileUtils.deleteDirectory(modelsTemp);
+            FileUtils.deleteDirectory(models);
+            FileUtils.deleteDirectory(tmpDir);
+            FileUtils.deleteDirectory(new File("./logs"));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }

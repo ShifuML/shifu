@@ -52,6 +52,11 @@ public class WDLModel extends BasicML implements MLRegression {
         return independentWDLModel.getWnd().getInputNum();
     }
 
+    public int getAllIndexedInputCount() {
+        return independentWDLModel.getWnd().getNumericalSize()
+                + independentWDLModel.getWnd().getEmbedColumnIds().size();
+    }
+
     @Override
     public int getOutputCount() {
         // TODO: change this if we want to support multiple classification

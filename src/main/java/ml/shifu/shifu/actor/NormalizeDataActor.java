@@ -33,6 +33,7 @@ import ml.shifu.shifu.message.AkkaActorInputMessage;
 import ml.shifu.shifu.message.ExceptionMessage;
 import ml.shifu.shifu.message.NormResultDataMessage;
 import ml.shifu.shifu.message.ScanNormInputDataMessage;
+import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 
 import org.slf4j.Logger;
@@ -63,6 +64,7 @@ public class NormalizeDataActor extends AbstractActor {
     private BufferedWriter selectDataWriter;
 
     private DecimalFormat df;
+    private String delimiter;
     private int resultCnt;
 
     public NormalizeDataActor(final ModelConfig modelConfig, final List<ColumnConfig> columnConfigList,
@@ -108,6 +110,7 @@ public class NormalizeDataActor extends AbstractActor {
 
         PathFinder pathFinder = new PathFinder(modelConfig);
         SourceType sourceType = modelConfig.getDataSet().getSource();
+        this.delimiter = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER);
         normDataWriter = ShifuFileUtils.getWriter(pathFinder.getNormalizedDataPath(sourceType), sourceType);
         selectDataWriter = ShifuFileUtils.getWriter(pathFinder.getSelectedRawDataPath(sourceType), sourceType);
 
@@ -182,9 +185,9 @@ public class NormalizeDataActor extends AbstractActor {
         for(List<Double> normData: normalizedDataList) {
             for(Double data: normData) {
                 if(data == null) {
-                    normDataWriter.append("|");
+                    normDataWriter.append(this.delimiter);
                 } else {
-                    normDataWriter.append(df.format(data) + "|");
+                    normDataWriter.append(df.format(data) + this.delimiter);
                 }
             }
 

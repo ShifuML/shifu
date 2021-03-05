@@ -14,7 +14,7 @@
 		<rpmDisabled>true</rpmDisabled>
 		<maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
 		<powermock.version>1.5.1</powermock.version>
-		<guagua.version>0.7.9</guagua.version>
+		<guagua.version>0.7.10</guagua.version>
 	</properties>
 
 	<url>https://github.com/ShifuML/shifu/</url>

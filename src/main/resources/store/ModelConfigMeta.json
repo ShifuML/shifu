@@ -229,6 +229,16 @@
                 "directive": "checkbox",
                 "defval" : true
             }, {
+                "name": "cateMaxNumBin",
+                "type": "integer",
+                "directive": "input",
+                "defval" : 0
+            }, {
+                "name": "cateMinCnt",
+                "type": "integer",
+                "directive": "input",
+                "defval" : 0
+            }, {
                 "name": "binningAlgorithm",
                 "type": "text",
                 "directive": "select",
@@ -428,9 +438,14 @@
                     {"label":"Discrete numerical feature in each bin and positive rate for categorical feature", "value":"DISCRETE_ZSCORE"},
                     {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCALE_INDEX"},
                     {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCORE_INDEX"},
+                    {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"MAXMIN_INDEX"},
                     {"label":"numerical variable using woe, categorical variable, using cate index", "value":"WOE_INDEX"},
                     {"label":"numerical variable using zscaled woe, categorical variable using cate index", "value":"WOE_ZSCALE_INDEX"},
-                    {"label":"both numerical and categorical norm to index, numerical index is from binBoundry, categorical index is from binCategory", "value":"INDEX"}
+                    {"label":"both numerical and categorical norm to index, numerical index is from binBoundry, categorical index is from binCategory", "value":"INDEX"},
+                    {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCALE_APPEND_INDEX"},
+                    {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCORE_APPEND_INDEX"},
+                    {"label":"numerical variable using woe, categorical variable, using cate index", "value":"WOE_APPEND_INDEX"},
+                    {"label":"numerical variable using zscaled woe, categorical variable using cate index", "value":"WOE_ZSCALE_APPEND_INDEX"}
                 ]
             }, {
                 "name": "stdDevCutOff",
@@ -929,6 +944,16 @@
                             {"label": "Estimator", "value":"Estimator"},
                             {"label": "Tensor", "value":"Tensor"},
                             {"label": "Keras_to_estimator", "value":"Keras_to_estimator"}
+                        ]
+                    }, {
+                        "name" : "WeightPolicy",
+                        "type" : "text",
+                        "directive": "select",
+                        "defval" : "RAW",
+                        "options": [
+                            {"label": "Raw weight", "value":"RAW"},
+                            {"label": "Positive weight", "value":"POSITIVE"},
+                            {"label": "No weight set( weight is 1)", "value":"NO"}
                         ]
                     }
                 ]

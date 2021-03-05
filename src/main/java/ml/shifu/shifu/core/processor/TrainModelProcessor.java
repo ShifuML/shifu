@@ -50,6 +50,7 @@ import java.util.Set;
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
+import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
@@ -235,7 +236,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 case MAPRED:
                     validateDistributedTrain();
                     syncDataToHdfs(super.modelConfig.getDataSet().getSource()); // sync to HDFS to ensure consistency
-                    checkAndCleanDataForTreeModels(this.isToShuffle);
+                    checkAndNormDataForModels(this.isToShuffle);
                     if(Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
                         status = runDistributedTensorflowTrain();
                     } else {
@@ -411,7 +412,12 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(Constants.WDL.equalsIgnoreCase(alg) && this.modelConfig.getNormalize().getNormType() != NormType.ZSCALE_INDEX
                 && this.modelConfig.getNormalize().getNormType() != NormType.ZSCORE_INDEX
                 && this.modelConfig.getNormalize().getNormType() != NormType.WOE_INDEX
-                && this.modelConfig.getNormalize().getNormType() != NormType.WOE_ZSCALE_INDEX) {
+                && this.modelConfig.getNormalize().getNormType() != NormType.WOE_ZSCALE_INDEX
+                && this.modelConfig.getNormalize().getNormType() != NormType.ZSCALE_APPEND_INDEX
+                && this.modelConfig.getNormalize().getNormType() != NormType.ZSCORE_APPEND_INDEX
+                && this.modelConfig.getNormalize().getNormType() != NormType.WOE_APPEND_INDEX
+                && this.modelConfig.getNormalize().getNormType() != NormType.WOE_ZSCALE_APPEND_INDEX
+                ) {
             throw new IllegalArgumentException(
                     "WDL only supports normalize#normType with ZSCALE_INDEX/ZSCORE_INDEX/WOE_INDEX/WOE_ZSCALE_INDEX, please reset and run 'shifu norm' again.");
         }
@@ -427,11 +433,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             isParquetMetaFileExist = false;
         }
         if(super.modelConfig.getNormalize().getIsParquet() && !isParquetMetaFileExist) {
-            throw new IllegalArgumentException("Your normlized input in "
+            throw new IllegalArgumentException("Your normalized input in "
                     + super.getPathFinder().getNormalizedDataPath()
                     + " is not parquet format. Please keep isParquet and re-run norm again and then run training step or change isParquet to false.");
         } else if(!super.modelConfig.getNormalize().getIsParquet() && isParquetMetaFileExist) {
-            throw new IllegalArgumentException("Your normlized input in "
+            throw new IllegalArgumentException("Your normalized input in "
                     + super.getPathFinder().getNormalizedDataPath()
                     + " is parquet format. Please keep isParquet and re-run norm again or change isParquet directly to true.");
         }
@@ -1439,7 +1445,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     private String getProgressLogFile(int i) {
-        return String.format("tmp/%s_%s.log", System.currentTimeMillis(), i);
+        long currTimeMillis = System.currentTimeMillis();
+        return String.format("tmp_%s/%s_%s.log", currTimeMillis, currTimeMillis, i);
     }
 
     private void stopTailThread(TailThread thread) throws IOException {
@@ -1923,13 +1930,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      * @throws IOException
      *             the io exception
      */
-    protected void checkAndCleanDataForTreeModels(boolean isToShuffle) throws IOException {
-        String alg = this.getModelConfig().getTrain().getAlgorithm();
-        // only for tree models
-        if(!CommonUtils.isTreeModel(alg)) {
-            return;
-        }
-
+    protected void checkAndNormDataForModels(boolean isToShuffle) throws IOException {
         // check if binBoundaries and binCategories are good and log error
         for(ColumnConfig columnConfig: columnConfigList) {
             if(columnConfig.isFinalSelect() && !columnConfig.isTarget() && !columnConfig.isMeta()) {
@@ -1956,22 +1957,38 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         // run cleaning data logic for model input
         SourceType sourceType = modelConfig.getDataSet().getSource();
-        String cleanedDataPath = this.pathFinder.getCleanedDataPath();
         String needReGen = Environment.getProperty("shifu.tree.regeninput", Boolean.FALSE.toString());
 
-        // 1. shifu.tree.regeninput = true, no matter what, will regen;
-        // 2. if cleanedDataPath does not exist, generate clean data for tree ensemble model training
-        // 3. if validationDataPath is not blank and cleanedValidationDataPath does not exist, generate clean data for
-        // tree ensemble model training
-        if(Boolean.TRUE.toString().equalsIgnoreCase(needReGen)
-                || !ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)
-                || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())
-                        && !ShifuFileUtils.isFileExists(pathFinder.getCleanedValidationDataPath(), sourceType))) {
-            runDataClean(isToShuffle, -1.0, false); // -1.0 means no re-balance
+        String alg = this.getModelConfig().getTrain().getAlgorithm();
+        // only for tree models
+        if(!CommonUtils.isTreeModel(alg)) {
+            String normalDataPath = this.pathFinder.getNormalizedDataPath();
+            if (Boolean.TRUE.toString().equalsIgnoreCase(needReGen)
+                    || !ShifuFileUtils.isFileExists(normalDataPath, sourceType)
+                    || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())
+                        && !ShifuFileUtils.isFileExists(pathFinder.getNormalizedValidationDataPath(), sourceType))) {
+                LOG.info("The normalized data path {} doesn't exist. Generate it before training.", normalDataPath);
+                Map<String, Object> params = new HashedMap();
+                params.put(Constants.IS_TO_SHUFFLE_DATA, isToShuffle);
+                NormalizeModelProcessor normStep = new NormalizeModelProcessor();
+            }
         } else {
-            // no need regen data
-            LOG.warn("For RF/GBT, training input in {} exists, no need to regenerate it.", cleanedDataPath);
-            LOG.warn("Need regen it, please set shifu.tree.regeninput in shifuconfig to true.");
+            String cleanedDataPath = this.pathFinder.getCleanedDataPath();
+
+            // 1. shifu.tree.regeninput = true, no matter what, will regen;
+            // 2. if cleanedDataPath does not exist, generate clean data for tree ensemble model training
+            // 3. if validationDataPath is not blank and cleanedValidationDataPath does not exist, generate clean data for
+            // tree ensemble model training
+            if(Boolean.TRUE.toString().equalsIgnoreCase(needReGen)
+                    || !ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)
+                    || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())
+                        && !ShifuFileUtils.isFileExists(pathFinder.getCleanedValidationDataPath(), sourceType))) {
+                runDataClean(isToShuffle, -1.0, false); // -1.0 means no re-balance
+            } else {
+                // no need regen data
+                LOG.warn("For RF/GBT, training input in {} exists, no need to regenerate it.", cleanedDataPath);
+                LOG.warn("Need regen it, please set shifu.tree.regeninput in shifuconfig to true.");
+            }
         }
     }
 

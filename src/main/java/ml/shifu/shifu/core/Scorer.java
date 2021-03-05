@@ -149,7 +149,7 @@ public class Scorer {
                 this.mtlColumnConfigLists.get(0));
         int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         int candidateCount = inputOutputIndex[2];
-        this.noVarSelect = (inputNodeCount == candidateCount);
+        this.noVarSelect = CommonUtils.getFinalSelectColumnConfigList(this.mtlColumnConfigLists.get(0)).size() == 0;
 
         mtlBinCategoryMaps = new ArrayList<>();
         // compute binCategoryMap for all algorithm while only be used in
@@ -233,7 +233,7 @@ public class Scorer {
                     this.columnConfigList);
             int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
             int candidateCount = inputOutputIndex[2];
-            this.noVarSelect = (inputNodeCount == candidateCount);
+            this.noVarSelect = CommonUtils.getFinalSelectColumnConfigList(this.columnConfigList).size() == 0;
         }
 
         // compute binCategoryMap for all algorithm while only be used in
@@ -505,9 +505,11 @@ public class Scorer {
                 }
             } else if(model instanceof WDLModel) {
                 final WDLModel wdl = (WDLModel) model;
-                if(wdl.getInputCount() != pair.getInput().size()) {
+                if(wdl.getInputCount() != pair.getInput().size()
+                        && wdl.getAllIndexedInputCount() != pair.getInput().size()) {
                     throw new RuntimeException("WDL and input size mismatch: wdl input Size = " + wdl.getInputCount()
-                            + "; data input Size = " + pair.getInput().size());
+                            + "; data input Size = " + pair.getInput().size() + "; all indexed input count: "
+                            + wdl.getAllIndexedInputCount());
                 }
 
                 Callable<MLData> callable = new Callable<MLData>() {
