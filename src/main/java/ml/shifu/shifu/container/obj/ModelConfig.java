@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import ml.shifu.shifu.fs.PathFinder;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
@@ -868,23 +869,30 @@ public class ModelConfig {
     }
 
     @JsonIgnore
-    public List<String> getSegmentFilterExpressions() throws IOException {
+    public List<String> getSegmentFilterExpressions(SourceType sourceType) throws IOException {
+        List<String> segments = new ArrayList<String>();
         String expressionFile = dataSet.getSegExpressionFile();
-        if(StringUtils.isBlank(expressionFile)) {
-            String defaultExpressionFile = Constants.COLUMN_META_FOLDER_NAME + File.separator
-                    + Constants.DEFAULT_EXPRESSION_COLUMN_FILE;
-            if(ShifuFileUtils.isFileExists(defaultExpressionFile, SourceType.LOCAL)) {
-                expressionFile = defaultExpressionFile;
-                LOG.warn(
-                        "'dataSet::segExpressionFile' is not set while default segExpressionFile: {} is found, default expression file will be used.",
-                        defaultExpressionFile);
+        if(StringUtils.isNotBlank(expressionFile)) {
+            if (!SourceType.LOCAL.equals(sourceType)) {
+                PathFinder pathFinder = new PathFinder(this);
+                expressionFile = Constants.COLUMN_META_FOLDER_NAME
+                        + File.separator + (new File(expressionFile)).getName();
+                expressionFile = pathFinder.getPathBySourceType(expressionFile, sourceType);
+            }
+
+            if (!ShifuFileUtils.isFileExists(expressionFile, sourceType)) {
+                LOG.warn("The segments file - {} doesn't exist! Your setting may won't work", expressionFile);
             } else {
-                return new ArrayList<String>();
+                // the segment filter must be one line each
+                segments = CommonUtils.readConfFileIntoList(expressionFile, sourceType);
             }
         }
+        return segments;
+    }
 
-        // the segment filter must be one line each
-        return CommonUtils.readConfFileIntoList(expressionFile, SourceType.LOCAL);
+    @JsonIgnore
+    public List<String> getSegmentFilterExpressions() throws IOException {
+        return this.getSegmentFilterExpressions(SourceType.LOCAL);
     }
 
     @JsonIgnore

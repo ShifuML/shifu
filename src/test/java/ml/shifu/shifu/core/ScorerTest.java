@@ -106,7 +106,7 @@ public class ScorerTest {
     }
 
 //    @Test
-    public void scoreTest() {
+    public void scoreTest() throws IOException {
         List<ColumnConfig> list = new ArrayList<ColumnConfig>();
         ColumnConfig col = new ColumnConfig();
         col.setColumnType(ColumnType.N);
@@ -136,14 +136,14 @@ public class ScorerTest {
     }
 
 //    @Test
-    public void scoreNull() {
+    public void scoreNull() throws IOException {
         Scorer s = new Scorer(models, null, "NN", modelConfig);
 
         Assert.assertNull(s.score(null, null));
     }
 
 //    @Test
-    public void scoreModelsException() {
+    public void scoreModelsException() throws IOException {
         List<ColumnConfig> list = new ArrayList<ColumnConfig>();
         ColumnConfig col = new ColumnConfig();
         col.setColumnType(ColumnType.N);
