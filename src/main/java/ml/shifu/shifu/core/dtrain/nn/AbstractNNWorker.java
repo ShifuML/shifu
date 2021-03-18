@@ -445,8 +445,6 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             }
             if(miniBatchs < 0) {
                 this.batchs = 1;
-            } else if(miniBatchs > 1000) {
-                this.batchs = 1000;
             } else {
                 this.batchs = miniBatchs;
             }

@@ -25,6 +25,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLData;
+import ml.shifu.shifu.util.PermutationShuffler;
+import ml.shifu.shifu.util.Shuffler;
 import org.encog.neural.error.ErrorFunction;
 import org.encog.neural.error.LinearErrorFunction;
 import org.encog.neural.flat.FlatNetwork;
@@ -183,11 +186,16 @@ public class ParallelGradient {
     public double[] computeGradients(int currentIteration, Set<Integer> dropoutNodes) {
         CompletionService<double[]> completionService = new ExecutorCompletionService<double[]>(this.threadPool);
         this.subGradients = new SubGradient[this.threadCount];
+        Shuffler shuffler = null;
+        // only support shuffle for in-memory training data
+        if(this.batchs > 1 && this.training instanceof BasicFloatMLData) {
+            shuffler = new PermutationShuffler((int) this.training.getRecordCount());
+        }
         for(int i = 0; i < this.threadCount; i++) {
             if(this.subGradients[i] == null) {
                 this.subGradients[i] = new SubGradient(this.network.clone(), this.training, this.trainLows[i],
                         this.trainHighs[i], this.testing, this.testLows[i], this.testHighs[i], this.flatSpot,
-                        this.isCrossOver, this, this.batchs, currentIteration, dropoutNodes, threadCount);
+                        this.isCrossOver, this, this.batchs, currentIteration, dropoutNodes, threadCount, shuffler);
             } else {
                 this.subGradients[i].setNetwork(this.network.clone());
                 this.subGradients[i].setDropoutNodes(dropoutNodes);

@@ -23,6 +23,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
+import ml.shifu.shifu.util.PermutationShuffler;
+import ml.shifu.shifu.util.Shuffler;
 import org.encog.mathutil.BoundMath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +77,7 @@ public class WDLParallelGradient {
         this.lossType = lossType;
 
         assert threadNumber > 0 && threadNumber < 33;
-        adjustTrainSet(0, this.trainData.size());
+        adjustTrainSet(this.trainData.size());
         adjustTestSet(0, this.testData.size());
     }
 
@@ -89,14 +91,11 @@ public class WDLParallelGradient {
      * So to achieve this, we need to adjust the start index of training set for each iteration. And also need update
      * the slice for each thread.
      *
-     * @param start
-     *          The start index in {@link WDLParallelGradient#trainData}, this iteration to train start with.
      * @param miniBatchSize
      *          The mini-batch size for each iteration.
      */
-    private void adjustTrainSet(int start, int miniBatchSize) {
-        assert start >= 0;
-        int recordCount = start + miniBatchSize > this.trainData.size() ? this.trainData.size() - start: miniBatchSize;
+    private void adjustTrainSet(int miniBatchSize) {
+        int recordCount = Math.min(miniBatchSize, this.trainData.size());
         if(this.trainData != null && this.trainData.size() > 0) {
             this.trainLows = new int[threadNumber];
             this.trainHighs = new int[threadNumber];
@@ -108,8 +107,8 @@ public class WDLParallelGradient {
             for(int i = 0; i < threadNumber; i++) {
                 int lowOffset = i * stepCount < recordCount ? i * stepCount : recordCount - 1;
                 int highOffset = lowOffset + stepCount - 1 < recordCount ? lowOffset + stepCount - 1 : recordCount - 1;
-                this.trainLows[i] = start + lowOffset;
-                this.trainHighs[i] = start + highOffset;
+                this.trainLows[i] = lowOffset;
+                this.trainHighs[i] = highOffset;
             }
             LOG.info("Train record count: {}", recordCount);
             LOG.info("Train lows: {}", Arrays.toString(trainLows));
@@ -142,22 +141,31 @@ public class WDLParallelGradient {
         }
     }
 
+    public WDLParams doCompute() {
+        return doCompute(false);
+    }
+
     /**
      * Batch training in parallel with {@link WDLParallelGradient#threadNumber} threads
-     * 
+     *
+     * @param shuffle whether to shuffle data before train
      * @return
      *      the combined gradients result
      */
-    public WDLParams doCompute() {
+    public WDLParams doCompute(boolean shuffle) {
         long start = System.currentTimeMillis();
+        Shuffler shuffler = null;
+        if (shuffle) {
+            shuffler = new PermutationShuffler(this.trainData.size());
+        }
         for(int i = 0; i < this.threadNumber; i++) {
             if(this.trainData != null && this.testData != null) {
                 this.completionService.submit(
                         new GradientTask(this.wdl, this.inputIndexMap, this.trainData, this.testData, this.trainLows[i],
-                                this.trainHighs[i], this.testLows[i], this.testHighs[i], this.lossType));
+                                this.trainHighs[i], this.testLows[i], this.testHighs[i], this.lossType, shuffler));
             } else if(this.trainData != null) {
                 this.completionService.submit(new GradientTask(this.wdl, this.inputIndexMap, this.trainData, null, -1,
-                        -1, -1, -1, this.lossType));
+                        -1, -1, -1, this.lossType, shuffler));
             }
 
         }
@@ -195,8 +203,8 @@ public class WDLParallelGradient {
      */
     public WDLParams doCompute(int iteration, int miniBatchSize) {
         LOG.info("training on iteration: " + iteration + " with miniBatchSize: " + miniBatchSize);
-        adjustTrainSet(iteration * miniBatchSize % this.trainData.size(), miniBatchSize);
-        return doCompute();
+        adjustTrainSet(miniBatchSize);
+        return doCompute(true);
     }
 
     public static class GradientTask implements Callable<WDLParams> {
@@ -210,12 +218,13 @@ public class WDLParallelGradient {
         private int testLow;
         private int testHigh;
         private LossType lossType;
+        private final Shuffler shuffler;
 
         private ErrorCalculation errorCalculation;
 
         public GradientTask(final WideAndDeep wdl, ConcurrentMap<Integer, Integer> inputIndexMap,
                 final MemoryLimitedList<WDLWorker.Data> trainData, final MemoryLimitedList<WDLWorker.Data> testData,
-                int trainLow, int trainHigh, int testLow, int testHigh, LossType lossType) {
+                int trainLow, int trainHigh, int testLow, int testHigh, LossType lossType, Shuffler shuffler) {
             this.wnd = wdl.clone();
             this.inputIndexMap = inputIndexMap;
             this.trainData = trainData;
@@ -225,6 +234,7 @@ public class WDLParallelGradient {
             this.testLow = testLow;
             this.testHigh = testHigh;
             this.lossType = lossType;
+            this.shuffler = shuffler;
             switch(this.lossType) {
                 case LOG:
                     this.errorCalculation = new LogErrorCalculation();
@@ -271,7 +281,7 @@ public class WDLParallelGradient {
 
             int index = 0;
             for(int i = trainLow; i < trainHigh; i++) {
-                WDLWorker.Data data = trainData.get(i);
+                WDLWorker.Data data = trainData.get(shuffler == null ? i : shuffler.getIndex(i));
                 trainSize += data.getWeight();
                 double[] logits = this.wnd.forward(data.getNumericalValues(), getEmbedInputs(data),
                         getWideInputs(data));
