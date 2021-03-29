@@ -414,8 +414,12 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                         int index = 0;
 
                         long cardinity = -1;
-                        if(cols.length > 2 && !StringUtils.isBlank(cols[2])) {
-                            cardinity = Long.parseLong(cols[2]);
+                        if (this.enableAutoHash && cols.length > 2 && !StringUtils.isBlank(cols[2])) {
+                            try {
+                                cardinity = Long.parseLong(cols[2]);
+                            } catch (Exception e) {
+                                LOG.debug("Cardinity parse failed.", e);
+                            }
                         }
 
                         if(this.enableAutoHash && cardinity > this.maxCategorySize && columnConfig.getHashSeed() <= 0) {
