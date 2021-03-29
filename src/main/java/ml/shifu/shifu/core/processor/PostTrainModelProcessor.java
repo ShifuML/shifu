@@ -194,7 +194,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
             }
         } finally {
             // release
-            closeScanners(scanners);
+            closeClosable(scanners);
         }
     }
 
@@ -219,7 +219,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
             }
         } finally {
             // release
-            closeScanners(scanners);
+            closeClosable(scanners);
         }
         return featureImportance;
     }
@@ -415,7 +415,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         log.info("Num of Scanners: " + scanners.size());
         AkkaSystemExecutor.getExecutor().submitPostTrainJob(modelConfig, columnConfigList, scanners);
 
-        closeScanners(scanners);
+        closeClosable(scanners);
     }
 
     /**
@@ -447,7 +447,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         }
 
         // release
-        closeScanners(scanners);
+        closeClosable(scanners);
 
         return columnConfigList;
     }

@@ -170,7 +170,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         AkkaSystemExecutor.getExecutor().submitNormalizeJob(modelConfig, columnConfigList, scanners);
 
         // release
-        closeScanners(scanners);
+        closeClosable(scanners);
     }
 
     /**
