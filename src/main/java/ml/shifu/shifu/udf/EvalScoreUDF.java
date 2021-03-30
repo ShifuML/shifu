@@ -398,7 +398,7 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
                     + modelRunner.getSubModelsCnt());
         }
 
-        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.headers, this.segFilterSize);
+        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.headers);
         if(MapUtils.isEmpty(rawDataNsMap)) {
             return null;
         }

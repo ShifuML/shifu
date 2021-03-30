@@ -50,7 +50,7 @@ public class FullScoreUDF extends AbstractTrainerUDF<Tuple> {
     }
 
     public Tuple exec(Tuple input) throws IOException {
-        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.header, 0);
+        Map<NSColumn, String> rawDataNsMap = CommonUtils.convertDataIntoNsMap(input, this.header);
 
         CaseScoreResult cs = modelRunner.computeNsData(rawDataNsMap);
         if(cs == null) {

@@ -38,16 +38,16 @@ public class NormalizationUtils {
 
     public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
-            double cutoff, String alg, List<String> segments) {
+            double cutoff, String alg) {
         return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff, alg,
-                CategoryMissingNormType.POSRATE, segments);
+                CategoryMissingNormType.POSRATE);
     }
 
     public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
-            double cutoff, String alg, CategoryMissingNormType categoryMissingNormType, List<String> segments) {
+            double cutoff, String alg, CategoryMissingNormType categoryMissingNormType) {
         return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff, alg,
-                categoryMissingNormType, null, segments);
+                categoryMissingNormType, null);
     }
 
     /**
@@ -72,8 +72,6 @@ public class NormalizationUtils {
      *            missing categorical value norm type, only used in WDL model
      * @param pt
      *            the precision type
-     * @param segments
-     *            the segments list for model
      * @return data pair instance
      * @throws NullPointerException
      *             if input is null
@@ -82,12 +80,11 @@ public class NormalizationUtils {
      */
     public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
-            double cutoff, String alg, CategoryMissingNormType categoryMissingNormType,
-            PrecisionType pt, List<String> segments) {
+            double cutoff, String alg, CategoryMissingNormType categoryMissingNormType, PrecisionType pt) {
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
 
         List<Double> inputList = assembleNormDataIntoList(binCategoryMap, noVarSel, modelConfig, columnConfigList,
-                rawNsDataMap, cutoff, alg, categoryMissingNormType, pt, segments);
+                rawNsDataMap, cutoff, alg, categoryMissingNormType, pt);
 
         // god, Double [] cannot be casted to double[], toArray doesn't work
         int size = inputList.size();
@@ -102,14 +99,14 @@ public class NormalizationUtils {
     private static List<Double> assembleNormDataIntoList(Map<Integer, Map<String, Integer>> binCategoryMap,
             boolean noVarSel, ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Map<NSColumn, String> rawNsDataMap, double cutoff, String alg,
-            CategoryMissingNormType categoryMissingNormType, PrecisionType pt, List<String> segments) {
+            CategoryMissingNormType categoryMissingNormType, PrecisionType pt) {
         List<Double> inputList = new ArrayList<Double>();
         boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for(ColumnConfig config: columnConfigList) {
             if(config == null) {
                 continue;
             }
-            NSColumn key = new NSColumn(CommonUtils.getSimpleColumnName(config, columnConfigList, segments));
+            NSColumn key = new NSColumn(CommonUtils.getOriginalName(config));
             if(config.isFinalSelect() // check whole name
                     && !rawNsDataMap.containsKey(key) // and then check simple name, in case user use wrong namespace
                     && !rawNsDataMap.containsKey(new NSColumn(key.getSimpleName()))) {
@@ -220,23 +217,23 @@ public class NormalizationUtils {
 
     public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
-            double cutoff, String alg, Set<Integer> featureSet, List<String> segments) {
+            double cutoff, String alg, Set<Integer> featureSet) {
         return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff, alg,
-                featureSet, CategoryMissingNormType.POSRATE, segments);
+                featureSet, CategoryMissingNormType.POSRATE);
     }
 
     public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
-            double cutoff, String alg, Set<Integer> featureSet, PrecisionType precisionType, List<String> segments) {
+            double cutoff, String alg, Set<Integer> featureSet, PrecisionType precisionType) {
         return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff, alg,
-                featureSet, CategoryMissingNormType.POSRATE, precisionType, segments);
+                featureSet, CategoryMissingNormType.POSRATE, precisionType);
     }
 
     public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
-            double cutoff, String alg, Set<Integer> featureSet, CategoryMissingNormType categoryMissingNormType, List<String> segments) {
+            double cutoff, String alg, Set<Integer> featureSet, CategoryMissingNormType categoryMissingNormType) {
         return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff, alg,
-                featureSet, categoryMissingNormType, null, segments);
+                featureSet, categoryMissingNormType, null);
     }
 
     /**
@@ -263,8 +260,6 @@ public class NormalizationUtils {
      *            missing categorical value norm type, only used in WDL model
      * @param precisionType
      *            the precision type, can be null
-     * @param segments
-     *            the segments list for model
      * @return data pair instance
      * @throws NullPointerException
      *             if input is null
@@ -274,10 +269,10 @@ public class NormalizationUtils {
     public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
             double cutoff, String alg, Set<Integer> featureSet, CategoryMissingNormType categoryMissingNormType,
-            PrecisionType precisionType, List<String> segments) {
+            PrecisionType precisionType) {
         if(CollectionUtils.isEmpty(featureSet)) {
             return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff,
-                    alg, categoryMissingNormType, precisionType, segments);
+                    alg, categoryMissingNormType, precisionType);
         }
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
 
@@ -286,7 +281,7 @@ public class NormalizationUtils {
             if(config == null) {
                 continue;
             }
-            NSColumn key = new NSColumn(CommonUtils.getSimpleColumnName(config, columnConfigList, segments));
+            NSColumn key = new NSColumn(CommonUtils.getOriginalName(config));
             if(config.isFinalSelect() // check whole name
                     && !rawNsDataMap.containsKey(key) // and then check simple name, in case user use wrong namespace
                     && !rawNsDataMap.containsKey(new NSColumn(key.getSimpleName()))) {
@@ -500,8 +495,6 @@ public class NormalizationUtils {
      *            algorithm used in model
      * @param categoryMissingNormType
      *            missing categorical value norm type, only used in WDL model
-     * @param segments
-     *            the segments list for model
      * @return data pair instance
      * @throws NullPointerException
      *             if input is null
@@ -511,11 +504,11 @@ public class NormalizationUtils {
     public static MLDataPair assembleNsDataPair(List<Map<Integer, Map<String, Integer>>> mtlBinCategoryMaps,
             boolean noVarSelect, ModelConfig modelConfig, List<List<ColumnConfig>> mtlSelectedColumnConfigList,
             Map<NSColumn, String> rawNsDataMap, double cutoff, String alg,
-            CategoryMissingNormType categoryMissingNormType, List<String> segments) {
+            CategoryMissingNormType categoryMissingNormType) {
         List<Double> finalList = new ArrayList<>();
         for(int i = 0; i < mtlBinCategoryMaps.size(); i++) {
             finalList.addAll(assembleNormDataIntoList(mtlBinCategoryMaps.get(i), noVarSelect, modelConfig,
-                    mtlSelectedColumnConfigList.get(i), rawNsDataMap, cutoff, alg, categoryMissingNormType, null, segments));
+                    mtlSelectedColumnConfigList.get(i), rawNsDataMap, cutoff, alg, categoryMissingNormType, null));
         }
 
         // god, Double [] cannot be casted to double[], toArray doesn't work

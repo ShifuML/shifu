@@ -15,15 +15,21 @@
  */
 package ml.shifu.shifu.core;
 
+import ml.shifu.shifu.combo.CsvFile;
 import ml.shifu.shifu.container.ScoreObject;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
+import ml.shifu.shifu.container.obj.RawSourceData;
 import ml.shifu.shifu.core.alg.NNTrainer;
 import ml.shifu.shifu.core.alg.SVMTrainer;
+import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.HDFSUtils;
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.fs.Path;
 import org.encog.ml.BasicML;
 import org.encog.ml.data.MLDataPair;
 import org.encog.ml.data.MLDataSet;
@@ -38,6 +44,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class ScorerTest {
 
@@ -175,5 +182,25 @@ public class ScorerTest {
         FileUtils.deleteDirectory(new File("models"));
         FileUtils.deleteDirectory(new File("test-output"));
         FileUtils.deleteDirectory(new File(Constants.COLUMN_META_FOLDER_NAME));
+    }
+
+    //@Test
+    public void testCQPModel() throws IOException {
+        ModelConfig modelConfig = CommonUtils.loadModelConfig("cqp_sf/ModelConfig.json",
+                RawSourceData.SourceType.LOCAL);
+        List<ColumnConfig> columnConfigList = CommonUtils.loadColumnConfigList("cqp_sf/ColumnConfig.json",
+                RawSourceData.SourceType.LOCAL);
+        BasicML model = ModelSpecLoaderUtils.loadModel(modelConfig, new Path("cqp_sf/models/model0.nn"),
+                HDFSUtils.getLocalFS());
+        List<BasicML> models = new ArrayList<>();
+        models.add(model);
+
+        Scorer scorer = new Scorer(models, columnConfigList, modelConfig.getAlgorithm(), modelConfig);
+        CsvFile inputFile = new CsvFile("cqp_sf/tmp/cqp_sf_Eval1_audit.data", "\u0007", true);
+
+        for (Map<String, String> rawData : inputFile) {
+            ScoreObject so = scorer.score(rawData);
+            System.out.println(rawData.get("mean") + "|" + so.getMeanScore());
+        }
     }
 }

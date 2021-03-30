@@ -1422,13 +1422,11 @@ public final class CommonUtils {
      *            - Tuple of a record
      * @param header
      *            - the column names for all the input data
-     * @param segFilterSize
-     *            segment filter size
      * @return (NSColumn, value) map for the record
      * @throws ExecException
      *             - throw exception when operating tuple
      */
-    public static Map<NSColumn, String> convertDataIntoNsMap(Tuple tuple, String[] header, int segFilterSize)
+    public static Map<NSColumn, String> convertDataIntoNsMap(Tuple tuple, String[] header)
             throws ExecException {
         if(tuple == null || tuple.size() == 0 || tuple.size() != header.length) {
             log.error("Invalid input, the tuple.size is = " + (tuple == null ? null : tuple.size())
@@ -1442,16 +1440,6 @@ public final class CommonUtils {
                 rawDataNsMap.put(new NSColumn(header[i]), "");
             } else {
                 rawDataNsMap.put(new NSColumn(header[i]), tuple.get(i).toString());
-            }
-        }
-
-        for(int i = 0; i < segFilterSize; i++) {
-            for(int j = 0; j < header.length; j++) {
-                if(tuple.get(j) == null) {
-                    rawDataNsMap.put(new NSColumn(header[j] + "_" + (i + 1)), "");
-                } else {
-                    rawDataNsMap.put(new NSColumn(header[j] + "_" + (i + 1)), tuple.get(j).toString());
-                }
             }
         }
 
@@ -1683,6 +1671,12 @@ public final class CommonUtils {
                     + CommonConstants.NAMESPACE_DELIMITER.length(), columnName.length());
         }
         return columnName;
+    }
+
+    public static String getOriginalName(ColumnConfig columnConfig) {
+        return (columnConfig.isSegment() ?
+                getSimpleColumnName(columnConfig.getColumnName()).replaceAll("_seg[0-9]*$", "")
+                : columnConfig.getColumnName());
     }
 
     /**

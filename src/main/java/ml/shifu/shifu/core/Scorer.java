@@ -90,11 +90,6 @@ public class Scorer {
     private int outputHiddenLayerIndex = 0;
 
     /**
-     * Whether there are segments for this model
-     */
-    private List<String> segments = null;
-
-    /**
      * Is in multi-thread mode?
      */
     private boolean multiThread;
@@ -150,7 +145,6 @@ public class Scorer {
         this.cutoff = cutoff;
         this.alg = algorithm;
         this.modelConfig = modelConfig;
-        this.segments = modelConfig.getSegmentFilterExpressions(modelConfig.getDataSet().getSource());
 
         int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
                 this.mtlColumnConfigLists.get(0));
@@ -234,7 +228,6 @@ public class Scorer {
         this.cutoff = cutoff;
         this.alg = algorithm;
         this.modelConfig = modelConfig;
-        this.segments = modelConfig.getSegmentFilterExpressions(modelConfig.getDataSet().getSource());
 
         if(this.columnConfigList != null) {
             int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
@@ -337,10 +330,10 @@ public class Scorer {
         if(inputPair == null && !this.alg.equalsIgnoreCase(CommonConstants.NN_ALG_NAME)) {
             if(modelConfig.isMultiTask()) {
                 inputPair = NormalizationUtils.assembleNsDataPair(mtlBinCategoryMaps, noVarSelect, modelConfig,
-                        mtlSelectedColumnConfigList, rawNsDataMap, cutoff, alg, categoryMissingNormType, segments);
+                        mtlSelectedColumnConfigList, rawNsDataMap, cutoff, alg, categoryMissingNormType);
             } else {
                 inputPair = NormalizationUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
-                        selectedColumnConfigList, rawNsDataMap, cutoff, alg, categoryMissingNormType, segments);
+                        selectedColumnConfigList, rawNsDataMap, cutoff, alg, categoryMissingNormType);
             }
         }
 
@@ -366,7 +359,7 @@ public class Scorer {
                 if(dataPair == null) {
                     dataPair = NormalizationUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
                             selectedColumnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet(),
-                            this.precisionType, this.segments);
+                            this.precisionType);
                     cachedNormDataPair.put(cacheKey, dataPair);
                 }
                 final MLDataPair networkPair = dataPair;
@@ -409,7 +402,7 @@ public class Scorer {
             } else if(model instanceof BasicNetwork) {
                 final BasicNetwork network = (BasicNetwork) model;
                 final MLDataPair networkPair = NormalizationUtils.assembleNsDataPair(binCategoryMap, noVarSelect,
-                        modelConfig, columnConfigList, rawNsDataMap, cutoff, alg, this.segments);
+                        modelConfig, columnConfigList, rawNsDataMap, cutoff, alg);
 
                 Callable<MLData> callable = new Callable<MLData>() {
                     @Override
