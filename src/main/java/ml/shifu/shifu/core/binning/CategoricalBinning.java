@@ -191,7 +191,7 @@ public class CategoricalBinning extends AbstractBinning<String> {
         if(objStrArr.length > 6 && StringUtils.isNotBlank(objStrArr[6])) {
             try {
                 this.hyper = HyperLogLogPlus.Builder.build(Base64Utils.base64DecodeToBytes((objStrArr[6])));
-            } catch (IOException e) {
+            } catch (Exception e) {
                 log.warn("Fail to to build HyperLogLogPlus from {}. The cardinality function may not work as expect.",
                         (objStrArr[6]));
                 // throw new RuntimeException(e);
