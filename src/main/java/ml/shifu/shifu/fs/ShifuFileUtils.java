@@ -354,6 +354,85 @@ public class ShifuFileUtils {
     }
 
     /**
+     * Get the BufferedReader for dath with @path and @sourceType
+     * @param path - source file
+     * @param sourceType - local / hdfs
+     * @return - the BufferedReader for that path
+     * @throws IOException - if any I/O exception in processing
+     */
+    public static List<BufferedReader> getBufferedReaders(String path, SourceType sourceType) throws IOException {
+        return getBufferedReaders(path, sourceType, null);
+    }
+
+    /**
+     * Get the BufferedReader for dath with @path and @sourceType
+     * @param path - source file
+     * @param sourceType - local / hdfs
+     * @param pathFilter - path filter to filter file under path
+     * @return - the BufferedReader for that path
+     * @throws IOException - if any I/O exception in processing
+     */
+    public static List<BufferedReader> getBufferedReaders(String path, SourceType sourceType, final PathFilter pathFilter)
+            throws IOException {
+        Path p = new Path(path);
+        FileSystem fs = getFileSystemBySourceType(sourceType, p);
+
+        FileStatus[] listStatus;
+        if(fs.getFileStatus(p).isDir()) {
+            // for folder we need filter pig header files
+            listStatus = fs.listStatus(p, new PathFilter() {
+                @Override
+                public boolean accept(Path path) {
+                    boolean hiddenOrSuccessFile = path.getName().startsWith(Constants.HIDDEN_FILES)
+                            || path.getName().equalsIgnoreCase("_SUCCESS");
+                    if(pathFilter != null) {
+                        return !hiddenOrSuccessFile && pathFilter.accept(path);
+                    } else {
+                        return !hiddenOrSuccessFile;
+                    }
+                }
+            });
+        } else {
+            listStatus = new FileStatus[] { fs.getFileStatus(p) };
+        }
+
+        if(listStatus.length > 1) {
+            Arrays.sort(listStatus, new Comparator<FileStatus>() {
+
+                @Override
+                public int compare(FileStatus f1, FileStatus f2) {
+                    return f1.getPath().getName().compareTo(f2.getPath().getName());
+                }
+
+            });
+        }
+
+        List<BufferedReader> readers = new ArrayList<BufferedReader>();
+        for(FileStatus f: listStatus) {
+            String filename = f.getPath().getName();
+
+            if(f.isDir()) {
+                log.warn("Skip - {}, since it's direcory, please check your configuration.", filename);
+                continue;
+            }
+
+            log.debug("Creating Scanner for file: {} ", filename);
+            if(filename.endsWith(Constants.GZ_SUFFIX)) {
+                readers.add(new BufferedReader(new InputStreamReader(new GZIPInputStream(fs.open(f.getPath())),
+                        Constants.DEFAULT_CHARSET)));
+            } else if(filename.endsWith(Constants.BZ2_SUFFIX)) {
+                readers.add(new BufferedReader(new InputStreamReader(new BZip2CompressorInputStream(fs.open(f.getPath())),
+                        Constants.DEFAULT_CHARSET)));
+            } else {
+                readers.add(new BufferedReader(new InputStreamReader(new BufferedInputStream(fs.open(f.getPath())),
+                        Constants.DEFAULT_CHARSET)));
+            }
+        }
+
+        return readers;
+    }
+
+    /**
      * Copy src file to dst file in the same FileSystem. Such as copy local source to local destination,
      * copy hdfs source to hdfs dest.
      * 

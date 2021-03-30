@@ -510,13 +510,7 @@ public class DTWorker extends
         LOG.info("Loss is set to {}.", this.loss);
 
         Object wpObj = validParams.get("WeightPolicy");
-        String wpObjStr = null;
-        if(wpObj != null) {
-            wpObjStr = wpObj.toString();
-            if(StringUtils.isBlank(wpObjStr)) {
-                wpObjStr = "RAW";
-            }
-        }
+        String wpObjStr = ((wpObj == null || StringUtils.isBlank(wpObj.toString())) ? "RAW" : wpObj.toString());
         this.wp = WeightPolicy.of(wpObjStr);
         LOG.info("Weight policy is set to {}.", this.wp);
 

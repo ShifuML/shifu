@@ -41,6 +41,7 @@ import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
@@ -335,16 +336,12 @@ public class BasicModelProcessor {
     }
 
     /**
-     * Close all scanners
-     * 
-     * @param scanners
-     *            the scanners
+     * Close a list of Closeable instance
+     * @param closeables - instances to close
      */
-    public void closeScanners(List<Scanner> scanners) {
-        if(CollectionUtils.isNotEmpty(scanners)) {
-            for(Scanner scanner: scanners) {
-                scanner.close();
-            }
+    public void closeClosable(List<? extends  Closeable> closeables) {
+        if(CollectionUtils.isNotEmpty(closeables)) {
+            closeables.stream().forEach(closeable -> IOUtils.closeQuietly(closeable));
         }
     }
 

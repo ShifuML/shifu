@@ -623,7 +623,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
         // FIXME A bug here in local mode, compute eval records please
         // this.evalRecords = ...;
-        closeScanners(scanners);
+        closeClosable(scanners);
     }
 
     /**

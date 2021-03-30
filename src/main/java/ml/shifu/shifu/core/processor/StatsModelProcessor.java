@@ -653,7 +653,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                     }
                 }
             }
-            closeScanners(scanners);
+            closeClosable(scanners);
         }
         return corrMap;
     }

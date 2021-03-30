@@ -297,7 +297,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(CollectionUtils.isNotEmpty(scanners)) {
             trainer.train();
         }
-        closeScanners(scanners);
+        closeClosable(scanners);
     }
 
     /**
@@ -353,7 +353,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             }
         }
 
-        closeScanners(scanners); // release
+        closeClosable(scanners); // release
     }
 
     /**
