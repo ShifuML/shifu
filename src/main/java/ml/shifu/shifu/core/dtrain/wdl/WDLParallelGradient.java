@@ -78,7 +78,7 @@ public class WDLParallelGradient {
 
         assert threadNumber > 0 && threadNumber < 33;
         adjustTrainSet(this.trainData.size());
-        adjustTestSet(0, this.testData.size());
+        adjustTestSet(this.testData.size());
     }
 
     /**
@@ -116,9 +116,8 @@ public class WDLParallelGradient {
         }
     }
 
-    private void adjustTestSet(int start, int miniBatchSize) {
-        assert start >= 0;
-        int recordCount = start + miniBatchSize > this.testData.size() ? this.testData.size() - start: miniBatchSize;
+    private void adjustTestSet(int miniBatchSize) {
+        int recordCount = Math.min(miniBatchSize, this.testData.size());
         if(this.testData != null && this.testData.size() > 0) {
             this.testLows = new int[threadNumber];
             this.testHighs = new int[threadNumber];
@@ -131,8 +130,8 @@ public class WDLParallelGradient {
             for(int i = 0; i < threadNumber; i++) {
                 int lowOffset = i * stepCount < recordCount ? i * stepCount : recordCount - 1;
                 int highOffset = lowOffset + stepCount - 1 < recordCount ? lowOffset + stepCount - 1 : recordCount - 1;
-                this.testLows[i] = start + lowOffset;
-                this.testHighs[i] = start + highOffset;
+                this.testLows[i] = lowOffset;
+                this.testHighs[i] = highOffset;
             }
 
             LOG.info("Test record count: {}", recordCount);
