@@ -915,6 +915,16 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
     }
 
     /**
+     * Configure the {@link AbstractNNWorker#isCompactMode}.
+     *
+     * @param columnAmountInData is the column amount in data file.
+     */
+    protected void configureCompactMode(int columnAmountInData) {
+        // In compact mode, column amount in data should be equal to feature input amount + meta input amount + 1 target column + 1 weight column.
+        isCompactMode = DTrainUtils.hasFinalSelectedVars(this.columnConfigList) && columnAmountInData == featureInputsCnt + DTrainUtils.getMetaInputsCnt(columnConfigList) + 2;
+    }
+
+    /**
      * Only baggingWithReplacement is set and size over NNConstants.NN_BAGGING_THRESHOLD, and random value <= 1/size. We
      * choose use existing data to add training data set and testing data set.
      */
