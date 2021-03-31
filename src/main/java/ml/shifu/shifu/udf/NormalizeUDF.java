@@ -73,6 +73,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private boolean hasSegExpression = false;
 
     /**
+     * <pre>
      * When this flag is true, we will do normalization in compact mode.
      * The normalization output will include 4 kind of columns.
      *     1. Target column.
@@ -90,6 +91,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
      *     3: meta column
      *     4: weight column
      * The compact mode cannot work with mtl now.
+     * </pre>
      */
     private boolean isCompactNorm = false;
 
