@@ -23,7 +23,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import ml.shifu.shifu.util.PermutationShuffler;
 import ml.shifu.shifu.util.Shuffler;
 import org.encog.mathutil.BoundMath;
 import org.slf4j.Logger;
@@ -40,8 +39,7 @@ import ml.shifu.shifu.core.dtrain.loss.SquaredErrorCalculation;
  * {@link WDLParallelGradient} is a class design to running training process in parallel. Both batch training and
  * mini-batch training are supported by this class.
  * 
- * For batch training, call {@link WDLParallelGradient#doCompute()}
- * For mini-batch training, call {@link WDLParallelGradient#doCompute(int, int)}
+ * For training, call {@link WDLParallelGradient#doCompute()}
  * 
  * User can configure the parameter ${@link WDLParallelGradient#threadNumber} stands for how many threads for each
  * worker in ModelConfig.json.
@@ -65,9 +63,12 @@ public class WDLParallelGradient {
 
     private LossType lossType;
 
+    private final int miniBatchSize;
+    private final Shuffler shuffler;
+
     public WDLParallelGradient(final WideAndDeep wnd, int threadNumber, ConcurrentMap<Integer, Integer> inputIndexMap,
             final MemoryLimitedList<WDLWorker.Data> trainData, final MemoryLimitedList<WDLWorker.Data> testData,
-            CompletionService<WDLParams> completionService, LossType lossType) {
+            CompletionService<WDLParams> completionService, LossType lossType, int miniBatchSize, Shuffler shuffler) {
         this.threadNumber = threadNumber;
         this.wdl = wnd;
         this.inputIndexMap = inputIndexMap;
@@ -75,10 +76,12 @@ public class WDLParallelGradient {
         this.testData = testData;
         this.completionService = completionService;
         this.lossType = lossType;
+        this.miniBatchSize = miniBatchSize;
+        this.shuffler = shuffler;
 
         assert threadNumber > 0 && threadNumber < 33;
-        adjustTrainSet(this.trainData.size());
-        adjustTestSet(this.testData.size());
+        adjustTrainSet();
+        adjustTestSet();
     }
 
     /**
@@ -90,12 +93,9 @@ public class WDLParallelGradient {
      * miniBatchSize, and return.
      * So to achieve this, we need to adjust the start index of training set for each iteration. And also need update
      * the slice for each thread.
-     *
-     * @param miniBatchSize
-     *          The mini-batch size for each iteration.
      */
-    private void adjustTrainSet(int miniBatchSize) {
-        int recordCount = Math.min(miniBatchSize, this.trainData.size());
+    private void adjustTrainSet() {
+        int recordCount = Math.min(this.miniBatchSize, this.trainData.size());
         if(this.trainData != null && this.trainData.size() > 0) {
             this.trainLows = new int[threadNumber];
             this.trainHighs = new int[threadNumber];
@@ -116,8 +116,8 @@ public class WDLParallelGradient {
         }
     }
 
-    private void adjustTestSet(int miniBatchSize) {
-        int recordCount = Math.min(miniBatchSize, this.testData.size());
+    private void adjustTestSet() {
+        int recordCount = Math.min(this.miniBatchSize, this.testData.size());
         if(this.testData != null && this.testData.size() > 0) {
             this.testLows = new int[threadNumber];
             this.testHighs = new int[threadNumber];
@@ -140,31 +140,22 @@ public class WDLParallelGradient {
         }
     }
 
-    public WDLParams doCompute() {
-        return doCompute(false);
-    }
-
     /**
      * Batch training in parallel with {@link WDLParallelGradient#threadNumber} threads
      *
-     * @param shuffle whether to shuffle data before train
      * @return
      *      the combined gradients result
      */
-    public WDLParams doCompute(boolean shuffle) {
+    public WDLParams doCompute() {
         long start = System.currentTimeMillis();
-        Shuffler shuffler = null;
-        if (shuffle) {
-            shuffler = new PermutationShuffler(this.trainData.size());
-        }
         for(int i = 0; i < this.threadNumber; i++) {
             if(this.trainData != null && this.testData != null) {
                 this.completionService.submit(
                         new GradientTask(this.wdl, this.inputIndexMap, this.trainData, this.testData, this.trainLows[i],
-                                this.trainHighs[i], this.testLows[i], this.testHighs[i], this.lossType, shuffler));
+                                this.trainHighs[i], this.testLows[i], this.testHighs[i], this.lossType, this.shuffler));
             } else if(this.trainData != null) {
                 this.completionService.submit(new GradientTask(this.wdl, this.inputIndexMap, this.trainData, null, -1,
-                        -1, -1, -1, this.lossType, shuffler));
+                        -1, -1, -1, this.lossType, this.shuffler));
             }
 
         }
@@ -187,23 +178,6 @@ public class WDLParallelGradient {
         }
         LOG.info("Worker with parallel train run time {} ms.", (System.currentTimeMillis() - start));
         return params;
-    }
-
-    /**
-     * MiniBatch training in parallel with {@link WDLParallelGradient#threadNumber} threads. For the first iteration,
-     * it will training data slice [0, batchSize], and next iteration [batchSize, 2 * batchSize), and so on.
-     * 
-     * @param iteration
-     *          the current iteration of whole training process.
-     * @param miniBatchSize
-     *          the mini batch size for each iteration
-     * @return
-     *          the combined gradients result
-     */
-    public WDLParams doCompute(int iteration, int miniBatchSize) {
-        LOG.info("training on iteration: " + iteration + " with miniBatchSize: " + miniBatchSize);
-        adjustTrainSet(miniBatchSize);
-        return doCompute(true);
     }
 
     public static class GradientTask implements Callable<WDLParams> {

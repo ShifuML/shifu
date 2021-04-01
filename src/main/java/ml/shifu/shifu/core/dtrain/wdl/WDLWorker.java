@@ -31,6 +31,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import ml.shifu.shifu.util.PermutationShuffler;
+import ml.shifu.shifu.util.Shuffler;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
@@ -270,7 +272,15 @@ public class WDLWorker extends
      */
     private LossType lossType;
 
-    private int batchs;
+    /**
+     * Mini batch size. Default to {@link Integer#MAX_VALUE} so that the whole train set will be used.
+     */
+    private int miniBatchSize = Integer.MAX_VALUE;
+
+    /**
+     * The shuffler used to map index.
+     */
+    private Shuffler shuffler = null;
 
     private boolean isLog = true;
 
@@ -743,20 +753,9 @@ public class WDLWorker extends
 
         Object miniBatchO = validParams.get(CommonConstants.MINI_BATCH);
         if(miniBatchO != null) {
-            int miniBatchs;
-            try {
-                miniBatchs = Integer.parseInt(miniBatchO.toString());
-            } catch (Exception e) {
-                miniBatchs = 1;
-            }
-            if(miniBatchs < 0) {
-                this.batchs = 1;
-            } else if(miniBatchs > 1000) {
-                this.batchs = 1000;
-            } else {
-                this.batchs = miniBatchs;
-            }
-            LOG.info("'miniBatchs' in worker is : {}, batchs is {} ", miniBatchs, batchs);
+            this.miniBatchSize = Integer.parseInt(miniBatchO.toString());
+            this.shuffler = new PermutationShuffler(this.trainingData.size());
+            LOG.info("'miniBatchs' in worker is : {}", miniBatchSize);
         }
 
         Object lossObj = validParams.get("Loss");
@@ -830,17 +829,14 @@ public class WDLWorker extends
 
         // update master global model into worker WideAndDeep graph
         this.wnd.updateWeights(context.getLastMasterResult());
-        WDLParallelGradient parallelGradient = new WDLParallelGradient(this.wnd, this.workerThreadCount,
-                this.inputIndexMap, this.trainingData, this.validationData, this.completionService, this.lossType);
-        WDLParams wdlParams = null;
-        if(miniBatchEnabled()) {
-            int iteration = context.getCurrentIteration();
-            int miniBatchSize = Integer
-                    .parseInt(this.modelConfig.getTrain().getParams().get(CommonConstants.MINI_BATCH).toString());
-            wdlParams = parallelGradient.doCompute(iteration, miniBatchSize);
-        } else {
-            wdlParams = parallelGradient.doCompute();
+        if (this.shuffler != null) {
+            // refresh shuffle mapping for each iteration
+            this.shuffler.refresh();
         }
+        WDLParallelGradient parallelGradient = new WDLParallelGradient(this.wnd, this.workerThreadCount,
+                this.inputIndexMap, this.trainingData, this.validationData, this.completionService, this.lossType,
+                this.miniBatchSize, this.shuffler);
+        WDLParams wdlParams = parallelGradient.doCompute();
         wdlParams.setSerializationType(SerializationType.GRADIENTS);
         this.wnd.setSerializationType(SerializationType.GRADIENTS);
         return wdlParams;

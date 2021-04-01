@@ -117,6 +117,11 @@ public class ParallelGradient {
      * If miniBatchRate set to 0.1d, {@link #batchs} is 10. It will run 10x iterations for one epochs.
      */
     private int batchs = 1;
+
+    /**
+     * A shuffler to map indexes. If mini batch is enabled, this will be initialized to a permutation shuffler.
+     */
+    private Shuffler shuffler = null;
     
     private long trainSize;
     private long validationSize;
@@ -181,15 +186,18 @@ public class ParallelGradient {
         this.threadPool = Executors.newFixedThreadPool(this.threadCount);
         this.lossStr = lossStr;
         this.batchs = batchs;
+        // only support shuffle for in-memory training data
+        if (this.batchs > 1 && this.training instanceof BasicFloatMLData) {
+            this.shuffler = new PermutationShuffler((int) this.training.getRecordCount());
+        }
     }
 
     public double[] computeGradients(int currentIteration, Set<Integer> dropoutNodes) {
         CompletionService<double[]> completionService = new ExecutorCompletionService<double[]>(this.threadPool);
         this.subGradients = new SubGradient[this.threadCount];
-        Shuffler shuffler = null;
-        // only support shuffle for in-memory training data
-        if(this.batchs > 1 && this.training instanceof BasicFloatMLData) {
-            shuffler = new PermutationShuffler((int) this.training.getRecordCount());
+        if (shuffler != null) {
+            // regenerate shuffle mapping in each iteration
+            shuffler.refresh();
         }
         for(int i = 0; i < this.threadCount; i++) {
             if(this.subGradients[i] == null) {

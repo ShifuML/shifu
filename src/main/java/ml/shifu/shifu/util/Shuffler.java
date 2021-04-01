@@ -36,4 +36,9 @@ public interface Shuffler {
      * @return total index size
      */
     int getRecordSize();
+
+    /**
+     * Refresh shuffle mapping.
+     */
+    void refresh();
 }

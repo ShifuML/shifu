@@ -33,20 +33,20 @@ public class PermutationShuffler implements Shuffler {
     /**
      * Internally held permutation mapping from index -> permutation[index].
      */
-    private int[] permutation;
+    private final int[] permutation;
 
     public PermutationShuffler(int recordSize) {
         assert recordSize > 0;
         this.recordSize = recordSize;
-
-        this.generatePermutation();
+        this.permutation = new int[recordSize];
+        this.refresh();
     }
 
     /**
      * Generate permutation array.
      */
-    private void generatePermutation() {
-        this.permutation = new int[recordSize];
+    @Override
+    public void refresh() {
         for(int i = 0; i < recordSize; i++) {
             this.permutation[i] = i;
         }
