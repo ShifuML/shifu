@@ -18,12 +18,21 @@ package ml.shifu.shifu.util;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
+ * A {@link Shuffler} implementation that provides permutation index mapping. A permutation of [0, {@link #recordSize})
+ * is created internally to provide the mapping functionality.
+ *
  * @author Junshi Guo
  */
 public class PermutationShuffler implements Shuffler {
 
+    /**
+     * Max index range. Should be set on construction and never change for one instance.
+     */
     private final int recordSize;
 
+    /**
+     * Internally held permutation mapping from index -> permutation[index].
+     */
     private int[] permutation;
 
     public PermutationShuffler(int recordSize) {
@@ -33,6 +42,9 @@ public class PermutationShuffler implements Shuffler {
         this.generatePermutation();
     }
 
+    /**
+     * Generate permutation array.
+     */
     private void generatePermutation() {
         this.permutation = new int[recordSize];
         for(int i = 0; i < recordSize; i++) {

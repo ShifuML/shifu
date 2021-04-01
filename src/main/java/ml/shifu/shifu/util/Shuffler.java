@@ -16,11 +16,24 @@
 package ml.shifu.shifu.util;
 
 /**
+ * Shuffler provides the functionality of mapping one integer to another integer.
+ *
  * @author Junshi Guo
  */
 public interface Shuffler {
 
+    /**
+     * Mapping from one integer to another.
+     *
+     * @param i original index
+     * @return mapped index
+     */
     int getIndex(int i);
 
+    /**
+     * Total index size. The index should not exceed this max size.
+     *
+     * @return total index size
+     */
     int getRecordSize();
 }
