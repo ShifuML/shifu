@@ -17,6 +17,34 @@
  */
 package ml.shifu.shifu.core.processor;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.Set;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.dmg.pmml.PMML;
+import org.encog.ml.BasicML;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ml.shifu.shifu.container.obj.ColumnAdditionalInfo;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -44,25 +72,6 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.HDFSUtils;
 import ml.shifu.shifu.util.ModelSpecLoaderUtils;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.MapUtils;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.dmg.pmml.PMML;
-import org.encog.ml.BasicML;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
 
 /**
  * ExportModelProcessor class
@@ -84,6 +93,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     public static final String CORRELATION = "corr";
     public static final String UME = "ume";
     public static final String BAGGING_UME = "baggingume";
+    public static final String NORM_UME = "normume";
 
     public static final String IS_CONCISE = "IS_CONCISE";
     public static final String REQUEST_VARS = "REQUEST_VARS";
@@ -91,6 +101,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     public static final String IV_KEEP_RATIO = "IV_KEEP_RATIO";
     public static final String MINIMUM_BIN_INST_CNT = "MINIMUM_BIN_INST_CNT";
     public static final String EXPORT_MODEL_NAME = "EXPORT_MODEL_NAME";
+    public static final String EXPORT_NORMUME_POSTFIX = "EXPORT_NORMUME_POSTFIX";
 
     private String type;
     private Map<String, Object> params;
@@ -231,13 +242,14 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 return 2;
             }
             return exportVariableCorr();
-        } else if(type.equalsIgnoreCase(UME) || type.equalsIgnoreCase(BAGGING_UME)) {
+        } else if(type.equalsIgnoreCase(UME) || type.equalsIgnoreCase(BAGGING_UME) || type.equalsIgnoreCase(NORM_UME)) {
             Class cls = null;
             try {
                 cls = Class.forName("com.paypal.gds.art.UmeExporter");
                 Object umeExporter = cls.getConstructor(ModelConfig.class).newInstance(modelConfig);
-                cls.getMethod("translate", String.class, Boolean.class)
-                        .invoke(umeExporter, getExportModelName(), type.equalsIgnoreCase(BAGGING_UME));
+                cls.getMethod("translate", String.class, Boolean.class, Boolean.class, String.class)
+                        .invoke(umeExporter, getExportModelName(), type.equalsIgnoreCase(BAGGING_UME),
+                                type.equalsIgnoreCase(NORM_UME), String.valueOf(params.get(EXPORT_NORMUME_POSTFIX)));
             } catch (ClassNotFoundException e) {
                 log.error("UMEExporter doesn't support!", e);
                 return 3;
