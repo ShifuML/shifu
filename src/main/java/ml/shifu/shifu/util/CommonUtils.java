@@ -70,6 +70,7 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import scala.annotation.meta.param;
 
 /**
  * {@link CommonUtils} is used to for almost all kinds of utility function in this framework.
@@ -432,8 +433,8 @@ public final class CommonUtils {
      * @throws IllegalArgumentException
      *             if {@code path} is null or empty, if sourceType is null.
      */
-    public static List<ColumnConfig> loadColumnConfigList(String path, SourceType sourceType, boolean nullSampleValues)
-            throws IOException {
+    public static synchronized List<ColumnConfig> loadColumnConfigList(String path, SourceType sourceType,
+            boolean nullSampleValues) throws IOException {
         ColumnConfig[] configList = loadJSON(path, sourceType, ColumnConfig[].class);
         List<ColumnConfig> columnConfigList = new ArrayList<ColumnConfig>();
         for(ColumnConfig columnConfig: configList) {
@@ -480,10 +481,7 @@ public final class CommonUtils {
             // NPE protection
             return columnName;
         }
-        return columnName.replaceAll("\\.", "_")
-                .replaceAll(" ", "_")
-                .replaceAll("/", "_")
-                .replaceAll("-", "_");
+        return columnName.replaceAll("\\.", "_").replaceAll(" ", "_").replaceAll("/", "_").replaceAll("-", "_");
     }
 
     /**
@@ -632,10 +630,10 @@ public final class CommonUtils {
      */
     public static String[] getHeaders(String pathHeader, String delimiter, SourceType sourceType, boolean isFull)
             throws IOException {
-        if (StringUtils.isEmpty(pathHeader) || StringUtils.isEmpty(delimiter) || sourceType == null) {
+        if(StringUtils.isEmpty(pathHeader) || StringUtils.isEmpty(delimiter) || sourceType == null) {
             throw new IllegalArgumentException(
-                String.format("Null or empty parameters srcDataPath:%s, delimiter:%s, sourceType:%s", pathHeader,
-                    delimiter, sourceType));
+                    String.format("Null or empty parameters srcDataPath:%s, delimiter:%s, sourceType:%s", pathHeader,
+                            delimiter, sourceType));
         }
         BufferedReader reader = null;
         String pigHeaderStr = null;
@@ -643,14 +641,14 @@ public final class CommonUtils {
         try {
             reader = ShifuFileUtils.getReader(pathHeader, sourceType);
             pigHeaderStr = reader.readLine();
-            if (StringUtils.isEmpty(pigHeaderStr)) {
+            if(StringUtils.isEmpty(pigHeaderStr)) {
                 throw new RuntimeException(
-                    String.format("Cannot reade header info from the first line of file: %s", pathHeader));
+                        String.format("Cannot reade header info from the first line of file: %s", pathHeader));
             }
         } catch (Exception e) {
             log.error(
-                "Error in getReader, this must be catched in this method to make sure the next reader can be returned.",
-                e);
+                    "Error in getReader, this must be catched in this method to make sure the next reader can be returned.",
+                    e);
             throw new ShifuException(ShifuErrorCode.ERROR_HEADER_NOT_FOUND);
         } finally {
             IOUtils.closeQuietly(reader);
@@ -686,7 +684,7 @@ public final class CommonUtils {
              * }
              */
             columnName = normColumnName(columnName);
-            if (headerSet.contains(columnName)) {
+            if(headerSet.contains(columnName)) {
                 columnName = getUniqueName(headerSet, columnName + "_dup" + index);
             }
 
@@ -698,17 +696,18 @@ public final class CommonUtils {
     }
 
     /**
-     * Get the unique name.
-     *
-     * @return name if name set doesn't contains it. If name exist in name set, it will check name_1, name_2, name_n to find one which doesn't
-     * exist in the set.
+     * Create the unique name to avoid duplication by appending "_1,2,3,4" postfix
+     * @param nameSet - existing name set
+     * @param name - name that needs to be unique
+     * @return name if name set doesn't contains it.
+     *      If name exist in name set, it will check name_1, name_2, name_n to find one which doesn't
      */
     public static String getUniqueName(Set<String> nameSet, String name) {
-        if (nameSet == null || name == null) {
+        if(nameSet == null || name == null) {
             return name;
         }
         String newName = name;
-        for (int i = 1; nameSet.contains(newName); i++) {
+        for(int i = 1; nameSet.contains(newName); i++) {
             newName = name + "_" + i;
         }
         return newName;
@@ -1423,13 +1422,11 @@ public final class CommonUtils {
      *            - Tuple of a record
      * @param header
      *            - the column names for all the input data
-     * @param segFilterSize
-     *            segment filter size
      * @return (NSColumn, value) map for the record
      * @throws ExecException
      *             - throw exception when operating tuple
      */
-    public static Map<NSColumn, String> convertDataIntoNsMap(Tuple tuple, String[] header, int segFilterSize)
+    public static Map<NSColumn, String> convertDataIntoNsMap(Tuple tuple, String[] header)
             throws ExecException {
         if(tuple == null || tuple.size() == 0 || tuple.size() != header.length) {
             log.error("Invalid input, the tuple.size is = " + (tuple == null ? null : tuple.size())
@@ -1443,16 +1440,6 @@ public final class CommonUtils {
                 rawDataNsMap.put(new NSColumn(header[i]), "");
             } else {
                 rawDataNsMap.put(new NSColumn(header[i]), tuple.get(i).toString());
-            }
-        }
-
-        for(int i = 0; i < segFilterSize; i++) {
-            for(int j = 0; j < header.length; j++) {
-                if(tuple.get(j) == null) {
-                    rawDataNsMap.put(new NSColumn(header[j] + "_" + (i + 1)), "");
-                } else {
-                    rawDataNsMap.put(new NSColumn(header[j] + "_" + (i + 1)), tuple.get(j).toString());
-                }
             }
         }
 
@@ -1631,6 +1618,28 @@ public final class CommonUtils {
      *            the column config list inculding all segment expansion columns if have
      * @param segmentExpansions
      *            segment expansion expressions
+     * @return the simple name not including name space part
+     */
+    public static String getSimpleColumnName(ColumnConfig columnConfig, List<ColumnConfig> columnConfigList,
+            List<String> segmentExpansions) {
+        if(CollectionUtils.isEmpty(segmentExpansions)) {
+            return getSimpleColumnName(columnConfig.getColumnName());
+        }
+
+        int originalLen = columnConfigList.size() / (segmentExpansions.size() + 1);
+        return getSimpleColumnName(columnConfigList.get(columnConfig.getColumnNum() % originalLen).getColumnName());
+    }
+
+    /**
+     * Simple name without name space part. For segment expansion, only retain raw column name but not current column
+     * name.
+     *
+     * @param columnConfig
+     *            the column configuration
+     * @param columnConfigList
+     *            the column config list inculding all segment expansion columns if have
+     * @param segmentExpansions
+     *            segment expansion expressions
      * @param dataSetHeaders
      *            data set headers for all raw columns
      * @return the simple name not including name space part
@@ -1662,6 +1671,12 @@ public final class CommonUtils {
                     + CommonConstants.NAMESPACE_DELIMITER.length(), columnName.length());
         }
         return columnName;
+    }
+
+    public static String getOriginalName(ColumnConfig columnConfig) {
+        return (columnConfig.isSegment() ?
+                getSimpleColumnName(columnConfig.getColumnName()).replaceAll("_seg[0-9]*$", "")
+                : columnConfig.getColumnName());
     }
 
     /**
@@ -2058,4 +2073,16 @@ public final class CommonUtils {
         return result * (1d - result);
     }
 
+    /**
+     * Read the iterable into String array
+     * @param split - iterable of text elements
+     * @return - elements of text
+     */
+    public static String[] readIterableToArray(Iterable<String> split) {
+        List<String> fields = new ArrayList<>();
+        for (String str : split) {
+            fields.add(str);
+        }
+        return fields.toArray(new String[0]);
+    }
 }

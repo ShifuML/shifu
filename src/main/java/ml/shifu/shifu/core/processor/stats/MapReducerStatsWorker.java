@@ -17,12 +17,7 @@ package ml.shifu.shifu.core.processor.stats;
 
 import static ml.shifu.shifu.util.Constants.LOCAL_DATE_STATS_CSV_FILE_NAME;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -406,28 +401,28 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         File binInfoFile = null;
 
         BufferedWriter writer = null;
-        List<Scanner> scanners = null;
+        List<BufferedReader> readers = null;
         try {
             if(this.modelConfig.isMultiTask()) {
-                scanners = ShifuFileUtils
-                        .getDataScanners(pathFinder.getUpdatedBinningInfoPath(source, this.getMtlIndex()), source);
+                readers = ShifuFileUtils
+                        .getBufferedReaders(pathFinder.getUpdatedBinningInfoPath(source, this.getMtlIndex()), source);
                 filePath = Constants.BINNING_INFO_FILE_NAME + "." + this.getMtlIndex();
             } else {
-                scanners = ShifuFileUtils.getDataScanners(pathFinder.getUpdatedBinningInfoPath(source), source);
+                readers = ShifuFileUtils.getBufferedReaders(pathFinder.getUpdatedBinningInfoPath(source), source);
                 filePath = Constants.BINNING_INFO_FILE_NAME;
             }
             binInfoFile = new File(filePath);
             writer = new BufferedWriter(
                     new OutputStreamWriter(new FileOutputStream(binInfoFile), Charset.forName("UTF-8")));
-            for(Scanner scanner: scanners) {
-                while(scanner.hasNextLine()) {
-                    String line = scanner.nextLine();
+            String line = null;
+            for(BufferedReader reader: readers) {
+                while((line = reader.readLine()) != null) {
                     writer.write(line + "\n");
                 }
             }
         } finally {
             // release
-            processor.closeScanners(scanners);
+            processor.closeClosable(readers);
             IOUtils.closeQuietly(writer);
         }
 
@@ -605,7 +600,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         }
 
         // release
-        processor.closeScanners(scanners);
+        processor.closeClosable(scanners);
 
         Collections.sort(this.columnConfigList, new Comparator<ColumnConfig>() {
             @Override

@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Binning, it helps to put data input bins
@@ -514,10 +515,10 @@ public class Binning {
             categoryFraudRateMap.put(key, rate);
         }
 
-        // Sort map
-        MapComparator cmp = new MapComparator(categoryFraudRateMap);
-        Map<String, Double> sortedCategoryFraudRateMap = new TreeMap<String, Double>(cmp);
-        sortedCategoryFraudRateMap.putAll(categoryFraudRateMap);
+        // Sort map by value
+        Map<String, Double> sortedCategoryFraudRateMap = categoryFraudRateMap.entrySet().stream().sorted(Map.Entry.comparingByValue()).collect(
+                Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+                        (e1, e2) -> e1, LinkedHashMap::new));
 
         for(Map.Entry<String, Double> entry: sortedCategoryFraudRateMap.entrySet()) {
             String key = entry.getKey();
@@ -619,24 +620,6 @@ public class Binning {
             }
         }
         return voList;
-    }
-
-    /**
-     * comparator for map
-     */
-    private static class MapComparator implements Comparator<String>, Serializable {
-
-        private static final long serialVersionUID = 2178035954425107063L;
-
-        Map<String, Double> base;
-
-        public MapComparator(Map<String, Double> base) {
-            this.base = base;
-        }
-
-        public int compare(String a, String b) {
-            return base.get(a).compareTo(base.get(b));
-        }
     }
 
     /**

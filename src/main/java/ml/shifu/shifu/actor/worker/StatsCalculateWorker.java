@@ -109,7 +109,6 @@ public class StatsCalculateWorker extends AbstractWorkerActor {
         binning.setAutoTypeThreshold(modelConfig.getAutoTypeThreshold());
         binning.setMergeEnabled(Boolean.TRUE);
         binning.doBinning();
-
         // Calculate Basic Stats
         BasicStatsCalculator basicStatsCalculator = new BasicStatsCalculator(binning.getUpdatedVoList(),
                 modelConfig.getNumericalValueThreshold());

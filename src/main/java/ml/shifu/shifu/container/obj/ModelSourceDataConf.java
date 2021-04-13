@@ -164,7 +164,6 @@ public class ModelSourceDataConf extends RawSourceData {
     /**
      * @return the segExpressionFile
      */
-    @JsonIgnore
     public String getSegExpressionFile() {
         return segExpressionFile;
     }

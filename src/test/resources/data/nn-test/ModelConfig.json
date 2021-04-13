@@ -1,0 +1,108 @@
+{
+  "basic" : {
+    "name" : "cancer-judgement",
+    "author" : "",
+    "description" : null,
+    "runMode" : "local",
+    "customPaths" : null
+  },
+  "dataSet" : {
+    "source" : "LOCAL",
+    "dataPath" : "./src/test/resources/example/cancer-judgement/DataStore/DataSet1",
+    "dataDelimiter" : "|",
+    "headerPath" : "./src/test/resources/example/cancer-judgement/DataStore/DataSet1/.pig_header",
+    "headerDelimiter" : "|",
+    "filterExpressions" : "",
+    "weightColumnName" : "column_3",
+    "targetColumnName" : "diagnosis",
+    "posTags" : [ "M" ],
+    "negTags" : [ "B" ],
+    "metaColumnNameFile" : null,
+    "categoricalColumnNameFile" : null
+  },
+  "stats" : {
+    "maxNumBin" : 10,
+    "binningMethod" : "EqualPositive",
+    "sampleRate" : 1.0,
+    "sampleNegOnly" : false
+  },
+  "varSelect" : {
+    "forceEnable" : true,
+    "forceSelectColumnNameFile" : null,
+    "forceRemoveColumnNameFile" : null,
+    "filterEnable" : true,
+    "filterNum" : 200,
+    "filterBy" : "KS",
+    "params" : {
+      "worker_sample_rate" : 0.5,
+      "population_multiply_cnt" :  20,
+      "population_live_size" : 10,
+      "expect_variable_cnt" : 6,
+      "hybrid_percent" : 60,
+      "mutation_percent" : 30
+    }
+  },
+  "normalize" : {
+    "stdDevCutOff" : 4.0,
+    "sampleRate" : 1.0,
+    "sampleNegOnly" : false
+  },
+  "train" : {
+    "baggingNum" : 5,
+    "baggingWithReplacement" : true,
+    "baggingSampleRate" : 1.0,
+    "validSetRate" : 0.1,
+    "trainOnDisk" : false,
+    "numTrainEpochs" : 100,
+    "algorithm" : "NN",
+    "params" : {
+      "NumHiddenLayers" : 2,
+      "ActivationFunc" : [ "Sigmoid", "Sigmoid" ],
+      "NumHiddenNodes" : [ 45, 45 ],
+      "LearningRate" : 0.1,
+      "Propagation" : "Q"
+    },
+    "customPaths" : null
+  },
+  "evals" : [ {
+    "name" : "EvalA",
+    "dataSet" : {
+      "source" : "LOCAL",
+      "dataPath" : "./src/test/resources/example/cancer-judgement/DataStore/EvalSet1",
+      "dataDelimiter" : "|",
+      "headerPath" : "./src/test/resources/example/cancer-judgement/DataStore/EvalSet1/.pig_header",
+      "headerDelimiter" : "|",
+      "filterExpressions" : null,
+      "weightColumnName" : null
+    },
+    "performanceBucketNum" : 10,
+    "performanceScoreSelector" : "mean",
+    "scoreMetaColumnNameFile" : null,
+    "customPaths" : {
+        "modelsPath" : null,
+        "scorePath" : null,
+        "confusionMatrixPath" : null,
+        "performancePath" : null
+     }
+  }, {
+    "name" : "EvalB",
+    "dataSet" : {
+      "source" : "LOCAL",
+      "dataPath" : "./src/test/resources/example/cancer-judgement/DataStore/EvalSet1",
+      "dataDelimiter" : "|",
+      "headerPath" : "./src/test/resources/example/cancer-judgement/DataStore/EvalSet1/.pig_header",
+      "headerDelimiter" : "|",
+      "filterExpressions" : null,
+      "weightColumnName" : null
+    },
+    "performanceBucketNum" : 10,
+    "performanceScoreSelector" : "mean",
+    "scoreMetaColumnNameFile" : null,
+    "customPaths" : {
+        "modelsPath" : null,
+        "scorePath" : null,
+        "confusionMatrixPath" : null,
+        "performancePath" : null
+     } 
+  } ]
+}

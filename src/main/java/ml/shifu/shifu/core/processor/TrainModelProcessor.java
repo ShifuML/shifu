@@ -50,6 +50,7 @@ import java.util.Set;
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
+import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
@@ -235,7 +236,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 case MAPRED:
                     validateDistributedTrain();
                     syncDataToHdfs(super.modelConfig.getDataSet().getSource()); // sync to HDFS to ensure consistency
-                    checkAndCleanDataForTreeModels(this.isToShuffle);
+                    checkAndNormDataForModels(this.isToShuffle);
                     if(Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
                         status = runDistributedTensorflowTrain();
                     } else {
@@ -296,7 +297,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         if(CollectionUtils.isNotEmpty(scanners)) {
             trainer.train();
         }
-        closeScanners(scanners);
+        closeClosable(scanners);
     }
 
     /**
@@ -352,7 +353,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             }
         }
 
-        closeScanners(scanners); // release
+        closeClosable(scanners); // release
     }
 
     /**
@@ -432,11 +433,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             isParquetMetaFileExist = false;
         }
         if(super.modelConfig.getNormalize().getIsParquet() && !isParquetMetaFileExist) {
-            throw new IllegalArgumentException("Your normlized input in "
+            throw new IllegalArgumentException("Your normalized input in "
                     + super.getPathFinder().getNormalizedDataPath()
                     + " is not parquet format. Please keep isParquet and re-run norm again and then run training step or change isParquet to false.");
         } else if(!super.modelConfig.getNormalize().getIsParquet() && isParquetMetaFileExist) {
-            throw new IllegalArgumentException("Your normlized input in "
+            throw new IllegalArgumentException("Your normalized input in "
                     + super.getPathFinder().getNormalizedDataPath()
                     + " is parquet format. Please keep isParquet and re-run norm again or change isParquet directly to true.");
         }
@@ -552,24 +553,27 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         }
     }
 
-    private void setSelectedTargetAndWeightColumnNumber(Configuration globalConf) {
+    private void setSelectedTargetMetaAndWeightColumnNumber(Configuration globalConf) {
         int targetColumnNum = -1, weightColumnNum = -1;
-        List<Integer> seletectedColumnNums = new ArrayList<Integer>();
+        List<Integer> selectedColumnNums = new ArrayList<>();
+        List<Integer> metaColumnNums = new ArrayList<>();
         String weightColumnName = this.modelConfig.getDataSet().getWeightColumnName();
 
         for(int i = 0; i < columnConfigList.size(); i++) {
             ColumnConfig cc = columnConfigList.get(i);
             if(cc.isTarget()) {
                 targetColumnNum = i;
-            } else if(cc.isFinalSelect()) {
-                seletectedColumnNums.add(i);
+            } else if (cc.isMeta()) {
+                metaColumnNums.add(i);
+            } else if (cc.isFinalSelect()) {
+                selectedColumnNums.add(i);
             }
 
             if(weightColumnName.equalsIgnoreCase(cc.getColumnName())) {
                 weightColumnNum = i;
             }
         }
-        if(seletectedColumnNums.size() == 0) {
+        if(selectedColumnNums.size() == 0) {
             boolean hasCandidate = CommonUtils.hasCandidateColumns(columnConfigList);
             for(int i = 0; i < columnConfigList.size(); i++) {
                 ColumnConfig cc = columnConfigList.get(i);
@@ -577,14 +581,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                     continue;
                 }
                 if(CommonUtils.isGoodCandidate(cc, hasCandidate)) {
-                    seletectedColumnNums.add(i);
+                    selectedColumnNums.add(i);
                 }
             }
         }
 
         globalConf.set("shifu.application.target-column-number", Integer.toString(targetColumnNum));
         globalConf.set("shifu.application.weight-column-number", Integer.toString(weightColumnNum));
-        globalConf.set("shifu.application.selected-column-numbers", StringUtils.join(seletectedColumnNums, ' '));
+        globalConf.set("shifu.application.selected-column-numbers", StringUtils.join(selectedColumnNums, ' '));
+        globalConf.set("shifu.application.meta-column-numbers", StringUtils.join(metaColumnNums, " "));
     }
 
     private void setSelectedColumnForWideDeep(Configuration globalConf) {
@@ -700,8 +705,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             }
             globalConf.set("shifu.application.python-script-path", currScriptPath);
 
-            // set selected column number; target column number; weight column number
-            setSelectedTargetAndWeightColumnNumber(globalConf);
+            // set selected column number; target column number; meta column number; weight column number
+            setSelectedTargetMetaAndWeightColumnNumber(globalConf);
 
             // set shell to lauch python
             globalConf.set("shifu.application.python-shell-path",
@@ -1929,13 +1934,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      * @throws IOException
      *             the io exception
      */
-    protected void checkAndCleanDataForTreeModels(boolean isToShuffle) throws IOException {
-        String alg = this.getModelConfig().getTrain().getAlgorithm();
-        // only for tree models
-        if(!CommonUtils.isTreeModel(alg)) {
-            return;
-        }
-
+    protected void checkAndNormDataForModels(boolean isToShuffle) throws IOException {
         // check if binBoundaries and binCategories are good and log error
         for(ColumnConfig columnConfig: columnConfigList) {
             if(columnConfig.isFinalSelect() && !columnConfig.isTarget() && !columnConfig.isMeta()) {
@@ -1962,22 +1961,38 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
         // run cleaning data logic for model input
         SourceType sourceType = modelConfig.getDataSet().getSource();
-        String cleanedDataPath = this.pathFinder.getCleanedDataPath();
         String needReGen = Environment.getProperty("shifu.tree.regeninput", Boolean.FALSE.toString());
 
-        // 1. shifu.tree.regeninput = true, no matter what, will regen;
-        // 2. if cleanedDataPath does not exist, generate clean data for tree ensemble model training
-        // 3. if validationDataPath is not blank and cleanedValidationDataPath does not exist, generate clean data for
-        // tree ensemble model training
-        if(Boolean.TRUE.toString().equalsIgnoreCase(needReGen)
-                || !ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)
-                || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())
-                        && !ShifuFileUtils.isFileExists(pathFinder.getCleanedValidationDataPath(), sourceType))) {
-            runDataClean(isToShuffle, -1.0, false); // -1.0 means no re-balance
+        String alg = this.getModelConfig().getTrain().getAlgorithm();
+        // only for tree models
+        if(!CommonUtils.isTreeModel(alg)) {
+            String normalDataPath = this.pathFinder.getNormalizedDataPath();
+            if (Boolean.TRUE.toString().equalsIgnoreCase(needReGen)
+                    || !ShifuFileUtils.isFileExists(normalDataPath, sourceType)
+                    || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())
+                        && !ShifuFileUtils.isFileExists(pathFinder.getNormalizedValidationDataPath(), sourceType))) {
+                LOG.info("The normalized data path {} doesn't exist. Generate it before training.", normalDataPath);
+                Map<String, Object> params = new HashedMap();
+                params.put(Constants.IS_TO_SHUFFLE_DATA, isToShuffle);
+                NormalizeModelProcessor normStep = new NormalizeModelProcessor();
+            }
         } else {
-            // no need regen data
-            LOG.warn("For RF/GBT, training input in {} exists, no need to regenerate it.", cleanedDataPath);
-            LOG.warn("Need regen it, please set shifu.tree.regeninput in shifuconfig to true.");
+            String cleanedDataPath = this.pathFinder.getCleanedDataPath();
+
+            // 1. shifu.tree.regeninput = true, no matter what, will regen;
+            // 2. if cleanedDataPath does not exist, generate clean data for tree ensemble model training
+            // 3. if validationDataPath is not blank and cleanedValidationDataPath does not exist, generate clean data for
+            // tree ensemble model training
+            if(Boolean.TRUE.toString().equalsIgnoreCase(needReGen)
+                    || !ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)
+                    || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())
+                        && !ShifuFileUtils.isFileExists(pathFinder.getCleanedValidationDataPath(), sourceType))) {
+                runDataClean(isToShuffle, -1.0, false); // -1.0 means no re-balance
+            } else {
+                // no need regen data
+                LOG.warn("For RF/GBT, training input in {} exists, no need to regenerate it.", cleanedDataPath);
+                LOG.warn("Need regen it, please set shifu.tree.regeninput in shifuconfig to true.");
+            }
         }
     }
 
