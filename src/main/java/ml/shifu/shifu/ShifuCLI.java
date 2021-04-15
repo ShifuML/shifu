@@ -18,13 +18,14 @@ package ml.shifu.shifu;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
-import ml.shifu.shifu.core.TreeModel;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.util.*;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -41,6 +42,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
+import ml.shifu.shifu.core.TreeModel;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.processor.BasicModelProcessor;
 import ml.shifu.shifu.core.processor.ComboModelProcessor;
 import ml.shifu.shifu.core.processor.CreateModelProcessor;
@@ -59,6 +62,10 @@ import ml.shifu.shifu.core.processor.StatsModelProcessor;
 import ml.shifu.shifu.core.processor.TrainModelProcessor;
 import ml.shifu.shifu.core.processor.VarSelectModelProcessor;
 import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.IndependentTreeModelUtils;
 
 /**
  * ShifuCLI class is the MAIN class for whole project
@@ -146,6 +153,8 @@ public class ShifuCLI {
     private static final String FI = "fi";
     // for model name
     private static final String NAME = "name";
+    // postfix option for normume type export
+    private static final String NORMUME_POSTFIX = "postfix";
 
     static private final Logger log = LoggerFactory.getLogger(ShifuCLI.class);
 
@@ -387,6 +396,7 @@ public class ShifuCLI {
                     params.put(ExportModelProcessor.IV_KEEP_RATIO, cmd.getOptionValue(IVR));
                     params.put(ExportModelProcessor.MINIMUM_BIN_INST_CNT, cmd.getOptionValue(BIC));
                     params.put(ExportModelProcessor.EXPORT_MODEL_NAME, cmd.getOptionValue(NAME));
+                    params.put(ExportModelProcessor.EXPORT_NORMUME_POSTFIX, cmd.getOptionValue(NORMUME_POSTFIX));
                     status = exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE), params);
                     if(status == 0) {
                         log.info("Export models/columnstats/corr successfully.");
@@ -795,6 +805,9 @@ public class ShifuCLI {
 
         Option opt_name = OptionBuilder.hasArg(true).withDescription("New model name for model spec.").create(NAME);
 
+        // postfix option for normume
+        Option opt_postfix = OptionBuilder.hasArg().create(NORMUME_POSTFIX);
+
         opts.addOption(opt_cmt);
         opts.addOption(opt_new);
         opts.addOption(opt_type);
@@ -849,6 +862,8 @@ public class ShifuCLI {
         opts.addOption(opt_fi);
         opts.addOption(opt_name);
 
+        opts.addOption(opt_postfix);
+
         return opts;
     }
 
@@ -896,7 +911,7 @@ public class ShifuCLI {
                 .println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat.");
         System.out.println("\teval -audit [-n <#numofrecords>]        Score eval data and generate audit dataset.");
         System.out.println(
-                "\texport [-t pmml|columnstats|woemapping|bagging|baggingpmml|corr|woe|ume|baggingume|normume] [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>] [-name <modelName>]");
+                "\texport [-t pmml|columnstats|woemapping|bagging|baggingpmml|corr|woe|ume|baggingume|normume] [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>] [-name <modelName>] [-postfix <postfix>]");
         System.out.println(
                 "\t                                        Export model to PMML format or export ColumnConfig.");
         System.out.println(
