@@ -106,7 +106,7 @@ public class NormalizationUtils {
             if(config == null) {
                 continue;
             }
-            NSColumn key = new NSColumn(config.getColumnName());
+            NSColumn key = new NSColumn(CommonUtils.getOriginalName(config));
             if(config.isFinalSelect() // check whole name
                     && !rawNsDataMap.containsKey(key) // and then check simple name, in case user use wrong namespace
                     && !rawNsDataMap.containsKey(new NSColumn(key.getSimpleName()))) {
@@ -281,7 +281,7 @@ public class NormalizationUtils {
             if(config == null) {
                 continue;
             }
-            NSColumn key = new NSColumn(config.getColumnName());
+            NSColumn key = new NSColumn(CommonUtils.getOriginalName(config));
             if(config.isFinalSelect() // check whole name
                     && !rawNsDataMap.containsKey(key) // and then check simple name, in case user use wrong namespace
                     && !rawNsDataMap.containsKey(new NSColumn(key.getSimpleName()))) {

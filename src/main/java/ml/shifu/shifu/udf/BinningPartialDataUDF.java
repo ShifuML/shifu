@@ -89,7 +89,7 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
                 columnConfig = super.columnConfigList.get(columnId);
                 if(columnConfig.isCategorical()) {
                     binning = new CategoricalBinning(-1, modelConfig.getMissingOrInvalidValues(),
-                            this.maxCategorySize,columnConfig.getHashSeed());
+                            this.maxCategorySize, columnConfig.getHashSeed());
                 } else {
                     if(super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)) {
                         binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin() > 0

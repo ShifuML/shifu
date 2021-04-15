@@ -896,7 +896,7 @@ public class ShifuCLI {
                 .println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat.");
         System.out.println("\teval -audit [-n <#numofrecords>]        Score eval data and generate audit dataset.");
         System.out.println(
-                "\texport [-t pmml|columnstats|woemapping|bagging|baggingpmml|corr|woe|ume|baggingume] [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>] [-name <modelName>]");
+                "\texport [-t pmml|columnstats|woemapping|bagging|baggingpmml|corr|woe|ume|baggingume|normume] [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>] [-name <modelName>]");
         System.out.println(
                 "\t                                        Export model to PMML format or export ColumnConfig.");
         System.out.println(

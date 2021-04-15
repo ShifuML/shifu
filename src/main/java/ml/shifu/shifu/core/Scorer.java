@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.core;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -105,28 +106,28 @@ public class Scorer {
     private PrecisionType precisionType;
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm,
-            ModelConfig modelConfig) {
+            ModelConfig modelConfig) throws IOException {
         this(models, columnConfigList, algorithm, modelConfig, 4.0d);
     }
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
-            boolean multiThread) {
+            boolean multiThread) throws IOException {
         this(models, columnConfigList, algorithm, modelConfig, 4.0d, 0, multiThread, null);
     }
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
-            Double cutoff, boolean multiThread) {
+            Double cutoff, boolean multiThread) throws IOException {
         this(models, columnConfigList, algorithm, modelConfig, cutoff, 0, multiThread, null);
     }
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
-            Double cutoff) {
+            Double cutoff) throws IOException {
         this(models, columnConfigList, algorithm, modelConfig, cutoff, 0, false, null);
     }
 
     public Scorer(List<BasicML> models, List<List<ColumnConfig>> mtlColumnConfigLists, String algorithm,
             ModelConfig modelConfig, Double cutoff, int outputHiddenLayerIndex, boolean multiThread, boolean isMTL,
-            PrecisionType pt) {
+            PrecisionType pt) throws IOException {
         if(modelConfig == null) {
             throw new IllegalArgumentException("modelConfig should not be null");
         }
@@ -149,7 +150,7 @@ public class Scorer {
                 this.mtlColumnConfigLists.get(0));
         int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
         int candidateCount = inputOutputIndex[2];
-        this.noVarSelect = (inputNodeCount == candidateCount);
+        this.noVarSelect = CommonUtils.getFinalSelectColumnConfigList(this.mtlColumnConfigLists.get(0)).size() == 0;
 
         mtlBinCategoryMaps = new ArrayList<>();
         // compute binCategoryMap for all algorithm while only be used in
@@ -215,7 +216,7 @@ public class Scorer {
     }
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
-            Double cutoff, int outputHiddenLayerIndex, boolean multiThread, PrecisionType pt) {
+            Double cutoff, int outputHiddenLayerIndex, boolean multiThread, PrecisionType pt) throws IOException {
         if(modelConfig == null) {
             throw new IllegalArgumentException("modelConfig should not be null");
         }
@@ -233,7 +234,7 @@ public class Scorer {
                     this.columnConfigList);
             int inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
             int candidateCount = inputOutputIndex[2];
-            this.noVarSelect = (inputNodeCount == candidateCount);
+            this.noVarSelect = CommonUtils.getFinalSelectColumnConfigList(this.columnConfigList).size() == 0;
         }
 
         // compute binCategoryMap for all algorithm while only be used in
@@ -505,9 +506,11 @@ public class Scorer {
                 }
             } else if(model instanceof WDLModel) {
                 final WDLModel wdl = (WDLModel) model;
-                if(wdl.getInputCount() != pair.getInput().size()) {
+                if(wdl.getInputCount() != pair.getInput().size()
+                        && wdl.getAllIndexedInputCount() != pair.getInput().size()) {
                     throw new RuntimeException("WDL and input size mismatch: wdl input Size = " + wdl.getInputCount()
-                            + "; data input Size = " + pair.getInput().size());
+                            + "; data input Size = " + pair.getInput().size() + "; all indexed input count: "
+                            + wdl.getAllIndexedInputCount());
                 }
 
                 Callable<MLData> callable = new Callable<MLData>() {

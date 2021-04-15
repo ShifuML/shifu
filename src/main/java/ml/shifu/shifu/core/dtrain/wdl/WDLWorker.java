@@ -17,6 +17,7 @@ package ml.shifu.shifu.core.dtrain.wdl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +53,7 @@ import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.guagua.worker.WorkerContext.WorkerCompletionCallBack;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
@@ -270,6 +272,8 @@ public class WDLWorker extends
 
     private int batchs;
 
+    private boolean isLog = true;
+
     /**
      * Logic to load data into memory list which includes double array for numerical features and sparse object array
      * for
@@ -283,36 +287,84 @@ public class WDLWorker extends
         }
 
         long hashcode = 0; // hashcode for fixed input split in train and validation
-        double[] inputs = new double[this.numInputs];
-        this.cateInputs = (int) this.columnConfigList.stream().filter(ColumnConfig::isCategorical).count();
-        SparseInput[] cateInputs = new SparseInput[this.cateInputs];
+        double[] inputs = null;
+        SparseInput[] cateInputs = null;
         double ideal = 0d, significance = 1d;
         int index = 0, numIndex = 0, cateIndex = 0;
         // use guava Splitter to iterate only once
-        for(String input: this.splitter.split(currentValue.getWritable().toString())) {
-            // if no wgt column at last pos, no need process here
-            if(index == this.columnConfigList.size()) {
-                significance = getWeightValue(input);
-                break; // the last field is significance, break here
-            } else {
-                ColumnConfig config = this.columnConfigList.get(index);
-                if(config != null && config.isTarget()) {
-                    ideal = getDoubleValue(input);
-                } else {
-                    // final select some variables but meta and target are not included
-                    if(validColumn(config)) {
-                        if(config.isNumerical()) {
-                            inputs[numIndex] = getDoubleValue(input);
+        switch(this.modelConfig.getNormalizeType()) {
+            case ZSCALE_APPEND_INDEX:
+            case ZSCORE_APPEND_INDEX:
+            case WOE_APPEND_INDEX:
+            case WOE_ZSCALE_APPEND_INDEX:
+                inputs = new double[this.numInputs + this.cateInputs];
+                cateInputs = new SparseInput[this.numInputs + this.cateInputs];
+                if(isLog) {
+                    LOG.info("denseinput of data {}, cate input of data {}", inputs.length, cateInputs.length);
+                }
+                List<String> list = CommonUtils.splitAndReturnList(currentValue.getWritable().toString(),
+                        this.splitter);
+                for(int i = 0; i < list.size(); i++) {
+                    String firstInput = list.get(i);
+                    if(i == list.size() - 1) {
+                        significance = getWeightValue(firstInput);
+                        continue;
+                    }
+
+                    ColumnConfig config = this.columnConfigList.get(index++);
+
+                    if(config.isMeta()) {
+                        continue; // metadata, skip this one and go to next i
+                    } else if(config != null && config.isTarget()) {
+                        ideal = getDoubleValue(firstInput);
+                    } else {
+                        // final select some variables but meta and target are not included
+                        if(validColumn(config)) {
+                            inputs[numIndex] = getDoubleValue(firstInput);
                             this.inputIndexMap.putIfAbsent(config.getColumnNum(), numIndex++);
-                        } else if(config.isCategorical()) {
-                            cateInputs[cateIndex] = new SparseInput(config.getColumnNum(), (int) getDoubleValue(input));
+                            hashcode = hashcode * 31 + firstInput.hashCode();
+
+                            String secondInput = list.get(i + 1);
+                            cateInputs[cateIndex] = new SparseInput(config.getColumnNum(),
+                                    (int) getDoubleValue(secondInput));
                             this.inputIndexMap.putIfAbsent(config.getColumnNum(), cateIndex++);
+                            hashcode = hashcode * 31 + secondInput.hashCode();
                         }
-                        hashcode = hashcode * 31 + input.hashCode();
+                        i += 1;
                     }
                 }
-            }
-            index += 1;
+                break;
+            default:
+                inputs = new double[this.numInputs];
+                cateInputs = new SparseInput[this.cateInputs];
+
+                for(String input: this.splitter.split(currentValue.getWritable().toString())) {
+                    // if no wgt column at last pos, no need process here
+                    if(index == this.columnConfigList.size()) {
+                        significance = getWeightValue(input);
+                        break; // the last field is significance, break here
+                    } else {
+                        ColumnConfig config = this.columnConfigList.get(index);
+                        if(config != null && config.isTarget()) {
+                            ideal = getDoubleValue(input);
+                        } else {
+                            // final select some variables but meta and target are not included
+                            if(validColumn(config)) {
+                                if(config.isNumerical()) {
+                                    inputs[numIndex] = getDoubleValue(input);
+                                    this.inputIndexMap.putIfAbsent(config.getColumnNum(), numIndex++);
+                                } else if(config.isCategorical()) {
+                                    cateInputs[cateIndex] = new SparseInput(config.getColumnNum(),
+                                            (int) getDoubleValue(input));
+                                    this.inputIndexMap.putIfAbsent(config.getColumnNum(), cateIndex++);
+                                }
+                                hashcode = hashcode * 31 + input.hashCode();
+                            }
+                        }
+                    }
+                    index += 1;
+                }
+                break;
         }
 
         // output delimiter in norm can be set by user now and if user set a special one later changed, this exception
@@ -334,6 +386,7 @@ public class WDLWorker extends
         boolean isInTraining = this.addDataPairToDataSet(hashcode, data, context.getAttachment());
         // update some positive or negative selected count in metrics
         this.updateMetrics(data, isInTraining);
+        isLog = false;
     }
 
     private boolean miniBatchEnabled() {
@@ -675,7 +728,9 @@ public class WDLWorker extends
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         // numerical + categorical = # of all input
         this.numInputs = inputOutputIndex[0];
+        this.cateInputs = inputOutputIndex[1];
         this.inputCount = inputOutputIndex[0] + inputOutputIndex[1];
+
         // regression outputNodeCount is 1, binaryClassfication, it is 1, OneVsAll it is 1, Native classification it is
         // 1, with index of 0,1,2,3 denotes different classes
         this.isAfterVarSelect = (inputOutputIndex[3] == 1);
@@ -728,8 +783,26 @@ public class WDLWorker extends
         boolean embedEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.EMBED_ENABLE), true);
         boolean wideDenseEnable = CommonUtils.getBooleanValue(this.validParams.get(CommonConstants.WIDE_DENSE_ENABLE),
                 true);
-        this.wnd = new WideAndDeep(wideEnable, deepEnable, embedEnable, wideDenseEnable, idBinCateSizeMap, numInputs,
-                numericalIds, embedColumnIds, embedOutputList, wideColumnIds, hiddenNodes, actFunc, l2reg);
+        NormType normType = this.modelConfig.getNormalizeType();
+
+        int deepNumInputs = this.numInputs;
+        if(NormType.ZSCALE_APPEND_INDEX.equals(normType) || NormType.ZSCORE_APPEND_INDEX.equals(normType)
+                || NormType.WOE_APPEND_INDEX.equals(normType) || NormType.WOE_ZSCALE_APPEND_INDEX.equals(normType)) {
+            deepNumInputs = this.inputCount;
+            numericalIds.addAll(wideColumnIds);
+            embedColumnIds = new ArrayList<Integer>();
+            embedOutputList = new ArrayList<Integer>();
+            for(Integer id: numericalIds) {
+                embedColumnIds.add(id);
+                embedOutputList.add(embedOutputs == null ? CommonConstants.DEFAULT_EMBEDING_OUTPUT : embedOutputs);
+            }
+            Collections.sort(embedColumnIds);
+            LOG.info("deepNumInputs {}; numericalIds {}; embedColumnIds {}.", deepNumInputs, numericalIds.size(),
+                    embedColumnIds.size());
+        }
+        this.wnd = new WideAndDeep(wideEnable, deepEnable, embedEnable, wideDenseEnable, idBinCateSizeMap,
+                deepNumInputs, numericalIds, embedColumnIds, embedOutputList, wideColumnIds, hiddenNodes, actFunc,
+                l2reg);
     }
 
     private void initCateIndexMap() {
@@ -762,7 +835,8 @@ public class WDLWorker extends
         WDLParams wdlParams = null;
         if(miniBatchEnabled()) {
             int iteration = context.getCurrentIteration();
-            int miniBatchSize = Integer.parseInt(this.modelConfig.getTrain().getParams().get(CommonConstants.MINI_BATCH).toString());
+            int miniBatchSize = Integer
+                    .parseInt(this.modelConfig.getTrain().getParams().get(CommonConstants.MINI_BATCH).toString());
             wdlParams = parallelGradient.doCompute(iteration, miniBatchSize);
         } else {
             wdlParams = parallelGradient.doCompute();

@@ -38,6 +38,7 @@ public class ModelNormalizeConf {
         WEIGHT_WOE_ZSCORE, WEIGHT_WOE_ZSCALE,
         ONEHOT, ZSCALE_ONEHOT,
         ZSCALE_ORDINAL,
+        MAXMIN_INDEX, // for numerical variable use MaxMin, for categorical variables use index
         ASIS_WOE, ASIS_PR, // don't run normalization, just use original value
         DISCRETE_ZSCORE, DISCRETE_ZSCALE, // for numerical feature, use low bondwary in each bin, the first bin use min 
                         // value, missing value use raw mean value, then do zscale by raw mean and raw std-dev;
@@ -45,6 +46,10 @@ public class ModelNormalizeConf {
         ZSCALE_INDEX, ZSCORE_INDEX, // numerical variable using zscale, categorical variable, using cate index
         WOE_INDEX, // numerical variable using woe, categorical variable, using cate index
         WOE_ZSCALE_INDEX, // numerical variable using zscaled woe, categorical variable using cate index
+        ZSCALE_APPEND_INDEX,
+        ZSCORE_APPEND_INDEX,
+        WOE_APPEND_INDEX,
+        WOE_ZSCALE_APPEND_INDEX,
         INDEX; // both numerical and categorical norm to index, numerical index is from binBoundry, categorical index is from binCategory 
 
         public boolean isWoe() {

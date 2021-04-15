@@ -61,4 +61,30 @@ public class Base64Utils {
         String originInput = Base64Utils.base64Decode(text);
         return StringUtils.equals(text, Base64Utils.base64Encode(originInput));
     }
+
+    public static String base64EncodeFromBytes(byte[] bytes) {
+        if(bytes == null) {
+            return null;
+        }
+
+        Base64 encoder = new Base64(-1);
+        try {
+            return new String(encoder.encode(bytes), Constants.DEFAULT_CHARSET);
+        } catch (UnsupportedEncodingException e) {
+            return null;
+        }
+    }
+
+    public static byte[] base64DecodeToBytes(String bytes) throws UnsupportedEncodingException {
+        if(bytes == null) {
+            return null;
+        }
+
+        Base64 decoder = new Base64(-1);
+        try {
+            return decoder.decode(bytes.getBytes(Constants.DEFAULT_CHARSET));
+        } catch (UnsupportedEncodingException e) {
+            return null;
+        }
+    }
 }

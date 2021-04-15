@@ -308,6 +308,8 @@ public interface Constants {
     public static final int MAX_CATEGORICAL_VAL_LENGTH = 512;
 
     public static final String SHIFU_MAX_CATEGORY_SIZE = "shifu.max.category.size";
+    
+    public static final String SHIFU_ENABLE_AUTO_HASH = "shifu.enable.auto.hash";
 
     public static final String SHIFU_NN_INDEPENDENT_MODEL = "shifu.nn.independent.model";
 
@@ -373,5 +375,7 @@ public interface Constants {
     public static final String SHIFU_MODELSPEC_PRECISION_TYPE = "shifu.modelspec.precision.type";
 
     public static final String IS_UPDATE_STATS_ONLY = "IS_UPDATE_STATS_ONLY";
+    
+    public static final String UTF_8 = "utf-8";
 
 }

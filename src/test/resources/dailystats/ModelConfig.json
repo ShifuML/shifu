@@ -21,6 +21,7 @@
     "negTags" : [ "B" ],
     "metaColumnNameFile" : "columns/meta.column.names",
     "categoricalColumnNameFile" : "columns/categorical.column.names",
+    "hybridColumnNameFile" : "columns/hybrid.column.names",
     "validationDataPath" : null,
     "validationFilterExpressions" : "",
     "missingOrInvalidValues" : [ "", "*", "#", "?", "null", "~" ]

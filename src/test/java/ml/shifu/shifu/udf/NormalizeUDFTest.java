@@ -17,6 +17,7 @@ package ml.shifu.shifu.udf;
 
 import java.io.IOException;
 
+import ml.shifu.shifu.util.Constants;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
@@ -89,4 +90,39 @@ public class NormalizeUDFTest {
         );
     }
 
+    @Test
+    public void testCompactNorm() throws Exception {
+        Configuration conf = new Configuration();
+        // Norm only selected columns.
+        conf.set(Constants.SHIFU_NORM_ONLY_SELECTED, "true");
+        UDFContext.getUDFContext().addJobConf(conf);
+        // The ColumnConfigCompact.json contains 31 columns. Only 3 columns are selected.
+        NormalizeUDF instance2 = new NormalizeUDF("LOCAL",
+            "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
+            "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfigCompact.json");
+        Tuple input = TupleFactory.getInstance().newTuple(31);
+        for (int i = 0; i < 31; i++) {
+            input.set(i, 1);
+        }
+        input.set(0, "M");
+        // Set weight column's value.
+        input.set(1, "2.1");
+
+        Tuple output = instance2.exec(input);
+        // Target, 3 selected columns, and weight, are 5 in total.
+        Assert.assertEquals(5, output.size());
+        Assert.assertEquals("(1,-3.3745382,-4.0,-3.697376,2.1)", output.toString());
+    }
+
+    @Test
+    public void testColumnConfigCache() throws Exception {
+        String modelConfigPath = "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json";
+        String columnConfigPath = "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfig.json";
+        String compactColumnConfigPath = "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ColumnConfigCompact.json";
+        NormalizeUDF normUDF1 = new NormalizeUDF("LOCAL", modelConfigPath, columnConfigPath);
+        NormalizeUDF normUDF2 = new NormalizeUDF("LOCAL", modelConfigPath, columnConfigPath);
+        NormalizeUDF normUDF3 = new NormalizeUDF("LOCAL", modelConfigPath, compactColumnConfigPath);
+        Assert.assertTrue(normUDF1.columnConfigList == normUDF2.columnConfigList);
+        Assert.assertFalse(normUDF1.columnConfigList == normUDF3.columnConfigList);
+    }
 }

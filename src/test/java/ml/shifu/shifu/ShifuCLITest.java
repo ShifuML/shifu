@@ -32,13 +32,11 @@ import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
-import scala.annotation.meta.field;
 
 import java.io.*;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Map;
 
 /**
  * ManagerTest class

@@ -399,6 +399,11 @@ public class ModelSpecLoaderUtils {
             baggingModelSize = gs.getFlattenParams().size();
         }
 
+        if (baggingModelSize > listStatus.size()) {
+            LOG.warn("Expect {} models, but only found {} models. Some models may be note built in training step.",
+                    baggingModelSize, listStatus.size());
+            baggingModelSize = listStatus.size();
+        }
         listStatus = (baggingModelSize > 0) ? listStatus.subList(0, baggingModelSize) : listStatus;
         return listStatus;
     }
@@ -574,7 +579,7 @@ public class ModelSpecLoaderUtils {
 
         return paths;
     }
-
+    
     /**
      * Load the generic model config and parse it to java object.
      * Similar as {@link #findModels(ModelConfig, EvalConfig, RawSourceData.SourceType)}

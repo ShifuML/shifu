@@ -20,9 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
-import ml.shifu.shifu.util.HDFSUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.pig.ExecType;
 import org.apache.pig.PigServer;
 import org.slf4j.Logger;

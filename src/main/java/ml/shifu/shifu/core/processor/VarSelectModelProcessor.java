@@ -421,8 +421,13 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
 
     private void selectByFeatureImportance() throws Exception {
         List<BasicML> models = null;
-        if(!super.modelConfig.getVarSelect().getFilterEnable()) {
-            models = ModelSpecLoaderUtils.loadBasicModels(this.modelConfig, null);
+        boolean reuseCurrentModel = Environment.getBoolean("shifu.varsel.reuse.model", Boolean.FALSE);
+        if(reuseCurrentModel) {
+            try {
+                models = ModelSpecLoaderUtils.loadBasicModels(this.modelConfig, null);
+            } catch (IOException e) {
+                LOG.warn("No existing models found. Will try to build new model for FI.");
+            }
         }
         if(models == null || models.size() < 1) {
             TrainModelProcessor trainModelProcessor = new TrainModelProcessor();
@@ -742,7 +747,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
      */
     private void distributedSEWrapper(String trainLogFile) throws Exception {
         // 1. Train a model using current selected variables, if no variables selected, use all candidate variables.
-        boolean reuseCurrentModel = Environment.getBoolean("shifu.varsel.se.reuse", Boolean.FALSE);
+        boolean reuseCurrentModel = Environment.getBoolean("shifu.varsel.reuse.model", Boolean.FALSE);
         SourceType source = this.modelConfig.getDataSet().getSource();
 
         if(!reuseCurrentModel) {

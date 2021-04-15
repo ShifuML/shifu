@@ -218,7 +218,6 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         updateProgressLog(context);
     }
 
-    @SuppressWarnings("deprecation")
     private void updateProgressLog(final MasterContext<NNParams, NNParams> context) {
         int currentIteration = context.getCurrentIteration();
         if(context.isFirstIteration()) {
