@@ -769,6 +769,15 @@ public class ModelConfig {
     }
 
     @JsonIgnore
+    public String getTargetColumnName(EvalConfig evalConfig) {
+        if (evalConfig!= null && evalConfig.getDataSet().getTargetColumnName() != null) {
+            return evalConfig.getDataSet().getTargetColumnName();
+        } else {
+            return this.getTargetColumnName();
+        }
+    }
+
+    @JsonIgnore
     public boolean isMapReduceRunMode() {
         return RunMode.MAPRED == basic.getRunMode() || RunMode.DIST == basic.getRunMode();
     }
