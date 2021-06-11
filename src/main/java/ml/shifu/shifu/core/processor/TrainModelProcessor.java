@@ -1934,6 +1934,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      * @throws IOException
      *             the io exception
      */
+    @SuppressWarnings({ "unchecked", "unused" })
     protected void checkAndNormDataForModels(boolean isToShuffle) throws IOException {
         // check if binBoundaries and binCategories are good and log error
         for(ColumnConfig columnConfig: columnConfigList) {

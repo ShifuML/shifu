@@ -471,12 +471,12 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private double buildAndAppendWeight(Tuple input, int weightColumnId) throws ExecException {
         double weight = 1.0d;
         if(weightColumnId > 0) {
-            String weightRaw = input.get(weightColumnId).toString();
+            String weightRaw = input.get(weightColumnId) == null ? null: input.get(weightColumnId).toString();
             try {
                 weight = Double.parseDouble(weightRaw);
             } catch (Exception e) {
                 if(System.currentTimeMillis() % 100 == 0) { // avoid error log flood
-                    log.error("Incorrect weight column - " + weightRaw, e);
+                    log.error("Incorrect weight column value - " + weightRaw, e);
                 }
                 weight = 1.0d; // set to 1.0d as default
             }
@@ -690,6 +690,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     /**
      * FLOAT7 is old with DecimalFormat, new one with FLOAT16, FLOAT32, DOUBLE64
      */
+    @SuppressWarnings("deprecation")
     private void appendOutputValue(Tuple tuple, double value, boolean enablePrecision) {
         if(enablePrecision) {
             switch(this.getPrecisionType()) {
