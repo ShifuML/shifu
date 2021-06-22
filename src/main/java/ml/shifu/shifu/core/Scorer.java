@@ -125,6 +125,7 @@ public class Scorer {
         this(models, columnConfigList, algorithm, modelConfig, cutoff, 0, false, null);
     }
 
+    @SuppressWarnings("unused")
     public Scorer(List<BasicML> models, List<List<ColumnConfig>> mtlColumnConfigLists, String algorithm,
             ModelConfig modelConfig, Double cutoff, int outputHiddenLayerIndex, boolean multiThread, boolean isMTL,
             PrecisionType pt) throws IOException {
@@ -215,6 +216,7 @@ public class Scorer {
         this.precisionType = pt;
     }
 
+    @SuppressWarnings("unused")
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
             Double cutoff, int outputHiddenLayerIndex, boolean multiThread, PrecisionType pt) throws IOException {
         if(modelConfig == null) {

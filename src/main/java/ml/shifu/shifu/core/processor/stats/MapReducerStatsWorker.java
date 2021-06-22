@@ -216,8 +216,9 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
     }
 
     /**
-     * According to sample values and distinct count in each column, check if user set wrong for numerical and
-     * categorical features. Only warning message are output to console for user to check.
+     * According to sample values and distinct count in each column, check if user
+     * set wrong for numerical and categorical features. Only warning message are
+     * output to console for user to check.
      */
     private void checkNumericalAndCategoricalColumns() {
         for(ColumnConfig config: this.columnConfigList) {
@@ -533,7 +534,8 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         String hdpVersion = HDPUtils.getHdpVersionForHDP224();
         if(StringUtils.isNotBlank(hdpVersion)) {
-            // for hdp 2.2.4, hdp.version should be set and configuration files should be add to container class path
+            // for hdp 2.2.4, hdp.version should be set and configuration files should be
+            // add to container class path
             conf.set("hdp.version", hdpVersion);
         }
 
@@ -612,10 +614,10 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
     private Set<String> getColumnNames(List<ColumnConfig> columnConfigs) {
         Set<String> columnNames = new HashSet<>();
-        if (columnConfigs == null) {
+        if(columnConfigs == null) {
             return columnNames;
         }
-        for (ColumnConfig columnConfig : columnConfigs) {
+        for(ColumnConfig columnConfig: columnConfigs) {
             columnNames.add(columnConfig.getColumnName());
         }
         return columnNames;
@@ -660,9 +662,10 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                     config.setColumnFlag(basicConfig.getColumnFlag() == ColumnFlag.Target ? ColumnFlag.Meta
                             : basicConfig.getColumnFlag());
                     config.setSegment(true);
-                    // If we have 30 features and column number is 31, we got column name "columnname_seg1"
+                    // If we have 30 features and column number is 31, we got column name
+                    // "columnname_seg1"
                     String columnName = basicConfig.getColumnName() + "_seg" + (columnNum / ccInitSize);
-                    if (columnNames.contains(columnName)) {
+                    if(columnNames.contains(columnName)) {
                         // If "columnname_seg1" exists, we will find a unique one.
                         columnName = CommonUtils.getUniqueName(columnNames, columnName);
                     }
@@ -761,17 +764,17 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         // check if could run PSI
         boolean toRunPSIWithStats = Environment.getBoolean("shifu.stats.psi.together", true);
         if(!toRunPSIWithStats) {
-            LOG.info("shifu.stats.psi.together is not set, skip PSI calculate.");
+            LOG.warn("'shifu.stats.psi.together' is not set, skip PSI calculate.");
             return;
         }
         if(StringUtils.isEmpty(modelConfig.getPsiColumnName())) {
-            LOG.info("ModelConfig#stats#psiColumnName is not set, skip PSI calculate.");
+            LOG.warn("ModelConfig#stats#psiColumnName is not set, skip PSI calculate.");
             return;
         }
         ColumnConfig columnConfig = CommonUtils.findColumnConfigByName(columnConfigList,
                 modelConfig.getPsiColumnName());
         if(columnConfig == null || isBadPSIColumn(columnConfig.getColumnStats().getDistinctCount())) {
-            LOG.error(
+            LOG.warn(
                     "Unable compute PSI with ModelConfig#stats#psiColumnName \"{}\", the distinct count {} should be [2, 1000], not match ColumnConfig#columnBinning#binCategory count",
                     columnConfig != null ? columnConfig.getColumnName() : "unknown",
                     columnConfig != null
@@ -812,7 +815,7 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
 
         List<Scanner> scanners = ShifuFileUtils.getDataScanners(psiPath, modelConfig.getDataSet().getSource());
         if(CollectionUtils.isEmpty(scanners)) {
-            LOG.info("The PSI got failure during the computation");
+            LOG.error("The PSI got failure during the computation");
             return;
         }
 
@@ -823,19 +826,25 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
                 // String[] output = scanner.nextLine().trim().split("\\|");
-                String[] output = Lists.newArrayList(splitter.split(scanner.nextLine())).toArray(new String[0]);
-                try {
-                    int columnNum = Integer.parseInt(output[0]);
-                    ColumnConfig config = this.columnConfigList.get(columnNum);
-                    config.setPSI(Double.parseDouble(output[1]));
-                    unitStats.add(output[0] + "|" + output[2] // PSI std
-                            + "|" + output[3] // cosine
-                            + "|" + output[4] // cosine std
-                            + "|" + output[5]);
-                    // config.setUnitStats(
-                    // Arrays.asList(StringUtils.split(output[2], CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
-                } catch (Exception e) {
-                    LOG.error("error in parsing", e);
+                String line = scanner.nextLine();
+                String[] output = Lists.newArrayList(splitter.split(line)).toArray(new String[0]);
+                if(output.length == 6) { // compatible with old psi job
+                    try {
+                        int columnNum = Integer.parseInt(output[0]);
+                        ColumnConfig config = this.columnConfigList.get(columnNum);
+                        config.setPSI(Double.parseDouble(output[1]));
+                        unitStats.add(output[0] + "|" + output[2] // PSI std
+                                + "|" + output[3] // cosine
+                                + "|" + output[4] // cosine std
+                                + "|" + output[5]);
+                        // config.setUnitStats(
+                        // Arrays.asList(StringUtils.split(output[2],
+                        // CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
+                    } catch (Exception e) {
+                        LOG.error("error in parsing", e);
+                    }
+                } else {
+                    unitStats.add(line);
                 }
             }
             // close scanner

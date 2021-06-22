@@ -177,7 +177,7 @@ public class CategoricalBinning extends AbstractBinning<String> {
             categoricalVals.clear();
         }
 
-        String[] objStrArr = CommonUtils.split(objValStr, Character.toString(FIELD_SEPARATOR));
+        String[] objStrArr = objValStr.split(Character.toString(FIELD_SEPARATOR), 7);
         this.isValid = Boolean.valueOf(objStrArr[4]);
         if(objStrArr.length > 5 && StringUtils.isNotBlank(objStrArr[5])) {
             String[] elements = CommonUtils.split(objStrArr[5], Character.toString(SETLIST_SEPARATOR));
@@ -205,8 +205,8 @@ public class CategoricalBinning extends AbstractBinning<String> {
     public String objToString() {
         try {
             return super.objToString() + Character.toString(FIELD_SEPARATOR) + Boolean.toString(isValid)
-                    + Character.toString(FIELD_SEPARATOR) + StringUtils.join(categoricalVals, SETLIST_SEPARATOR)
-                    + Character.toString(FIELD_SEPARATOR) + Base64Utils.base64EncodeFromBytes(this.hyper.getBytes());
+                    + Character.toString(FIELD_SEPARATOR) + Base64Utils.base64EncodeFromBytes(this.hyper.getBytes())
+                    + Character.toString(FIELD_SEPARATOR) + StringUtils.join(categoricalVals, SETLIST_SEPARATOR);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
