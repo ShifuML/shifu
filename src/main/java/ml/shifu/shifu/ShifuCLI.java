@@ -154,6 +154,7 @@ public class ShifuCLI {
     private static final String NAME = "name";
     // postfix option for normume type export
     private static final String NORMUME_POSTFIX = "postfix";
+    private static final String STRATEGY = "strategy";
 
     static private final Logger log = LoggerFactory.getLogger(ShifuCLI.class);
 
@@ -396,6 +397,7 @@ public class ShifuCLI {
                     params.put(ExportModelProcessor.MINIMUM_BIN_INST_CNT, cmd.getOptionValue(BIC));
                     params.put(ExportModelProcessor.EXPORT_MODEL_NAME, cmd.getOptionValue(NAME));
                     params.put(ExportModelProcessor.EXPORT_NORMUME_POSTFIX, cmd.getOptionValue(NORMUME_POSTFIX));
+                    params.put(ExportModelProcessor.EXPORT_ASSEMBLE_STRATEGY, cmd.getOptionValue(STRATEGY));
                     status = exportModel(cmd.getOptionValue(MODELSET_CMD_TYPE), params);
                     if (status == 0) {
                         log.info("Export models/columnstats/corr successfully.");
@@ -812,6 +814,7 @@ public class ShifuCLI {
 
         // postfix option for normume
         Option opt_postfix = OptionBuilder.hasArg().create(NORMUME_POSTFIX);
+        Option opt_strategy = OptionBuilder.hasArg().create(STRATEGY);
 
         opts.addOption(opt_cmt);
         opts.addOption(opt_new);
@@ -868,6 +871,7 @@ public class ShifuCLI {
         opts.addOption(opt_name);
 
         opts.addOption(opt_postfix);
+        opts.addOption(opt_strategy);
 
         return opts;
     }
@@ -915,8 +919,8 @@ public class ShifuCLI {
         System.out
                 .println("\teval -perf <EvalSetName>                Calculate the model performance based on confmat.");
         System.out.println("\teval -audit [-n <#numofrecords>]        Score eval data and generate audit dataset.");
-        System.out.println(
-                "\texport [-t pmml|columnstats|woemapping|bagging|baggingpmml|corr|woe|ume|baggingume|normume] [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>] [-name <modelName>] [-postfix <postfix>]");
+        System.out.println("\texport [-t pmml|columnstats|woemapping|bagging|baggingpmml|corr|woe|ume|baggingume|normume]");
+        System.out.println("\t       [-c] [-vars var1,var1] [-ivr <ratio>] [-bic <bic>] [-name <modelName>] [-postfix <postfix>] [-strategy <max|min|mean>]");
         System.out.println(
                 "\t                                        Export model to PMML format or export ColumnConfig.");
         System.out.println(

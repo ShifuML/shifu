@@ -37,6 +37,10 @@ public class NumericCounter extends Counter {
 
     @Override
     public void addData(Boolean isPositive, String val) {
+        if(isPositive == null) {
+            isPositive = true;
+        }
+
         long[] counter = (isPositive ? positiveCounter : negativeCounter);
 
         if(val == null || missingValSet.contains(val)) {
