@@ -122,6 +122,20 @@ def get_activation_fun(name):
     else:
         return tf.nn.relu
 
+def get_column_info(feature_column_nums, meta_column_nums, target_column_num):
+    max_index = target_column_num
+    if len(feature_column_nums) > 0:
+        max_index = max(max_index, feature_column_nums[-1])
+    if len(meta_column_nums) > 0:
+        max_index = max(max_index, meta_column_nums[-1])
+    column_info = [[i, "Default"] for i in range(max_index + 1)]
+    column_info[target_column_num] = [target_column_num, "Target"]
+    for num in meta_column_nums:
+        column_info[num] = [num, "Meta"]
+    for num in feature_column_nums:
+        column_info[num] = [num, "Feature"]
+    return column_info
+
 def read_context_from_env_and_modelconf():
     replicas_to_aggregate_ratio = 1 # Aggregation replica reatio, default is 1, setting to < 1 can accerlerate traning but accuracy may be dropped.
     
@@ -140,9 +154,11 @@ def read_context_from_env_and_modelconf():
     total_training_data_number = int(os.environ["TOTAL_TRAINING_DATA_NUMBER"]) # total data 200468
     feature_column_nums = [int(s) for s in str(os.environ["SELECTED_COLUMN_NUMS"]).split(' ')]  # selected column numbers
     feature_count = len(feature_column_nums) # number of input columns
+    meta_column_nums = [int(s) for s in str(os.environ["META_COLUMN_NUM"]).split(' ')]
 
     sample_weight_column_num = int(os.environ["WEIGHT_COLUMN_NUM"])  # weight column number, default is -1
     target_column_num = int(os.environ["TARGET_COLUMN_NUM"])  # target column number, default is -1
+    column_info = get_column_info(feature_column_nums, meta_column_nums, target_column_num)
 
     tmp_model_path = os.environ["TMP_MODEL_PATH"]
     final_model_path = os.environ["FINAL_MODEL_PATH"]
@@ -169,10 +185,10 @@ def read_context_from_env_and_modelconf():
 
     return {"model_conf": model_conf, "replicas_to_aggregate_ratio": replicas_to_aggregate_ratio, "delimiter": delimiter, 
             "cluster_spec": cluster_spec, "n_pss": n_pss, "n_workers": n_workers, "job_name": job_name, "task_index": task_index, 
-            "socket_server_port": socket_server_port, "feature_column_nums": feature_column_nums, 
+            "socket_server_port": socket_server_port, "feature_column_nums": feature_column_nums, "meta_column_nums": meta_column_nums,
             "total_training_data_number": total_training_data_number, "sample_weight_column_num": sample_weight_column_num,
             "target_column_num": target_column_num, "tmp_model_path": tmp_model_path, "final_model_path": final_model_path,
-            "is_continue_train": is_continue_train, "valid_training_data_ratio": valid_training_data_ratio,
+            "is_continue_train": is_continue_train, "valid_training_data_ratio": valid_training_data_ratio, 'column_info': column_info,
             "layers": model_conf['train']['params']['NumHiddenNodes'], "batch_size": batch_size, "feature_count": feature_count,
             "model_name": model_conf['basic']['name'], "is_chief": is_chief, "training_data_path": training_data_path,
             "export_dir": final_model_path, "epochs": epochs, "sample_weight_column_num": sample_weight_column_num,
@@ -469,6 +485,9 @@ def load_data(shifu_context):
     feature_column_nums = shifu_context['feature_column_nums']
     target_column_num = shifu_context['target_column_num']
     sample_weight_column_num = shifu_context['sample_weight_column_num']
+    meta_column_nums = shifu_context['meta_column_nums']
+    column_info = shifu_context['column_info']
+    compact_mode = False
 
     for currentFile in data_file_list:
         logging.info(
@@ -487,35 +506,47 @@ def load_data(shifu_context):
                     logging.info("Total loading lines: %s." % str(line_count))
 
                 columns = line.split(shifu_context['delimiter'])
+                if line_count == 1:
+                    # meta amount + feature amount + 1 target + 1 weight
+                    compact_mode = len(meta_column_nums) + len(feature_column_nums) + 2 == len(columns)
+                    logging.info("Compact mode: %s." % str(compact_mode))
 
-                if feature_column_nums is None:
+                if feature_column_nums == None:
                     feature_column_nums = range(0, len(columns))
 
                     feature_column_nums.remove(target_column_num)
                     if sample_weight_column_num >= 0:
                         feature_column_nums.remove(sample_weight_column_num)
+                    column_info = get_column_info(feature_column_nums, meta_column_nums, target_column_num)
+                    logging.info("Column info %s." % str(column_info))
 
                 if random.random() >= valid_ratio:
                     # Append training data
-                    train_target.append([float(columns[target_column_num])])
-                    if columns[target_column_num] == "1": # FIXME, some case target is not 0 or 1
-                        train_pos_cnt += 1
-                    else:
-                        train_neg_cnt += 1
+                    data_index = 0
                     single_train_data = np.zeros([len(feature_column_nums)], dtype=np.float32)
                     single_train_data_index = 0
-                    for feature_column_num in feature_column_nums:
-                        try:
-                            f_val = float(columns[feature_column_num].strip('\n'))
-                            if math.isnan(f_val):
-                                logging.warn("Warning: value is NaN after parsing %s." % columns[feature_column_num].strip('\n'))
-                                f_val = 0.0
-                            single_train_data[single_train_data_index] = f_val
-                        except:
-                            single_train_data[single_train_data_index] = 0.0
-                            logging.warn("Could not convert %s to float." % str(columns[feature_column_num].strip('\n')))
-                            logging.info("DEBUG: feature_column_num is %s." % str(feature_column_num))
-                        single_train_data_index += 1
+                    for pair in column_info:
+                        column_num = pair[0]
+                        column_type = pair[1]
+                        if column_type == "Target":
+                            train_target.append([float(columns[data_index])])
+                            if columns[data_index] == "1": # FIXME, some case target is not 0 or 1
+                                train_pos_cnt += 1
+                            else:
+                                train_neg_cnt += 1
+                        elif column_type == "Feature":
+                            try:
+                                f_val = float(columns[data_index].strip('\n'))
+                                if math.isnan(f_val):
+                                    logging.warn("Warning: value is NaN after parsing %s." % columns[data_index].strip('\n'))
+                                    f_val = 0.0
+                                single_train_data[single_train_data_index] = f_val
+                            except:
+                                single_train_data[single_train_data_index] = 0.0
+                                logging.warn("Could not convert %s to float." % str(columns[data_index].strip('\n')))
+                            single_train_data_index += 1
+                        if not compact_mode or column_type == "Target" or column_type == "Feature" or column_type == "Meta":
+                            data_index += 1
                     train_data.append(single_train_data)
 
                     weight = float(columns[len(columns)-1].strip('\n'))
@@ -525,31 +556,36 @@ def load_data(shifu_context):
                     training_data_sample_weight.append([weight])
                 else:
                     # Append validation data
-                    valid_target.append([float(columns[target_column_num])])
-                    if columns[target_column_num] == "1":
-                        valid_pos_cnt += 1
-                    else:
-                        valid_neg_cnt += 1
+                    data_index = 0
                     single_valid_data = np.zeros([len(feature_column_nums)], dtype=np.float32)
                     single_valid_data_index = 0
-                    for feature_column_num in feature_column_nums:
-                        try:
-                            f_val = float(columns[feature_column_num].strip('\n'))
-                            if math.isnan(f_val):
-                                logging.warn("Warning: value is NaN after parsing %s." % columns[feature_column_num].strip('\n'))
-                                f_val = 0.0
-                            single_valid_data[single_valid_data_index] = f_val
-                        except:
-                            single_valid_data[single_valid_data_index] = 0.0
-                            logging.warn("Could not convert %s to float." % str(columns[feature_column_num].strip('\n')))
-                            logging.info("DEBUG: feature_column_num is %s." % str(feature_column_num))
-                        single_valid_data_index += 1
+                    for pair in column_info:
+                        column_num = pair[0]
+                        column_type = pair[1]
+                        if column_type == "Target":
+                            valid_target.append([float(columns[data_index])])
+                            if columns[data_index] == "1": # FIXME, some case target is not 0 or 1
+                                valid_pos_cnt += 1
+                            else:
+                                valid_neg_cnt += 1
+                        elif column_type == "Feature":
+                            try:
+                                f_val = float(columns[data_index].strip('\n'))
+                                if math.isnan(f_val):
+                                    logging.warn("Warning: value is NaN after parsing %s." % columns[data_index].strip('\n'))
+                                    f_val = 0.0
+                                single_valid_data[single_valid_data_index] = f_val
+                            except:
+                                single_valid_data[single_valid_data_index] = 0.0
+                                logging.warn("Could not convert %s to float." % str(columns[data_index].strip('\n')))
+                            single_valid_data_index += 1
+                        if not compact_mode or column_type == "Target" or column_type == "Feature" or column_type == "Meta":
+                            data_index += 1
                     valid_data.append(single_valid_data)
 
                     weight = float(columns[len(columns)-1].strip('\n'))
                     if weight < 0.0:
                         logging.warn("Warning: weight is below 0, use default 1.0. weight: %s example: %s." % (weight, line))
-
                         weight = 1.0
                     valid_data_sample_weight.append([weight])
 

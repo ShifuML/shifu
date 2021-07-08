@@ -157,6 +157,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         long[] binCountNeg = null;
         double[] binWeightPos = null;
         double[] binWeightNeg = null;
+        double[] binCountWoe = null;
+        double[] binWeightedWoe = null;
         long[] binCountTotal = null;
 
         int columnConfigIndex = key.get() >= this.columnConfigList.size() ? key.get() % this.columnConfigList.size()
@@ -198,6 +200,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 binCountNeg = new long[binSize + 1];
                 binWeightPos = new double[binSize + 1];
                 binWeightNeg = new double[binSize + 1];
+                binCountWoe = new double[binSize + 1];
+                binWeightedWoe = new double[binSize + 1];
                 binCountTotal = new long[binSize + 1];
             } else if(columnConfig.isNumerical() && binBoundaryList == null) {
                 binBoundaryList = info.getBinBoundaries();
@@ -206,6 +210,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 binCountNeg = new long[binSize + 1];
                 binWeightPos = new double[binSize + 1];
                 binWeightNeg = new double[binSize + 1];
+                binCountWoe = new double[binSize + 1];
+                binWeightedWoe = new double[binSize + 1];
                 binCountTotal = new long[binSize + 1];
             } else if(columnConfig.isCategorical() && binCategories == null) {
                 binCategories = info.getBinCategories();
@@ -214,6 +220,8 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 binCountNeg = new long[binSize + 1];
                 binWeightPos = new double[binSize + 1];
                 binWeightNeg = new double[binSize + 1];
+                binCountWoe = new double[binSize + 1];
+                binWeightedWoe = new double[binSize + 1];
                 binCountTotal = new long[binSize + 1];
             }
 
@@ -240,11 +248,13 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 binCountNeg[i] += info.getBinCountNeg()[i];
                 binWeightPos[i] += info.getBinWeightPos()[i];
                 binWeightNeg[i] += info.getBinWeightNeg()[i];
-
+                binCountWoe[i] += info.getBinCountWoe()[i];
+                binWeightedWoe[i] += info.getBinWeightedWoe()[i];
                 binCountTotal[i] += info.getBinCountPos()[i];
                 binCountTotal[i] += info.getBinCountNeg()[i];
             }
         }
+
         if(columnConfig.isNumerical()) {
             long p25Count = count / 4;
             long medianCount = p25Count * 2;
@@ -435,6 +445,9 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         if(modelConfig.isRegression()) {
             columnCountMetrics = ColumnStatsCalculator.calculateColumnMetrics(binCountNeg, binCountPos);
             columnWeightMetrics = ColumnStatsCalculator.calculateColumnMetrics(binWeightNeg, binWeightPos);
+        } else if (modelConfig.isLinearRegression()) {
+            columnCountMetrics = ColumnStatsCalculator.calculateColumnMetricsWoe(binCountPos, binCountWoe);
+            columnWeightMetrics = ColumnStatsCalculator.calculateColumnMetricsWoe(binWeightPos, binWeightedWoe);
         }
 
         // To make it be consistent with SPDT, missingCount is excluded to compute mean, stddev ...

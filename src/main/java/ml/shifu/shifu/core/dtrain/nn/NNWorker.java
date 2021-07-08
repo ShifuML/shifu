@@ -79,10 +79,16 @@ public class NNWorker extends AbstractNNWorker<Text> {
         String[] fields = Lists.newArrayList(this.splitter.split(currentValue.getWritable().toString()))
                 .toArray(new String[0]);
 
+        if (super.count == 1) {
+            // When reading the first line, we check if it is the compact mode.
+            configureCompactMode(fields.length);
+        }
+
         for (ColumnConfig columnConfig : this.columnConfigList) {
-            float fval = DTrainUtils.parseRawNormValue(fields, dataPos, 0.0f);
+            float fval;
 
             if (columnConfig.isTarget()) {
+                fval = DTrainUtils.parseRawNormValue(fields, dataPos, 0.0f);
                 if(isLinearTarget || modelConfig.isRegression()) {
                     ideal[outputIndex++] = fval;
                 } else {
@@ -118,6 +124,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
                 dataPos ++;
             } else { // other variables
                 if(subFeatureSet.contains(columnConfig.getColumnNum())) {
+                    fval = DTrainUtils.parseRawNormValue(fields, dataPos, 0.0f);
                     if(columnConfig.isMeta() || columnConfig.isForceRemove()) {
                         // it shouldn't happen here
                         dataPos += 1;
@@ -141,7 +148,7 @@ public class NNWorker extends AbstractNNWorker<Text> {
                         dataPos++;
                     }
                     hashcode = hashcode * 31 + Double.valueOf(fval).hashCode();
-                } else { // just skip unused data in normalized data
+                } else if (!isCompactMode || columnConfig.isMeta()){ // It is not compact mode or it is meta column, just skip unused data in normalized data. No unused data will exist in compact mode.
                     if(!CommonUtils.isToNormVariable(columnConfig, hasCandidates, modelConfig.isRegression())) {
                         dataPos += 1;
                     } else if(columnConfig.isNumerical()

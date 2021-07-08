@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
+import ml.shifu.shifu.util.Shuffler;
 import org.encog.engine.network.activation.ActivationFunction;
 import org.encog.neural.error.ErrorFunction;
 import org.encog.neural.flat.FlatNetwork;
@@ -181,11 +182,12 @@ public class SubGradient implements Callable<double[]> {
     private long validationSize;
     private double trainSum;
     private double validationSum;
+    private final Shuffler shuffler;
 
     public SubGradient(final FloatFlatNetwork theNetwork, final FloatMLDataSet theTraining, long trainLow,
             long trainHigh, final FloatMLDataSet theTesting, long testLow, long testHigh, final double[] flatSpot,
             boolean isCrossOver, ParallelGradient owner, int batchs, int currentInteration, Set<Integer> dropoutNodes,
-            int threadCount) {
+            int threadCount, Shuffler shuffler) {
         this.network = theNetwork;
         this.training = theTraining;
         this.trainLow = trainLow;
@@ -204,6 +206,7 @@ public class SubGradient implements Callable<double[]> {
         this.currentIteration = currentInteration;
         this.dropoutNodes = dropoutNodes;
         this.threadCount = threadCount;
+        this.shuffler = shuffler;
     }
 
     private void initNetworkParams() {
@@ -366,7 +369,7 @@ public class SubGradient implements Callable<double[]> {
                         // 3:1 to select testing data set, tmp hard code, TODO fix hard code issue,extract such logic to
                         // a method
                         if((i + seed) % 4 < 3) {
-                            this.training.getRecord(i, this.pair);
+                            this.training.getRecord(this.shuffler == null ? i : this.shuffler.getIndex((int) i), this.pair);
                         } else {
                             long testingSize = this.testing.getRecordCount();
                             // it's ok to take data from all testing set
@@ -377,7 +380,7 @@ public class SubGradient implements Callable<double[]> {
                             }
                         }
                     } else {
-                        this.training.getRecord(i, this.pair);
+                        this.training.getRecord(this.shuffler == null ? i : this.shuffler.getIndex((int) i), this.pair);
                     }
                 }
                 process(this.pair.getInputArray(), this.pair.getIdealArray(), pair.getSignificance());

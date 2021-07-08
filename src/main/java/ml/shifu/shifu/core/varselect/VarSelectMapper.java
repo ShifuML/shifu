@@ -139,6 +139,11 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
     private Set<Integer> featureSet;
 
     /**
+     * Feature set used to check if column with index are in the feature set
+     */
+    private Set<Integer> modelFeatureSet;
+
+    /**
      * The input values for each columns, if the input is missing
      */
     private Map<Integer, List<Double>> columnMissingInputValues;
@@ -181,14 +186,15 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         this.featureSet = DTrainUtils.generateModelFeatureSet(modelConfig, columnConfigList);
         this.columnMissingInputValues = new HashMap<>();
         this.columnNormDataPosMapping = new HashMap<>();
-        this.featureInputLen = DTrainUtils.generateFeatureInputInfo(modelConfig, columnConfigList, this.featureSet,
-                this.columnMissingInputValues, this.columnNormDataPosMapping);
 
         int modelInputCount = model.getInputCount();
-        Set<Integer> modelFeatureSet = null;
+        this.modelFeatureSet = null;
         if(model instanceof BasicFloatNetwork) {
-            modelFeatureSet = ((BasicFloatNetwork) model).getFeatureSet();
+            this.modelFeatureSet = ((BasicFloatNetwork) model).getFeatureSet();
         }
+
+        this.featureInputLen = DTrainUtils.generateFeatureInputInfo(modelConfig, columnConfigList,
+                this.getInputFeatureSet(), this.columnMissingInputValues, this.columnNormDataPosMapping);
 
         if (CollectionUtils.isEmpty(featureSet) || this.featureInputLen == 0) {
             throw new IllegalArgumentException("No input columns according to ColumnConfig.json. Please check!");
@@ -200,7 +206,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         }
 
         if(CollectionUtils.isNotEmpty(modelFeatureSet)
-                && (this.featureSet.size() != modelFeatureSet.size() || !this.featureSet.containsAll(modelFeatureSet))){
+                && (this.featureSet.size() < this.modelFeatureSet.size() || !this.featureSet.containsAll(modelFeatureSet))){
             // both feature set and model feature set are not empty
             throw new IllegalArgumentException("Model input features is inconsistent with ColumnConfig.json. "
                     + "Please check the model spec vs. ColumnConfig.json");
@@ -297,47 +303,6 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         return result;
     }
 
-    @SuppressWarnings("unused")
-    private Set<Integer> generateModelFeatureSet(List<ColumnConfig> columnConfigList) {
-        Set<Integer> columnIdSet = new HashSet<>();
-        boolean hasFinalSelectedVars = DTrainUtils.hasFinalSelectedVars(columnConfigList);
-        if (hasFinalSelectedVars) {
-            columnConfigList.stream().forEach(columnConfig -> {
-                if (columnConfig.isFinalSelect()) {
-                    columnIdSet.add(columnConfig.getColumnNum());
-                }
-            });
-        } else {
-            boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
-            columnConfigList.stream().forEach(columnConfig -> {
-                if (CommonUtils.isGoodCandidate(columnConfig, hasCandidates, modelConfig.isRegression())) {
-                    columnIdSet.add(columnConfig.getColumnNum());
-                }
-            });
-        }
-        return columnIdSet;
-    }
-
-    @SuppressWarnings("unused")
-    private int generateFeatureInputInfo(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Set<Integer> featureSet) {
-        int vectorLen = 0;
-        this.columnMissingInputValues = new HashMap<>();
-        this.columnNormDataPosMapping = new HashMap<>();
-        for ( ColumnConfig columnConfig : columnConfigList) {
-            if (featureSet.contains(columnConfig.getColumnNum())) {
-                this.columnNormDataPosMapping.put(columnConfig.getColumnNum(), vectorLen);
-                List<Double> normValues = Normalizer.normalize(columnConfig, null,
-                        modelConfig.getNormalizeStdDevCutOff(), modelConfig.getNormalizeType(),
-                        CategoryMissingNormType.MEAN);
-                if(CollectionUtils.isNotEmpty(normValues)) { // usually, the normValues won't be empty
-                    this.columnMissingInputValues.put(columnConfig.getColumnNum(), normValues);
-                    vectorLen += normValues.size();
-                }
-            }
-        }
-        return vectorLen;
-    }
-
     @Override
     protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
         recordCount += 1L;
@@ -347,7 +312,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         }
 
         // load normalized data into inputs
-        DTrainUtils.loadDataIntoInputs(modelConfig, columnConfigList, this.featureSet,
+        DTrainUtils.loadDataIntoInputs(modelConfig, columnConfigList, this.getInputFeatureSet(),
                 this.isLinearTarget, this.hasCandidates, inputs, outputs,
                 Lists.newArrayList(this.splitter.split(value.toString())).toArray(new String[0]));
 
@@ -420,4 +385,7 @@ public class VarSelectMapper extends Mapper<LongWritable, Text, LongWritable, Co
         return data * data;
     }
 
+    private Set<Integer> getInputFeatureSet() {
+        return (CollectionUtils.isEmpty(modelFeatureSet) ? this.featureSet : this.modelFeatureSet);
+    }
 }

@@ -25,6 +25,7 @@ REGISTER $path_jar;
 DEFINE AddColumnNum      ml.shifu.shifu.udf.AddColumnNumUDF('$source_type', '$path_model_config', '$path_column_config', 'false');
 DEFINE PopulationCounter ml.shifu.shifu.udf.PopulationCounterSaltUDF('$source_type', '$path_model_config', '$path_column_config', '$value_index');
 DEFINE PSI               ml.shifu.shifu.udf.PSICalculatorUDF('$source_type', '$path_model_config', '$path_column_config');
+DEFINE PSIByColumn       ml.shifu.shifu.udf.PSIByColumnUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE PopulationCounterSum ml.shifu.shifu.udf.PopulationCounterSaltSumUDF('$source_type', '$path_model_config', '$path_column_config', '$value_index');
 DEFINE IsDataFilterOut   ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE GenPsiDataSchema  ml.shifu.shifu.udf.GenerateDataSchema('$source_type', '$path_model_config', '$path_column_config');
@@ -39,7 +40,7 @@ data_cols = FILTER data_cols BY $1 is not null;
 data_cols = FOREACH data_cols GENERATE $PSIColumn, FLATTEN($1);
 
 -- Group population_info with salt
-data_cols = FOREACH data_cols GENERATE $PSIColumn, columnId, value, tag,  rand as salt, weight;
+data_cols = FOREACH data_cols GENERATE $PSIColumn, columnId, value, tag, rand as salt, weight;
 data_cols_grd = GROUP data_cols BY ($PSIColumn, columnId, salt) PARALLEL $column_parallel;
 population_info = FOREACH data_cols_grd GENERATE FLATTEN(group), PopulationCounter(*) as counters;
 
@@ -52,7 +53,7 @@ population_info = FOREACH population_grp GENERATE PopulationCounterSum(*) as cou
 -- calculate the psi
 population_info = FILTER population_info BY counters is not null;
 population_info = FOREACH population_info GENERATE FLATTEN(counters);
-psi = FOREACH (GROUP population_info by $0) GENERATE FLATTEN(PSI(*));
+psi = FOREACH (GROUP population_info by $0) GENERATE FLATTEN(PSIByColumn(*));
 
 rmf $path_psi
 STORE psi INTO '$path_psi' USING PigStorage('$output_delimiter', '-schema');

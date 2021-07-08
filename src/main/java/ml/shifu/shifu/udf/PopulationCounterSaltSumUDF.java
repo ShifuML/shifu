@@ -101,13 +101,13 @@ public class PopulationCounterSaltSumUDF extends AbstractTrainerUDF<Tuple> {
         }
 
         List<Long> dataBin = counter.getCounter();
-        Tuple output = TupleFactory.getInstance().newTuple(3);
+        Tuple output = TupleFactory.getInstance().newTuple(4);
         output.set(0, columnId);
-        output.set(1, StringUtils.join(dataBin, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
-
         String unit = (groupInfo.get(0) == null ? "" : groupInfo.get(0).toString());
+        output.set(1, StringUtils.join(dataBin, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
         output.set(2,  toStatsText(unit, counter.getUnitMean(),
                 counter.getMissingRate(), counter.getTotalInstCnt(), counter.getDistMetrics()));
+        output.set(3, unit);
         return output;
     }
 
@@ -122,7 +122,7 @@ public class PopulationCounterSaltSumUDF extends AbstractTrainerUDF<Tuple> {
     public Schema outputSchema(Schema input) {
         try {
             return Utils
-                .getSchemaFromString("PopulationInfo:Tuple(columnId : int, population : chararray, unitstats : chararray)");
+                .getSchemaFromString("PopulationInfo:Tuple(columnId : int, population : chararray, unitstats : chararray, psiColumn : chararray)");
         } catch (ParserException e) {
             log.error("Error when generating output schema.", e);
             // just ignore

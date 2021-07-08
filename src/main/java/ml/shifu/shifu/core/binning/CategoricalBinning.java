@@ -177,7 +177,7 @@ public class CategoricalBinning extends AbstractBinning<String> {
             categoricalVals.clear();
         }
 
-        String[] objStrArr = CommonUtils.split(objValStr, Character.toString(FIELD_SEPARATOR));
+        String[] objStrArr = objValStr.split(Character.toString(FIELD_SEPARATOR), 7);
         this.isValid = Boolean.valueOf(objStrArr[4]);
         if(objStrArr.length > 5 && StringUtils.isNotBlank(objStrArr[5])) {
             String[] elements = CommonUtils.split(objStrArr[5], Character.toString(SETLIST_SEPARATOR));
@@ -194,7 +194,11 @@ public class CategoricalBinning extends AbstractBinning<String> {
             } catch (Exception e) {
                 log.warn("Fail to to build HyperLogLogPlus from {}. The cardinality function may not work as expect.",
                         (objStrArr[6]));
+                log.warn("The total input is {}", objValStr);
                 // throw new RuntimeException(e);
+            } catch (Throwable t) {
+                log.warn("The total input is {}", objValStr);
+                throw t;
             }
         }
     }
@@ -204,7 +208,8 @@ public class CategoricalBinning extends AbstractBinning<String> {
      */
     public String objToString() {
         try {
-            return super.objToString() + Character.toString(FIELD_SEPARATOR) + Boolean.toString(isValid)
+            return super.objToString()
+                    + Character.toString(FIELD_SEPARATOR) + Boolean.toString(isValid)
                     + Character.toString(FIELD_SEPARATOR) + StringUtils.join(categoricalVals, SETLIST_SEPARATOR)
                     + Character.toString(FIELD_SEPARATOR) + Base64Utils.base64EncodeFromBytes(this.hyper.getBytes());
         } catch (IOException e) {

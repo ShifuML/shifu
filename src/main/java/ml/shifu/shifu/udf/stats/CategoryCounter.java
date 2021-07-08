@@ -41,10 +41,6 @@ public class CategoryCounter extends Counter {
 
     @Override
     public void addData(Boolean isPositive, String val) {
-        if(isPositive == null) {
-            isPositive = true;
-        }
-
         long[] counter = (isPositive ? this.positiveCounter : this.negativeCounter);
 
         int pos = binLen;
@@ -55,19 +51,8 @@ public class CategoryCounter extends Counter {
             }
         }
 
-        counter[pos] = counter[pos] + 1;
+        counter[pos] += 1;
         this.unitSum += this.binPosRate.get(pos);
     }
     
-    
-
-
-    public static long mappingToLong(int vertexIndex, long key) {
-      return (key << 8) + vertexIndex;
-    }
-
-    
-    public static void main(String [] args ) {
-        System.out.println(mappingToLong(0, 23977254002229L));
-    }
 }

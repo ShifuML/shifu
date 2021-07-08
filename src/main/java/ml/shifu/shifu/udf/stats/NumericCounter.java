@@ -44,12 +44,12 @@ public class NumericCounter extends Counter {
         long[] counter = (isPositive ? positiveCounter : negativeCounter);
 
         if(val == null || missingValSet.contains(val)) {
-            counter[binLen] = counter[binLen] + 1;
+            counter[binLen] += 1;
         } else {
             try {
                 Double dVal = Double.parseDouble(val);
                 int index = BinUtils.getBinIndex(binBoundary, dVal);
-                counter[index] = counter[index] + 1;
+                counter[index] += 1;
                 unitSum += dVal;
             } catch (Exception e) {
                 // logger.warn("Unable to count this column {} with {}, using default value", name, val);

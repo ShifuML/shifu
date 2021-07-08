@@ -425,6 +425,12 @@ public class ModelConfig {
                 || (CollectionUtils.isEmpty(dataSet.getPosTags()) && CollectionUtils.isNotEmpty(dataSet.getNegTags()));
     }
 
+    @JsonIgnore
+    public boolean isLinearRegression() {
+        return (CollectionUtils.isEmpty(dataSet.getPosTags()) && CollectionUtils.isEmpty(dataSet.getNegTags()));
+    }
+
+
     /**
      * If multi-task learning or not.
      * 
@@ -765,6 +771,15 @@ public class ModelConfig {
             return evalConfig.getDataSet().getTargetColumnName();
         } else {
             return defaultTarget;
+        }
+    }
+
+    @JsonIgnore
+    public String getTargetColumnName(EvalConfig evalConfig) {
+        if (evalConfig!= null && evalConfig.getDataSet().getTargetColumnName() != null) {
+            return evalConfig.getDataSet().getTargetColumnName();
+        } else {
+            return this.getTargetColumnName();
         }
     }
 

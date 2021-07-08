@@ -288,6 +288,7 @@
 					<charset>UTF-8</charset>
 					<docencoding>UTF-8</docencoding>
 				</configuration>
+				<!-- 
 				<executions>
 					<execution>
 						<id>attach-javadocs</id>
@@ -296,6 +297,7 @@
 						</goals>
 					</execution>
 				</executions>
+				-->
 			</plugin>
 			<plugin>
 				<artifactId>maven-deploy-plugin</artifactId>

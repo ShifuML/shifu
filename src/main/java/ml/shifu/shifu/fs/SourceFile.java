@@ -46,5 +46,5 @@ public class SourceFile {
     public void setSourceType(SourceType sourceType) {
         this.sourceType = sourceType;
     }
-
+    
 }
