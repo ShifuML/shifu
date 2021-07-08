@@ -425,6 +425,12 @@ public class ModelConfig {
                 || (CollectionUtils.isEmpty(dataSet.getPosTags()) && CollectionUtils.isNotEmpty(dataSet.getNegTags()));
     }
 
+    @JsonIgnore
+    public boolean isLinearRegression() {
+        return (CollectionUtils.isEmpty(dataSet.getPosTags()) && CollectionUtils.isEmpty(dataSet.getNegTags()));
+    }
+
+
     /**
      * If multi-task learning or not.
      * 

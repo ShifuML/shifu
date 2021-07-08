@@ -651,6 +651,56 @@ public class ConfusionMatrix {
         return prevCmo;
     }
 
+    public PerformanceResult computeConfusionMatrixForLinearRegression(String evalPerformancePath,
+            long records) throws IOException {
+        SourceType sourceType = evalConfig.getDataSet().getSource();
+
+        List<Scanner> scanners = ShifuFileUtils.getDataScanners(pathFinder.getEvalScorePath(evalConfig, sourceType),
+                sourceType);
+        boolean isDir = ShifuFileUtils.isDir(pathFinder.getEvalScorePath(evalConfig, sourceType), sourceType);
+        long count = 0;
+        double mape = 0.0;
+        Splitter splitter = Splitter.on(delimiter).trimResults();
+
+        for(Scanner scanner: scanners) {
+            while(scanner.hasNext()) {
+                if((++count) % 100000 == 0) {
+                    LOG.info("Loaded " + count + " records.");
+                }
+                if(!isDir && count == 1) {
+                    // if the evaluation score file is the local file, skip the first line since we add header in
+                    continue;
+                }
+
+                String[] raw = CommonUtils.readIterableToArray(splitter.split(scanner.nextLine()));
+
+                String tagText = raw[targetColumnIndex];
+                try {
+                    double actualValue = Double.parseDouble(tagText);
+                    double predictValue = Double.parseDouble(raw[2]); // get the mean value
+
+                    if(Math.abs(actualValue) > 1e-3) {
+                        mape += Math.abs((actualValue - predictValue) / actualValue);
+                    }
+                } catch (Exception e) {
+                    LOG.warn("Skip! Fail to parse tag - {}, and score field - {}", tagText, raw[2]);
+                }
+            }
+            scanner.close();
+        }
+
+        if (count > 0) {
+            mape = (mape / count) * 100;
+        }
+        LOG.info("The MAPE of Linear model = {}, for {} records in evaluation set.", mape, count);
+
+        PerformanceResult result = new PerformanceResult();
+        result.mape = mape;
+
+        writePerResult2File(evalPerformancePath, result);
+        return result;
+    }
+
     public void computeConfusionMatixForMultipleClassification(long records) throws IOException {
         SourceType sourceType = evalConfig.getDataSet().getSource();
 
@@ -681,6 +731,7 @@ public class ConfusionMatrix {
         }
 
         long[][] confusionMatrix = new long[classes][classes];
+        Splitter splitter = Splitter.on(delimiter).trimResults();
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
                 if((++cnt) % 100000 == 0) {
@@ -692,7 +743,8 @@ public class ConfusionMatrix {
                 }
 
                 // score is separated by default delimiter in our pig output format
-                String[] raw = scanner.nextLine().split(Constants.DEFAULT_ESCAPE_DELIMITER);
+                // String[] raw = scanner.nextLine().split(Constants.DEFAULT_ESCAPE_DELIMITER);
+                String[] raw = CommonUtils.readIterableToArray(splitter.split(scanner.nextLine()));
 
                 String tag = raw[targetColumnIndex];
                 if(StringUtils.isBlank(tag) || !tagSet.contains(tag)) {

@@ -1349,6 +1349,24 @@ public final class CommonUtils {
         return fileLines;
     }
 
+    public static Map<String, String> readConfFileIntoMap(String configFile, SourceType sourceType) throws IOException {
+        return readConfFileIntoMap(configFile, sourceType, "|");
+    }
+
+    public static Map<String, String> readConfFileIntoMap(String configFile, SourceType sourceType, String delimiter) throws IOException {
+        Map<String, String> confMap = new HashMap<>();
+        if (StringUtils.isNotBlank(configFile)) {
+            List<String> confList = readConfFileIntoList(configFile, sourceType);
+            confList.stream().forEach(confText -> {
+                String[] fields = split(confText, delimiter);
+                if (fields.length == 2) {
+                    confMap.put(StringUtils.trimToEmpty(fields[0]), StringUtils.trimToEmpty(fields[1]));
+                }
+            });
+        }
+        return confMap;
+    }
+
     /**
      * Find the @ColumnConfig according the column name
      *
