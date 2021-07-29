@@ -127,7 +127,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
                         .getDataSet().getDataDelimiter(), header);
 
                 // get the tag
-                String tag = CommonUtils.trimTag(rawDataMap.get(modelConfig.getTargetColumnName(evalConfig, null)));
+                String tag = CommonUtils.trimTag(rawDataMap.get(modelConfig.getTargetColumnName(evalConfig)));
                 buf.append(tag);
 
                 // append weight column value
@@ -211,7 +211,7 @@ public class ScoreModelWorker extends AbstractWorkerActor {
      */
     private void writeScoreHeader() throws IOException {
         StringBuilder buf = new StringBuilder();
-        buf.append(modelConfig.getTargetColumnName(evalConfig, "tag"));
+        buf.append(modelConfig.getTargetColumnName(evalConfig));
 
         buf.append(this.delimiter + (StringUtils.isBlank(evalConfig.getDataSet().getWeightColumnName())
                 ? "weight" : evalConfig.getDataSet().getWeightColumnName()));

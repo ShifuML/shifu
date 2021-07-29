@@ -47,4 +47,6 @@ public class PerformanceResult {
     public List<PerformanceObject> weightedGains;
     
     public List<PerformanceObject> modelScoreList;
+
+    public double mape; // for linear model
 }

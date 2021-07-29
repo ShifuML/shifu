@@ -102,6 +102,8 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     public static final String MINIMUM_BIN_INST_CNT = "MINIMUM_BIN_INST_CNT";
     public static final String EXPORT_MODEL_NAME = "EXPORT_MODEL_NAME";
     public static final String EXPORT_NORMUME_POSTFIX = "EXPORT_NORMUME_POSTFIX";
+    public static final String EXPORT_ASSEMBLE_STRATEGY = "EXPORT_ASSEMBLE_STRATEGY";
+    public static final String EXPORT_MAPPING = "EXPORT_MAPPING";
 
     private String type;
     private Map<String, Object> params;
@@ -247,9 +249,15 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             try {
                 cls = Class.forName("com.paypal.gds.art.UmeExporter");
                 Object umeExporter = cls.getConstructor(ModelConfig.class).newInstance(modelConfig);
-                cls.getMethod("translate", String.class, Boolean.class, Boolean.class, String.class)
-                        .invoke(umeExporter, getExportModelName(), type.equalsIgnoreCase(BAGGING_UME),
-                                type.equalsIgnoreCase(NORM_UME), String.valueOf(params.get(EXPORT_NORMUME_POSTFIX)));
+                Map<String, Object> exportParams = new HashMap<>();
+                exportParams.put("baggingMode", type.equalsIgnoreCase(BAGGING_UME));
+                exportParams.put("normAsUme", type.equalsIgnoreCase(NORM_UME));
+                exportParams.put("normUmePostfix", String.valueOf(params.get(EXPORT_NORMUME_POSTFIX)));
+                exportParams.put("assembleStrategy", params.get(EXPORT_ASSEMBLE_STRATEGY));
+                exportParams.put("variableMappingConf", params.get(EXPORT_MAPPING));
+
+                cls.getMethod("translate", String.class, Map.class)
+                        .invoke(umeExporter, getExportModelName(), exportParams);
             } catch (ClassNotFoundException e) {
                 log.error("UMEExporter doesn't support!", e);
                 return 3;

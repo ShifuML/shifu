@@ -212,7 +212,7 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
             this.mcPredictor = new MultiClsTagPredictor(this.modelConfig);
         }
 
-        this.scale = scale;
+        this.scale = (this.modelConfig.isLinearRegression() ? "1" : scale); // no scale for linear model
 
         log.info("Run eval " + evalConfig.getName() + " with " + this.modelScoreNames.size() + " model(s).");
 

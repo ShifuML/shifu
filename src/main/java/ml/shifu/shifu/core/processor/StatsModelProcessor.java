@@ -396,14 +396,14 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         // if one of two memory settings is null, automatically set mapper memory by column size, if not set it from
         // system properties which is set from command line like 'shifu stats -c -Dmapreduce.map.memory.mb=3072
         // -Dmapreduce.map.java.opts=-Xmx3000M'
-        if(System.getProperty("mapreduce.map.memory.mb") == null
-                || System.getProperty("mapreduce.map.java.opts") == null) {
+        if(Environment.getProperty("mapreduce.map.memory.mb") == null
+                || Environment.getProperty("mapreduce.map.java.opts") == null) {
             setMapperMemory(conf, threads, isFastCorrelation);
         } else {
-            conf.set("mapreduce.map.memory.mb", System.getProperty("mapreduce.map.memory.mb"));
-            conf.set("mapreduce.map.java.opts", System.getProperty("mapreduce.map.java.opts"));
+            conf.set("mapreduce.map.memory.mb", Environment.getProperty("mapreduce.map.memory.mb"));
+            conf.set("mapreduce.map.java.opts", Environment.getProperty("mapreduce.map.java.opts"));
             log.info("Corrrelation map memory is set to {}MB from command line parameters.",
-                    System.getProperty("mapreduce.map.memory.mb"));
+                    Environment.getProperty("mapreduce.map.memory.mb"));
         }
 
         @SuppressWarnings("deprecation")

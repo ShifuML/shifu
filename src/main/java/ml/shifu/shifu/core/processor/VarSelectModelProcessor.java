@@ -246,7 +246,7 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
                     syncDataToHdfs(super.modelConfig.getDataSet().getSource());
                 }
 
-                if(modelConfig.isRegression() || this.isLinearSEorST()) {
+                if(modelConfig.isRegression() || modelConfig.isLinearRegression()) {
                     String filterBy = this.modelConfig.getVarSelectFilterBy();
                     if(filterBy.equalsIgnoreCase(Constants.FILTER_BY_KS)
                             || filterBy.equalsIgnoreCase(Constants.FILTER_BY_IV)
