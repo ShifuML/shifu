@@ -485,6 +485,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             // mtlIndex here set to -1 since each eval pig job, output COUNTER are the same name.
             return getScoreStatus(sourceType, maxMinScoreFolder, jobStats, evalRecords, -1);
         }
+
+        // Remove maxMinScore HDFS output to save quota in HDFS
+        ShifuFileUtils.deleteFile(maxMinScoreFolder, sourceType);
+
         return null;
     }
 
