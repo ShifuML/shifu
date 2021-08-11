@@ -117,12 +117,12 @@ public class DataPurifier {
                 String[] newTags = CommonUtils.split(newTagSplits[1].trim(), NEW_TARGET_TAG_DELIMITER);
                 this.newPosTags = new HashSet<>();
                 for(String tag: newTags) {
-                    this.newPosTags.add(tag.trim());
+                    this.newPosTags.add(CommonUtils.trimTag(tag.trim()));
                 }
                 newTags = CommonUtils.split(newTagSplits[2].trim(), NEW_TARGET_TAG_DELIMITER);
                 this.newNegTags = new HashSet<>();
                 for(String tag: newTags) {
-                    this.newNegTags.add(tag.trim());
+                    this.newNegTags.add(CommonUtils.trimTag(tag.trim()));
                 }
             } catch (Exception e) {
                 throw new IllegalArgumentException(
