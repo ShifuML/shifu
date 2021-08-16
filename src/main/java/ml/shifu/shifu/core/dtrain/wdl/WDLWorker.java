@@ -31,12 +31,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import ml.shifu.shifu.util.PermutationShuffler;
+import ml.shifu.shifu.util.Shuffler;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.encog.mathutil.BoundMath;
+import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -270,9 +273,59 @@ public class WDLWorker extends
      */
     private LossType lossType;
 
-    private int batchs;
+    /**
+     * Mini batch size. Default to {@link Integer#MAX_VALUE} so that the whole train set will be used.
+     */
+    private int miniBatchSize = Integer.MAX_VALUE;
+
+    /**
+     * The shuffler used to map index.
+     */
+    private Shuffler shuffler = null;
 
     private boolean isLog = true;
+
+    /**
+     * Is the norm type among ZSCALE_APPEND_INDEX, ZSCORE_APPEND_INDEX, WOE_APPEND_INDEX and WOE_ZSCALE_APPEND_INDEX.
+     */
+    private boolean isNormWithIndex;
+
+    /**
+     * Is it the compact mode. In compact mode, the data only has final select columns.
+     */
+    private boolean isCompactMode;
+
+    protected void configureCompactMode(int columnAmountInData) {
+        if (!isAfterVarSelect) {
+            return;
+        }
+
+        int targetAmt = 0;
+        int metaAmt = 0;
+        int selectAmt = 0;
+        for (ColumnConfig config : columnConfigList) {
+            if (config.isTarget()) {
+                targetAmt++;
+            } else if (config.isMeta()) {
+                metaAmt++;
+            } else if (config.isFinalSelect()) {
+                selectAmt++;
+            }
+        }
+
+        // Only support 1 target column in compact mode now.
+        if (targetAmt != 1) {
+            return;
+        }
+
+        if (this.isNormWithIndex) {
+            // meta column + selected column * 2 + 1 target + 1 weight
+            isCompactMode = columnAmountInData == metaAmt + selectAmt * 2 + targetAmt + 1;
+        } else {
+            // meta column + selected column + 1 target + 1 weight
+            isCompactMode = columnAmountInData == metaAmt + selectAmt + targetAmt + 1;
+        }
+    }
 
     /**
      * Logic to load data into memory list which includes double array for numerical features and sparse object array
@@ -286,86 +339,62 @@ public class WDLWorker extends
             LOG.info("Read {} records.", this.count);
         }
 
+        List<String> fields = CommonUtils.splitAndReturnList(currentValue.getWritable().toString(), this.splitter);
+        if (this.count == 1) {
+            configureCompactMode(fields.size());
+        }
+
         long hashcode = 0; // hashcode for fixed input split in train and validation
         double[] inputs = null;
         SparseInput[] cateInputs = null;
         double ideal = 0d, significance = 1d;
         int index = 0, numIndex = 0, cateIndex = 0;
-        // use guava Splitter to iterate only once
-        switch(this.modelConfig.getNormalizeType()) {
-            case ZSCALE_APPEND_INDEX:
-            case ZSCORE_APPEND_INDEX:
-            case WOE_APPEND_INDEX:
-            case WOE_ZSCALE_APPEND_INDEX:
-                inputs = new double[this.numInputs + this.cateInputs];
-                cateInputs = new SparseInput[this.numInputs + this.cateInputs];
-                if(isLog) {
-                    LOG.info("denseinput of data {}, cate input of data {}", inputs.length, cateInputs.length);
-                }
-                List<String> list = CommonUtils.splitAndReturnList(currentValue.getWritable().toString(),
-                        this.splitter);
-                for(int i = 0; i < list.size(); i++) {
-                    String firstInput = list.get(i);
-                    if(i == list.size() - 1) {
-                        significance = getWeightValue(firstInput);
-                        continue;
-                    }
-
-                    ColumnConfig config = this.columnConfigList.get(index++);
-
-                    if(config.isMeta()) {
-                        continue; // metadata, skip this one and go to next i
-                    } else if(config != null && config.isTarget()) {
-                        ideal = getDoubleValue(firstInput);
-                    } else {
-                        // final select some variables but meta and target are not included
-                        if(validColumn(config)) {
-                            inputs[numIndex] = getDoubleValue(firstInput);
-                            this.inputIndexMap.putIfAbsent(config.getColumnNum(), numIndex++);
-                            hashcode = hashcode * 31 + firstInput.hashCode();
-
-                            String secondInput = list.get(i + 1);
-                            cateInputs[cateIndex] = new SparseInput(config.getColumnNum(),
-                                    (int) getDoubleValue(secondInput));
-                            this.inputIndexMap.putIfAbsent(config.getColumnNum(), cateIndex++);
-                            hashcode = hashcode * 31 + secondInput.hashCode();
-                        }
-                        i += 1;
-                    }
-                }
-                break;
-            default:
-                inputs = new double[this.numInputs];
-                cateInputs = new SparseInput[this.cateInputs];
-
-                for(String input: this.splitter.split(currentValue.getWritable().toString())) {
-                    // if no wgt column at last pos, no need process here
-                    if(index == this.columnConfigList.size()) {
-                        significance = getWeightValue(input);
-                        break; // the last field is significance, break here
-                    } else {
-                        ColumnConfig config = this.columnConfigList.get(index);
-                        if(config != null && config.isTarget()) {
-                            ideal = getDoubleValue(input);
-                        } else {
-                            // final select some variables but meta and target are not included
-                            if(validColumn(config)) {
-                                if(config.isNumerical()) {
-                                    inputs[numIndex] = getDoubleValue(input);
-                                    this.inputIndexMap.putIfAbsent(config.getColumnNum(), numIndex++);
-                                } else if(config.isCategorical()) {
-                                    cateInputs[cateIndex] = new SparseInput(config.getColumnNum(),
-                                            (int) getDoubleValue(input));
-                                    this.inputIndexMap.putIfAbsent(config.getColumnNum(), cateIndex++);
-                                }
-                                hashcode = hashcode * 31 + input.hashCode();
-                            }
-                        }
-                    }
-                    index += 1;
-                }
-                break;
+        if (this.isNormWithIndex) {
+            inputs = new double[this.numInputs + this.cateInputs];
+            cateInputs = new SparseInput[this.numInputs + this.cateInputs];
+        }else{
+            inputs = new double[this.numInputs];
+            cateInputs = new SparseInput[this.cateInputs];
         }
+        for (ColumnConfig config : columnConfigList) {
+            if (config.isTarget()) {
+                ideal = getDoubleValue(fields.get(index++));
+            } else if (config.isMeta()) {
+                // In compact mode, the data column will be missing if it is not selected.
+                index += 1;
+            } else if (validColumn(config)) {
+                // valid column should have data whether it is compact mode or not.
+                if (this.isNormWithIndex) {
+                    // For data which has index, we fetch two data columns.
+                    String firstInput = fields.get(index++);
+                    inputs[numIndex] = getDoubleValue(firstInput);
+                    this.inputIndexMap.putIfAbsent(config.getColumnNum(), numIndex++);
+                    hashcode = hashcode * 31 + firstInput.hashCode();
+
+                    String secondInput = fields.get(index++);
+                    cateInputs[cateIndex] = new SparseInput(config.getColumnNum(), (int) getDoubleValue(secondInput));
+                    this.inputIndexMap.putIfAbsent(config.getColumnNum(), cateIndex++);
+                    hashcode = hashcode * 31 + secondInput.hashCode();
+                } else if (config.isNumerical()) {
+                    // For data which has no index, we fetch one data column. This is for numeric.
+                    String input = fields.get(index++);
+                    inputs[numIndex] = getDoubleValue(input);
+                    this.inputIndexMap.putIfAbsent(config.getColumnNum(), numIndex++);
+                    hashcode = hashcode * 31 + input.hashCode();
+                } else if (config.isCategorical()) {
+                    // For data which has no index, we fetch one data column. This is for category.
+                    String input = fields.get(index++);
+                    cateInputs[cateIndex] = new SparseInput(config.getColumnNum(), (int) getDoubleValue(input));
+                    this.inputIndexMap.putIfAbsent(config.getColumnNum(), cateIndex++);
+                    hashcode = hashcode * 31 + input.hashCode();
+                }
+            } else if (!isCompactMode){
+                // Not target, meta column, and not final select. So it is numeric or category column with out final select.
+                // We need to ignore the data column. Ignore 2 columns for index mode, ignore 1 for non-index mode.
+                index += this.isNormWithIndex ? 2 : 1;
+            }
+        }
+        significance = getWeightValue(fields.get(index++));
 
         // output delimiter in norm can be set by user now and if user set a special one later changed, this exception
         // is helped to quick find such issue, here only check numerical array
@@ -743,20 +772,9 @@ public class WDLWorker extends
 
         Object miniBatchO = validParams.get(CommonConstants.MINI_BATCH);
         if(miniBatchO != null) {
-            int miniBatchs;
-            try {
-                miniBatchs = Integer.parseInt(miniBatchO.toString());
-            } catch (Exception e) {
-                miniBatchs = 1;
-            }
-            if(miniBatchs < 0) {
-                this.batchs = 1;
-            } else if(miniBatchs > 1000) {
-                this.batchs = 1000;
-            } else {
-                this.batchs = miniBatchs;
-            }
-            LOG.info("'miniBatchs' in worker is : {}, batchs is {} ", miniBatchs, batchs);
+            this.miniBatchSize = Integer.parseInt(miniBatchO.toString());
+            this.shuffler = new PermutationShuffler(this.trainingData.size());
+            LOG.info("'miniBatchs' in worker is : {}", miniBatchSize);
         }
 
         Object lossObj = validParams.get("Loss");
@@ -785,9 +803,19 @@ public class WDLWorker extends
                 true);
         NormType normType = this.modelConfig.getNormalizeType();
 
+        switch(this.modelConfig.getNormalizeType()) {
+            case ZSCALE_APPEND_INDEX:
+            case ZSCORE_APPEND_INDEX:
+            case WOE_APPEND_INDEX:
+            case WOE_ZSCALE_APPEND_INDEX:
+                this.isNormWithIndex = true;
+                break;
+            default:
+                this.isNormWithIndex = false;
+        }
+
         int deepNumInputs = this.numInputs;
-        if(NormType.ZSCALE_APPEND_INDEX.equals(normType) || NormType.ZSCORE_APPEND_INDEX.equals(normType)
-                || NormType.WOE_APPEND_INDEX.equals(normType) || NormType.WOE_ZSCALE_APPEND_INDEX.equals(normType)) {
+        if(this.isNormWithIndex) {
             deepNumInputs = this.inputCount;
             numericalIds.addAll(wideColumnIds);
             embedColumnIds = new ArrayList<Integer>();
@@ -830,17 +858,14 @@ public class WDLWorker extends
 
         // update master global model into worker WideAndDeep graph
         this.wnd.updateWeights(context.getLastMasterResult());
-        WDLParallelGradient parallelGradient = new WDLParallelGradient(this.wnd, this.workerThreadCount,
-                this.inputIndexMap, this.trainingData, this.validationData, this.completionService, this.lossType);
-        WDLParams wdlParams = null;
-        if(miniBatchEnabled()) {
-            int iteration = context.getCurrentIteration();
-            int miniBatchSize = Integer
-                    .parseInt(this.modelConfig.getTrain().getParams().get(CommonConstants.MINI_BATCH).toString());
-            wdlParams = parallelGradient.doCompute(iteration, miniBatchSize);
-        } else {
-            wdlParams = parallelGradient.doCompute();
+        if (this.shuffler != null) {
+            // refresh shuffle mapping for each iteration
+            this.shuffler.refresh();
         }
+        WDLParallelGradient parallelGradient = new WDLParallelGradient(this.wnd, this.workerThreadCount,
+                this.inputIndexMap, this.trainingData, this.validationData, this.completionService, this.lossType,
+                this.miniBatchSize, this.shuffler);
+        WDLParams wdlParams = parallelGradient.doCompute();
         wdlParams.setSerializationType(SerializationType.GRADIENTS);
         this.wnd.setSerializationType(SerializationType.GRADIENTS);
         return wdlParams;

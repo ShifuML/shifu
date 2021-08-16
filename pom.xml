@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ml.shifu</groupId>
 	<artifactId>shifu</artifactId>
-	<version>0.12.7</version>
+	<version>0.12.10</version>
 	<name>Shifu</name>
 	<description>An open-source, end-to-end and distributed machine learning and data mining framework built on top of Hadoop.</description>
 	<properties>
@@ -288,6 +288,7 @@
 					<charset>UTF-8</charset>
 					<docencoding>UTF-8</docencoding>
 				</configuration>
+				<!-- 
 				<executions>
 					<execution>
 						<id>attach-javadocs</id>
@@ -296,6 +297,7 @@
 						</goals>
 					</execution>
 				</executions>
+				-->
 			</plugin>
 			<plugin>
 				<artifactId>maven-deploy-plugin</artifactId>

@@ -345,6 +345,10 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             binningInfo.setBinWeightPos(binWeightPos);
             double[] binWeightNeg = new double[binSize + 1];
             binningInfo.setBinWeightNeg(binWeightNeg);
+            double[] binCountWoe = new double[binSize + 1];
+            binningInfo.setBinCountWoe(binCountWoe);
+            double[] binWeightedWoe = new double[binSize + 1];
+            binningInfo.setBinWeightedWoe(binWeightedWoe);
             this.columnBinningInfo.put(cc.getColumnNum(), binningInfo);
         }
     }
@@ -414,8 +418,12 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                         int index = 0;
 
                         long cardinity = -1;
-                        if(cols.length > 2 && !StringUtils.isBlank(cols[2])) {
-                            cardinity = Long.parseLong(cols[2]);
+                        if (this.enableAutoHash && cols.length > 2 && !StringUtils.isBlank(cols[2])) {
+                            try {
+                                cardinity = Long.parseLong(cols[2]);
+                            } catch (Exception e) {
+                                LOG.debug("Cardinity parse failed.", e);
+                            }
                         }
 
                         if(this.enableAutoHash && cardinity > this.maxCategorySize && columnConfig.getHashSeed() <= 0) {
@@ -447,6 +455,13 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
 
                     double[] binWeightNeg = new double[binSize + 1];
                     binningInfo.setBinWeightNeg(binWeightNeg);
+
+                    double[] binCountWoe = new double[binSize + 1];
+                    binningInfo.setBinCountWoe(binCountWoe);
+
+                    double[] binWeightedWoe = new double[binSize + 1];
+                    binningInfo.setBinWeightedWoe(binWeightedWoe);
+
                     binningInfo.setHashSeed(columnConfig.getHashSeed());
 
                     LOG.debug("column num {}  and info {}", rawColumnNum, binningInfo);
@@ -644,7 +659,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             if(hybridThreshold == null) {
                 hybridThreshold = Double.NEGATIVE_INFINITY;
             }
-            // douVal < hybridThreshould which will also be set to category
+            // douVal < hybridThreshold which will also be set to category
             boolean isCategory = Double.isNaN(douVal) || douVal < hybridThreshold;
             boolean isNumber = !Double.isNaN(douVal);
 
@@ -690,12 +705,27 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     binningInfoWritable.setMin(douVal);
                 }
             }
-            if(posTags.contains(tag)) {
+            if (this.modelConfig.isRegression()) {
+                if(posTags.contains(tag)) {
+                    binningInfoWritable.getBinCountPos()[binNum] += 1L;
+                    binningInfoWritable.getBinWeightPos()[binNum] += weight;
+                } else if(negTags.contains(tag)) {
+                    binningInfoWritable.getBinCountNeg()[binNum] += 1L;
+                    binningInfoWritable.getBinWeightNeg()[binNum] += weight;
+                }
+            } else {
                 binningInfoWritable.getBinCountPos()[binNum] += 1L;
                 binningInfoWritable.getBinWeightPos()[binNum] += weight;
-            } else if(negTags.contains(tag)) {
-                binningInfoWritable.getBinCountNeg()[binNum] += 1L;
-                binningInfoWritable.getBinWeightNeg()[binNum] += weight;
+                if (this.modelConfig.isLinearRegression()) {
+                    Double tagValue = 0.0;
+                    try {
+                        tagValue = Double.parseDouble(tag);
+                    } catch (Exception e) {
+                        // not number, invalid tag
+                    }
+                    binningInfoWritable.getBinCountWoe()[binNum] += tagValue;
+                    binningInfoWritable.getBinWeightedWoe()[binNum] += tagValue * weight;
+                }
             }
         } else if(columnConfig.isCategorical()) {
             int lastBinIndex = binningInfoWritable.getBinCategories().size();
@@ -731,6 +761,16 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                 // for multiple classification, set bin count to BinCountPos and leave BinCountNeg empty
                 binningInfoWritable.getBinCountPos()[binNum] += 1L;
                 binningInfoWritable.getBinWeightPos()[binNum] += weight;
+                if (this.modelConfig.isLinearRegression()) {
+                    Double tagValue = 0.0;
+                    try {
+                        tagValue = Double.parseDouble(tag);
+                    } catch (Exception e) {
+                        // not number, invalid tag
+                    }
+                    binningInfoWritable.getBinCountWoe()[binNum] += tagValue;
+                    binningInfoWritable.getBinWeightedWoe()[binNum] += tagValue * weight;
+                }
             }
         } else if(columnConfig.isNumerical()) {
             int lastBinIndex = binningInfoWritable.getBinBoundaries().size();
@@ -766,6 +806,19 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                         binningInfoWritable.getBinCountNeg()[lastBinIndex] += 1L;
                         binningInfoWritable.getBinWeightNeg()[lastBinIndex] += weight;
                     }
+                } else {
+                    binningInfoWritable.getBinCountPos()[lastBinIndex] += 1L;
+                    binningInfoWritable.getBinWeightPos()[lastBinIndex] += weight;
+                    if (this.modelConfig.isLinearRegression()) {
+                        Double tagValue = 0.0;
+                        try {
+                            tagValue = Double.parseDouble(tag);
+                        } catch (Exception e) {
+                            // not number, invalid tag
+                        }
+                        binningInfoWritable.getBinCountWoe()[lastBinIndex] += tagValue;
+                        binningInfoWritable.getBinWeightedWoe()[lastBinIndex] += tagValue * weight;
+                    }
                 }
             } else {
                 // For invalid or missing values, no need update sum, squaredSum, max, min ...
@@ -780,6 +833,19 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     } else if(negTags.contains(tag)) {
                         binningInfoWritable.getBinCountNeg()[binNum] += 1L;
                         binningInfoWritable.getBinWeightNeg()[binNum] += weight;
+                    }
+                } else {
+                    binningInfoWritable.getBinCountPos()[binNum] += 1L;
+                    binningInfoWritable.getBinWeightPos()[binNum] += weight;
+                    if (this.modelConfig.isLinearRegression()) {
+                        Double tagValue = 0.0;
+                        try {
+                            tagValue = Double.parseDouble(tag);
+                        } catch (Exception e) {
+                            // not number, invalid tag
+                        }
+                        binningInfoWritable.getBinCountWoe()[binNum] += tagValue;
+                        binningInfoWritable.getBinWeightedWoe()[binNum] += tagValue * weight;
                     }
                 }
                 binningInfoWritable.setSum(binningInfoWritable.getSum() + douVal);

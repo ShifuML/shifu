@@ -31,6 +31,8 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
+import com.google.common.base.Splitter;
+import ml.shifu.shifu.util.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FileUtils;
@@ -68,10 +70,6 @@ import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.core.varselect.ColumnStatistics;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.udf.CalculateStatsUDF;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.HDFSUtils;
-import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 
 /**
  * ExportModelProcessor class
@@ -102,6 +100,8 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     public static final String MINIMUM_BIN_INST_CNT = "MINIMUM_BIN_INST_CNT";
     public static final String EXPORT_MODEL_NAME = "EXPORT_MODEL_NAME";
     public static final String EXPORT_NORMUME_POSTFIX = "EXPORT_NORMUME_POSTFIX";
+    public static final String EXPORT_ASSEMBLE_STRATEGY = "EXPORT_ASSEMBLE_STRATEGY";
+    public static final String EXPORT_MAPPING = "EXPORT_MAPPING";
 
     private String type;
     private Map<String, Object> params;
@@ -247,9 +247,15 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             try {
                 cls = Class.forName("com.paypal.gds.art.UmeExporter");
                 Object umeExporter = cls.getConstructor(ModelConfig.class).newInstance(modelConfig);
-                cls.getMethod("translate", String.class, Boolean.class, Boolean.class, String.class)
-                        .invoke(umeExporter, getExportModelName(), type.equalsIgnoreCase(BAGGING_UME),
-                                type.equalsIgnoreCase(NORM_UME), params.get(EXPORT_NORMUME_POSTFIX) != null ? String.valueOf(params.get(EXPORT_NORMUME_POSTFIX)) : null);
+                Map<String, Object> exportParams = new HashMap<>();
+                exportParams.put("baggingMode", type.equalsIgnoreCase(BAGGING_UME));
+                exportParams.put("normAsUme", type.equalsIgnoreCase(NORM_UME));
+                exportParams.put("normUmePostfix", String.valueOf(params.get(EXPORT_NORMUME_POSTFIX)));
+                exportParams.put("assembleStrategy", params.get(EXPORT_ASSEMBLE_STRATEGY));
+                exportParams.put("variableMappingConf", params.get(EXPORT_MAPPING));
+
+                cls.getMethod("translate", String.class, Map.class)
+                        .invoke(umeExporter, getExportModelName(), exportParams);
             } catch (ClassNotFoundException e) {
                 log.error("UMEExporter doesn't support!", e);
                 return 3;
@@ -472,13 +478,15 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
 
     private Map<Integer, ColumnAdditionalInfo> loadColumnAdditionalInfos() throws IOException {
         Map<Integer, ColumnAdditionalInfo> columnConfigUnitStats = new HashMap<>();
-
         String unitStatsFilePath = this.pathFinder.getColumnConfigUnitStatsPath();
         if (ShifuFileUtils.isFileExists(unitStatsFilePath, SourceType.LOCAL)) {
+            String delimiter = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER);
+            Splitter splitter = Splitter.on(delimiter).trimResults();
             List<String> unitStatsLines = FileUtils.readLines(new File(unitStatsFilePath));
             if (CollectionUtils.isNotEmpty(unitStatsLines)) {
                 for (String line : unitStatsLines) {
-                    String[] fields = line.trim().split("\\|");
+                    // String[] fields = line.trim().split("\\|");
+                    String[] fields = CommonUtils.splitAndReturnList(line.trim(), splitter).toArray(new String[0]);
                     int columnNum = Integer.parseInt(fields[0]);
                     double psiStd = Double.parseDouble(fields[1]);
                     double cosine = Double.parseDouble(fields[2]);

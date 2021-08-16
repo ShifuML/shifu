@@ -445,8 +445,6 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             }
             if(miniBatchs < 0) {
                 this.batchs = 1;
-            } else if(miniBatchs > 1000) {
-                this.batchs = 1000;
             } else {
                 this.batchs = miniBatchs;
             }
@@ -912,6 +910,16 @@ public abstract class AbstractNNWorker<VALUE extends Writable> extends
             // in range [start, 100) or [0, endHashCode-100)
             return hashCodeIn100 >= startHashCode || hashCodeIn100 < (endHashCode % 100);
         }
+    }
+
+    /**
+     * Configure the {@link AbstractNNWorker#isCompactMode}.
+     *
+     * @param columnAmountInData is the column amount in data file.
+     */
+    protected void configureCompactMode(int columnAmountInData) {
+        // In compact mode, column amount in data should be equal to feature input amount + meta input amount + 1 target column + 1 weight column.
+        isCompactMode = DTrainUtils.hasFinalSelectedVars(this.columnConfigList) && columnAmountInData == featureInputsCnt + DTrainUtils.getMetaInputsCnt(columnConfigList) + 2;
     }
 
     /**

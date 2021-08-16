@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -88,6 +89,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
     public static final String NOSORT = "NOSORT";
     public static final String EXPECT_AUDIT_CNT = "EXPECT_AUDIT_CNT";
+    public static final String VAR_MAPPING_CONF = "VAR_MAPPING_CONF";
     public static final String REF_MODEL = "REF_MODEL";
 
     private String evalName = null;
@@ -450,10 +452,12 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         Map<String, String> confMap = new HashMap<String, String>();
 
         // max min score folder
-        Path path = new Path(
-                "tmp" + File.separator + "maxmin_score_" + System.currentTimeMillis() + "_" + RANDOM.nextLong());
-        String maxMinScoreFolder = ShifuFileUtils.getFileSystemBySourceType(sourceType, path).makeQualified(path)
-                .toString();
+
+        Path path = new Path(Constants.TMP + File.separator
+                + "maxmin_score_" + System.currentTimeMillis() + "_" + RANDOM.nextLong());
+        String maxMinScoreFolder = this.pathFinder.getPathBySourceType(path, sourceType);
+        // String maxMinScoreFolder = ShifuFileUtils.getFileSystemBySourceType(sourceType, path).makeQualified(path)
+        //        .toString();
         confMap.put(Constants.SHIFU_EVAL_MAXMIN_SCORE_OUTPUT, maxMinScoreFolder);
         if(modelConfig.isClassification()
                 || (isNoSort() && (EvalStep.SCORE.equals(this.evalStep) || EvalStep.AUDIT.equals(this.evalStep)))) {
@@ -483,6 +487,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             // mtlIndex here set to -1 since each eval pig job, output COUNTER are the same name.
             return getScoreStatus(sourceType, maxMinScoreFolder, jobStats, evalRecords, -1);
         }
+
+        // Remove maxMinScore HDFS output to save quota in HDFS
+        ShifuFileUtils.deleteFile(maxMinScoreFolder, sourceType);
+
         return null;
     }
 
@@ -646,7 +654,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         evalConfig.setDataSet(modelConfig.getDataSet().cloneRawSourceData());
         // create empty <EvalSetName>Score.meta.column.names
         ShifuFileUtils.createFileIfNotExists(
-                new Path(evalConfig.getName() + Constants.DEFAULT_CHAMPIONSCORE_META_COLUMN_FILE).toString(),
+                new Path(Constants.COLUMN_META_FOLDER_NAME + File.separator
+                        + evalConfig.getName() + Constants.DEFAULT_CHAMPIONSCORE_META_COLUMN_FILE).toString(),
                 SourceType.LOCAL);
 
         // create empty <EvalSetName>.meta.column.names
@@ -962,7 +971,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         List<String> scoreMetaColumns = evalConfig.getScoreMetaColumns(modelConfig);
         addReferModelScoreColumns(scoreMetaColumns);
         if(scoreMetaColumns == null || scoreMetaColumns.isEmpty() || !modelConfig.isRegression()) {
-            // if no any champion score column set, go to previous evaluation with only challendge model
+            // if no any champion score column set, go to previous evaluation with only challenge model
             runConfusionMatrix(evalConfig, ss, isGBTNotConvertToProb(evalConfig), false, -1);
             return;
         }
@@ -1246,6 +1255,8 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                             ss.pigPosWeightTags, ss.pigNegWeightTags, ss.evalRecords, ss.maxScore, ss.minScore,
                             scoreDataPath, evalPerformancePath, isPrint, isGenerateChart, isUseMaxMinScore, isMTL,
                             mtlIndex);
+                } else if(modelConfig.isLinearRegression()) {
+                    return worker.computeConfusionMatrixForLinearRegression(evalPerformancePath, this.evalRecords);
                 } else {
                     worker.computeConfusionMatixForMultipleClassification(this.evalRecords);
                     return null;
@@ -1322,19 +1333,23 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         saveModelConfig();
 
         int auditRecordsCount = getExpectAuditCount();
-
+        Map<String, String> variableMapping = CommonUtils.readConfFileIntoMap(getStringParam(params, VAR_MAPPING_CONF),
+                SourceType.LOCAL);
         File auditFile = new File("tmp", modelConfig.getModelSetName() + "_" + evalConfig.getName() + "_audit.data");
         BufferedWriter writer = null;
         try {
             writer = new BufferedWriter(new FileWriter(auditFile));
             if(ModelBasicConf.RunMode.LOCAL.equals(this.modelConfig.getBasic().getRunMode())) {
                 String evalSorePah = this.pathFinder.getEvalScorePath(evalConfig);
-                writeFileLines(writer, evalSorePah, evalConfig.getDataSet().getSource(), false, auditRecordsCount + 1);
+                writeFileLines(writer, evalSorePah, evalConfig.getDataSet().getSource(), false,
+                        auditRecordsCount + 1, variableMapping);
             } else {
                 String headerPath = this.pathFinder.getEvalScoreHeaderPath(evalConfig);
-                writeFileLines(writer, headerPath, evalConfig.getDataSet().getSource(), false, 1);
+                writeFileLines(writer, headerPath, evalConfig.getDataSet().getSource(), false,
+                        1, variableMapping);
                 String evalSorePah = this.pathFinder.getEvalScorePath(evalConfig);
-                writeFileLines(writer, evalSorePah, evalConfig.getDataSet().getSource(), true, auditRecordsCount);
+                writeFileLines(writer, evalSorePah, evalConfig.getDataSet().getSource(), true,
+                        auditRecordsCount, null);
             }
 
             LOG.info("Generate audit file {} successfully", auditFile.getCanonicalFile());
@@ -1346,7 +1361,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     }
 
     private void writeFileLines(BufferedWriter writer, String filePath, SourceType sourceType, boolean isPartFile,
-            int linesCount) {
+            int linesCount, Map<String, String> headerMapping) {
         BufferedReader reader = null;
         HdfsPartFile hdfsPartFile = null;
         int currentNumOfLine = 0;
@@ -1355,6 +1370,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 reader = ShifuFileUtils.getReader(filePath, sourceType);
                 String line = null;
                 while(currentNumOfLine++ < linesCount && (line = reader.readLine()) != null) {
+                    if(currentNumOfLine == 1 && MapUtils.isNotEmpty(headerMapping)) {
+                        line = replaceColumnName(line, headerMapping);
+                    }
                     writer.write(line);
                     writer.newLine();
                 }
@@ -1362,6 +1380,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 hdfsPartFile = new HdfsPartFile(filePath, sourceType);
                 String line = null;
                 while(currentNumOfLine++ < linesCount && (line = hdfsPartFile.readLine()) != null) {
+                    if(currentNumOfLine == 1 && MapUtils.isNotEmpty(headerMapping)) {
+                        line = replaceColumnName(line, headerMapping);
+                    }
                     writer.write(line);
                     writer.newLine();
                 }
@@ -1374,6 +1395,20 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 hdfsPartFile.close();
             }
         }
+    }
+
+    private String replaceColumnName(String line, Map<String, String> headerMapping) {
+        String delimiter = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER);
+        String[] columns = CommonUtils.split(line, delimiter);
+        for (int i = 0; i < columns.length; i++) {
+            String column = columns[i];
+            NSColumn nsColumn = new NSColumn(column);
+            if (headerMapping.containsKey(nsColumn.getSimpleName())) {
+                column = column.replaceAll(nsColumn.getSimpleName(), headerMapping.get(nsColumn.getSimpleName()));
+                columns[i] = column;
+            }
+        }
+        return StringUtils.join(columns, delimiter);
     }
 
     /**
