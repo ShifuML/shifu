@@ -137,7 +137,7 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
     protected List<List<ColumnConfig>> mtlColumnConfigLists;
     private boolean isMultiTask = false;
 
-    private int modelCnt;
+    // private int modelCnt;
 
     @SuppressWarnings("rawtypes")
     private Map subModelsCnt;
@@ -182,10 +182,9 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
         }
 
         // move model runner construction in exec to avoid OOM error in client side if model is too big like RF
-        // TODO not to load model but only to check model file cnt
         this.modelScoreNames = ModelSpecLoaderUtils.getBasicModelScoreNames(modelConfig, evalConfig,
                 evalConfig.getDataSet().getSource());
-        this.modelCnt = this.modelScoreNames.size();
+        // this.modelCnt = this.modelScoreNames.size();
         this.subModelScoreNames = ModelSpecLoaderUtils.getSubModelScoreNames(modelConfig, this.columnConfigList,
                 evalConfig, evalConfig.getDataSet().getSource());
         if(this.subModelScoreNames != null && this.subModelScoreNames.size() > 0) {
@@ -674,12 +673,12 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
             boolean isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
 
             if(isLinearTarget || this.isMultiTask || modelConfig.isRegression()) {
-                if(this.modelCnt > 0) {
+                if(this.modelScoreNames.size() > 0) {
                     if(this.isMultiTask) {
-                        // TODO REMOVEME
+                        // TODO REMOVE ME
                         addModelSchema(tupleSchema, this.modelConfig.getMultiTaskTargetColumnNames().size(), "");
                     } else {
-                        addModelSchema(tupleSchema, this.modelCnt, "");
+                        addModelSchema(tupleSchema, this.modelScoreNames, "");
                     }
                 } else if(MapUtils.isEmpty(this.subModelsCnt)) {
                     throw new IllegalStateException("No any model found!");
