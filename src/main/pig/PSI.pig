@@ -53,7 +53,7 @@ population_info = FOREACH population_grp GENERATE PopulationCounterSum(*) as cou
 -- calculate the psi
 population_info = FILTER population_info BY counters is not null;
 population_info = FOREACH population_info GENERATE FLATTEN(counters);
-psi = FOREACH (GROUP population_info by $0) GENERATE FLATTEN(PSIByColumn(*));
+psi = FOREACH (GROUP population_info by $0) GENERATE FLATTEN(PSI(*));
 
 rmf $path_psi
 STORE psi INTO '$path_psi' USING PigStorage('$output_delimiter', '-schema');
