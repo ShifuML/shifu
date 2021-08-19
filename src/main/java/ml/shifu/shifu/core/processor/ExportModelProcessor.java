@@ -480,13 +480,13 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         Map<Integer, ColumnAdditionalInfo> columnConfigUnitStats = new HashMap<>();
         String unitStatsFilePath = this.pathFinder.getColumnConfigUnitStatsPath();
         if (ShifuFileUtils.isFileExists(unitStatsFilePath, SourceType.LOCAL)) {
-            String delimiter = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER);
-            Splitter splitter = Splitter.on(delimiter).trimResults();
+            // String delimiter = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER);
+            // Splitter splitter = Splitter.on(delimiter).trimResults();
             List<String> unitStatsLines = FileUtils.readLines(new File(unitStatsFilePath));
             if (CollectionUtils.isNotEmpty(unitStatsLines)) {
                 for (String line : unitStatsLines) {
-                    // String[] fields = line.trim().split("\\|");
-                    String[] fields = CommonUtils.splitAndReturnList(line.trim(), splitter).toArray(new String[0]);
+                    String[] fields = line.trim().split("\\|");
+                    // String[] fields = CommonUtils.splitAndReturnList(line.trim(), splitter).toArray(new String[0]);
                     int columnNum = Integer.parseInt(fields[0]);
                     double psiStd = Double.parseDouble(fields[1]);
                     double cosine = Double.parseDouble(fields[2]);
