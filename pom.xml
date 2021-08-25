@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ml.shifu</groupId>
 	<artifactId>shifu</artifactId>
-	<version>0.12.2</version>
+	<version>0.12.12</version>
 	<name>Shifu</name>
 	<description>An open-source, end-to-end and distributed machine learning and data mining framework built on top of Hadoop.</description>
 	<properties>
@@ -14,7 +14,7 @@
 		<rpmDisabled>true</rpmDisabled>
 		<maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
 		<powermock.version>1.5.1</powermock.version>
-		<guagua.version>0.7.8</guagua.version>
+		<guagua.version>0.7.10</guagua.version>
 		<compileSource>1.6</compileSource>
 		<releaseUrl>http://paypalcentral.es.paypalcorp.com/nexus/content/repositories/releases/</releaseUrl>
 		<snapshotUrl>http://paypalcentral.es.paypalcorp.com/nexus/content/repositories/snapshots/</snapshotUrl>
@@ -111,12 +111,12 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-core</artifactId>
-			<version>2.9.7</version>
+			<version>2.9.10</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>2.9.7</version>
+			<version>2.9.10.1</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.guava</groupId>
@@ -136,7 +136,7 @@
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-compress</artifactId>
-			<version>1.18</version>
+			<version>1.19</version>
 		</dependency>
 		<dependency>
 			<groupId>de.bwaldvogel</groupId>
@@ -201,7 +201,6 @@
 		<dependency>
 			<groupId>org.jpmml</groupId>
 			<artifactId>pmml-model</artifactId>
-			<!-- <version>1.1.4</version> -->
 			<version>1.4.1</version>
 		</dependency>
 		<dependency>
@@ -292,6 +291,7 @@
 					<charset>UTF-8</charset>
 					<docencoding>UTF-8</docencoding>
 				</configuration>
+				<!-- 
 				<executions>
 					<execution>
 						<id>attach-javadocs</id>
@@ -300,6 +300,7 @@
 						</goals>
 					</execution>
 				</executions>
+				-->
 			</plugin>
 			<plugin>
 				<artifactId>maven-deploy-plugin</artifactId>

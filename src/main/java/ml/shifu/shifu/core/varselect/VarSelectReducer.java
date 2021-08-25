@@ -16,10 +16,7 @@
 package ml.shifu.shifu.core.varselect;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
@@ -143,8 +140,10 @@ public class VarSelectReducer extends Reducer<LongWritable, ColumnInfo, Text, Te
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
 
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
-        this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
+        //int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(), this.columnConfigList);
+        //this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
+        Set<Integer> featureSet = DTrainUtils.generateModelFeatureSet(modelConfig, columnConfigList);
+        this.inputNodeCount = featureSet.size();
         this.filterOutRatio = context.getConfiguration().getFloat(Constants.SHIFU_VARSELECT_FILTEROUT_RATIO,
                 Constants.SHIFU_DEFAULT_VARSELECT_FILTEROUT_RATIO);
         this.filterNum = context.getConfiguration().getInt(Constants.SHIFU_VARSELECT_FILTER_NUM,

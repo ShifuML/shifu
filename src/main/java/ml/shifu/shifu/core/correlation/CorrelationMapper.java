@@ -29,9 +29,11 @@ import ml.shifu.shifu.container.obj.ColumnConfig.ColumnFlag;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -94,6 +96,8 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
     protected Set<String> tagSet;
     private List<Set<String>> tags;
 
+    private PrecisionType precisionType;
+
     private synchronized static void loadConfigFiles(final Context context) {
         if(modelConfig == null) {
             LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(),
@@ -117,9 +121,15 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
 
+        String precision = context.getConfiguration().get(Constants.SHIFU_PRECISION_TYPE);
+        if(StringUtils.isNotBlank(precision)) {
+            this.precisionType = PrecisionType.of(
+                    context.getConfiguration().get(Constants.SHIFU_PRECISION_TYPE, PrecisionType.FLOAT32.toString()));
+        }
+
         this.dataSetDelimiter = modelConfig.getDataSetDelimiter();
 
-        this.dataPurifier = new DataPurifier(modelConfig, false);
+        this.dataPurifier = new DataPurifier(modelConfig, columnConfigList, false);
 
         this.isComputeAll = Boolean
                 .valueOf(context.getConfiguration().get(Constants.SHIFU_CORRELATION_COMPUTE_ALL, "false"));
@@ -190,7 +200,8 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                 continue;
             }
 
-            CorrelationWritable cw = CorrelationMultithreadedMapper.finalCorrelationMap.get(columnConfig.getColumnNum());
+            CorrelationWritable cw = CorrelationMultithreadedMapper.finalCorrelationMap
+                    .get(columnConfig.getColumnNum());
             synchronized(cw) {
                 cw.setColumnIndex(i);
                 cw.setCount(cw.getCount() + 1d);
@@ -229,7 +240,7 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                     cw.setAdjustSumY(adjustSumY);
                 }
 
-                for(int j = (this.isComputeAll ? 0 : i) ; j < columnConfigList.size(); j++) {
+                for(int j = (this.isComputeAll ? 0 : i); j < columnConfigList.size(); j++) {
                     ColumnConfig otherColumnConfig = columnConfigList.get(j);
                     if((otherColumnConfig.getColumnFlag() != ColumnFlag.Target)
                             && ((otherColumnConfig.getColumnFlag() == ColumnFlag.Meta) || (hasCandidates
@@ -292,6 +303,10 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
                         dValues[i] = Double.MIN_VALUE;
                     } else {
                         dValues[i] = NumberFormatUtils.getDouble(units[i], Double.MIN_VALUE);
+                    }
+                    if(precisionType != null) {
+                        // mimic like cur precision
+                        dValues[i] = ((Number) this.precisionType.to(dValues[i])).doubleValue();
                     }
                 }
                 if(columnConfig.isCategorical()) {

@@ -17,15 +17,22 @@
  */
 package ml.shifu.shifu.core.binning;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.clearspring.analytics.stream.cardinality.CardinalityMergeException;
+import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
+
+import ml.shifu.shifu.util.Base64Utils;
+import ml.shifu.shifu.util.CommonUtils;
 
 /**
  * CategoricalBinning class
@@ -36,6 +43,9 @@ public class CategoricalBinning extends AbstractBinning<String> {
 
     private boolean isValid = true;
     private Set<String> categoricalVals;
+    private int hashSeed = 0;
+
+    private HyperLogLogPlus hyper = new HyperLogLogPlus(8);;
 
     /**
      * Empty constructor : it is just for bin merging
@@ -60,6 +70,21 @@ public class CategoricalBinning extends AbstractBinning<String> {
         this.categoricalVals = new HashSet<String>();
     }
 
+    public CategoricalBinning(int binningNum, List<String> missingValList, int maxCategorySize, int hashSeed) {
+        this(binningNum, missingValList, maxCategorySize);
+        this.hashSeed = hashSeed;
+    }
+
+    /*
+     * Constructor with expected bin number and missing value list
+     * For categorical variable, the binningNum won't be used
+     */
+    public CategoricalBinning(int binningNum, List<String> missingValList, int maxCategorySize, int hashSeed,
+            boolean isPrint) {
+        this(binningNum, missingValList, maxCategorySize);
+        this.hashSeed = hashSeed;
+    }
+
     /*
      * (non-Javadoc)
      * Add the string into value set
@@ -71,17 +96,25 @@ public class CategoricalBinning extends AbstractBinning<String> {
     @Override
     public void addData(String val) {
         String fval = (val == null ? "" : val);
-        if(!isMissingVal(fval)) {
-            if(isValid) {
+        log.debug("hash feature test");
+
+        this.hyper.offer(fval);
+
+        if(isMissingVal(fval)) {
+            super.incMissingValCnt();
+        } else if(fval.length() > Constants.MAX_CATEGORICAL_VAL_LENGTH) {
+            super.incInvalidValCnt();
+        } else {
+            if(isValid && this.hashSeed <= 0) {
                 categoricalVals.add(fval);
+            } else if(isValid && this.hashSeed > 0) {
+                categoricalVals.add(Integer.toString(fval.hashCode() % this.hashSeed));
             }
 
             if(categoricalVals.size() > maxCategorySize) {
                 isValid = false;
                 categoricalVals.clear();
             }
-        } else {
-            super.incMissingValCnt();
         }
     }
 
@@ -107,9 +140,26 @@ public class CategoricalBinning extends AbstractBinning<String> {
         CategoricalBinning binning = (CategoricalBinning) another;
         super.mergeBin(another);
 
+        // merge hyper stats
+        try {
+            this.hyper.merge(binning.hyper);
+        } catch (CardinalityMergeException e) {
+            throw new RuntimeException(e);
+        }
+
         this.isValid = (this.isValid && binning.isValid);
         if(this.isValid) {
-            this.categoricalVals.addAll(binning.categoricalVals);
+            for(String cate: binning.categoricalVals) {
+                // check if over max category size, skip to copy to avoid OOM
+                if(this.categoricalVals.size() <= this.maxCategorySize) {
+                    this.categoricalVals.add(cate);
+                } else {
+                    log.warn("Categorical variables binning merge over max category size ({}).", this.maxCategorySize);
+                    this.categoricalVals.clear();
+                    this.isValid = false;
+                    break;
+                }
+            }
         } else {
             this.categoricalVals.clear();
         }
@@ -127,7 +177,7 @@ public class CategoricalBinning extends AbstractBinning<String> {
             categoricalVals.clear();
         }
 
-        String[] objStrArr = CommonUtils.split(objValStr, Character.toString(FIELD_SEPARATOR));
+        String[] objStrArr = objValStr.split(Character.toString(FIELD_SEPARATOR), 7);
         this.isValid = Boolean.valueOf(objStrArr[4]);
         if(objStrArr.length > 5 && StringUtils.isNotBlank(objStrArr[5])) {
             String[] elements = CommonUtils.split(objStrArr[5], Character.toString(SETLIST_SEPARATOR));
@@ -137,14 +187,43 @@ public class CategoricalBinning extends AbstractBinning<String> {
         } else {
             log.warn("Empty categorical bin - " + objValStr);
         }
+
+        if(objStrArr.length > 6 && StringUtils.isNotBlank(objStrArr[6])) {
+            try {
+                this.hyper = HyperLogLogPlus.Builder.build(Base64Utils.base64DecodeToBytes((objStrArr[6])));
+            } catch (Exception e) {
+                log.warn("Fail to to build HyperLogLogPlus from {}. The cardinality function may not work as expect.",
+                        (objStrArr[6]));
+                log.warn("The total input is {}", objValStr);
+                // throw new RuntimeException(e);
+            } catch (Throwable t) {
+                log.warn("The total input is {}", objValStr);
+                throw t;
+            }
+        }
     }
 
     /*
      * convert @CategoricalBinning to String
      */
     public String objToString() {
-        return super.objToString() + Character.toString(FIELD_SEPARATOR) + Boolean.toString(isValid)
-                + Character.toString(FIELD_SEPARATOR) + StringUtils.join(categoricalVals, SETLIST_SEPARATOR);
+        try {
+            return super.objToString()
+                    + Character.toString(FIELD_SEPARATOR) + Boolean.toString(isValid)
+                    + Character.toString(FIELD_SEPARATOR) + StringUtils.join(categoricalVals, SETLIST_SEPARATOR)
+                    + Character.toString(FIELD_SEPARATOR) + Base64Utils.base64EncodeFromBytes(this.hyper.getBytes());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Categorical variable in first 2 stats job to get cardinality, if too large, hash trick can be enabled.
+     * 
+     * @return cardinality of categories
+     */
+    public long cardinality() {
+        return this.hyper.cardinality();
     }
 
 }

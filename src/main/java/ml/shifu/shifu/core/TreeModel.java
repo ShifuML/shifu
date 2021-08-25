@@ -28,6 +28,8 @@ import java.util.Map.Entry;
 
 import ml.shifu.shifu.core.dtrain.dt.IndependentTreeModel;
 import ml.shifu.shifu.core.dtrain.dt.TreeNode;
+import ml.shifu.shifu.core.dtrain.nn.IndependentNNModel;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.encog.ml.BasicML;
@@ -88,6 +90,10 @@ public class TreeModel extends BasicML implements MLRegression {
         return loadFromStream(input, false);
     }
 
+    public static NNModel loadFromStream(InputStream input, PrecisionType pt) throws IOException {
+        return new NNModel(IndependentNNModel.loadFromStream(input, true, pt));
+    }
+
     public static TreeModel loadFromStream(InputStream input, String gbtScoreConvertStrategy) throws IOException {
         return loadFromStream(input, false, gbtScoreConvertStrategy);
     }
@@ -98,7 +104,13 @@ public class TreeModel extends BasicML implements MLRegression {
 
     public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, String gbtScoreConvertStrategy)
             throws IOException {
-        return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb, gbtScoreConvertStrategy));
+        return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb, gbtScoreConvertStrategy,
+                PrecisionType.DOUBLE64));
+    }
+
+    public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, String gbtScoreConvertStrategy,
+            PrecisionType pt) throws IOException {
+        return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb, gbtScoreConvertStrategy, pt));
     }
 
     public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode)
@@ -108,14 +120,14 @@ public class TreeModel extends BasicML implements MLRegression {
 
     public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode,
             String gbtScoreConvertStrategy) throws IOException {
-        return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb, isOptimizeMode,
-                gbtScoreConvertStrategy));
+        return new TreeModel(
+                IndependentTreeModel.loadFromStream(input, isConvertToProb, isOptimizeMode, gbtScoreConvertStrategy));
     }
 
     public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode,
             boolean isRemoveNameSpace) throws IOException {
-        return new TreeModel(IndependentTreeModel.loadFromStream(input, isConvertToProb, isOptimizeMode,
-                isRemoveNameSpace));
+        return new TreeModel(
+                IndependentTreeModel.loadFromStream(input, isConvertToProb, isOptimizeMode, isRemoveNameSpace));
     }
 
     public static TreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode,
@@ -168,6 +180,13 @@ public class TreeModel extends BasicML implements MLRegression {
         if(this.getIndependentTreeModel().getTrees().size() != 1) {
             throw new RuntimeException(
                     "Bagging model cannot be supported in Tree Model one element feature importance computing.");
+        }
+
+        // initialize for all candidate variables in the model,
+        // so all unused variables will be in the list of feature importance also
+        for(Entry<Integer, String> entry: nameMapping.entrySet()) {
+            String featureName = entry.getValue();
+            importancesSum.put(entry.getKey(), MutablePair.of(featureName, 0.0d));
         }
 
         for(TreeNode tree: this.getIndependentTreeModel().getTrees().get(0)) {

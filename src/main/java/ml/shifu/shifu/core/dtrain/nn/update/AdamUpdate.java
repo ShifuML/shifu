@@ -25,8 +25,6 @@ package ml.shifu.shifu.core.dtrain.nn.update;
 
 import java.util.Set;
 
-import ml.shifu.shifu.core.dtrain.Weight;
-
 /**
  * Created by jeffh on 7/15/2016.
  * 
@@ -42,27 +40,34 @@ public class AdamUpdate implements UpdateRule {
 
     private double learningRate;
 
+    private Update update;
+
     @Override
-    public void init(Weight weight) {
-        this.learningRate = weight.getLearningRate();
-        this.m = new double[weight.getNumWeight()];
-        this.v = new double[weight.getNumWeight()];
-        this.beta1 = weight.getAdamBeta1();
-        this.beta2 = weight.getAdamBeta2();
+    public void init(Update update) {
+        this.update = update;
+        this.learningRate = update.getLearningRate();
+        this.m = new double[update.getNumWeight()];
+        this.v = new double[update.getNumWeight()];
+        this.beta1 = update.getAdamBeta1();
+        this.beta2 = update.getAdamBeta2();
     }
 
     @Override
     public void update(double[] gradients, double[] weights, int iteration, Set<Integer> fixedWeights) {
         for(int i = 0; i < weights.length; i++) {
-            if (fixedWeights.contains(i)) continue;
-            
-            m[i] = (this.beta1 * m[i]) + (1 - this.beta1) * gradients[i];
-            v[i] = (this.beta2 * v[i]) + (1 - this.beta2) * gradients[i] * gradients[i];
+            if(fixedWeights.contains(i))
+                continue;
+
+            double avgGrad = gradients[i] / this.update.getNumTrainSize();
+
+            m[i] = (this.beta1 * m[i]) + (1 - this.beta1) * avgGrad;
+            v[i] = (this.beta2 * v[i]) + (1 - this.beta2) * avgGrad * avgGrad;
 
             double mCorrect = m[i] / (1 - Math.pow(this.beta1, iteration));
             double vCorrect = v[i] / (1 - Math.pow(this.beta2, iteration));
 
-            final double delta = (this.learningRate * mCorrect) / (Math.sqrt(vCorrect) + this.eps);
+            final double delta = (this.learningRate  * mCorrect)
+                    / (Math.sqrt(vCorrect) + this.eps);
             weights[i] += delta;
         }
     }

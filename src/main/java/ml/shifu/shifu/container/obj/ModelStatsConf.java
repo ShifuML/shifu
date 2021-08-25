@@ -83,6 +83,7 @@ public class ModelStatsConf {
     private Boolean binningAutoTypeEnable = Boolean.FALSE;
     private Integer binningAutoTypeThreshold = 5;
     private Boolean binningMergeEnable = Boolean.TRUE;
+    private Integer cateMinCnt = 0;
 
     /**
      * Binning algorithm used to do binning. SPDTI is the best algorithm in terms of scalability.
@@ -93,6 +94,16 @@ public class ModelStatsConf {
      * PSI feature enabled if not empty. In stats, PSI value will be computed.
      */
     private String psiColumnName = "";
+
+    private String dateStatsOutputFileName = "";
+
+    public String getDateStatsOutputFileName() {
+        return dateStatsOutputFileName;
+    }
+
+    public void setDateStatsOutputFileName(String dateStatsOutputFileName) {
+        this.dateStatsOutputFileName = dateStatsOutputFileName;
+    }
 
     public Integer getMaxNumBin() {
         return maxNumBin;
@@ -188,6 +199,22 @@ public class ModelStatsConf {
         this.psiColumnName = psiColumnName;
     }
 
+    /**
+     * @return the cateMinCnt
+     */
+    @JsonIgnore
+    public Integer getCateMinCnt() {
+        return cateMinCnt;
+    }
+
+    /**
+     * @param cateMinCnt
+     *            the cateMinCnt to set
+     */
+    public void setCateMinCnt(Integer cateMinCnt) {
+        this.cateMinCnt = cateMinCnt;
+    }
+
     @Override
     public ModelStatsConf clone() {
         ModelStatsConf other = new ModelStatsConf();
@@ -203,4 +230,5 @@ public class ModelStatsConf {
         other.setSampleRate(sampleRate);
         return other;
     }
+
 }

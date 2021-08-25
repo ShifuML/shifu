@@ -17,7 +17,39 @@
  */
 package ml.shifu.shifu.core.processor;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.Set;
+
+import com.google.common.base.Splitter;
+import ml.shifu.shifu.util.*;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.dmg.pmml.PMML;
+import org.encog.ml.BasicML;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import ml.shifu.shifu.container.obj.ColumnAdditionalInfo;
 import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.container.obj.ModelVarSelectConf.PostCorrelationMetric;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -38,29 +70,6 @@ import ml.shifu.shifu.core.validator.ModelInspector.ModelStep;
 import ml.shifu.shifu.core.varselect.ColumnStatistics;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.udf.CalculateStatsUDF;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.HDFSUtils;
-import ml.shifu.shifu.util.ModelSpecLoaderUtils;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.MapUtils;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.dmg.pmml.PMML;
-import org.encog.ml.BasicML;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
 
 /**
  * ExportModelProcessor class
@@ -80,12 +89,19 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     public static final String WOE_MAPPING = "woemapping";
     public static final String WOE = "woe";
     public static final String CORRELATION = "corr";
+    public static final String UME = "ume";
+    public static final String BAGGING_UME = "baggingume";
+    public static final String NORM_UME = "normume";
 
     public static final String IS_CONCISE = "IS_CONCISE";
     public static final String REQUEST_VARS = "REQUEST_VARS";
     public static final String EXPECTED_BIN_NUM = "EXPECTED_BIN_NUM";
     public static final String IV_KEEP_RATIO = "IV_KEEP_RATIO";
     public static final String MINIMUM_BIN_INST_CNT = "MINIMUM_BIN_INST_CNT";
+    public static final String EXPORT_MODEL_NAME = "EXPORT_MODEL_NAME";
+    public static final String EXPORT_NORMUME_POSTFIX = "EXPORT_NORMUME_POSTFIX";
+    public static final String EXPORT_ASSEMBLE_STRATEGY = "EXPORT_ASSEMBLE_STRATEGY";
+    public static final String EXPORT_MAPPING = "EXPORT_MAPPING";
 
     private String type;
     private Map<String, Object> params;
@@ -105,6 +121,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
      * 
      * @see ml.shifu.shifu.core.processor.Processor#run()
      */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     public int run() throws Exception {
         setUp(ModelStep.EXPORT);
@@ -225,6 +242,27 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 return 2;
             }
             return exportVariableCorr();
+        } else if(type.equalsIgnoreCase(UME) || type.equalsIgnoreCase(BAGGING_UME) || type.equalsIgnoreCase(NORM_UME)) {
+            Class cls = null;
+            try {
+                cls = Class.forName("com.paypal.gds.art.UmeExporter");
+                Object umeExporter = cls.getConstructor(ModelConfig.class).newInstance(modelConfig);
+                Map<String, Object> exportParams = new HashMap<>();
+                exportParams.put("baggingMode", type.equalsIgnoreCase(BAGGING_UME));
+                exportParams.put("normAsUme", type.equalsIgnoreCase(NORM_UME));
+                exportParams.put("normUmePostfix", String.valueOf(params.get(EXPORT_NORMUME_POSTFIX)));
+                exportParams.put("assembleStrategy", params.get(EXPORT_ASSEMBLE_STRATEGY));
+                exportParams.put("variableMappingConf", params.get(EXPORT_MAPPING));
+
+                cls.getMethod("translate", String.class, Map.class)
+                        .invoke(umeExporter, getExportModelName(), exportParams);
+            } catch (ClassNotFoundException e) {
+                log.error("UMEExporter doesn't support!", e);
+                return 3;
+            } catch (Exception e) {
+                log.error("Error occurred when exporting UME model.", e);
+                return 3;
+            }
         } else {
             log.error("Unsupported output format - {}", type);
             status = -1;
@@ -367,14 +405,14 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         try {
             writer = ShifuFileUtils.getWriter(localColumnStatsPath.toString(), SourceType.LOCAL);
 
-            Map<Integer, List<String>> ccUnitStatsMap = loadColumnConfigUnitStats();
+            Map<Integer, ColumnAdditionalInfo> ccUnitStatsMap = loadColumnAdditionalInfos();
             List<String> firstUnitStats = null;
 
             if (MapUtils.isNotEmpty(ccUnitStatsMap)) {
-                firstUnitStats = ccUnitStatsMap.entrySet().iterator().next().getValue();
+                firstUnitStats = ccUnitStatsMap.entrySet().iterator().next().getValue().getUnitStats();
                 writer.write("dataSet,columnFlag,columnName,columnNum,iv,ks,max,mean,median,min,missingCount,"
                         + "missingPercentage,stdDev,totalCount,distinctCount,weightedIv,weightedKs,weightedWoe,woe,"
-                        + "skewness,kurtosis,columnType,finalSelect,psi,unitstats,version,"
+                        + "skewness,kurtosis,columnType,finalSelect,psi,unitstats,version,psiStd,cosine,cosStd,"
                         + unitsToHeader(firstUnitStats)
                         + "\n");
             } else {
@@ -413,8 +451,19 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 builder.append(StringUtils.join(columnConfig.getUnitStats(), '|')).append(',');
                 if (CollectionUtils.isNotEmpty(firstUnitStats)) {
                     builder.append(modelConfig.getBasic().getVersion()).append(",");
-                    builder.append(splitUnitStatsToColumn(
-                            ccUnitStatsMap.get(columnConfig.getColumnNum()), firstUnitStats.size())).append("\n");
+                    ColumnAdditionalInfo additionalInfo = ccUnitStatsMap.get(columnConfig.getColumnNum());
+                    if (additionalInfo != null) {
+                        builder.append(additionalInfo.getPsiStd()).append(',');
+                        builder.append(additionalInfo.getCosine()).append(',');
+                        builder.append(additionalInfo.getCosStd()).append(',');
+                        builder.append(splitUnitStatsToColumn(additionalInfo.getUnitStats(),
+                                firstUnitStats.size())).append("\n");
+                    } else { // append empty
+                        builder.append(',');
+                        builder.append(',');
+                        builder.append(',');
+                        builder.append(splitUnitStatsToColumn(null, firstUnitStats.size())).append("\n");
+                    }
                 } else {
                     builder.append(modelConfig.getBasic().getVersion()).append("\n");
                 }
@@ -427,17 +476,30 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         }
     }
 
-    private Map<Integer, List<String>> loadColumnConfigUnitStats() throws IOException {
-        Map<Integer, List<String>> columnConfigUnitStats = new HashMap<Integer, List<String>>();
-
+    private Map<Integer, ColumnAdditionalInfo> loadColumnAdditionalInfos() throws IOException {
+        Map<Integer, ColumnAdditionalInfo> columnConfigUnitStats = new HashMap<>();
         String unitStatsFilePath = this.pathFinder.getColumnConfigUnitStatsPath();
         if (ShifuFileUtils.isFileExists(unitStatsFilePath, SourceType.LOCAL)) {
+            // String delimiter = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER);
+            // Splitter splitter = Splitter.on(delimiter).trimResults();
             List<String> unitStatsLines = FileUtils.readLines(new File(unitStatsFilePath));
             if (CollectionUtils.isNotEmpty(unitStatsLines)) {
                 for (String line : unitStatsLines) {
                     String[] fields = line.trim().split("\\|");
-                    columnConfigUnitStats.put(Integer.parseInt(fields[0]),
-                            Arrays.asList(StringUtils.split(fields[1], CalculateStatsUDF.CATEGORY_VAL_SEPARATOR)));
+                    // String[] fields = CommonUtils.splitAndReturnList(line.trim(), splitter).toArray(new String[0]);
+                    int columnNum = Integer.parseInt(fields[0]);
+                    double psiStd = Double.parseDouble(fields[1]);
+                    double cosine = Double.parseDouble(fields[2]);
+                    double cosStd = Double.parseDouble(fields[3]);
+                    List<String> unitStats = Arrays.asList(
+                            StringUtils.split(fields[4], CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
+                    ColumnAdditionalInfo additionalInfo = new ColumnAdditionalInfo();
+                    additionalInfo.setColumnNum(columnNum);
+                    additionalInfo.setPsiStd(psiStd);
+                    additionalInfo.setCosine(cosine);
+                    additionalInfo.setCosStd(cosStd);
+                    additionalInfo.setUnitStats(unitStats);
+                    columnConfigUnitStats.put(columnNum, additionalInfo);
                 }
             }
         }
@@ -446,22 +508,26 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     }
 
     private String splitUnitStatsToColumn(List<String> unitStats, int size) {
-        List<String> unitHeaders = new ArrayList<String>(size * 3);
+        List<String> unitHeaders = new ArrayList<String>(size * 5);
         if ( CollectionUtils.isEmpty(unitStats) || unitStats.size() != size ) {
             Collections.fill(unitHeaders, "");
         } else {
             unitHeaders.addAll(unitStatsFields(unitStats, 1, ""));
             unitHeaders.addAll(unitStatsFields(unitStats, 2, ""));
             unitHeaders.addAll(unitStatsFields(unitStats, 3, ""));
+            unitHeaders.addAll(unitStatsFields(unitStats, 4, ""));
+            unitHeaders.addAll(unitStatsFields(unitStats, 5, ""));
         }
         return StringUtils.join(unitHeaders, ",");
     }
 
     private String unitsToHeader(List<String> unitStats) {
-        List<String> unitHeaders = new ArrayList<String>(unitStats.size() * 3);
+        List<String> unitHeaders = new ArrayList<String>(unitStats.size() * 5);
         unitHeaders.addAll(unitStatsFields(unitStats, 0, "_mean"));
         unitHeaders.addAll(unitStatsFields(unitStats, 0, "_missing_rate"));
         unitHeaders.addAll(unitStatsFields(unitStats, 0, "_inst_cnt"));
+        unitHeaders.addAll(unitStatsFields(unitStats, 0, "_ks"));
+        unitHeaders.addAll(unitStatsFields(unitStats, 0, "_iv"));
         return StringUtils.join(unitHeaders, ",");
     }
 
@@ -547,7 +613,8 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     private Map<Integer, ColumnStatistics> readSEValuesToMap(String seOutputFiles, SourceType source)
             throws IOException {
         // here only works for 1 reducer
-        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source).globStatus(new Path(seOutputFiles));
+        Path filePath = new Path(seOutputFiles);
+        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source, filePath).globStatus(filePath);
         if(globStatus == null || globStatus.length == 0) {
             throw new RuntimeException("Var select MSE stats output file not exist.");
         }
@@ -637,6 +704,13 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             }
         }
         return 0;
+    }
+
+    public String getExportModelName() {
+        if (MapUtils.isNotEmpty(this.params) && this.params.get(EXPORT_MODEL_NAME) instanceof String) {
+            return (String) this.params.get(EXPORT_MODEL_NAME);
+        }
+        return null;
     }
 
     public static class VarCorrInfo implements Comparable<VarCorrInfo> {

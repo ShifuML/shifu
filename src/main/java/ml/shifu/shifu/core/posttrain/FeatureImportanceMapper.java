@@ -93,12 +93,12 @@ public class FeatureImportanceMapper extends Mapper<LongWritable, Text, IntWrita
 
     private void loadConfigFiles(final Context context) {
         try {
-            SourceType sourceType = SourceType.valueOf(context.getConfiguration().get(
-                    Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
-            this.modelConfig = CommonUtils.loadModelConfig(
-                    context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG), sourceType);
-            this.columnConfigList = CommonUtils.loadColumnConfigList(
-                    context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
+            SourceType sourceType = SourceType.valueOf(
+                    context.getConfiguration().get(Constants.SHIFU_MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
+            this.modelConfig = CommonUtils.loadModelConfig(context.getConfiguration().get(Constants.SHIFU_MODEL_CONFIG),
+                    sourceType);
+            this.columnConfigList = CommonUtils
+                    .loadColumnConfigList(context.getConfiguration().get(Constants.SHIFU_COLUMN_CONFIG), sourceType);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -110,7 +110,7 @@ public class FeatureImportanceMapper extends Mapper<LongWritable, Text, IntWrita
 
         loadTagWeightNum();
 
-        this.dataPurifier = new DataPurifier(this.modelConfig, false);
+        this.dataPurifier = new DataPurifier(this.modelConfig, this.columnConfigList, false);
 
         this.outputKey = new IntWritable();
         this.outputValue = new DoubleWritable();

@@ -20,7 +20,7 @@ package ml.shifu.shifu.util;
  */
 public interface Constants {
 
-    public static final String version = "0.12.0";
+    public static final String version = "0.13.0";
 
     public static final String MODELS = "models";
 
@@ -33,6 +33,8 @@ public interface Constants {
     public static final String COMBO_CONFIG_JSON_FILE_NAME = "ComboTrain.json";
 
     public static final String COLUMN_STATS_CSV_FILE_NAME = "ColumnStats.csv";
+
+    public static final String LOCAL_DATE_STATS_CSV_FILE_NAME = "DateStats.csv";
 
     public static final String MODEL_SETS = "ModelSets";
 
@@ -87,6 +89,7 @@ public interface Constants {
     public static final String SVM = "svm";
     public static final String NN = "nn";
     public static final String GBT = "GBT";
+    public static final String RF = "rf";
     public static final String GENERIC = "generic";
     public static final String TENSORFLOW = "tensorflow";
     public static final String WDL = "WDL";
@@ -176,6 +179,7 @@ public interface Constants {
     public static final String DEFAULT_META_COLUMN_FILE = "meta.column.names";
     public static final String DEFAULT_APPEND_COLUMN_FILE = "append.column.names";
     public static final String DEFAULT_CATEGORICAL_COLUMN_FILE = "categorical.column.names";
+    public static final String DEFAULT_CATEGORICAL_HASH_FILE = "categorical.hash.seed.conf";
     public static final String DEFAULT_HYBRID_COLUMN_FILE = "hybrid.column.names";
     public static final String DEFAULT_CANDIDATE_COLUMN_FILE = "candidate.column.names";
     public static final String DEFAULT_FORCESELECT_COLUMN_FILE = "forceselect.column.names";
@@ -210,6 +214,8 @@ public interface Constants {
     public static final String FILTER_BY_ST = "ST";
 
     public static final String FILTER_BY_SE = "SE";
+
+    public static final String FILTER_BY_SC = "SC";
 
     public static final String FILTER_BY_VOTED = "V";
 
@@ -267,6 +273,12 @@ public interface Constants {
 
     public static final String SHIFU_NORM_PREFER_PART_SIZE = "shifu.norm.prefer.part.size";
 
+    public static final String SHIFU_NORM_SHUFFLE_RBL_RATIO = "shifu.norm.shuffle.rbl.ratio";
+
+    public static final String SHIFU_NORM_SHUFFLE_RBL_TARGET_INDEX = "shifu.norm.shuffle.rbl.target.index";
+
+    public static final String SHIFU_NORM_SHUFFLE_RBL_UPDATE_WEIGHT = "shifu.norm.shuffle.rbl.update.weight";
+
     public static final String SHIFU_SCORE_SCALE = "shifu.score.scale";
 
     public static final String SHIFU_CORRELATION_MULTI_THREADS = "shifu.correlation.multi.threads";
@@ -292,13 +304,16 @@ public interface Constants {
      * Experience value from modeler
      */
     public static final int MAX_CATEGORICAL_BINC_COUNT = 10000;
-    public static final int MAX_CATEGORICAL_VAL_LENGTH = 10000;
+    // The categorical variable length shouldn't be longer than 512, or it will be treated as invalid
+    public static final int MAX_CATEGORICAL_VAL_LENGTH = 512;
 
     public static final String SHIFU_MAX_CATEGORY_SIZE = "shifu.max.category.size";
+    
+    public static final String SHIFU_ENABLE_AUTO_HASH = "shifu.enable.auto.hash";
 
     public static final String SHIFU_NN_INDEPENDENT_MODEL = "shifu.nn.independent.model";
 
-    public static final String SHIFU_NN_BINARY_MODEL_PATH = "shifu.nn.binary.model.path";
+    public static final String SHIFU_BINARY_MODEL_PATH = "shifu.binary.model.path";
 
     public static final String HYBRID_BIN_STR_DILIMETER = ";;;";
 
@@ -326,8 +341,12 @@ public interface Constants {
 
     public static final String RECURSIVE_CNT = "RECURSIVE_CNT";
     public static final String IS_TO_SHUFFLE_DATA = "IS_TO_SHUFFLE_DATA";
+    public static final String EXPECT_POS_RATIO = "EXPECT_POS_RATIO";
+    public static final String RBL_UPDATE_WEIGHT = "RBL_UPDATE_WEIGHT";
 
     public static final String STRICT_MODE = "STRICT";
+
+    public static final String VAR_SEL_FILE = "VAR_SEL_FILE";
 
     /**
      * GBT score range is not in [0, 1], to make it in [0, 1], such strategies are provided with case insensitive.
@@ -341,21 +360,22 @@ public interface Constants {
 
     public static final String SHIFU_SEGMENT_EXPRESSIONS = "shifu.segment.expressions";
     public static final String SHIFU_NORM_CATEGORY_MISSING_NORM = "shifu.norm.category.missing.norm";
-    
+
     public static final String SHIFU_EVAL_NORM_APPEND_SCORE = "shifu.eval.norm.appendscore";
     public static final String SHIFU_EVAL_NORM_OUTPUTRAW = "shifu.eval.norm.outputraw";
     public static final String SHIFU_NORM_ONLY_SELECTED = "shifu.norm.only.selected";
 
     public static final String SHIFU_OUTPUT_DATA_DELIMITER = "shifu.output.data.delimiter";
     public static final String SHIFU_OUTPUT_DATA_CSV = "shifu.output.data.csv";
-    
+
     public static final String SHIFU_NORM_PRECISION_TYPE = "shifu.norm.precision.type";
     
-    public static final String TF_ALG_NAME = "Tensorflow";
+    public static final String SHIFU_PRECISION_TYPE = "shifu.precision.type";
     
-    /**
-     * Wide and deep model name
-     */
-    public static final String WDL_ALG_NAME = "WDL";
+    public static final String SHIFU_MODELSPEC_PRECISION_TYPE = "shifu.modelspec.precision.type";
+
+    public static final String IS_UPDATE_STATS_ONLY = "IS_UPDATE_STATS_ONLY";
+    
+    public static final String UTF_8 = "utf-8";
 
 }

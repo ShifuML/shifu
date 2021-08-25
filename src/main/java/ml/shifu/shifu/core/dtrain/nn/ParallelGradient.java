@@ -25,15 +25,23 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import ml.shifu.shifu.core.dtrain.dataset.FloatFlatNetwork;
-import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataSet;
-import ml.shifu.shifu.util.ClassUtils;
-
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLData;
+import ml.shifu.shifu.util.PermutationShuffler;
+import ml.shifu.shifu.util.Shuffler;
 import org.encog.neural.error.ErrorFunction;
 import org.encog.neural.error.LinearErrorFunction;
 import org.encog.neural.flat.FlatNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import ml.shifu.shifu.core.dtrain.dataset.FloatFlatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataSet;
+import ml.shifu.shifu.core.dtrain.loss.AbsoluteErrorCalculation;
+import ml.shifu.shifu.core.dtrain.loss.AbsoluteErrorFunction;
+import ml.shifu.shifu.core.dtrain.loss.LogErrorCalculation;
+import ml.shifu.shifu.core.dtrain.loss.LogErrorFunction;
+import ml.shifu.shifu.core.dtrain.loss.SquaredErrorCalculation;
+import ml.shifu.shifu.util.ClassUtils;
 
 /**
  * {@link ParallelGradient} is copied from Encog framework. The reason is that we original Gradient don't pop up
@@ -98,7 +106,7 @@ public class ParallelGradient {
     /**
      * If enabled by extreme learning machine: https://en.wikipedia.org/wiki/Extreme_learning_machine
      */
-    //private boolean isELM;
+    // private boolean isELM;
 
     /**
      * Loss string definition: log, squared, absolute
@@ -109,6 +117,16 @@ public class ParallelGradient {
      * If miniBatchRate set to 0.1d, {@link #batchs} is 10. It will run 10x iterations for one epochs.
      */
     private int batchs = 1;
+
+    /**
+     * A shuffler to map indexes. If mini batch is enabled, this will be initialized to a permutation shuffler.
+     */
+    private Shuffler shuffler = null;
+    
+    private long trainSize;
+    private long validationSize;
+    private double trainSum;
+    private double validationSum;
 
     public ParallelGradient(final FloatFlatNetwork theNetwork, final FloatMLDataSet theTraining,
             final FloatMLDataSet theTesting, final double[] flatSpot, ErrorFunction ef, boolean isCrossOver,
@@ -168,16 +186,24 @@ public class ParallelGradient {
         this.threadPool = Executors.newFixedThreadPool(this.threadCount);
         this.lossStr = lossStr;
         this.batchs = batchs;
+        // only support shuffle for in-memory training data
+        if (this.batchs > 1 && this.training instanceof BasicFloatMLData) {
+            this.shuffler = new PermutationShuffler((int) this.training.getRecordCount());
+        }
     }
 
     public double[] computeGradients(int currentIteration, Set<Integer> dropoutNodes) {
         CompletionService<double[]> completionService = new ExecutorCompletionService<double[]>(this.threadPool);
         this.subGradients = new SubGradient[this.threadCount];
+        if (shuffler != null) {
+            // regenerate shuffle mapping in each iteration
+            shuffler.refresh();
+        }
         for(int i = 0; i < this.threadCount; i++) {
             if(this.subGradients[i] == null) {
                 this.subGradients[i] = new SubGradient(this.network.clone(), this.training, this.trainLows[i],
                         this.trainHighs[i], this.testing, this.testLows[i], this.testHighs[i], this.flatSpot,
-                        this.isCrossOver, this, this.batchs, currentIteration, dropoutNodes);
+                        this.isCrossOver, this, this.batchs, currentIteration, dropoutNodes, threadCount, shuffler);
             } else {
                 this.subGradients[i].setNetwork(this.network.clone());
                 this.subGradients[i].setDropoutNodes(dropoutNodes);
@@ -204,11 +230,17 @@ public class ParallelGradient {
         }
 
         double errorSum = 0d;
+        this.trainSize = 0L;
+        this.trainSum = 0L;
+        // TODO init here but compute in #caculateError ?
+        this.validationSize = 0L;
+        this.validationSum = 0L;
         for(int i = 0; i < this.threadCount; i++) {
-            errorSum += this.subGradients[i].getError() * (trainHighs[i] - trainLows[i] + 1)
-                    * this.getNetwork().getOutputCount();
+            errorSum += this.subGradients[i].getError(); // * (trainHighs[i] - trainLows[i] + 1)
+            this.trainSize +=  this.subGradients[i].getTrainSize();
+            this.trainSum +=  this.subGradients[i].getTrainSum();
         }
-        this.trainError = errorSum / (this.training.getRecordCount() * this.getNetwork().getOutputCount());
+        this.trainError = errorSum;
         return finalGradients;
     }
 
@@ -243,7 +275,7 @@ public class ParallelGradient {
 
     public double calculateError() {
         CompletionService<Double> completionService = new ExecutorCompletionService<Double>(this.threadPool);
-        final ml.shifu.shifu.core.dtrain.nn.ErrorCalculation ec = createECInstance();
+        final ml.shifu.shifu.core.dtrain.loss.ErrorCalculation ec = createECInstance();
         for(int i = 0; i < this.threadCount; i++) {
             final SubGradient subGradient = this.subGradients[i];
             completionService.submit(new Callable<Double>() {
@@ -266,6 +298,11 @@ public class ParallelGradient {
             }
             rCnt += 1;
         }
+        
+        for(int i = 0; i < this.threadCount; i++) {
+            this.validationSize += this.subGradients[i].getValidationSize();
+            this.validationSum += this.subGradients[i].getValidationSum();
+        }
 
         return ec.calculate();
     }
@@ -275,8 +312,8 @@ public class ParallelGradient {
      * 
      * @return the ErrorCalculation instance.
      */
-    public ml.shifu.shifu.core.dtrain.nn.ErrorCalculation createECInstance() {
-        ml.shifu.shifu.core.dtrain.nn.ErrorCalculation ec = new SquaredErrorCalculation();
+    public ml.shifu.shifu.core.dtrain.loss.ErrorCalculation createECInstance() {
+        ml.shifu.shifu.core.dtrain.loss.ErrorCalculation ec = new SquaredErrorCalculation();
         if(lossStr.equalsIgnoreCase("log")) {
             ec = new LogErrorCalculation();
         } else if(lossStr.equalsIgnoreCase("absolute")) {
@@ -285,7 +322,7 @@ public class ParallelGradient {
             ec = new SquaredErrorCalculation();
         } else {
             try {
-                ec = (ml.shifu.shifu.core.dtrain.nn.ErrorCalculation) ClassUtils.newInstance(Class.forName(lossStr));
+                ec = (ml.shifu.shifu.core.dtrain.loss.ErrorCalculation) ClassUtils.newInstance(Class.forName(lossStr));
             } catch (ClassNotFoundException e) {
                 LOG.warn("Class not found for {}, using default SquaredLoss", lossStr);
                 ec = new SquaredErrorCalculation();
@@ -340,6 +377,62 @@ public class ParallelGradient {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    /**
+     * @return the trainSize
+     */
+    public long getTrainSize() {
+        return trainSize;
+    }
+
+    /**
+     * @param trainSize the trainSize to set
+     */
+    public void setTrainSize(long trainSize) {
+        this.trainSize = trainSize;
+    }
+
+    /**
+     * @return the validationSize
+     */
+    public long getValidationSize() {
+        return validationSize;
+    }
+
+    /**
+     * @param validationSize the validationSize to set
+     */
+    public void setValidationSize(long validationSize) {
+        this.validationSize = validationSize;
+    }
+
+    /**
+     * @return the trainSum
+     */
+    public double getTrainSum() {
+        return trainSum;
+    }
+
+    /**
+     * @param trainSum the trainSum to set
+     */
+    public void setTrainSum(double trainSum) {
+        this.trainSum = trainSum;
+    }
+
+    /**
+     * @return the validationSum
+     */
+    public double getValidationSum() {
+        return validationSum;
+    }
+
+    /**
+     * @param validationSum the validationSum to set
+     */
+    public void setValidationSum(double validationSum) {
+        this.validationSum = validationSum;
     }
 
 }

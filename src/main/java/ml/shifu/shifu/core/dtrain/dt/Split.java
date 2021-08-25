@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Set;
 
 import ml.shifu.guagua.io.Bytable;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 
 /**
  * Split for Both continuous and categorical features.
@@ -149,8 +150,7 @@ public class Split implements Bytable {
         this.isLeft = isLeft;
     }
 
-    @Override
-    public void write(DataOutput out) throws IOException {
+    public void write(DataOutput out, PrecisionType pt) throws IOException {
         out.writeInt(this.columnNum);
         // use byte type to save space, should not be null
         out.writeByte(this.featureType);
@@ -168,9 +168,26 @@ public class Split implements Bytable {
                 }
                 break;
             case CONTINUOUS:
-                out.writeDouble(this.threshold);
+                switch(pt) {
+                    case FLOAT32:
+                        out.writeFloat((float) this.threshold);
+                        break;
+                    case FLOAT16:
+                        out.writeFloat((float) PrecisionType.FLOAT16.to(this.threshold));
+                        break;
+                    case DOUBLE64:
+                        out.writeDouble(this.threshold);
+                        break;
+                    default:
+                        throw new UnsupportedOperationException("Not supported precision");
+                }
                 break;
         }
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+        this.write(out, PrecisionType.DOUBLE64);
     }
 
     @Override
@@ -191,6 +208,39 @@ public class Split implements Bytable {
                 break;
             case CONTINUOUS:
                 this.threshold = in.readDouble();
+                break;
+        }
+    }
+
+    public void readFields(DataInput in, int version, PrecisionType pt) throws IOException {
+        this.columnNum = in.readInt();
+        this.featureType = in.readByte();
+
+        switch(this.featureType) {
+            case CATEGORICAL:
+                this.isLeft = in.readBoolean();
+                boolean isNull = in.readBoolean();
+                if(isNull) {
+                    leftOrRightCategories = null;
+                } else {
+                    leftOrRightCategories = new SimpleBitSet<Short>();
+                    ((Bytable) leftOrRightCategories).readFields(in);
+                }
+                break;
+            case CONTINUOUS:
+                switch(pt) {
+                    case FLOAT32:
+                        this.threshold = in.readFloat();
+                        break;
+                    case FLOAT16:
+                        this.threshold = in.readFloat();
+                        break;
+                    case DOUBLE64:
+                        this.threshold = in.readDouble();
+                        break;
+                    default:
+                        throw new UnsupportedOperationException("Not supported precision");
+                }
                 break;
         }
     }

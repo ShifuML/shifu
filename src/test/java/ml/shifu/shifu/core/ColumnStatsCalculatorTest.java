@@ -16,6 +16,9 @@
 package ml.shifu.shifu.core;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import org.testng.annotations.Test;
 
@@ -35,6 +38,33 @@ public class ColumnStatsCalculatorTest {
         ColumnStatsCalculator.ColumnMetrics status = ColumnStatsCalculator.calculateColumnMetrics(negativeList, positiveList);
         System.out.println(status.getIv());
         System.out.println(status.getKs());
+        System.out.println(status.getBinningWoe());
+
+        double[] negativeDoubleList = new double[negativeList.length];
+        for (int i = 0; i < negativeDoubleList.length; i ++) {
+            negativeDoubleList[i] = negativeList[i];
+        }
+        double[] positiveDoubleList = new double[negativeList.length];
+        for (int i = 0; i < positiveDoubleList.length; i ++) {
+            positiveDoubleList[i] = positiveList[i];
+        }
+        status = ColumnStatsCalculator.calculateColumnMetrics(negativeDoubleList, positiveDoubleList);
+        System.out.println(status.getIv());
+        System.out.println(status.getKs());
+        System.out.println(status.getBinningWoe());
+
+        List<Long> negativeLongList = new ArrayList<>();
+        for (long v : negativeList) {
+            negativeLongList.add(v);
+        }
+        List<Long> positiveLongList = new ArrayList<>();
+        for (long v : positiveList) {
+            positiveLongList.add(v);
+        }
+        status = ColumnStatsCalculator.calculateColumnMetrics(negativeLongList, positiveLongList);
+        System.out.println(status.getIv());
+        System.out.println(status.getKs());
+        System.out.println(status.getBinningWoe());
     }
 
 }

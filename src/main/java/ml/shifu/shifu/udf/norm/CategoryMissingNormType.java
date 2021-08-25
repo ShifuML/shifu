@@ -1,7 +1,5 @@
 package ml.shifu.shifu.udf.norm;
 
-import ml.shifu.shifu.udf.NormalizeUDF;
-
 /**
  * Copyright [2013-2018] PayPal Software Foundation
  * <p>

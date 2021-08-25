@@ -45,6 +45,16 @@ public interface FloatMLDataSet extends Iterable<FloatMLDataPair> {
     long getRecordCount();
 
     /**
+     * Determine the sum of significance for all records in the set.
+     *
+     * if the significance specified, it equals sum of all significances,
+     * if no the significance specified, it equals the total number of records in the set
+     *
+     * @return The sum of significance for all records in the set.
+     */
+    double getRecordSum();
+
+    /**
      * Read an individual record, specified by index, in random order.
      * 
      * @param index

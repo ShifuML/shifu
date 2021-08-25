@@ -35,6 +35,7 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.StringUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.Constants;
 
@@ -527,6 +528,24 @@ public class IndependentNNModel {
      *             any IOException in de-serialization.
      */
     public static IndependentNNModel loadFromStream(InputStream input, boolean isRemoveNameSpace) throws IOException {
+        return loadFromStream(input, true, PrecisionType.DOUBLE64);
+    }
+
+    /**
+     * Load model instance from input stream which is saved in NNOutput for specified binary format.
+     * 
+     * @param input
+     *            the input stream, flat input stream or gzip input stream both OK
+     * @param isRemoveNameSpace
+     *            is remove name space or not
+     * @param pt
+     *            output precision type for weights
+     * @return the nn model instance
+     * @throws IOException
+     *             any IOException in de-serialization.
+     */
+    public static IndependentNNModel loadFromStream(InputStream input, boolean isRemoveNameSpace, PrecisionType pt)
+            throws IOException {
         DataInputStream dis = null;
         // check if gzip or not
         try {
@@ -656,7 +675,7 @@ public class IndependentNNModel {
         int size = dis.readInt();
         List<BasicFloatNetwork> networks = new ArrayList<BasicFloatNetwork>();
         for(int i = 0; i < size; i++) {
-            networks.add(new PersistBasicFloatNetwork().readNetwork(dis));
+            networks.add(new PersistBasicFloatNetwork().readNetwork(dis, pt));
         }
 
         return new IndependentNNModel(networks, normType, numNameMap, cateColumnNameNames, columnMap, cateWoeMap,

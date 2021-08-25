@@ -49,7 +49,7 @@ public class HdfsPartFile {
         }
 
         String line = this.reader.readLine();
-        if (line == null) { // reach part file end
+        while(line == null) { // reach part file end
             // close current reader
             IOUtils.closeQuietly(this.reader);
 
@@ -58,6 +58,8 @@ public class HdfsPartFile {
             this.reader = createReaderFromPartFile(this.currentFileOps);
             if (this.reader != null) {
                 line = this.reader.readLine();
+            } else {
+                break;
             }
         }
 
@@ -77,7 +79,7 @@ public class HdfsPartFile {
         CompressionCodecFactory compressionFactory = new CompressionCodecFactory(new Configuration());
         InputStream is = null;
 
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType, fileStatus.getPath());
         CompressionCodec codec = compressionFactory.getCodec(fileStatus.getPath());
         if (codec != null) {
             is = codec.createInputStream(fs.open(fileStatus.getPath()));

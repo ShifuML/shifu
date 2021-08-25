@@ -34,8 +34,8 @@ public class MunroPatIStatsExecutor extends MapReducerStatsWorker {
     private static Logger log = LoggerFactory.getLogger(MunroPatIStatsExecutor.class);
 
     public MunroPatIStatsExecutor(BasicModelProcessor processor, ModelConfig modelConfig,
-            List<ColumnConfig> columnConfigList) {
-        super(processor, modelConfig, columnConfigList);
+            List<ColumnConfig> columnConfigList, boolean isUpdateStatsOnly) {
+        super(processor, modelConfig, columnConfigList, isUpdateStatsOnly);
     }
 
     @Override

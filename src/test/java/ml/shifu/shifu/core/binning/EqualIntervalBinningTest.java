@@ -17,11 +17,37 @@
  */
 package ml.shifu.shifu.core.binning;
 
+import org.testng.Assert;
+import org.testng.annotations.Test;
+
+import java.util.HashSet;
+import java.util.List;
+
 /**
  * EqualIntervalBinningTest class
  *
  * @Oct 27, 2014
  */
 public class EqualIntervalBinningTest {
+
+    @Test
+    public void test() {
+        EqualIntervalBinning inst = new EqualIntervalBinning();
+        inst.missingValSet = new HashSet<>();
+        inst.expectedBinningNum = 5;
+        inst.addData("");
+        inst.addData(null);
+        inst.addData(Double.toString(Double.MAX_VALUE));
+        inst.addData("0.0");
+        inst.addData("1.0");
+        inst.addData("2.0");
+        inst.addData("3.0");
+        inst.addData("4.0");
+        inst.addData("5.0");
+        List<Double> bins = inst.getDataBin();
+        Assert.assertTrue(bins.size() == 5);
+        Assert.assertTrue(bins.get(1) > 0.5);
+        Assert.assertTrue(bins.get(bins.size() - 1) < 4.5);
+    }
 
 }

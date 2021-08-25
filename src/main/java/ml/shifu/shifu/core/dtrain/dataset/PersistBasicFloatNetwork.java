@@ -15,21 +15,36 @@
  */
 package ml.shifu.shifu.core.dtrain.dataset;
 
-import ml.shifu.shifu.core.dtrain.nn.ActivationLeakyReLU;
-import ml.shifu.shifu.core.dtrain.nn.ActivationPTANH;
-import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
-import ml.shifu.shifu.core.dtrain.nn.ActivationSwish;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
 import org.apache.commons.lang.StringUtils;
 import org.encog.engine.network.activation.ActivationFunction;
 import org.encog.neural.flat.FlatNetwork;
 import org.encog.neural.networks.BasicNetwork;
 import org.encog.neural.networks.PersistBasicNetwork;
-import org.encog.persist.*;
+import org.encog.persist.EncogFileSection;
+import org.encog.persist.EncogPersistor;
+import org.encog.persist.EncogReadHelper;
+import org.encog.persist.EncogWriteHelper;
+import org.encog.persist.PersistConst;
+import org.encog.persist.PersistError;
 import org.encog.util.csv.CSVFormat;
 
-import java.io.*;
-import java.util.*;
-import java.util.Map.Entry;
+import ml.shifu.shifu.core.dtrain.nn.ActivationLeakyReLU;
+import ml.shifu.shifu.core.dtrain.nn.ActivationPTANH;
+import ml.shifu.shifu.core.dtrain.nn.ActivationReLU;
+import ml.shifu.shifu.core.dtrain.nn.ActivationSwish;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 
 /**
  * Support {@link BasicFloatNetwork} serialization and de-serialization. This is copied from {@link PersistBasicNetwork}
@@ -75,8 +90,8 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
 
                 flat.setBeginTraining(EncogFileSection.parseInt(params, BasicNetwork.TAG_BEGIN_TRAINING));
                 flat.setConnectionLimit(EncogFileSection.parseDouble(params, BasicNetwork.TAG_CONNECTION_LIMIT));
-                flat.setContextTargetOffset(EncogFileSection.parseIntArray(params,
-                        BasicNetwork.TAG_CONTEXT_TARGET_OFFSET));
+                flat.setContextTargetOffset(
+                        EncogFileSection.parseIntArray(params, BasicNetwork.TAG_CONTEXT_TARGET_OFFSET));
                 flat.setContextTargetSize(EncogFileSection.parseIntArray(params, BasicNetwork.TAG_CONTEXT_TARGET_SIZE));
                 flat.setEndTraining(EncogFileSection.parseInt(params, BasicNetwork.TAG_END_TRAINING));
                 flat.setHasContext(EncogFileSection.parseBoolean(params, BasicNetwork.TAG_HAS_CONTEXT));
@@ -102,11 +117,11 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
                     String name = "org.encog.engine.network.activation." + cols.get(0);
                     if(cols.get(0).equals("ActivationReLU")) {
                         name = "ml.shifu.shifu.core.dtrain.nn.ActivationReLU";
-                    } else if (cols.get(0).equals("ActivationLeakyReLU")) {
+                    } else if(cols.get(0).equals("ActivationLeakyReLU")) {
                         name = "ml.shifu.shifu.core.dtrain.nn.ActivationLeakyReLU";
-                    } else if (cols.get(0).equals("ActivationSwish")){
+                    } else if(cols.get(0).equals("ActivationSwish")) {
                         name = "ml.shifu.shifu.core.dtrain.nn.ActivationSwish";
-                    } else if (cols.get(0).equals("ActivationPTANH")){
+                    } else if(cols.get(0).equals("ActivationPTANH")) {
                         name = "ml.shifu.shifu.core.dtrain.nn.ActivationPTANH";
                     }
                     try {
@@ -197,6 +212,10 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
     }
 
     public BasicFloatNetwork readNetwork(final DataInput in) throws IOException {
+        return readNetwork(in, PrecisionType.DOUBLE64);
+    }
+
+    public BasicFloatNetwork readNetwork(final DataInput in, PrecisionType pt) throws IOException {
         final BasicFloatNetwork result = new BasicFloatNetwork();
         final FlatNetwork flat = new FlatNetwork();
 
@@ -228,7 +247,21 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
         flat.setOutputCount(in.readInt());
         flat.setLayerSums(new double[flat.getLayerOutput().length]);
         flat.setWeightIndex(readIntArray(in));
-        flat.setWeights(readDoubleArray(in));
+        if(pt != null) {
+            switch(pt) {
+                case DOUBLE64:
+                    flat.setWeights(readDoubleArray(in));
+                    break;
+                case FLOAT32:
+                    flat.setWeights(readFloatArrayToDouble(in));
+                    break;
+                case FLOAT16:
+                    flat.setWeights(readFloatArrayToDouble(in));
+                    break;
+                default:
+                    throw new UnsupportedOperationException(pt + " is not supported in model spec deserialization.");
+            }
+        }
         flat.setBiasActivation(readDoubleArray(in));
 
         // read activations
@@ -238,11 +271,11 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
             String name = ml.shifu.shifu.core.dtrain.StringUtils.readString(in);
             if(name.equals("ActivationReLU")) {
                 name = ActivationReLU.class.getName();
-            } else if (name.equals("ActivationLeakyReLU")) {
+            } else if(name.equals("ActivationLeakyReLU")) {
                 name = ActivationLeakyReLU.class.getName();
-            } else if (name.equals("ActivationSwish")) {
+            } else if(name.equals("ActivationSwish")) {
                 name = ActivationSwish.class.getName();
-            } else if (name.equals("ActivationPTANH")) {
+            } else if(name.equals("ActivationPTANH")) {
                 name = ActivationPTANH.class.getName();
             } else {
                 name = "org.encog.engine.network.activation." + name;
@@ -277,7 +310,7 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
         return result;
     }
 
-    public void saveNetwork(DataOutput out, final BasicFloatNetwork network) throws IOException {
+    public void saveNetwork(DataOutput out, final BasicFloatNetwork network, PrecisionType pt) throws IOException {
         final FlatNetwork flat = network.getStructure().getFlat();
         // write general properties
         Map<String, String> properties = network.getProperties();
@@ -309,7 +342,21 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
         writeDoubleArray(out, flat.getLayerOutput());
         out.writeInt(flat.getOutputCount());
         writeIntArray(out, flat.getWeightIndex());
-        writeDoubleArray(out, flat.getWeights());
+
+        switch(pt) {
+            case FLOAT32:
+                writeFloatArray(out, flat.getWeights());
+                break;
+            case FLOAT16:
+                writeFloat16Array(out, flat.getWeights());
+                break;
+            case DOUBLE64:
+                writeDoubleArray(out, flat.getWeights());
+                break;
+            default:
+                throw new UnsupportedOperationException(pt + " is not supported in model spec serialization.");
+        }
+
         writeDoubleArray(out, flat.getBiasActivation());
 
         // write activation list
@@ -330,6 +377,10 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
         }
     }
 
+    public void saveNetwork(DataOutput out, final BasicFloatNetwork network) throws IOException {
+        saveNetwork(out, network, PrecisionType.DOUBLE64);
+    }
+
     private int[] readIntArray(DataInput in) throws IOException {
         int size = in.readInt();
         int[] array = new int[size];
@@ -344,6 +395,26 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
         double[] array = new double[size];
         for(int i = 0; i < size; i++) {
             array[i] = in.readDouble();
+        }
+        return array;
+    }
+
+    @SuppressWarnings("unused")
+    private double[] readFloatArrayToDouble(DataInput in) throws IOException {
+        int size = in.readInt();
+        double[] array = new double[size];
+        for(int i = 0; i < size; i++) {
+            array[i] = in.readFloat();
+        }
+        return array;
+    }
+
+    @SuppressWarnings("unused")
+    private float[] readFloatArray(DataInput in) throws IOException {
+        int size = in.readInt();
+        float[] array = new float[size];
+        for(int i = 0; i < size; i++) {
+            array[i] = in.readFloat();
         }
         return array;
     }
@@ -366,6 +437,28 @@ public class PersistBasicFloatNetwork implements EncogPersistor {
             out.writeInt(array.length);
             for(double d: array) {
                 out.writeDouble(d);
+            }
+        }
+    }
+
+    private void writeFloatArray(DataOutput out, double[] array) throws IOException {
+        if(array == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(array.length);
+            for(double d: array) {
+                out.writeFloat((float) d);
+            }
+        }
+    }
+
+    private void writeFloat16Array(DataOutput out, double[] array) throws IOException {
+        if(array == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(array.length);
+            for(double d: array) {
+                out.writeFloat((float) PrecisionType.FLOAT16.to(d));
             }
         }
     }

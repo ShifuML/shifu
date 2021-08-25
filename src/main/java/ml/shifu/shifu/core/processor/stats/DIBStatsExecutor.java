@@ -38,8 +38,9 @@ public class DIBStatsExecutor extends MapReducerStatsWorker {
 
     private PathFinder pathFinder;
 
-    public DIBStatsExecutor(BasicModelProcessor processor, ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
-        super(processor, modelConfig, columnConfigList);
+    public DIBStatsExecutor(BasicModelProcessor processor, ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            boolean isUpdateStatsOnly) {
+        super(processor, modelConfig, columnConfigList, isUpdateStatsOnly);
         this.pathFinder = new PathFinder(this.modelConfig);
     }
 

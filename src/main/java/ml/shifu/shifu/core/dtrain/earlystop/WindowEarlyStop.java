@@ -4,6 +4,8 @@ import ml.shifu.guagua.master.MasterContext;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Copyright [2013-2018] PayPal Software Foundation
@@ -21,8 +23,10 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
  */
 
 public class WindowEarlyStop extends AbstractEarlyStopStrategy {
+    private static final Logger LOGGER = LoggerFactory.getLogger(WindowEarlyStop.class);
 
     private double globalMinimumError = Double.MAX_VALUE;
+    private double ignoreValue;
     private int minimumEpochs;
     private int bufferSize = 0;
     private int windowSize;
@@ -30,9 +34,12 @@ public class WindowEarlyStop extends AbstractEarlyStopStrategy {
     @SuppressWarnings("rawtypes")
     public WindowEarlyStop(MasterContext context, ModelConfig modelConfig, int windowSize) {
         double minimumStepsRatio = DTrainUtils.getDouble(context.getProps(), // get # of steps to choose parameters
-                CommonConstants.SHIFU_TRAIN_VAL_STEPS_RATIO, 0.1);
+                CommonConstants.SHIFU_TRAIN_VAL_STEPS_RATIO, 0.01);
+        this.ignoreValue = DTrainUtils.getDouble(context.getProps(), CommonConstants.EARLY_STOP_IGNORE_VALUE, 1.0E-20);
         this.minimumEpochs = (int)(modelConfig.getNumTrainEpochs() * minimumStepsRatio);
         this.windowSize = windowSize;
+        LOGGER.info("Init WindowEarlyStop with ignore value {}, mini num epoch {}, windowSize {}", this.ignoreValue,
+                this.minimumEpochs, this.windowSize);
     }
 
     @Override public boolean shouldEarlyStop(int epochs, double[] weights, double trainingError, double validationError) {
@@ -40,7 +47,7 @@ public class WindowEarlyStop extends AbstractEarlyStopStrategy {
             return false;
         }
 
-        if ( validationError < this.globalMinimumError ) {
+        if ( validationError < this.globalMinimumError || validationError - this.globalMinimumError < ignoreValue) {
             this.globalMinimumError = validationError;
             this.bufferSize = 0;
             return false;

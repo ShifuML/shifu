@@ -284,6 +284,20 @@ public class MemoryDiskFloatMLDataSet implements FloatMLDataSet {
 
     /*
      * (non-Javadoc)
+     *
+     * @see ml.shifu.shifu.core.dtrain.dataset.FloatMLDataSet.getRecordSum()
+     */
+    @Override
+    public double getRecordSum() {
+        double recordSum = this.memoryDataSet.getRecordSum();
+        if(this.diskDataSet != null) {
+            recordSum += this.diskDataSet.getRecordSum();
+        }
+        return recordSum;
+    }
+
+    /*
+     * (non-Javadoc)
      * 
      * @see org.encog.ml.data.MLDataSet#getRecord(long, org.encog.ml.data.MLDataPair)
      */

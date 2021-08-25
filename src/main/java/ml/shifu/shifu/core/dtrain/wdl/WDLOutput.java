@@ -86,7 +86,6 @@ public class WDLOutput extends BasicMasterInterceptor<WDLParams, WDLParams> {
     /**
      * ColumnConfig list reference
      */
-    @SuppressWarnings("unused")
     private List<ColumnConfig> columnConfigList;
 
     /**
@@ -128,7 +127,12 @@ public class WDLOutput extends BasicMasterInterceptor<WDLParams, WDLParams> {
                     if(!isHalt && currentIteration != totalIteration) {
                         Path tmpModelPath = getTmpModelPath(currentIteration);
                         writeModelToFileSystem(context.getMasterResult(), out);
-
+                        // a bug in new version to write last model, wait 1s for model flush hdfs successfully.
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e1) {
+                            Thread.currentThread().interrupt();
+                        }
                         // in such case tmp model is final model, just copy to tmp models
                         LOG.info("Copy checkpointed model to tmp folder: {}", tmpModelPath.toString());
                         try {
@@ -161,9 +165,9 @@ public class WDLOutput extends BasicMasterInterceptor<WDLParams, WDLParams> {
             // first iteration is used for training preparation
             return;
         }
-        double trainError = context.getMasterResult().getTrainError() / context.getMasterResult().getTrainCount();
-        double validationError = context.getMasterResult().getValidationCount() == 0d ? 0d
-                : context.getMasterResult().getValidationError() / context.getMasterResult().getValidationCount();
+        double trainError = context.getMasterResult().getTrainError() / context.getMasterResult().getTrainSize();
+        double validationError = context.getMasterResult().getValidationSize() == 0d ? 0d
+                : context.getMasterResult().getValidationError() / context.getMasterResult().getValidationSize();
         String info = "";
         if(trainError != 0d) {
             info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
@@ -192,7 +196,7 @@ public class WDLOutput extends BasicMasterInterceptor<WDLParams, WDLParams> {
         if(this.isGsMode || this.isKFoldCV) {
             Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
             double valErr = context.getMasterResult().getValidationError()
-                    / context.getMasterResult().getValidationCount();
+                    / context.getMasterResult().getValidationSize();
             writeValErrorToFileSystem(valErr, valErrOutput);
         }
         IOUtils.closeStream(this.progressOutput);
@@ -213,9 +217,8 @@ public class WDLOutput extends BasicMasterInterceptor<WDLParams, WDLParams> {
 
     private void writeModelToFileSystem(WDLParams params, Path out) {
         try {
-            BinaryWDLSerializer
-                    .save(this.modelConfig, this.columnConfigList, params.getWnd(), FileSystem.get(new Configuration()),
-                            out);
+            BinaryWDLSerializer.save(this.modelConfig, this.columnConfigList, params.getWnd(),
+                    FileSystem.get(new Configuration()), out);
         } catch (IOException e) {
             LOG.error("Error in writing WideAndDeep model", e);
         }

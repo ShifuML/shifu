@@ -28,7 +28,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 
 /**
- * Generate gainchart with html format and csv format
+ * Generate gainchart with html format and csv format.
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
@@ -46,12 +46,12 @@ public class GainChart {
 
             writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_1, "Weighted Operation Point",
                     "lst0", "Weighted Recall", "lst1", "Unit-wise Recall"));
-            writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_2,
-                    "Unit-wise Operation Point", "lst2", "Weighted Recall", "lst3", "Unit-wise Recall"));
+            writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_2, "Unit-wise Operation Point",
+                    "lst2", "Weighted Recall", "lst3", "Unit-wise Recall"));
             writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_3, "Model Score", "lst4",
                     "Weighted Recall", "lst5", "Unit-wise Recall"));
-            writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_4, "Score Distibution",
-                    "lst6", "Score Count"));
+            writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_4, "Score Distibution", "lst6",
+                    "Score Count"));
 
             writer.write("      </div>\n");
             writer.write("      <div class=\"col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main\">\n");
@@ -250,8 +250,8 @@ public class GainChart {
 
             writer.write(GainChartTemplate.HIGHCHART_BASE_BEGIN);
 
-            writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_1, "Weighted PR Curve",
-                    "lst0", "Weighted Precision", "lst1", "Unit-wise Precision"));
+            writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_1, "Weighted PR Curve", "lst0",
+                    "Weighted Precision", "lst1", "Unit-wise Precision"));
             writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_2, "Unit-wise PR Curve",
                     "lst2", "Weighted Precision", "lst3", "Unit-wise Precision"));
             writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_1, "Weighted ROC Curve",
@@ -363,11 +363,9 @@ public class GainChart {
             for(int i = 0; i < result.weightedRoc.size(); i++) {
                 PerformanceObject po = result.weightedRoc.get(i);
                 writer.write(String.format(GainChartTemplate.PRROC_DATA_FORMAT,
-                        GainChartTemplate.DF.format(po.recall * 100),
-                        GainChartTemplate.DF.format(po.weightedFpr * 100),
+                        GainChartTemplate.DF.format(po.recall * 100), GainChartTemplate.DF.format(po.weightedFpr * 100),
                         GainChartTemplate.DF.format(po.weightedPrecision * 100),
-                        GainChartTemplate.DF.format(po.recall * 100),
-                        GainChartTemplate.DF.format(po.weightedFpr * 100),
+                        GainChartTemplate.DF.format(po.recall * 100), GainChartTemplate.DF.format(po.weightedFpr * 100),
                         GainChartTemplate.DF.format(po.weightedActionRate * 100),
                         GainChartTemplate.DF.format(po.binLowestScore)));
                 if(i != result.weightedRoc.size() - 1) {
@@ -381,10 +379,10 @@ public class GainChart {
             for(int i = 0; i < result.roc.size(); i++) {
                 PerformanceObject po = result.roc.get(i);
                 writer.write(String.format(GainChartTemplate.PRROC_DATA_FORMAT,
-                        GainChartTemplate.DF.format(po.weightedRecall * 100),
-                        GainChartTemplate.DF.format(po.fpr * 100), GainChartTemplate.DF.format(po.precision * 100),
-                        GainChartTemplate.DF.format(po.weightedRecall * 100),
-                        GainChartTemplate.DF.format(po.fpr * 100), GainChartTemplate.DF.format(po.actionRate * 100),
+                        GainChartTemplate.DF.format(po.weightedRecall * 100), GainChartTemplate.DF.format(po.fpr * 100),
+                        GainChartTemplate.DF.format(po.precision * 100),
+                        GainChartTemplate.DF.format(po.weightedRecall * 100), GainChartTemplate.DF.format(po.fpr * 100),
+                        GainChartTemplate.DF.format(po.actionRate * 100),
                         GainChartTemplate.DF.format(po.binLowestScore)));
                 if(i != result.roc.size() - 1) {
                     writer.write(",");
@@ -491,12 +489,12 @@ public class GainChart {
 
             writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_1, "Weighted Operation Point",
                     "lst0", "Weighted Recall", "lst1", "Unit-wise Recall"));
-            writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_2,
-                    "Unit-wise Operation Point", "lst2", "Weighted Recall", "lst3", "Unit-wise Recall"));
+            writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_2, "Unit-wise Operation Point",
+                    "lst2", "Weighted Recall", "lst3", "Unit-wise Recall"));
             writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_3, "Model Score", "lst4",
                     "Weighted Recall", "lst5", "Unit-wise Recall"));
-            writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_4, "Score Distibution",
-                    "lst6", "Score Count"));
+            writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_4, "Score Distibution", "lst6",
+                    "Score Count"));
 
             writer.write("      </div>\n");
             writer.write("      <div class=\"col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main\">\n");
@@ -536,13 +534,13 @@ public class GainChart {
                 writer.write("  var data_" + (results.size() + j) + " = [\n");
                 for(int i = 0; i < result.weightedGains.size(); i++) {
                     PerformanceObject po = result.weightedGains.get(i);
-                    writer.write(String.format(GainChartTemplate.DATA_FORMAT,
-                            GainChartTemplate.DF.format(po.recall * 100),
-                            GainChartTemplate.DF.format(po.weightedActionRate * 100),
-                            GainChartTemplate.DF.format(po.weightedActionRate * 100),
-                            GainChartTemplate.DF.format(po.precision * 100),
-                            GainChartTemplate.DF.format(po.actionRate * 100),
-                            GainChartTemplate.DF.format(po.binLowestScore)));
+                    writer.write(
+                            String.format(GainChartTemplate.DATA_FORMAT, GainChartTemplate.DF.format(po.recall * 100),
+                                    GainChartTemplate.DF.format(po.weightedActionRate * 100),
+                                    GainChartTemplate.DF.format(po.weightedActionRate * 100),
+                                    GainChartTemplate.DF.format(po.precision * 100),
+                                    GainChartTemplate.DF.format(po.actionRate * 100),
+                                    GainChartTemplate.DF.format(po.binLowestScore)));
                     if(i != result.weightedGains.size() - 1) {
                         writer.write(",");
                     }
@@ -576,13 +574,13 @@ public class GainChart {
                 writer.write("  var data_" + (3 * results.size() + j) + " = [\n");
                 for(int i = 0; i < result.gains.size(); i++) {
                     PerformanceObject po = result.gains.get(i);
-                    writer.write(String.format(GainChartTemplate.DATA_FORMAT,
-                            GainChartTemplate.DF.format(po.recall * 100),
-                            GainChartTemplate.DF.format(po.actionRate * 100),
-                            GainChartTemplate.DF.format(po.weightedActionRate * 100),
-                            GainChartTemplate.DF.format(po.precision * 100),
-                            GainChartTemplate.DF.format(po.actionRate * 100),
-                            GainChartTemplate.DF.format(po.binLowestScore)));
+                    writer.write(
+                            String.format(GainChartTemplate.DATA_FORMAT, GainChartTemplate.DF.format(po.recall * 100),
+                                    GainChartTemplate.DF.format(po.actionRate * 100),
+                                    GainChartTemplate.DF.format(po.weightedActionRate * 100),
+                                    GainChartTemplate.DF.format(po.precision * 100),
+                                    GainChartTemplate.DF.format(po.actionRate * 100),
+                                    GainChartTemplate.DF.format(po.binLowestScore)));
                     if(i != result.gains.size() - 1) {
                         writer.write(",");
                     }
@@ -616,13 +614,13 @@ public class GainChart {
                 writer.write("  var data_" + (5 * results.size() + j) + " = [\n");
                 for(int i = 0; i < result.modelScoreList.size(); i++) {
                     PerformanceObject po = result.modelScoreList.get(i);
-                    writer.write(String.format(GainChartTemplate.DATA_FORMAT,
-                            GainChartTemplate.DF.format(po.recall * 100),
-                            GainChartTemplate.DF.format(po.binLowestScore),
-                            GainChartTemplate.DF.format(po.weightedActionRate * 100),
-                            GainChartTemplate.DF.format(po.precision * 100),
-                            GainChartTemplate.DF.format(po.actionRate * 100),
-                            GainChartTemplate.DF.format(po.binLowestScore)));
+                    writer.write(
+                            String.format(GainChartTemplate.DATA_FORMAT, GainChartTemplate.DF.format(po.recall * 100),
+                                    GainChartTemplate.DF.format(po.binLowestScore),
+                                    GainChartTemplate.DF.format(po.weightedActionRate * 100),
+                                    GainChartTemplate.DF.format(po.precision * 100),
+                                    GainChartTemplate.DF.format(po.actionRate * 100),
+                                    GainChartTemplate.DF.format(po.binLowestScore)));
                     if(i != result.modelScoreList.size() - 1) {
                         writer.write(",");
                     }
@@ -638,7 +636,8 @@ public class GainChart {
                     PerformanceObject po = result.modelScoreList.get(i);
                     writer.write(String.format(GainChartTemplate.SCORE_DATA_FORMAT,
                             GainChartTemplate.DF.format(po.scoreCount), GainChartTemplate.DF.format(po.binLowestScore),
-                            GainChartTemplate.DF.format(po.scoreCount), GainChartTemplate.DF.format(po.binLowestScore)));
+                            GainChartTemplate.DF.format(po.scoreCount),
+                            GainChartTemplate.DF.format(po.binLowestScore)));
                     if(i != result.modelScoreList.size() - 1) {
                         writer.write(",");
                     }
@@ -819,8 +818,8 @@ public class GainChart {
 
             writer.write(GainChartTemplate.HIGHCHART_BASE_BEGIN);
 
-            writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_1, "Weighted PR Curve",
-                    "lst0", "Weighted Precision", "lst1", "Unit-wise Precision"));
+            writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_1, "Weighted PR Curve", "lst0",
+                    "Weighted Precision", "lst1", "Unit-wise Precision"));
             writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_2, "Unit-wise PR Curve",
                     "lst2", "Weighted Precision", "lst3", "Unit-wise Precision"));
             writer.write(String.format(GainChartTemplate.HIGHCHART_BUTTON_PANEL_TEMPLATE_1, "Weighted ROC Curve",
@@ -975,8 +974,7 @@ public class GainChart {
                             GainChartTemplate.DF.format(po.weightedRecall * 100),
                             GainChartTemplate.DF.format(po.fpr * 100), GainChartTemplate.DF.format(po.precision * 100),
                             GainChartTemplate.DF.format(po.weightedRecall * 100),
-                            GainChartTemplate.DF.format(po.fpr * 100),
-                            GainChartTemplate.DF.format(po.actionRate * 100),
+                            GainChartTemplate.DF.format(po.fpr * 100), GainChartTemplate.DF.format(po.actionRate * 100),
                             GainChartTemplate.DF.format(po.binLowestScore)));
                     if(i != result.roc.size() - 1) {
                         writer.write(",");
@@ -1106,8 +1104,8 @@ public class GainChart {
             writer.write("\n");
 
             writer.write(String.format(GainChartTemplate.HIGHCHART_CHART_TEMPLATE_PREFIX3, "container5",
-                    "Weighted FPR - Unit-wise Recall (ROC Curve)", modelConfig.getBasic().getName(),
-                    "Unit-wise Recall", "Weighted FPR", "%", "false"));
+                    "Weighted FPR - Unit-wise Recall (ROC Curve)", modelConfig.getBasic().getName(), "Unit-wise Recall",
+                    "Weighted FPR", "%", "false"));
             writer.write("series: [");
 
             for(int i = 0; i < results.size(); i++) {
@@ -1207,7 +1205,8 @@ public class GainChart {
         BufferedWriter writer = null;
         try {
             writer = ShifuFileUtils.getWriter(fileName, SourceType.LOCAL);
-            writer.write("ActionRate,WeightedActionRate,Recall,WeightedRecall,Precision,WeightedPrecision,FPR,WeightedFPR,BinLowestScore\n");
+            writer.write(
+                    "ActionRate,WeightedActionRate,Recall,WeightedRecall,Precision,WeightedPrecision,FPR,WeightedFPR,BinLowestScore\n");
             String formatString = "%s,%s,%s,%s,%s,%s,%s,%s,%s\n";
 
             for(PerformanceObject po: performanceList) {

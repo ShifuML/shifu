@@ -1,10 +1,7 @@
 package ml.shifu.shifu.util.updater;
 
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map.Entry;
-
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -18,8 +15,8 @@ import org.apache.commons.collections.CollectionUtils;
  */
 public class TrainUpdater extends BasicUpdater {
 
-    public TrainUpdater(ModelConfig modelConfig) throws IOException {
-        super(modelConfig);
+    public TrainUpdater(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, int mtlIndex) throws IOException {
+        super(modelConfig, columnConfigList, mtlIndex);
     }
 
     @Override

@@ -16,7 +16,9 @@
 package ml.shifu.shifu.core;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * To compute ks, iv and woe values.
@@ -59,9 +61,9 @@ public final class ColumnStatsCalculator {
             double p = cntP / sumP;
             double n = cntN / sumN;
             // TODO merge bin with p or q = 0 ???
-            double woePerBin = Math.log((p + EPS) / (n + EPS));
+            double woePerBin = Math.log((n + EPS) / (p + EPS));
             binningWoe.add(woePerBin);
-            iv += (p - n) * woePerBin;
+            iv += (n - p) * woePerBin;
             cumP += p;
             cumN += n;
             double tmpKS = Math.abs(cumP - cumN);
@@ -161,6 +163,52 @@ public final class ColumnStatsCalculator {
         }
 
         return new ColumnMetrics(ks * 100, iv, woe, binningWoe);
+    }
+
+    public static ColumnMetrics calculateColumnMetricsWoe(long[] binPosCount, double[] binCountWoe) {
+        double[] tempCount = new double[binPosCount.length];
+        for(int i = 0; i < binPosCount.length; i ++) {
+            tempCount[i] = (double) binPosCount[i];
+        }
+        return calculateColumnMetricsWoe(tempCount, binCountWoe);
+    }
+
+    public static ColumnMetrics calculateColumnMetricsWoe(double[] binWeightedCount, double[] binWeightedWoe) {
+        double totalInstanceCount = Arrays.stream(binWeightedCount).sum();
+        double totalWoeCount = Arrays.stream(binWeightedWoe).sum();
+        double average = ((Math.abs(totalInstanceCount) < 1e-8) ? 0.0d : totalWoeCount / totalInstanceCount);
+        List<Double> binWoeResult = new ArrayList<>();
+        for (int i = 0; i < binWeightedWoe.length; i ++) {
+            // the formula is =  (binWeightedWoe[i] / binWeightedCount[i]) / average
+            double v = average * binWeightedCount[i];
+            binWoeResult.add((Math.abs(v) < 1e-8) ? 0.0d : binWeightedWoe[i] / v);
+        }
+
+        double[] distVector = new double[binWeightedCount.length];
+        double[] woeVector = new double[binWeightedCount.length];
+        for (int i = 0; i < binWeightedWoe.length; i ++) {
+            // instance distribution for each bins
+            distVector[i] = binWeightedCount[i] / totalInstanceCount;
+            // target value distribution for each bins
+            woeVector[i] = binWeightedWoe[i] / totalWoeCount;
+        }
+
+        double dissimilarity = 1 - calculateVectorSimilarity(distVector, woeVector);
+
+        return new ColumnMetrics(dissimilarity * 100, dissimilarity, 0.0d, binWoeResult);
+    }
+
+    private static double calculateVectorSimilarity(double[] distVector, double[] woeVector) {
+        double mulRes = 0.0;
+        double distVectorSum = 0.0;
+        double woeVectorSum = 0.0;
+        for (int i = 0; i < distVector.length; i ++) {
+            mulRes += distVector[i] * woeVector[i];
+            distVectorSum += distVector[i] * distVector[i];
+            woeVectorSum += woeVector[i] * woeVector[i];
+        }
+        double div = Math.sqrt(distVectorSum) * Math.sqrt(woeVectorSum);
+        return (Math.abs(div) < 1e-8) ? 1.0d : mulRes / div;
     }
 
     /**

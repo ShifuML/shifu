@@ -18,6 +18,7 @@ package ml.shifu.shifu.util;
 import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -28,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * {@link HDFSUtils} is a unified class to get HDFS FileSystem Object.
@@ -36,6 +38,8 @@ public final class HDFSUtils {
 
     private final static Logger LOG = LoggerFactory.getLogger(HDFSUtils.class);
 
+    private final static String DEFAULT_HOST = "DEFAULT_HOST";
+
     /**
      * Conf object which is used to construct HDFS FileSystem.
      */
@@ -43,8 +47,9 @@ public final class HDFSUtils {
 
     /**
      * HDFS FileSystem
+     *  Host -- FileSystem
      */
-    private static volatile FileSystem hdfs;
+    private static volatile ConcurrentHashMap<String, FileSystem> hdfs = new ConcurrentHashMap<>();
 
     /**
      * Local FileSystem
@@ -64,28 +69,38 @@ public final class HDFSUtils {
         return defaultFsName != null && defaultFsName.startsWith("hdfs:");
     }
 
-    /*
-     * Get HDFS FileSystem
+    /**
+     * Get HDFS FileSystem.
+     * @return HDFS FileSystem handler
      */
     public static FileSystem getFS() {
-        if(hdfs == null) {
-            synchronized(HDFSUtils.class) {
-                if(hdfs == null) {
-                    try {
-                        // initialization
-                        // Assign to the hdfs instance after the tmpHdfs instance initialization fully complete.
-                        // Avoid hdfs instance being used before fully initializaion.
-                        FileSystem tmpHdfs = FileSystem.get(conf);
-                        tmpHdfs.setVerifyChecksum(false);
-                        hdfs = tmpHdfs;
-                    } catch (IOException e) {
-                        LOG.error("Error on creating hdfs FileSystem object.", e);
-                        throw new ShifuException(ShifuErrorCode.ERROR_GET_HDFS_SYSTEM);
-                    }
+        return getFS(null);
+    }
+
+    /**
+     * Get HDFS FileSystem according the Path
+     * @param path - file path to access
+     * @return file system for specified path
+     */
+    public static FileSystem getFS(Path path) {
+        String host = (path == null || path.toUri() == null || StringUtils.isBlank(path.toUri().getHost())) ?
+                DEFAULT_HOST : path.toUri().getHost();
+        FileSystem fs = hdfs.getOrDefault(host, null);
+        if (fs == null) {
+            try {
+                if(path == null || StringUtils.isBlank(path.toUri().getScheme())) {
+                    fs = FileSystem.get(conf);
+                } else {
+                    fs = path.getFileSystem(conf);
                 }
+                fs.setVerifyChecksum(false);
+                hdfs.put(host, fs);
+            } catch (IOException e) {
+                LOG.error("Error on creating hdfs FileSystem object.", e);
+                throw new ShifuException(ShifuErrorCode.ERROR_GET_HDFS_SYSTEM);
             }
         }
-        return hdfs;
+        return fs;
     }
 
     /*
@@ -94,21 +109,11 @@ public final class HDFSUtils {
      * 
      * @see ShifuFileUtils#getReader(String, ml.shifu.shifu.container.obj.RawSourceData.SourceType)
      */
-    public static FileSystem renewFS() {
-        synchronized(HDFSUtils.class) {
-            try {
-                // initialization
-                // Assign to the hdfs instance after the tmpHdfs instance initialization fully complete.
-                // Avoid hdfs instance being used before fully initializaion.
-                FileSystem tmpHdfs = FileSystem.get(conf);
-                tmpHdfs.setVerifyChecksum(false);
-                hdfs = tmpHdfs;
-            } catch (IOException e) {
-                LOG.error("Error on creating hdfs FileSystem object.", e);
-                throw new ShifuException(ShifuErrorCode.ERROR_GET_HDFS_SYSTEM);
-            }
-        }
-        return hdfs;
+    public static FileSystem renewFS(Path path) {
+        String host = (path.toUri() == null || StringUtils.isBlank(path.toUri().getHost())) ?
+                DEFAULT_HOST : path.toUri().getHost();
+        hdfs.remove(host);
+        return getFS(path);
     }
 
     /*

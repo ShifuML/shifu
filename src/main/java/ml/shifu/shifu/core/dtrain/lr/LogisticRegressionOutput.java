@@ -24,9 +24,8 @@ import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
-import org.apache.hadoop.conf.Configuration;
+import ml.shifu.shifu.util.HDFSUtils;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
@@ -41,8 +40,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * {@link LogisticRegressionOutput} is used to write the final model output to file system.
  */
-public class LogisticRegressionOutput extends
-        BasicMasterInterceptor<LogisticRegressionParams, LogisticRegressionParams> {
+public class LogisticRegressionOutput
+        extends BasicMasterInterceptor<LogisticRegressionParams, LogisticRegressionParams> {
 
     private static final Logger LOG = LoggerFactory.getLogger(LogisticRegressionOutput.class);
 
@@ -110,24 +109,24 @@ public class LogisticRegressionOutput extends
             return;
         }
 
-        if (minimumEpochs < 0) {
+        if(minimumEpochs < 0) {
             double minimumStepsRatio = DTrainUtils.getDouble(context.getProps(), // get # of steps to choose parameters
                     CommonConstants.SHIFU_TRAIN_VAL_STEPS_RATIO, 0.1);
-            minimumEpochs = (int) (modelConfig.getNumTrainEpochs() * minimumStepsRatio) ;
+            minimumEpochs = (int) (modelConfig.getNumTrainEpochs() * minimumStepsRatio);
         }
 
-
-        if ( context.getCurrentIteration() < minimumEpochs ) {
+        if(context.getCurrentIteration() < minimumEpochs) {
             this.optimizedWeights = context.getMasterResult().getParameters();
         } else {
-            double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON) ? context.getMasterResult()
-                    .getTrainError() : context.getMasterResult().getTestError());
-            if ( currentError < this.minTestError ) {
+            double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON)
+                    ? context.getMasterResult().getTrainError()
+                    : context.getMasterResult().getValidationError());
+            if(currentError < this.minTestError) {
                 this.minTestError = currentError;
                 this.optimizedWeights = Arrays.copyOf(context.getMasterResult().getParameters(),
                         context.getMasterResult().getParameters().length);
-                LOG.info("change minTestError to {}, and update best weights at {}-th epoch.",
-                        this.minTestError, context.getCurrentIteration());
+                LOG.info("change minTestError to {}, and update best weights at {}-th epoch.", this.minTestError,
+                        context.getCurrentIteration());
             }
         }
 
@@ -164,7 +163,6 @@ public class LogisticRegressionOutput extends
         updateProgressLog(context);
     }
 
-    @SuppressWarnings("deprecation")
     private void updateProgressLog(final MasterContext<LogisticRegressionParams, LogisticRegressionParams> context) {
         int currentIteration = context.getCurrentIteration();
         if(currentIteration == 1) {
@@ -174,12 +172,12 @@ public class LogisticRegressionOutput extends
         String progress = new StringBuilder(200).append("    Trainer ").append(this.trainerId).append(" Epoch #")
                 .append(currentIteration - 1).append(" Training Error:")
                 .append(context.getMasterResult().getTrainError()).append(" Validation Error:")
-                .append(context.getMasterResult().getTestError()).append("\n").toString();
+                .append(context.getMasterResult().getValidationError()).append("\n").toString();
         try {
             LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), progress.toString());
             this.progressOutput.write(progress.getBytes("UTF-8"));
             this.progressOutput.flush();
-            this.progressOutput.sync();
+            this.progressOutput.hflush();
         } catch (IOException e) {
             LOG.error("Error in write progress log:", e);
         }
@@ -202,7 +200,7 @@ public class LogisticRegressionOutput extends
         writeModelWeightsToFileSystem(optimizedWeights, out);
         if(this.isKFoldCV || this.isGsMode) {
             Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
-            writeValErrorToFileSystem(context.getMasterResult().getTestError(), valErrOutput);
+            writeValErrorToFileSystem(context.getMasterResult().getValidationError(), valErrOutput);
         }
         IOUtils.closeStream(this.progressOutput);
     }
@@ -210,7 +208,7 @@ public class LogisticRegressionOutput extends
     private void writeValErrorToFileSystem(double valError, Path out) {
         FSDataOutputStream fos = null;
         try {
-            fos = FileSystem.get(new Configuration()).create(out);
+            fos = HDFSUtils.getFS(out).create(out);
             LOG.info("Writing valerror to {}", out);
             fos.write((valError + "").getBytes("UTF-8"));
         } catch (IOException e) {
@@ -224,8 +222,8 @@ public class LogisticRegressionOutput extends
      * Save tmp nn model to HDFS.
      */
     private void saveTmpModelToHDFS(int iteration, double[] weights) {
-        Path out = new Path(DTrainUtils.getTmpModelName(this.tmpModelsFolder, this.trainerId, iteration, modelConfig
-                .getTrain().getAlgorithm().toLowerCase()));
+        Path out = new Path(DTrainUtils.getTmpModelName(this.tmpModelsFolder, this.trainerId, iteration,
+                modelConfig.getTrain().getAlgorithm().toLowerCase()));
         writeModelWeightsToFileSystem(weights, out);
     }
 
@@ -244,7 +242,8 @@ public class LogisticRegressionOutput extends
                 isKFoldCV = true;
             }
 
-            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(), modelConfig.getTrain().getGridConfigFileContent());
+            GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(),
+                    modelConfig.getTrain().getGridConfigFileContent());
             this.isGsMode = gs.hasHyperParam();
         }
 
@@ -253,9 +252,9 @@ public class LogisticRegressionOutput extends
             // if the progressLog already exists, that because the master failed, and fail-over
             // we need to append the log, so that client console can get refreshed. Or console will appear stuck.
             if(ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
-                this.progressOutput = FileSystem.get(new Configuration()).append(progressLog);
+                this.progressOutput = HDFSUtils.getFS(progressLog).append(progressLog);
             } else {
-                this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
+                this.progressOutput = HDFSUtils.getFS(progressLog).create(progressLog);
             }
         } catch (IOException e) {
             LOG.error("Error in create progress log:", e);
@@ -268,8 +267,8 @@ public class LogisticRegressionOutput extends
      */
     private void loadConfigFiles(final Properties props) {
         try {
-            SourceType sourceType = SourceType.valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE,
-                    SourceType.HDFS.toString()));
+            SourceType sourceType = SourceType
+                    .valueOf(props.getProperty(CommonConstants.MODELSET_SOURCE_TYPE, SourceType.HDFS.toString()));
             this.modelConfig = CommonUtils.loadModelConfig(props.getProperty(CommonConstants.SHIFU_MODEL_CONFIG),
                     sourceType);
         } catch (IOException e) {
@@ -284,7 +283,7 @@ public class LogisticRegressionOutput extends
         FSDataOutputStream fos = null;
         PrintWriter pw = null;
         try {
-            fos = FileSystem.get(new Configuration()).create(out);
+            fos = HDFSUtils.getFS(out).create(out);
             LOG.info("Writing results to {}", out);
             if(out != null) {
                 pw = new PrintWriter(fos);

@@ -18,8 +18,6 @@ package ml.shifu.shifu.core.dtrain.nn;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import ml.shifu.shifu.util.CommonUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 
@@ -29,13 +27,14 @@ import ml.shifu.guagua.ComputableMonitor;
 import ml.shifu.guagua.hadoop.io.GuaguaLineRecordReader;
 import ml.shifu.guagua.hadoop.io.GuaguaWritableAdapter;
 import ml.shifu.guagua.io.GuaguaFileSplit;
-import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.guagua.worker.WorkerContext;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
+import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLData;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatMLDataPair;
 import ml.shifu.shifu.core.dtrain.dataset.FloatMLDataPair;
+import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
 /**
@@ -71,128 +70,124 @@ public class NNWorker extends AbstractNNWorker<Text> {
         }
 
         long hashcode = 0;
-        float significance = 1f;
+        float significance = 1.0f;
         // use guava Splitter to iterate only once
         // use NNConstants.NN_DEFAULT_COLUMN_SEPARATOR to replace getModelConfig().getDataSetDelimiter(), super follows
         // the function in akka mode.
-        int index = 0, inputsIndex = 0, outputIndex = 0;
+        int dataPos = 0, inputsIndex = 0, outputIndex = 0;
 
         String[] fields = Lists.newArrayList(this.splitter.split(currentValue.getWritable().toString()))
                 .toArray(new String[0]);
-        int pos = 0;
 
-        for(pos = 0; pos < fields.length;) {
-            String input = fields[pos];
-            // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-            float floatValue = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(input, 0f);
-            // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
-            floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
+        if (super.count == 1) {
+            // When reading the first line, we check if it is the compact mode.
+            configureCompactMode(fields.length);
+        }
 
-            if(pos == fields.length - 1) {
-                // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
-                // weight, how to process???
-                if(StringUtils.isBlank(modelConfig.getWeightColumnName())) {
-                    significance = 1f;
-                    // break here if we reach weight column which is last column
-                    break;
+        for (ColumnConfig columnConfig : this.columnConfigList) {
+            float fval;
+
+            if (columnConfig.isTarget()) {
+                fval = DTrainUtils.parseRawNormValue(fields, dataPos, 0.0f);
+                if(isLinearTarget || modelConfig.isRegression()) {
+                    ideal[outputIndex++] = fval;
+                } else {
+                    if(modelConfig.getTrain().isOneVsAll()) {
+                        // if one vs all, set correlated idea value according to trainerId which means in trainer
+                        // with id 0, target 0 is treated with 1, other are 0. Such target value are set to index of
+                        // tags like [0, 1, 2, 3] compared with ["a", "b", "c", "d"]
+                        ideal[outputIndex++] = Float.compare(fval, trainerId) == 0 ? 1f : 0f;
+                    } else {
+                        if(modelConfig.getTags().size() == 2) {
+                            // if only 2 classes, output node is 1 node. if target = 0 means 0 is the index for
+                            // positive prediction, set positive to 1 and negative to 0
+                            int ideaIndex = (int) fval;
+                            ideal[0] = ideaIndex == 0 ? 1f : 0f;
+                        } else {
+                            // for multiple classification
+                            int ideaIndex = (int) fval;
+                            ideal[ideaIndex] = 1f;
+                        }
+                    }
                 }
-
-                // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 1f)
-                significance = input.length() == 0 ? 1f : NumberFormatUtils.getFloat(input, 1f);
+                dataPos ++;
+            } else if (this.weightColumnId > 0 // user set weight column
+                    && this.weightColumnId == columnConfig.getColumnNum() // the weight column is current
+                    && this.isWeightColumnMeta) { // the weight column is Meta
+                significance = DTrainUtils.parseRawNormValue(fields, dataPos, 1.0f);
                 // if invalid weight, set it to 1f and warning in log
                 if(Float.compare(significance, 0f) < 0) {
                     LOG.warn("The {} record in current worker weight {} is less than 0f, it is invalid, set it to 1.",
                             count, significance);
                     significance = 1f;
                 }
-                // the last field is significance, break here
-                break;
-            } else {
-                ColumnConfig columnConfig = super.columnConfigList.get(index);
-                if(columnConfig != null && columnConfig.isTarget()) {
-                    if(isLinearTarget || modelConfig.isRegression()) {
-                        ideal[outputIndex++] = floatValue;
-                    } else {
-                        if(modelConfig.getTrain().isOneVsAll()) {
-                            // if one vs all, set correlated idea value according to trainerId which means in trainer
-                            // with id 0, target 0 is treated with 1, other are 0. Such target value are set to index of
-                            // tags like [0, 1, 2, 3] compared with ["a", "b", "c", "d"]
-                            ideal[outputIndex++] = Float.compare(floatValue, trainerId) == 0 ? 1f : 0f;
-                        } else {
-                            if(modelConfig.getTags().size() == 2) {
-                                // if only 2 classes, output node is 1 node. if target = 0 means 0 is the index for
-                                // positive prediction, set positive to 1 and negative to 0
-                                int ideaIndex = (int) floatValue;
-                                ideal[0] = ideaIndex == 0 ? 1f : 0f;
-                            } else {
-                                // for multiple classification
-                                int ideaIndex = (int) floatValue;
-                                ideal[ideaIndex] = 1f;
-                            }
+                dataPos ++;
+            } else { // other variables
+                if(subFeatureSet.contains(columnConfig.getColumnNum())) {
+                    fval = DTrainUtils.parseRawNormValue(fields, dataPos, 0.0f);
+                    if(columnConfig.isMeta() || columnConfig.isForceRemove()) {
+                        // it shouldn't happen here
+                        dataPos += 1;
+                    } else if(columnConfig != null && columnConfig.isNumerical()
+                            && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)) {
+                        for(int k = 0; k < columnConfig.getBinBoundary().size() + 1; k++) {
+                            float tval = DTrainUtils.parseRawNormValue(fields, dataPos, 0.0f);
+                            inputs[inputsIndex++] = tval;
+                            dataPos++;
                         }
+                    } else if(columnConfig != null && columnConfig.isCategorical()
+                            && (modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
+                            || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))) {
+                        for(int k = 0; k < columnConfig.getBinCategory().size() + 1; k++) {
+                            float tval = DTrainUtils.parseRawNormValue(fields, dataPos, 0.0f);
+                            inputs[inputsIndex++] = tval;
+                            dataPos++;
+                        }
+                    } else {
+                        inputs[inputsIndex++] = fval;
+                        dataPos++;
                     }
-                    pos++;
-                } else {
-                    if(subFeatureSet.contains(index)) {
-                        if ( columnConfig.isMeta() || columnConfig.isForceRemove() ) {
-                            // it shouldn't happen here
-                            pos += 1;
-                        } else if ( columnConfig != null && columnConfig.isNumerical()
-                                && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT) ) {
-                            for(int k = 0; k < columnConfig.getBinBoundary().size() + 1; k++) {
-                                String tval = fields[pos];
-                                // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-                                float fval = tval.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
-                                // no idea about why NaN in input data, we should process it as missing value TODO ,
-                                // according to norm type
-                                fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? 0f : fval;
-                                inputs[inputsIndex++] = fval;
-                                pos++;
-                            }
-                        } else if(columnConfig != null && columnConfig.isCategorical()
-                                && (modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
-                                        || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))) {
-                            for(int k = 0; k < columnConfig.getBinCategory().size() + 1; k++) {
-                                String tval = fields[pos];
-                                // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
-                                float fval = tval.length() == 0 ? 0f : NumberFormatUtils.getFloat(tval, 0f);
-                                // no idea about why NaN in input data, we should process it as missing value TODO ,
-                                // according to norm type
-                                fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? 0f : fval;
-                                inputs[inputsIndex++] = fval;
-                                pos++;
-                            }
-                        } else {
-                            inputs[inputsIndex++] = floatValue;
-                            pos++;
-                        }
-                        hashcode = hashcode * 31 + Double.valueOf(floatValue).hashCode();
+                    hashcode = hashcode * 31 + Double.valueOf(fval).hashCode();
+                } else if (!isCompactMode || columnConfig.isMeta()){ // It is not compact mode or it is meta column, just skip unused data in normalized data. No unused data will exist in compact mode.
+                    if(!CommonUtils.isToNormVariable(columnConfig, hasCandidates, modelConfig.isRegression())) {
+                        dataPos += 1;
+                    } else if(columnConfig.isNumerical()
+                            && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)
+                            && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 0) {
+                        dataPos += (columnConfig.getBinBoundary().size() + 1);
+                    } else if(columnConfig.isCategorical()
+                            && (modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
+                            || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))
+                            && columnConfig.getBinCategory().size() > 0) {
+                        dataPos += (columnConfig.getBinCategory().size() + 1);
                     } else {
-                        if ( !CommonUtils.isToNormVariable(columnConfig, hasCandidates, modelConfig.isRegression()) ) {
-                            pos += 1;
-                        } else if ( columnConfig.isNumerical()
-                                && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)
-                                && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 0) {
-                            pos += (columnConfig.getBinBoundary().size() + 1);
-                        } else if(columnConfig.isCategorical()
-                                && (modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
-                                        || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))
-                                && columnConfig.getBinCategory().size() > 0) {
-                            pos += (columnConfig.getBinCategory().size() + 1);
-                        } else {
-                            pos += 1;
-                        }
+                        dataPos += 1;
                     }
                 }
             }
-            index += 1;
         }
 
-        if ( index != this.columnConfigList.size() || pos != fields.length - 1 ) {
-            throw new RuntimeException("Wrong data indexing. ColumnConfig index = " + index
-                    + ", while it should be " + columnConfigList.size() + ". "
-                    + "Data Pos = " + pos
-                    + ", while it should be " + (fields.length - 1));
+        // if (dataPos == fields.length -1), the last column is weight column
+        // if (dataPos == fields.length), normalized data doesn't have weight column
+        if (dataPos != fields.length -1 && dataPos != fields.length) {
+            LOG.error("Normalization data has extra data. Expect {} or {}, actual is {}.", dataPos, dataPos + 1, fields.length);
+            throw new RuntimeException("Out of range Normalization data doesn't match with ColumnConfig.json.");
+        }
+
+        if (this.weightColumnId > 0 && !this.isWeightColumnMeta && dataPos == fields.length - 1) {
+            // user specified the weight column, it is not meta column and now point to last column of data
+            significance = DTrainUtils.parseRawNormValue(fields, dataPos, 1.0f);
+            // if invalid weight, set it to 1f and warning in log
+            if(Float.compare(significance, 0f) < 0) {
+                LOG.warn("The {} record in current worker weight {} is less than 0f, it is invalid, set it to 1.",
+                        count, significance);
+                significance = 1f;
+            }
+        } else if(this.weightColumnId > 0 && !this.isWeightColumnMeta && dataPos == fields.length) {
+            // user specified the weight column, and it is not meta column
+            // but it doesn't exist in normalized data set, throw error or use default?
+            // OK, use default currently
+            significance = 1f;
         }
 
         // output delimiter in norm can be set by user now and if user set a special one later changed, this exception
@@ -277,5 +272,4 @@ public class NNWorker extends AbstractNNWorker<Text> {
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
     }
-
 }

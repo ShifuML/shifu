@@ -34,7 +34,7 @@ import ml.shifu.guagua.io.HaltBytable;
  * Workers are responsible to compute local accumulated gradients and send to master while master accumulates all
  * gradients together to build a global model.
  */
-public class LogisticRegressionParams extends HaltBytable implements Combinable<LogisticRegressionParams>{
+public class LogisticRegressionParams extends HaltBytable implements Combinable<LogisticRegressionParams> {
 
     /**
      * Model weights in the first iteration, gradients in other iterations.
@@ -44,7 +44,7 @@ public class LogisticRegressionParams extends HaltBytable implements Combinable<
     /**
      * Current test error which can be sent to master
      */
-    private double testError = 0;
+    private double validationError = 0;
 
     /**
      * Current train error which can be sent to master
@@ -52,14 +52,24 @@ public class LogisticRegressionParams extends HaltBytable implements Combinable<
     private double trainError = 0;
 
     /**
+     * Weighted wgt training record count in one worker
+     */
+    private double trainSize;
+
+    /**
+     * Weighted wgt testing record count in one worker
+     */
+    private double validationSize;
+
+    /**
      * Training record count in one worker
      */
-    private long trainSize;
+    private double trainCount;
 
     /**
      * Testing record count in one worker
      */
-    private long testSize;
+    private double validationCount;
 
     public LogisticRegressionParams() {
     }
@@ -68,13 +78,15 @@ public class LogisticRegressionParams extends HaltBytable implements Combinable<
         this.parameters = parameters;
     }
 
-    public LogisticRegressionParams(double[] parameters, double trainError, double testError, long trainSize,
-            long testSize) {
+    public LogisticRegressionParams(double[] parameters, double trainError, double validationError, double trainSize,
+            double validationSize, double trainCount, double validationCount) {
         this.parameters = parameters;
         this.trainError = trainError;
-        this.testError = testError;
+        this.validationError = validationError;
         this.trainSize = trainSize;
-        this.testSize = testSize;
+        this.validationSize = validationSize;
+        this.trainCount = trainCount;
+        this.validationCount = validationCount;
     }
 
     public double[] getParameters() {
@@ -88,7 +100,7 @@ public class LogisticRegressionParams extends HaltBytable implements Combinable<
     /**
      * @return the trainSize
      */
-    public long getTrainSize() {
+    public double getTrainSize() {
         return trainSize;
     }
 
@@ -96,17 +108,19 @@ public class LogisticRegressionParams extends HaltBytable implements Combinable<
      * @param trainSize
      *            the trainSize to set
      */
-    public void setTrainSize(long trainSize) {
+    public void setTrainSize(double trainSize) {
         this.trainSize = trainSize;
     }
-    
+
     @Override
     public LogisticRegressionParams combine(LogisticRegressionParams from) {
         assert from != null;
         this.trainError += from.trainError;
-        this.testError += from.testError;
-        this.trainSize+=from.trainSize;
-        this.testSize+=from.testSize;
+        this.validationError += from.validationError;
+        this.trainSize += from.trainSize;
+        this.validationSize += from.validationSize;
+        this.trainCount += from.trainCount;
+        this.validationCount += from.validationCount;
         assert this.parameters != null && from.parameters != null;
         for(int i = 0; i < this.parameters.length; i++) {
             this.parameters[i] += from.parameters[i];
@@ -125,9 +139,12 @@ public class LogisticRegressionParams extends HaltBytable implements Combinable<
             }
         }
         out.writeDouble(this.trainError);
-        out.writeDouble(this.testError);
-        out.writeLong(this.trainSize);
-        out.writeLong(this.testSize);
+        out.writeDouble(this.validationError);
+        out.writeDouble(this.trainSize);
+        out.writeDouble(this.validationSize);
+        out.writeDouble(this.trainCount);
+        out.writeDouble(this.validationCount);
+
     }
 
     @Override
@@ -138,24 +155,11 @@ public class LogisticRegressionParams extends HaltBytable implements Combinable<
             this.parameters[i] = in.readDouble();
         }
         this.trainError = in.readDouble();
-        this.testError = in.readDouble();
-        this.trainSize = in.readLong();
-        this.testSize = in.readLong();
-    }
-
-    /**
-     * @return the testError
-     */
-    public double getTestError() {
-        return testError;
-    }
-
-    /**
-     * @param testError
-     *            the testError to set
-     */
-    public void setTestError(double testError) {
-        this.testError = testError;
+        this.validationError = in.readDouble();
+        this.trainSize = in.readDouble();
+        this.validationSize = in.readDouble();
+        this.trainCount = in.readDouble();
+        this.validationCount = in.readDouble();
     }
 
     /**
@@ -174,18 +178,63 @@ public class LogisticRegressionParams extends HaltBytable implements Combinable<
     }
 
     /**
-     * @return the testSize
+     * @return the trainCount
      */
-    public long getTestSize() {
-        return testSize;
+    public double getTrainCount() {
+        return trainCount;
     }
 
     /**
-     * @param testSize
-     *            the testSize to set
+     * @param trainCount
+     *            the trainCount to set
      */
-    public void setTestSize(long testSize) {
-        this.testSize = testSize;
+    public void setTrainCount(double trainCount) {
+        this.trainCount = trainCount;
+    }
+
+    /**
+     * @return the validationError
+     */
+    public double getValidationError() {
+        return validationError;
+    }
+
+    /**
+     * @param validationError
+     *            the validationError to set
+     */
+    public void setValidationError(double validationError) {
+        this.validationError = validationError;
+    }
+
+    /**
+     * @return the validationSize
+     */
+    public double getValidationSize() {
+        return validationSize;
+    }
+
+    /**
+     * @param validationSize
+     *            the validationSize to set
+     */
+    public void setValidationSize(double validationSize) {
+        this.validationSize = validationSize;
+    }
+
+    /**
+     * @return the validationCount
+     */
+    public double getValidationCount() {
+        return validationCount;
+    }
+
+    /**
+     * @param validationCount
+     *            the validationCount to set
+     */
+    public void setValidationCount(double validationCount) {
+        this.validationCount = validationCount;
     }
 
 }

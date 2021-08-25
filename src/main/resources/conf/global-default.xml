@@ -77,7 +77,7 @@
   <property>
     <description>AM memory size, requested as a string (e.g. '2g' or '2048m').</description>
     <name>shifu.am.memory</name>
-    <value>2g</value>
+    <value>4g</value>
   </property>
 
   <property>
@@ -125,7 +125,7 @@
   <property>
     <description>Worker memory size, requested as a string (e.g. '2g' or '2048m').</description>
     <name>shifu.worker.memory</name>
-    <value>10g</value>
+    <value>2g</value>
   </property>
 
 <!-- Could change by User -->

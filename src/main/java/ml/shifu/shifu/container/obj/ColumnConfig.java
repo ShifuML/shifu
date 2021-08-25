@@ -35,6 +35,7 @@ import java.util.List;
 public class ColumnConfig {
 
     // add weight column and weight column is treated the same as meta
+    // add Weight back for back-compatible
     public static enum ColumnFlag {
         ForceSelect, ForceRemove, Candidate, Meta, Target, Weight
     }
@@ -73,6 +74,11 @@ public class ColumnConfig {
      */
     private Boolean finalSelect = Boolean.FALSE;
 
+    /**
+     * This column is a segment column or not.
+     */
+    private Boolean isSegment = Boolean.FALSE;
+
     // in some hybrid threshold, some values like -100 is also category, try to set a threshold like 0, if value<0 would
     // be treated as categorical features, if not set, by default threshold is min double value, which means all value <
     // min can be set to categorical, which is all double value is not categorical, only works in Hybrid column type
@@ -97,6 +103,11 @@ public class ColumnConfig {
      * Sample values of such column.
      */
     private List<String> sampleValues;
+    
+    /**
+     * hash seed for categorical column enabled hash feature.
+     */
+    private int hashSeed = 0;
 
     /*
      * ---------------------------------------------------------------------------
@@ -104,7 +115,15 @@ public class ColumnConfig {
      * ---------------------------------------------------------------------------
      */
 
-    public Integer getColumnNum() {
+    public int getHashSeed() {
+		return hashSeed;
+	}
+
+	public void setHashSeed(int hashSeed) {
+		this.hashSeed = hashSeed;
+	}
+
+	public Integer getColumnNum() {
         return columnNum;
     }
 
@@ -140,6 +159,14 @@ public class ColumnConfig {
         this.finalSelect = finalSelect;
     }
 
+    public Boolean isSegment() {
+        return isSegment;
+    }
+
+    public void setSegment(Boolean isSegment) {
+        this.isSegment = isSegment;
+    }
+
     public void setColumnName(String columnName) {
         this.columnName = columnName;
     }
@@ -167,12 +194,6 @@ public class ColumnConfig {
      * 
      * ---------------------------------------------------------------------------
      */
-
-    @JsonIgnore
-    public boolean isWeight() {
-        return ColumnFlag.Weight == columnFlag;
-    }
-
     @JsonIgnore
     public boolean isTarget() {
         return ColumnFlag.Target.equals(columnFlag);
@@ -210,7 +231,7 @@ public class ColumnConfig {
     // weigt column is also treated as meta column
     @JsonIgnore
     public boolean isMeta() {
-        return ColumnFlag.Meta == columnFlag || ColumnFlag.Weight == columnFlag;
+        return ColumnFlag.Meta == columnFlag;
     }
 
     @JsonIgnore
@@ -274,12 +295,16 @@ public class ColumnConfig {
 
     public void setBinBoundary(List<Double> binBoundary) {
         columnBinning.setBinBoundary(binBoundary);
-        columnBinning.setLength(binBoundary == null ? 0 : binBoundary.size());
+        if (binBoundary != null) {
+            setBinLength(binBoundary.size() + 1);
+        }
     }
 
     public void setBinCategory(List<String> binCategory) {
         columnBinning.setBinCategory(binCategory);
-        columnBinning.setLength(binCategory == null ? 0 : binCategory.size());
+        if (binCategory != null) {
+            setBinLength(binCategory.size() + 1);
+        }
     }
 
     public void setBinCountNeg(List<Integer> binCountNeg) {
@@ -483,6 +508,7 @@ public class ColumnConfig {
         other.setColumnType(columnType);
         other.setColumnFlag(columnFlag);
         other.setFinalSelect(finalSelect);
+        other.setSegment(isSegment);
         other.setColumnStats(columnStats);
         other.setColumnBinning(columnBinning);
         // other.setCorrArray(corrArray);
@@ -532,6 +558,7 @@ public class ColumnConfig {
         output.writeUTF(columnFlag.toString());
         output.writeBoolean(finalSelect);
         output.writeDouble(hybridThreshold);
+        output.writeInt(hashSeed);
         columnStats.write(output);
         columnBinning.write(output);
         if (sampleValues == null || sampleValues.isEmpty()) {
@@ -542,6 +569,7 @@ public class ColumnConfig {
                 output.writeUTF(sampleValue);
             }
         }
+        output.writeBoolean(isSegment);
     }
 
     /**
@@ -557,6 +585,7 @@ public class ColumnConfig {
         columnFlag = ColumnFlag.valueOf(input.readUTF());
         finalSelect = input.readBoolean();
         hybridThreshold = input.readDouble();
+        hashSeed = input.readInt();
         columnStats = new ColumnStats();
         columnStats.read(input);
         columnBinning = new ColumnBinning();
@@ -566,5 +595,6 @@ public class ColumnConfig {
         for (int i = 0; i < size; i++) {
             sampleValues.add(input.readUTF());
         }
+        isSegment = input.readBoolean();
     }
 }

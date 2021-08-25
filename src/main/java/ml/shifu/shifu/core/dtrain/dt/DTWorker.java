@@ -56,6 +56,7 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.TreeModel;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
+import ml.shifu.shifu.core.dtrain.WeightPolicy;
 import ml.shifu.shifu.core.dtrain.dt.DTWorkerParams.NodeStats;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
@@ -334,6 +335,11 @@ public class DTWorker extends
 
     private boolean hasCandidates;
 
+    /**
+     * Weight policy set in params, by default RAW if not set.
+     */
+    private WeightPolicy wp;
+
     @Override
     public void initRecordReader(GuaguaFileSplit fileSplit) throws IOException {
         super.setRecordReader(new GuaguaLineRecordReader(fileSplit));
@@ -374,7 +380,7 @@ public class DTWorker extends
                 }
             }
         }
-        
+
         this.hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
 
         // create Splitter
@@ -453,7 +459,7 @@ public class DTWorker extends
         int[] inputOutputIndex = DTrainUtils.getNumericAndCategoricalInputAndOutputCounts(this.columnConfigList);
         // numerical + categorical = # of all input
         this.inputCount = inputOutputIndex[0] + inputOutputIndex[1];
-        // regression outputNodeCount is 1, binaryClassfication, it is 1, OneVsAll it is 1, Native classification it is
+        // regression outputNodeCount is 1, binaryClassification, it is 1, OneVsAll it is 1, Native classification it is
         // 1, with index of 0,1,2,3 denotes different classes
         this.isAfterVarSelect = (inputOutputIndex[3] == 1);
         this.isManualValidation = (modelConfig.getValidationDataSetRawPath() != null
@@ -463,14 +469,22 @@ public class DTWorker extends
         String imStr = validParams.get("Impurity").toString();
         int minInstancesPerNode = Integer.valueOf(validParams.get("MinInstancesPerNode").toString());
         double minInfoGain = Double.valueOf(validParams.get("MinInfoGain").toString());
+        Object csmObj = validParams.get("CateSortMode");
+        String cateSortMode = null;
+        if(csmObj != null) {
+            cateSortMode = csmObj.toString();
+            if(StringUtils.isBlank(cateSortMode)) {
+                cateSortMode = "sort";
+            }
+        }
         if(imStr.equalsIgnoreCase("entropy")) {
-            impurity = new Entropy(numClasses, minInstancesPerNode, minInfoGain);
+            impurity = new Entropy(numClasses, minInstancesPerNode, minInfoGain, cateSortMode);
         } else if(imStr.equalsIgnoreCase("gini")) {
-            impurity = new Gini(numClasses, minInstancesPerNode, minInfoGain);
+            impurity = new Gini(numClasses, minInstancesPerNode, minInfoGain, cateSortMode);
         } else if(imStr.equalsIgnoreCase("friedmanmse")) {
-            impurity = new FriedmanMSE(minInstancesPerNode, minInfoGain);
+            impurity = new FriedmanMSE(minInstancesPerNode, minInfoGain, cateSortMode);
         } else {
-            impurity = new Variance(minInstancesPerNode, minInfoGain);
+            impurity = new Variance(minInstancesPerNode, minInfoGain, cateSortMode);
         }
 
         this.isRF = ALGORITHM.RF.toString().equalsIgnoreCase(modelConfig.getAlgorithm());
@@ -493,6 +507,12 @@ public class DTWorker extends
                 this.loss = new SquaredLoss();
             }
         }
+        LOG.info("Loss is set to {}.", this.loss);
+
+        Object wpObj = validParams.get("WeightPolicy");
+        String wpObjStr = ((wpObj == null || StringUtils.isBlank(wpObj.toString())) ? "RAW" : wpObj.toString());
+        this.wp = WeightPolicy.of(wpObjStr);
+        LOG.info("Weight policy is set to {}.", this.wp);
 
         if(this.isGBDT) {
             this.learningRate = Double.valueOf(validParams.get(CommonConstants.LEARNING_RATE).toString());
@@ -535,7 +555,7 @@ public class DTWorker extends
             TreeModel existingModel = null;
             try {
                 existingModel = (TreeModel) ModelSpecLoaderUtils.loadModel(modelConfig, modelPath,
-                        ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
+                        ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource(), modelPath));
             } catch (IOException e) {
                 LOG.error("Error in get existing model, will ignore and start from scratch", e);
             }
@@ -1114,6 +1134,7 @@ public class DTWorker extends
         // the function in akka mode.
         int index = 0, inputIndex = 0;
         for(String input: this.splitter.split(currentValue.getWritable().toString())) {
+            // if no wgt column at last field of line, significance will be bypassed and set to default 1
             if(index == this.columnConfigList.size()) {
                 // do we need to check if not weighted directly set to 1f; if such logic non-weight at first, then
                 // weight, how to process???
@@ -1221,6 +1242,10 @@ public class DTWorker extends
             index += 1;
         }
 
+        // re weight according to weight policy
+        boolean isPositive = (int) (ideal + 0.01d) == 1;
+        significance = this.wp.weight(isPositive, significance);
+
         // output delimiter in norm can be set by user now and if user set a special one later changed, this exception
         // is helped to quick find such issue.
         if(inputIndex != inputs.length) {
@@ -1300,12 +1325,11 @@ public class DTWorker extends
         // check here to avoid bad performance in failed NumberFormatUtils.getFloat(input, 0f)
         float floatValue = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(input, 0f);
         // no idea about why NaN in input data, we should process it as missing value TODO , according to norm type
-        floatValue = (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
-        return floatValue;
+        return (Float.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
     }
 
     private boolean isPositive(float value) {
-        return Float.compare(1f, value) == 0 ? true : false;
+        return Float.compare(1f, value) == 0;
     }
 
     /**
@@ -1495,7 +1519,8 @@ public class DTWorker extends
                     this.modelConfig.getDataSet().getSource())) {
                 return null;
             }
-            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource());
+            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource(),
+                    this.checkpointOutput);
             stream = fs.open(this.checkpointOutput);
             int treeSize = stream.readInt();
             trees = new ArrayList<TreeNode>(treeSize);
