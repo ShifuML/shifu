@@ -45,6 +45,8 @@ import java.util.*;
  */
 public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
 
+    private static final String SHIFU_EVAL_NORM_SKIP_CHECK = "shifu.eval.norm.skip.check";
+
     private static final String ORIG_POSTFIX = "_orig";
 
     private String[] headers;
@@ -102,6 +104,8 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
 
     private PrecisionType precisionType;
 
+    private boolean skipColumnCheck = false;
+
     public EvalNormUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName, String scale)
             throws IOException {
         super(source, pathModelConfig, pathColumnConfig, evalSetName);
@@ -134,6 +138,14 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
             isAppendScoreStr = UDFContext.getUDFContext().getJobConf().get(Constants.SHIFU_EVAL_NORM_APPEND_SCORE);
         } else {
             isAppendScoreStr = Environment.getProperty(Constants.SHIFU_EVAL_NORM_APPEND_SCORE);
+        }
+
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            skipColumnCheck = Boolean.TRUE.toString()
+                    .equalsIgnoreCase(UDFContext.getUDFContext().getJobConf().get(SHIFU_EVAL_NORM_SKIP_CHECK));
+        } else {
+            skipColumnCheck = Boolean.TRUE.toString()
+                    .equalsIgnoreCase(Environment.getProperty(SHIFU_EVAL_NORM_SKIP_CHECK));
         }
 
         if(StringUtils.isNotBlank(isAppendScoreStr)) {
@@ -236,8 +248,13 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
                             outputNames.addAll(
                                     super.genNormColumnNames(columnConfig, this.modelConfig.getNormalizeType()));
                         } else {
-                            throw new RuntimeException(varDesc + " - " + columnConfig.getColumnName()
-                                    + " couldn't be found in eval dataset!");
+                            if(skipColumnCheck) {
+                                log.warn(varDesc + " - " + columnConfig.getColumnName()
+                                        + " couldn't be found in eval dataset!");
+                            } else {
+                                throw new RuntimeException(varDesc + " - " + columnConfig.getColumnName()
+                                        + " couldn't be found in eval dataset!");
+                            }
                         }
                     } else { // expression appending variables, like abc_1, real column name is abc.
                         String realColumnName = columnConfig.getColumnName().substring(0,
@@ -247,8 +264,13 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
                             outputNames.addAll(
                                     super.genNormColumnNames(columnConfig, this.modelConfig.getNormalizeType()));
                         } else {
-                            throw new RuntimeException(varDesc + " - " + columnConfig.getColumnName()
-                                    + " couldn't be found in eval dataset!");
+                            if(skipColumnCheck) {
+                                log.warn(varDesc + " - " + columnConfig.getColumnName()
+                                        + " couldn't be found in eval dataset!");
+                            } else {
+                                throw new RuntimeException(varDesc + " - " + columnConfig.getColumnName()
+                                        + " couldn't be found in eval dataset!");
+                            }
                         }
                     }
                 } else {
@@ -256,8 +278,13 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
                         featureNames.add(columnConfig.getColumnName());
                         outputNames.addAll(super.genNormColumnNames(columnConfig, this.modelConfig.getNormalizeType()));
                     } else {
-                        throw new RuntimeException(
-                                varDesc + " - " + columnConfig.getColumnName() + " couldn't be found in eval dataset!");
+                        if(skipColumnCheck) {
+                            log.warn(varDesc + " - " + columnConfig.getColumnName()
+                                    + " couldn't be found in eval dataset!");
+                        } else {
+                            throw new RuntimeException(varDesc + " - " + columnConfig.getColumnName()
+                                    + " couldn't be found in eval dataset!");
+                        }
                     }
                 }
             }
