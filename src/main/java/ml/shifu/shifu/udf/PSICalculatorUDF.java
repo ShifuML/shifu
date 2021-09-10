@@ -15,7 +15,12 @@
  */
 package ml.shifu.shifu.udf;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.apache.pig.data.DataBag;
@@ -23,22 +28,38 @@ import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.logicalLayer.schema.Schema;
+import org.apache.pig.impl.util.UDFContext;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
 
 /**
  * Calculate the Population Stability Index
  */
 public class PSICalculatorUDF extends AbstractTrainerUDF<Tuple> {
 
-    public PSICalculatorUDF(String source, String pathModelConfig, String pathColumnConfig)
-        throws IOException {
+    /**
+     * New PSI compute mode: if psi column defined, in each column by comparing category by category, like 20200101 to
+     * 20200102 to get PSI trend of each variables.
+     */
+    private PSIByColumnUDF psiInstance;
+    private boolean psiByCategory = false;
+
+    public PSICalculatorUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
 
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            psiByCategory = Boolean.TRUE.toString().equalsIgnoreCase(
+                    UDFContext.getUDFContext().getJobConf().get(Constants.SHIFU_PSI_BY_COLUMN_CATEGORY));
+        } else {
+            psiByCategory = Boolean.TRUE.toString()
+                    .equalsIgnoreCase(Environment.getProperty(Constants.SHIFU_PSI_BY_COLUMN_CATEGORY));
+        }
+
+        if(this.psiByCategory) {
+            psiInstance = new PSIByColumnUDF(source, pathModelConfig, pathColumnConfig);
+        }
     }
 
     @Override
@@ -47,23 +68,26 @@ public class PSICalculatorUDF extends AbstractTrainerUDF<Tuple> {
             return null;
         }
 
+        if(this.psiByCategory) {
+            return this.psiInstance.exec(input);
+        }
+
         Integer columnId = (Integer) input.get(0);
         DataBag databag = (DataBag) input.get(1);
 
         ColumnConfig columnConfig = this.columnConfigList.get(columnId);
 
         List<Integer> negativeBin = columnConfig.getBinCountNeg();
-        List<Integer> positiveBin  = columnConfig.getBinCountPos();
+        List<Integer> positiveBin = columnConfig.getBinCountPos();
         List<Double> expected = new ArrayList<Double>(negativeBin.size());
-        for (int i = 0 ; i < columnConfig.getBinCountNeg().size(); i ++) {
-            if (columnConfig.getTotalCount() == 0) {
+        for(int i = 0; i < columnConfig.getBinCountNeg().size(); i++) {
+            if(columnConfig.getTotalCount() == 0) {
                 expected.add(0D);
             } else {
-                expected.add(((double)negativeBin.get(i) + (double)positiveBin.get(i))
-                             / columnConfig.getTotalCount());
+                expected.add(
+                        ((double) negativeBin.get(i) + (double) positiveBin.get(i)) / columnConfig.getTotalCount());
             }
         }
-
 
         Double psi = 0D;
         double cosine = 0.0d;
@@ -72,9 +96,9 @@ public class PSICalculatorUDF extends AbstractTrainerUDF<Tuple> {
         List<String> unitStats = new ArrayList<String>();
 
         Iterator<Tuple> iter = databag.iterator();
-        while (iter.hasNext()) {
+        while(iter.hasNext()) {
             Tuple tuple = iter.next();
-            if (tuple != null && tuple.size() != 0) {
+            if(tuple != null && tuple.size() != 0) {
                 String subBinStr = (String) tuple.get(1);
                 String[] subBinArr = StringUtils.split(subBinStr, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
                 List<Double> subCounter = new ArrayList<Double>();
@@ -86,14 +110,14 @@ public class PSICalculatorUDF extends AbstractTrainerUDF<Tuple> {
                 }
 
                 int i = 0;
-                for (Double sub : subCounter) {
-                    if ( total == 0 ) {
+                for(Double sub: subCounter) {
+                    if(total == 0) {
                         continue;
-                    } else if (expected.get(i) == 0) {
+                    } else if(expected.get(i) == 0) {
                         continue;
                     } else {
                         double logNum = (sub / total) / expected.get(i);
-                        if (logNum <= 0) {
+                        if(logNum <= 0) {
                             continue;
                         } else {
                             double unitPsi = ((sub / total - expected.get(i)) * Math.log(logNum));
@@ -101,7 +125,7 @@ public class PSICalculatorUDF extends AbstractTrainerUDF<Tuple> {
                             psiStats.addValue(unitPsi);
                         }
                     }
-                    i ++;
+                    i++;
                 }
 
                 double unitCosine = calculateCosine(expected, subCounter);
@@ -127,12 +151,12 @@ public class PSICalculatorUDF extends AbstractTrainerUDF<Tuple> {
     }
 
     private double calculateCosine(List<Double> totalVector, List<Double> subVector) {
-        assert totalVector != null && subVector != null
-                && totalVector.size() != 0 && totalVector.size() == subVector.size();
+        assert totalVector != null && subVector != null && totalVector.size() != 0
+                && totalVector.size() == subVector.size();
 
         double multi = 0.0d;
-        double squareX = 0.0d, squareY= 0.0d;
-        for (int i = 0; i < totalVector.size(); i ++ ) {
+        double squareX = 0.0d, squareY = 0.0d;
+        for(int i = 0; i < totalVector.size(); i++) {
             double x = totalVector.get(i);
             double y = subVector.get(i);
 
@@ -141,8 +165,8 @@ public class PSICalculatorUDF extends AbstractTrainerUDF<Tuple> {
             squareY = squareY + y * y;
         }
 
-        double divisor = Math.sqrt(squareX) *  Math.sqrt(squareY);
-        if ( divisor < 1e-10) {
+        double divisor = Math.sqrt(squareX) * Math.sqrt(squareY);
+        if(divisor < 1e-10) {
             return 0;
         }
         return multi / divisor;
@@ -155,11 +179,16 @@ public class PSICalculatorUDF extends AbstractTrainerUDF<Tuple> {
         try {
             Schema tupleSchema = new Schema();
             tupleSchema.add(new Schema.FieldSchema("columnId", DataType.INTEGER));
-            tupleSchema.add(new Schema.FieldSchema("psi", DataType.DOUBLE));
-            tupleSchema.add(new Schema.FieldSchema("psiStd", DataType.DOUBLE));
-            tupleSchema.add(new Schema.FieldSchema("cosine", DataType.DOUBLE));
-            tupleSchema.add(new Schema.FieldSchema("cosStd", DataType.DOUBLE));
-            tupleSchema.add(new Schema.FieldSchema("unitstats", DataType.CHARARRAY));
+            if(this.psiByCategory) {
+                tupleSchema.add(new Schema.FieldSchema("psi", DataType.CHARARRAY));
+            } else {
+                tupleSchema.add(new Schema.FieldSchema("psi", DataType.DOUBLE));
+                tupleSchema.add(new Schema.FieldSchema("psiStd", DataType.DOUBLE));
+                tupleSchema.add(new Schema.FieldSchema("cosine", DataType.DOUBLE));
+                tupleSchema.add(new Schema.FieldSchema("cosStd", DataType.DOUBLE));
+                tupleSchema.add(new Schema.FieldSchema("unitstats", DataType.CHARARRAY));
+            }
+
             return new Schema(new Schema.FieldSchema("PSIInfo", tupleSchema, DataType.TUPLE));
         } catch (IOException e) {
             log.error("Error in outputSchema", e);

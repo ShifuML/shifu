@@ -45,8 +45,6 @@ import java.util.*;
  */
 public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
 
-    private static final String SHIFU_EVAL_NORM_SKIP_CHECK = "shifu.eval.norm.skip.check";
-
     private static final String ORIG_POSTFIX = "_orig";
 
     private String[] headers;
@@ -141,11 +139,11 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
         }
 
         if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
-            skipColumnCheck = Boolean.TRUE.toString()
-                    .equalsIgnoreCase(UDFContext.getUDFContext().getJobConf().get(SHIFU_EVAL_NORM_SKIP_CHECK));
+            skipColumnCheck = Boolean.TRUE.toString().equalsIgnoreCase(
+                    UDFContext.getUDFContext().getJobConf().get(Constants.SHIFU_EVAL_NORM_SKIP_CHECK));
         } else {
             skipColumnCheck = Boolean.TRUE.toString()
-                    .equalsIgnoreCase(Environment.getProperty(SHIFU_EVAL_NORM_SKIP_CHECK));
+                    .equalsIgnoreCase(Environment.getProperty(Constants.SHIFU_EVAL_NORM_SKIP_CHECK));
         }
 
         if(StringUtils.isNotBlank(isAppendScoreStr)) {
