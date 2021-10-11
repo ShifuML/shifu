@@ -57,3 +57,4 @@ psi = FOREACH (GROUP population_info by $0) GENERATE FLATTEN(PSI(*));
 
 rmf $path_psi
 STORE psi INTO '$path_psi' USING PigStorage('$output_delimiter', '-schema');
+

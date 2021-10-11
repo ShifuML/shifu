@@ -17,7 +17,7 @@
  */
 package ml.shifu.shifu.core.binning;
 
-import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -45,7 +45,7 @@ public class CategoricalBinning extends AbstractBinning<String> {
     private Set<String> categoricalVals;
     private int hashSeed = 0;
 
-    private HyperLogLogPlus hyper = new HyperLogLogPlus(8);;
+    private HyperLogLogPlus hyper = new HyperLogLogPlus(8);
 
     /**
      * Empty constructor : it is just for bin merging
@@ -145,6 +145,8 @@ public class CategoricalBinning extends AbstractBinning<String> {
             this.hyper.merge(binning.hyper);
         } catch (CardinalityMergeException e) {
             throw new RuntimeException(e);
+        } catch (Throwable e) {
+            // ignore
         }
 
         this.isValid = (this.isValid && binning.isValid);
@@ -194,10 +196,22 @@ public class CategoricalBinning extends AbstractBinning<String> {
             } catch (Exception e) {
                 log.warn("Fail to to build HyperLogLogPlus from {}. The cardinality function may not work as expect.",
                         (objStrArr[6]));
-                log.warn("The total input is {}", objValStr);
-                // throw new RuntimeException(e);
+                try {
+                    log.warn("The total input after base64 is {}, hyper loglog base64 input is {}",
+                            Base64Utils.base64EncodeFromBytes(objValStr.getBytes("utf-8")),
+                            Base64Utils.base64EncodeFromBytes(objStrArr[6].getBytes("utf-8")));
+                } catch (UnsupportedEncodingException ignore) {
+                }
+                this.hyper = new HyperLogLogPlus(8);
+                throw new RuntimeException(e);
             } catch (Throwable t) {
-                log.warn("The total input is {}", objValStr);
+                try {
+                    log.warn("The total input after base64 is {}, hyper loglog base64 input is {}",
+                            Base64Utils.base64EncodeFromBytes(objValStr.getBytes("utf-8")),
+                            Base64Utils.base64EncodeFromBytes(objStrArr[6].getBytes("utf-8")));
+                } catch (UnsupportedEncodingException ignore) {
+                }
+                this.hyper = new HyperLogLogPlus(8);
                 throw t;
             }
         }
@@ -208,11 +222,10 @@ public class CategoricalBinning extends AbstractBinning<String> {
      */
     public String objToString() {
         try {
-            return super.objToString()
-                    + Character.toString(FIELD_SEPARATOR) + Boolean.toString(isValid)
+            return super.objToString() + Character.toString(FIELD_SEPARATOR) + Boolean.toString(isValid)
                     + Character.toString(FIELD_SEPARATOR) + StringUtils.join(categoricalVals, SETLIST_SEPARATOR)
                     + Character.toString(FIELD_SEPARATOR) + Base64Utils.base64EncodeFromBytes(this.hyper.getBytes());
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
