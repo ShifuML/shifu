@@ -16,19 +16,12 @@
 package ml.shifu.shifu.core.dtrain.nn;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import ml.shifu.shifu.util.NormalUtils;
+import ml.shifu.shifu.util.HDFSUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.encog.ml.BasicML;
@@ -49,6 +42,7 @@ import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 
@@ -149,6 +143,12 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
      */
     private int minimumEpochs = -1;
 
+    /**
+     * Model spec output precision type, double64 by default would be stored, if float32 or float 16 duplicated model
+     * spec would also be stored.
+     */
+    private PrecisionType msPt;
+
     @Override
     public void preApplication(MasterContext<NNParams, NNParams> context) {
         init(context);
@@ -161,25 +161,27 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             return;
         }
 
-        if (minimumEpochs < 0) {
+        if(minimumEpochs < 0) {
             double minimumStepsRatio = DTrainUtils.getDouble(context.getProps(), // get # of steps to choose parameters
                     CommonConstants.SHIFU_TRAIN_VAL_STEPS_RATIO, 0.1);
-            minimumEpochs = (int) (modelConfig.getNumTrainEpochs() * minimumStepsRatio) ;
+            minimumEpochs = Math.max((int) (modelConfig.getNumTrainEpochs() * minimumStepsRatio), 5);
         }
 
-
-        if ( context.getCurrentIteration() < minimumEpochs ) {
+        if(context.getCurrentIteration() < minimumEpochs) {
             this.optimizedWeights = context.getMasterResult().getWeights();
         } else {
-            double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON) ? context.getMasterResult()
-                    .getTrainError() : context.getMasterResult().getValidationError());
-            if ( currentError < this.minTestError ) {
+            double currentError = ((modelConfig.getTrain().getValidSetRate() < EPSILON)
+                    ? context.getMasterResult().getTrainError()
+                    : context.getMasterResult().getValidationError());
+            if(currentError < this.minTestError) {
                 this.minTestError = currentError;
                 // the optimizedWeights are the weights just evaluated, not current weights after applying gradients
                 this.optimizedWeights = context.getMasterResult().getEvaluatedWeights();
-                context.getMasterResult().setEvaluatedWeights(null);
-                LOG.info("change minTestError to {}, and update best weights at {}-th epoch.",
-                        this.minTestError, context.getCurrentIteration());
+                if(this.optimizedWeights == null) {
+                    this.optimizedWeights = context.getMasterResult().getWeights();
+                }
+                LOG.info("change minTestError to {}, and update best weights at {}-th epoch.", this.minTestError,
+                        context.getCurrentIteration());
             }
         }
 
@@ -216,7 +218,6 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         updateProgressLog(context);
     }
 
-    @SuppressWarnings("deprecation")
     private void updateProgressLog(final MasterContext<NNParams, NNParams> context) {
         int currentIteration = context.getCurrentIteration();
         if(context.isFirstIteration()) {
@@ -231,7 +232,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             LOG.debug("Writing progress results to {} {}", context.getCurrentIteration(), progress.toString());
             this.progressOutput.write(progress.getBytes("UTF-8"));
             this.progressOutput.flush();
-            this.progressOutput.sync();
+            this.progressOutput.hflush();
         } catch (IOException e) {
             LOG.error("Error in write progress log:", e);
         }
@@ -247,9 +248,10 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         }
 
         if(optimizedWeights != null) {
-            Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
             // TODO do we need to check IOException and retry again to make sure such important model is saved
             // successfully.
+            Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
+
             writeModelWeightsToFileSystem(optimizedWeights, out, true);
         }
 
@@ -262,7 +264,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     private void writeValErrorToFileSystem(double valError, Path out) {
         FSDataOutputStream fos = null;
         try {
-            fos = FileSystem.get(new Configuration()).create(out);
+            fos = HDFSUtils.getFS(out).create(out);
             LOG.info("Writing valerror to {}", out);
             fos.write((valError + "").getBytes("UTF-8"));
         } catch (IOException e) {
@@ -315,7 +317,13 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
                 this.wgtInit = wgtInitObj.toString();
             }
 
-            this.bModel = new Path(context.getProps().getProperty(Constants.SHIFU_NN_BINARY_MODEL_PATH));
+            this.bModel = new Path(context.getProps().getProperty(Constants.SHIFU_BINARY_MODEL_PATH));
+
+            try {
+                this.msPt = PrecisionType.of(context.getProps().getProperty(Constants.SHIFU_MODELSPEC_PRECISION_TYPE));
+            } catch (Exception e) {
+                this.msPt = null;
+            }
 
             initNetwork(context);
         }
@@ -325,9 +333,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
             // if the progressLog already exists, that because the master failed, and fail-over
             // we need to append the log, so that client console can get refreshed. Or console will appear stuck.
             if(ShifuFileUtils.isFileExists(progressLog, SourceType.HDFS)) {
-                this.progressOutput = FileSystem.get(new Configuration()).append(progressLog);
+                this.progressOutput = HDFSUtils.getFS(progressLog).append(progressLog);
             } else {
-                this.progressOutput = FileSystem.get(new Configuration()).create(progressLog);
+                this.progressOutput = HDFSUtils.getFS(progressLog).create(progressLog);
             }
         } catch (IOException e) {
             LOG.error("Error in create progress log:", e);
@@ -366,9 +374,9 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         List<String> actFunc = (List<String>) validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodeList = (List<Integer>) validParams.get(CommonConstants.NUM_HIDDEN_NODES);
 
-        boolean isAfterVarSelect = inputOutputIndex[0] != 0;
         // cache all feature list for sampling features
-        List<Integer> allFeatures = NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
+        List<Integer> allFeatures = new ArrayList<>(DTrainUtils.generateModelFeatureSet(modelConfig, columnConfigList));
+        // NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect);
         String subsetStr = context.getProps().getProperty(CommonConstants.SHIFU_NN_FEATURE_SUBSET);
         if(StringUtils.isBlank(subsetStr)) {
             this.subFeatures = new HashSet<Integer>(allFeatures);
@@ -382,7 +390,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
 
         int featureInputsCnt = DTrainUtils.getFeatureInputsCnt(modelConfig, columnConfigList, this.subFeatures);
 
-        String outputActivationFunc = (String)validParams.get(CommonConstants.OUTPUT_ACTIVATION_FUNC);
+        String outputActivationFunc = (String) validParams.get(CommonConstants.OUTPUT_ACTIVATION_FUNC);
 
         this.network = DTrainUtils.generateNetwork(featureInputsCnt, outputNodeCount, numLayers, actFunc,
                 hiddenNodeList, false, this.dropoutRate, this.wgtInit,
@@ -403,7 +411,7 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
     private void writeEncogModelToFileSystem(double[] weights, Path out) {
         FSDataOutputStream fos = null;
         try {
-            fos = FileSystem.get(new Configuration()).create(out);
+            fos = HDFSUtils.getFS(out).create(out);
             LOG.info("Writing results to {}", out);
             this.network.getFlat().setWeights(weights);
             if(out != null) {
@@ -423,7 +431,20 @@ public class NNOutput extends BasicMasterInterceptor<NNParams, NNParams> {
         BasicML basicML = this.network;
         try {
             BinaryNNSerializer.save(modelConfig, columnConfigList, Arrays.asList(basicML),
-                    FileSystem.get(new Configuration()), out);
+                    HDFSUtils.getFS(out), out, PrecisionType.DOUBLE64);
+            if(this.msPt != null) {
+                switch(this.msPt) {
+                    case FLOAT32:
+                        Path msOut = new Path(out.toString() + "." + this.msPt.toString().toLowerCase());
+                        BinaryNNSerializer.save(modelConfig, columnConfigList, Arrays.asList(basicML),
+                                HDFSUtils.getFS(msOut), msOut, this.msPt);
+                        break;
+                    case FLOAT16:
+                        throw new UnsupportedOperationException("TODO: support FLOAT16");
+                    default:
+                        throw new UnsupportedOperationException("Unsupported model spec precision type.");
+                }
+            }
         } catch (IOException e) {
             LOG.error("Error in writing model", e);
         }

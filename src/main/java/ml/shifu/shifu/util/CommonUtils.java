@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
+import org.encog.mathutil.BoundMath;
 import org.encog.ml.BasicML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +57,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 
+import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.column.NSColumn;
 import ml.shifu.shifu.column.NSColumnUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
@@ -68,6 +70,7 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import scala.annotation.meta.param;
 
 /**
  * {@link CommonUtils} is used to for almost all kinds of utility function in this framework.
@@ -98,10 +101,10 @@ public final class CommonUtils {
      *             If parameter {@code modelConfig} is null
      */
     public static boolean copyConfFromLocalToHDFS(ModelConfig modelConfig, PathFinder pathFinder) throws IOException {
-        FileSystem hdfs = HDFSUtils.getFS();
         FileSystem localFs = HDFSUtils.getLocalFS();
 
         Path hdfsMSPath = new Path(pathFinder.getModelSetPath(SourceType.HDFS));
+        FileSystem hdfs = HDFSUtils.getFS(hdfsMSPath);
         Path pathModelSet = hdfsMSPath;
         // don't check whether pathModelSet is exists, should be remove by user.
         hdfs.mkdirs(pathModelSet);
@@ -118,10 +121,14 @@ public final class CommonUtils {
         }
 
         // Copy ColumnConfig
-        Path srcColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.LOCAL));
-        Path dstColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.HDFS));
-        if(ShifuFileUtils.isFileExists(srcColumnConfig.toString(), SourceType.LOCAL)) {
-            hdfs.copyFromLocalFile(srcColumnConfig, dstColumnConfig);
+        if(modelConfig.isMultiTask()) {
+            copyMTLColumnConfigs(modelConfig, hdfs, hdfsMSPath);
+        } else {
+            Path srcColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.LOCAL));
+            Path dstColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.HDFS));
+            if(ShifuFileUtils.isFileExists(srcColumnConfig.toString(), SourceType.LOCAL)) {
+                hdfs.copyFromLocalFile(srcColumnConfig, dstColumnConfig);
+            }
         }
 
         // Copy column related config files
@@ -155,6 +162,18 @@ public final class CommonUtils {
         }
 
         return true;
+    }
+
+    private static void copyMTLColumnConfigs(ModelConfig modelConfig, FileSystem hdfs, Path hdfsMSPath)
+            throws IOException {
+        PathFinder pf = new PathFinder(modelConfig);
+        Path mtlHDFSPath = new Path(pf.getMTLColumnConfigFolder(SourceType.HDFS));
+        hdfs.mkdirs(mtlHDFSPath);
+        List<String> tagColumnNames = modelConfig.getMultiTaskTargetColumnNames();
+        for(int i = 0; i < tagColumnNames.size(); i++) {
+            Path srcPath = new Path(pf.getMTLColumnConfigPath(SourceType.LOCAL, i));
+            hdfs.copyFromLocalFile(srcPath, mtlHDFSPath);
+        }
     }
 
     private static void copyColumnConfigFiles(ModelConfig modelConfig, FileSystem hdfs, Path hdfsMSPath)
@@ -198,12 +217,12 @@ public final class CommonUtils {
     public static void copyEvalDataFromLocalToHDFS(ModelConfig modelConfig, String evalName) throws IOException {
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(evalName);
         if(evalConfig != null) {
-            FileSystem hdfs = HDFSUtils.getFS();
             FileSystem localFs = HDFSUtils.getLocalFS();
             PathFinder pathFinder = new PathFinder(modelConfig);
 
             Path evalDir = new Path(pathFinder.getEvalSetPath(evalConfig, SourceType.LOCAL));
             Path dst = new Path(pathFinder.getEvalSetPath(evalConfig, SourceType.HDFS));
+            FileSystem hdfs = HDFSUtils.getFS(dst);
             if(localFs.exists(evalDir) // local evaluation folder exists
                     && localFs.getFileStatus(evalDir).isDir() // is directory
                     && !hdfs.exists(dst)) {
@@ -261,7 +280,7 @@ public final class CommonUtils {
         if(StringUtils.isNotBlank(modelConfig.getTrain().getGridConfigFile())) {
             String gridConfigPath = modelConfig.getTrain().getGridConfigFile().trim();
             if(sourceType == SourceType.HDFS) {
-                // gridsearch config file is uploaded to modelset path
+                // grid-search config file is uploaded to modelset path
                 gridConfigPath = new PathFinder(modelConfig).getPathBySourceType(
                         gridConfigPath.substring(gridConfigPath.lastIndexOf(File.separator) + 1), SourceType.HDFS);
             }
@@ -414,8 +433,8 @@ public final class CommonUtils {
      * @throws IllegalArgumentException
      *             if {@code path} is null or empty, if sourceType is null.
      */
-    public static List<ColumnConfig> loadColumnConfigList(String path, SourceType sourceType, boolean nullSampleValues)
-            throws IOException {
+    public static synchronized List<ColumnConfig> loadColumnConfigList(String path, SourceType sourceType,
+            boolean nullSampleValues) throws IOException {
         ColumnConfig[] configList = loadJSON(path, sourceType, ColumnConfig[].class);
         List<ColumnConfig> columnConfigList = new ArrayList<ColumnConfig>();
         for(ColumnConfig columnConfig: configList) {
@@ -531,7 +550,17 @@ public final class CommonUtils {
                             ? evalConfig.getDataSet().getDataDelimiter()
                             : evalConfig.getDataSet().getHeaderDelimiter(),
                     evalConfig.getDataSet().getSource());
-            if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName(evalConfig))) {
+            if(evalConfig.isMultiTask()) {
+                List<String> tarColumns = evalConfig.getMultiTaskTargetColumnNames();
+                if(CollectionUtils.isNotEmpty(tarColumns)) {
+                    for(String column: tarColumns) {
+                        if(!StringUtils.join(fields, "").contains(column)) {
+                            isSchemaProvided = false;
+                            break;
+                        }
+                    }
+                }
+            } else if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName(evalConfig, ""))) {
                 // if first line contains target column name, we guess it is csv format and first line is header.
                 isSchemaProvided = true;
                 log.warn("No header path is provided, we will try to read first line and detect schema.");
@@ -603,7 +632,7 @@ public final class CommonUtils {
             throws IOException {
         if(StringUtils.isEmpty(pathHeader) || StringUtils.isEmpty(delimiter) || sourceType == null) {
             throw new IllegalArgumentException(
-                    String.format("Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", pathHeader,
+                    String.format("Null or empty parameters srcDataPath:%s, delimiter:%s, sourceType:%s", pathHeader,
                             delimiter, sourceType));
         }
         BufferedReader reader = null;
@@ -624,7 +653,21 @@ public final class CommonUtils {
         } finally {
             IOUtils.closeQuietly(reader);
         }
+        return calculateHeaders(pigHeaderStr, delimiter, isFull);
+    }
 
+    /**
+     * Return header column array from header string.
+     *
+     * @param pigHeaderStr
+     *            header string
+     * @param delimiter
+     *            the delimiter of headers
+     * @param isFull
+     *            if full header name including name space
+     * @return headers array
+     */
+    public static String[] calculateHeaders(String pigHeaderStr, String delimiter, boolean isFull) {
         List<String> headerList = new ArrayList<String>();
         Set<String> headerSet = new HashSet<String>();
         int index = 0;
@@ -640,16 +683,34 @@ public final class CommonUtils {
              * columnName = getRelativePigHeaderColumnName(str);
              * }
              */
+            columnName = normColumnName(columnName);
             if(headerSet.contains(columnName)) {
-                columnName = columnName + "_" + index;
+                columnName = getUniqueName(headerSet, columnName + "_dup" + index);
             }
 
-            columnName = normColumnName(columnName);
             headerSet.add(columnName);
             index++;
             headerList.add(columnName);
         }
         return headerList.toArray(new String[0]);
+    }
+
+    /**
+     * Create the unique name to avoid duplication by appending "_1,2,3,4" postfix
+     * @param nameSet - existing name set
+     * @param name - name that needs to be unique
+     * @return name if name set doesn't contains it.
+     *      If name exist in name set, it will check name_1, name_2, name_n to find one which doesn't
+     */
+    public static String getUniqueName(Set<String> nameSet, String name) {
+        if(nameSet == null || name == null) {
+            return name;
+        }
+        String newName = name;
+        for(int i = 1; nameSet.contains(newName); i++) {
+            newName = name + "_" + i;
+        }
+        return newName;
     }
 
     /**
@@ -738,6 +799,29 @@ public final class CommonUtils {
         }
         List<String> headerList = new ArrayList<String>();
         for(String str: Splitter.on(delimiter).split(raw)) {
+            headerList.add(str);
+        }
+        return headerList;
+    }
+
+    /**
+     * Common split function to ignore special character like '|'.
+     *
+     * @param raw
+     *            raw string
+     * @param splitter
+     *            the splitter to split the string
+     * @return list of split Strings
+     * @throws IllegalArgumentException
+     *             {@code raw} and {@code splitter} is null or empty.
+     */
+    public static List<String> splitAndReturnList(String raw, Splitter splitter) {
+        if(StringUtils.isEmpty(raw) || splitter == null) {
+            throw new IllegalArgumentException(
+                    String.format("raw and delimeter should not be null or empty, raw:%s, splitter:%s", raw, splitter));
+        }
+        List<String> headerList = new ArrayList<String>();
+        for(String str: splitter.split(raw)) {
             headerList.add(str);
         }
         return headerList;
@@ -847,51 +931,56 @@ public final class CommonUtils {
         return rawDataMap;
     }
 
-    /**
-     * Return all parameters for pig execution.
-     *
-     * @param modelConfig
-     *            model config
-     * @param sourceType
-     *            source type
-     * @return map of configurations
-     * @throws IOException
-     *             any io exception
-     * @throws IllegalArgumentException
-     *             if modelConfig is null.
-     */
-    public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType)
-            throws IOException {
-        if(modelConfig == null) {
-            throw new IllegalArgumentException("modelConfig should not be null.");
-        }
-        PathFinder pathFinder = new PathFinder(modelConfig);
+    // /**
+    // * Return all parameters for pig execution.
+    // *
+    // * @param modelConfig
+    // * model config
+    // * @param sourceType
+    // * source type
+    // * @return map of configurations
+    // * @throws IOException
+    // * any io exception
+    // * @throws IllegalArgumentException
+    // * if modelConfig is null.
+    // */
+    // public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType)
+    // throws IOException {
+    // if(modelConfig == null) {
+    // throw new IllegalArgumentException("modelConfig should not be null.");
+    // }
+    // PathFinder pathFinder = new PathFinder(modelConfig);
+    //
+    // Map<String, String> pigParamMap = new HashMap<String, String>();
+    // pigParamMap.put(Constants.NUM_PARALLEL, Environment.getInt(Environment.HADOOP_NUM_PARALLEL, 400).toString());
+    // log.info("jar path is {}", pathFinder.getJarPath());
+    // pigParamMap.put(Constants.PATH_JAR, pathFinder.getJarPath());
+    //
+    // pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
+    // pigParamMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedDataPath(sourceType));
+    // // default norm is not for clean, so set it to false, this will be overrided in Train#Norm for tree models
+    // pigParamMap.put(Constants.IS_NORM_FOR_CLEAN, Boolean.FALSE.toString());
+    // pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS, pathFinder.getPreTrainingStatsPath(sourceType));
+    // pigParamMap.put(Constants.PATH_STATS_BINNING_INFO, pathFinder.getUpdatedBinningInfoPath(sourceType));
+    // pigParamMap.put(Constants.PATH_STATS_PSI_INFO, pathFinder.getPSIInfoPath(sourceType));
+    //
+    // pigParamMap.put(Constants.WITH_SCORE, Boolean.FALSE.toString());
+    // pigParamMap.put(Constants.STATS_SAMPLE_RATE, modelConfig.getBinningSampleRate().toString());
+    // pigParamMap.put(Constants.PATH_MODEL_CONFIG, pathFinder.getModelConfigPath(sourceType));
+    // pigParamMap.put(Constants.PATH_COLUMN_CONFIG, pathFinder.getColumnConfigPath(sourceType));
+    // pigParamMap.put(Constants.PATH_SELECTED_RAW_DATA, pathFinder.getSelectedRawDataPath(sourceType));
+    // pigParamMap.put(Constants.PATH_BIN_AVG_SCORE, pathFinder.getBinAvgScorePath(sourceType));
+    // pigParamMap.put(Constants.PATH_TRAIN_SCORE, pathFinder.getTrainScoresPath(sourceType));
+    //
+    // pigParamMap.put(Constants.SOURCE_TYPE, sourceType.toString());
+    // pigParamMap.put(Constants.JOB_QUEUE,
+    // Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE));
+    // return pigParamMap;
+    // }
 
-        Map<String, String> pigParamMap = new HashMap<String, String>();
-        pigParamMap.put(Constants.NUM_PARALLEL, Environment.getInt(Environment.HADOOP_NUM_PARALLEL, 400).toString());
-        log.info("jar path is {}", pathFinder.getJarPath());
-        pigParamMap.put(Constants.PATH_JAR, pathFinder.getJarPath());
-
-        pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
-        pigParamMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedDataPath(sourceType));
-        // default norm is not for clean, so set it to false, this will be overrided in Train#Norm for tree models
-        pigParamMap.put(Constants.IS_NORM_FOR_CLEAN, Boolean.FALSE.toString());
-        pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS, pathFinder.getPreTrainingStatsPath(sourceType));
-        pigParamMap.put(Constants.PATH_STATS_BINNING_INFO, pathFinder.getUpdatedBinningInfoPath(sourceType));
-        pigParamMap.put(Constants.PATH_STATS_PSI_INFO, pathFinder.getPSIInfoPath(sourceType));
-
-        pigParamMap.put(Constants.WITH_SCORE, Boolean.FALSE.toString());
-        pigParamMap.put(Constants.STATS_SAMPLE_RATE, modelConfig.getBinningSampleRate().toString());
-        pigParamMap.put(Constants.PATH_MODEL_CONFIG, pathFinder.getModelConfigPath(sourceType));
-        pigParamMap.put(Constants.PATH_COLUMN_CONFIG, pathFinder.getColumnConfigPath(sourceType));
-        pigParamMap.put(Constants.PATH_SELECTED_RAW_DATA, pathFinder.getSelectedRawDataPath(sourceType));
-        pigParamMap.put(Constants.PATH_BIN_AVG_SCORE, pathFinder.getBinAvgScorePath(sourceType));
-        pigParamMap.put(Constants.PATH_TRAIN_SCORE, pathFinder.getTrainScoresPath(sourceType));
-
-        pigParamMap.put(Constants.SOURCE_TYPE, sourceType.toString());
-        pigParamMap.put(Constants.JOB_QUEUE,
-                Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE));
-        return pigParamMap;
+    public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType,
+            PathFinder pathFinder) throws IOException {
+        return getPigParamMap(modelConfig, sourceType, pathFinder, -1);
     }
 
     /**
@@ -903,6 +992,8 @@ public final class CommonUtils {
      *            source type
      * @param pathFinder
      *            path finder instance
+     * @param mtlIndex
+     *            the multi task learning index
      * @return map of configurations
      * @throws IOException
      *             any io exception
@@ -910,7 +1001,7 @@ public final class CommonUtils {
      *             if modelConfig is null.
      */
     public static Map<String, String> getPigParamMap(ModelConfig modelConfig, SourceType sourceType,
-            PathFinder pathFinder) throws IOException {
+            PathFinder pathFinder, int mtlIndex) throws IOException {
         if(modelConfig == null) {
             throw new IllegalArgumentException("modelConfig should not be null.");
         }
@@ -924,14 +1015,26 @@ public final class CommonUtils {
 
         pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
         pigParamMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedDataPath(sourceType));
-        pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS, pathFinder.getPreTrainingStatsPath(sourceType));
-        pigParamMap.put(Constants.PATH_STATS_BINNING_INFO, pathFinder.getUpdatedBinningInfoPath(sourceType));
+
+        if(modelConfig.isMultiTask()) {
+            pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS,
+                    pathFinder.getPreTrainingStatsPath(sourceType, mtlIndex));
+            pigParamMap.put(Constants.PATH_STATS_BINNING_INFO,
+                    pathFinder.getUpdatedBinningInfoPath(sourceType, mtlIndex));
+            pigParamMap.put(Constants.PATH_STATS_PSI_INFO, pathFinder.getPSIInfoPath(sourceType, mtlIndex));
+            pigParamMap.put(Constants.PATH_COLUMN_CONFIG, pathFinder.getMTLColumnConfigPath(sourceType, mtlIndex));
+        } else {
+            pigParamMap.put(Constants.PATH_PRE_TRAINING_STATS, pathFinder.getPreTrainingStatsPath(sourceType));
+            pigParamMap.put(Constants.PATH_STATS_BINNING_INFO, pathFinder.getUpdatedBinningInfoPath(sourceType));
+            pigParamMap.put(Constants.PATH_STATS_PSI_INFO, pathFinder.getPSIInfoPath(sourceType));
+            pigParamMap.put(Constants.PATH_COLUMN_CONFIG, pathFinder.getColumnConfigPath(sourceType));
+        }
+
         pigParamMap.put(Constants.PATH_STATS_PSI_INFO, pathFinder.getPSIInfoPath(sourceType));
 
         pigParamMap.put(Constants.WITH_SCORE, Boolean.FALSE.toString());
         pigParamMap.put(Constants.STATS_SAMPLE_RATE, modelConfig.getBinningSampleRate().toString());
         pigParamMap.put(Constants.PATH_MODEL_CONFIG, pathFinder.getModelConfigPath(sourceType));
-        pigParamMap.put(Constants.PATH_COLUMN_CONFIG, pathFinder.getColumnConfigPath(sourceType));
         pigParamMap.put(Constants.PATH_SELECTED_RAW_DATA, pathFinder.getSelectedRawDataPath(sourceType));
         pigParamMap.put(Constants.PATH_BIN_AVG_SCORE, pathFinder.getBinAvgScorePath(sourceType));
         pigParamMap.put(Constants.PATH_TRAIN_SCORE, pathFinder.getTrainScoresPath(sourceType));
@@ -1054,7 +1157,7 @@ public final class CommonUtils {
     }
 
     public static boolean isTensorFlowModel(String alg) {
-        return Constants.TF_ALG_NAME.equalsIgnoreCase(alg);
+        return CommonConstants.TF_ALG_NAME.equalsIgnoreCase(alg);
     }
 
     public static boolean isNNModel(String alg) {
@@ -1067,6 +1170,10 @@ public final class CommonUtils {
 
     public static boolean isWDLModel(String alg) {
         return "wdl".equalsIgnoreCase(alg);
+    }
+
+    public static boolean isMTLModel(String alg) {
+        return "mtl".equalsIgnoreCase(alg);
     }
 
     public static boolean isWeightColumn(String weightColumnName, ColumnConfig columnConfig) {
@@ -1242,6 +1349,24 @@ public final class CommonUtils {
         return fileLines;
     }
 
+    public static Map<String, String> readConfFileIntoMap(String configFile, SourceType sourceType) throws IOException {
+        return readConfFileIntoMap(configFile, sourceType, "|");
+    }
+
+    public static Map<String, String> readConfFileIntoMap(String configFile, SourceType sourceType, String delimiter) throws IOException {
+        Map<String, String> confMap = new HashMap<>();
+        if (StringUtils.isNotBlank(configFile)) {
+            List<String> confList = readConfFileIntoList(configFile, sourceType);
+            confList.stream().forEach(confText -> {
+                String[] fields = split(confText, delimiter);
+                if (fields.length == 2) {
+                    confMap.put(StringUtils.trimToEmpty(fields[0]), StringUtils.trimToEmpty(fields[1]));
+                }
+            });
+        }
+        return confMap;
+    }
+
     /**
      * Find the @ColumnConfig according the column name
      *
@@ -1315,13 +1440,11 @@ public final class CommonUtils {
      *            - Tuple of a record
      * @param header
      *            - the column names for all the input data
-     * @param segFilterSize
-     *            segment filter size
      * @return (NSColumn, value) map for the record
      * @throws ExecException
      *             - throw exception when operating tuple
      */
-    public static Map<NSColumn, String> convertDataIntoNsMap(Tuple tuple, String[] header, int segFilterSize)
+    public static Map<NSColumn, String> convertDataIntoNsMap(Tuple tuple, String[] header)
             throws ExecException {
         if(tuple == null || tuple.size() == 0 || tuple.size() != header.length) {
             log.error("Invalid input, the tuple.size is = " + (tuple == null ? null : tuple.size())
@@ -1335,16 +1458,6 @@ public final class CommonUtils {
                 rawDataNsMap.put(new NSColumn(header[i]), "");
             } else {
                 rawDataNsMap.put(new NSColumn(header[i]), tuple.get(i).toString());
-            }
-        }
-
-        for(int i = 0; i < segFilterSize; i++) {
-            for(int j = 0; j < header.length; j++) {
-                if(tuple.get(j) == null) {
-                    rawDataNsMap.put(new NSColumn(header[j] + "_" + (i + 1)), "");
-                } else {
-                    rawDataNsMap.put(new NSColumn(header[j] + "_" + (i + 1)), tuple.get(j).toString());
-                }
             }
         }
 
@@ -1466,8 +1579,9 @@ public final class CommonUtils {
         }
 
         String firstValidFile = null;
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source);
-        FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HiddenPathFilter.getHiddenPathFilter());
+        Path filePath = new Path(dataSetRawPath);
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source, filePath);
+        FileStatus[] globStatus = fs.globStatus(filePath, HiddenPathFilter.getHiddenPathFilter());
         if(globStatus == null || globStatus.length == 0) {
             throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
         } else {
@@ -1522,6 +1636,28 @@ public final class CommonUtils {
      *            the column config list inculding all segment expansion columns if have
      * @param segmentExpansions
      *            segment expansion expressions
+     * @return the simple name not including name space part
+     */
+    public static String getSimpleColumnName(ColumnConfig columnConfig, List<ColumnConfig> columnConfigList,
+            List<String> segmentExpansions) {
+        if(CollectionUtils.isEmpty(segmentExpansions)) {
+            return getSimpleColumnName(columnConfig.getColumnName());
+        }
+
+        int originalLen = columnConfigList.size() / (segmentExpansions.size() + 1);
+        return getSimpleColumnName(columnConfigList.get(columnConfig.getColumnNum() % originalLen).getColumnName());
+    }
+
+    /**
+     * Simple name without name space part. For segment expansion, only retain raw column name but not current column
+     * name.
+     *
+     * @param columnConfig
+     *            the column configuration
+     * @param columnConfigList
+     *            the column config list inculding all segment expansion columns if have
+     * @param segmentExpansions
+     *            segment expansion expressions
      * @param dataSetHeaders
      *            data set headers for all raw columns
      * @return the simple name not including name space part
@@ -1555,6 +1691,12 @@ public final class CommonUtils {
         return columnName;
     }
 
+    public static String getOriginalName(ColumnConfig columnConfig) {
+        return (columnConfig.isSegment() ?
+                getSimpleColumnName(columnConfig.getColumnName()).replaceAll("_seg[0-9]*$", "")
+                : columnConfig.getColumnName());
+    }
+
     /**
      * Return first two lines split string array. This is used to detect data schema and check if data
      * schema is the
@@ -1577,8 +1719,9 @@ public final class CommonUtils {
         }
 
         String firstValidFile = null;
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source);
-        FileStatus[] globStatus = fs.globStatus(new Path(dataSetRawPath), HiddenPathFilter.getHiddenPathFilter());
+        Path filePath = new Path(dataSetRawPath);
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(source, filePath);
+        FileStatus[] globStatus = fs.globStatus(filePath, HiddenPathFilter.getHiddenPathFilter());
         if(globStatus == null || globStatus.length == 0) {
             throw new IllegalArgumentException("No files founded in " + dataSetRawPath);
         } else {
@@ -1805,11 +1948,72 @@ public final class CommonUtils {
         }
 
         double[] output = new double[src.length];
-
         for(int i = 0; i < src.length; i++) {
             output[i] = src[i];
         }
+        return output;
+    }
 
+    public static float[] doubleToFloat(double[] src) {
+        if(src == null) {
+            return null;
+        }
+
+        float[] output = new float[src.length];
+        for(int i = 0; i < src.length; i++) {
+            output[i] = (float) src[i];
+        }
+        return output;
+    }
+
+    public static double[] minus(double[] src, double[] target) {
+        if(src == null || target == null) {
+            return null;
+        }
+        assert src.length == target.length;
+
+        double[] output = new double[src.length];
+        for(int i = 0; i < src.length; i++) {
+            output[i] = src[i] - target[i];
+        }
+        return output;
+    }
+
+    public static double[] plus(double[] src, double[] target) {
+        if(src == null || target == null) {
+            return null;
+        }
+        assert src.length == target.length;
+
+        double[] output = new double[src.length];
+        for(int i = 0; i < src.length; i++) {
+            output[i] = src[i] + target[i];
+        }
+        return output;
+    }
+
+    public static double[] minus(double[] src, float[] target) {
+        if(src == null || target == null) {
+            return null;
+        }
+        assert src.length == target.length;
+
+        double[] output = new double[src.length];
+        for(int i = 0; i < src.length; i++) {
+            output[i] = src[i] - target[i];
+        }
+        return output;
+    }
+
+    public static double[] sigmoid(double[] src) {
+        if(src == null) {
+            return null;
+        }
+
+        double[] output = new double[src.length];
+        for(int i = 0; i < src.length; i++) {
+            output[i] = sigmoid(src[i]);
+        }
         return output;
     }
 
@@ -1851,5 +2055,52 @@ public final class CommonUtils {
             return defaultValue;
         }
         return Boolean.TRUE.toString().equalsIgnoreCase(object.toString());
+    }
+
+    /**
+     * Return float value parsed from input string, NaN by default changed to 0.
+     * 
+     * @param input
+     *            the input string
+     * @return parsed float value
+     */
+    public static float getFloatValue(String input) {
+        float floatValue = input.length() == 0 ? 0f : NumberFormatUtils.getFloat(input, 0f);
+        return (Double.isNaN(floatValue) || Double.isNaN(floatValue)) ? 0f : floatValue;
+    }
+
+    /**
+     * Sigmoid function definition.
+     * 
+     * @param logit
+     *            the logit value
+     * @return sigmoid value
+     */
+    public static double sigmoid(double logit) {
+        return 1.0d / (1.0d + BoundMath.exp(-1 * logit));
+    }
+
+    /**
+     * Derived function for sigmoid function.
+     * 
+     * @param result
+     *            logit result
+     * @return sigmoid derived value
+     */
+    public static double sigmoidDerivedFunction(double result) {
+        return result * (1d - result);
+    }
+
+    /**
+     * Read the iterable into String array
+     * @param split - iterable of text elements
+     * @return - elements of text
+     */
+    public static String[] readIterableToArray(Iterable<String> split) {
+        List<String> fields = new ArrayList<>();
+        for (String str : split) {
+            fields.add(str);
+        }
+        return fields.toArray(new String[0]);
     }
 }

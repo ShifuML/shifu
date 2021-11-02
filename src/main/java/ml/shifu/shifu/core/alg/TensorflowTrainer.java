@@ -27,15 +27,18 @@ import java.util.List;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelTrainConf;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
@@ -88,9 +91,9 @@ public class TensorflowTrainer {
     private String optimizer;
 
     private String weightInitializer;
-    
+
     private Integer miniBatch;
-    
+
     private int epoch = 100;
 
     private double validateRate = 0.2;
@@ -139,6 +142,12 @@ public class TensorflowTrainer {
         hiddenLayerNodes = (List<Integer>) modelTrainConf.getParams().get(CommonConstants.NUM_HIDDEN_NODES);
         hiddenLayers = hiddenLayerNodes.size();
         inputDataPath = pathFinder.getNormalizedDataPath();
+        if(modelConfig.getDataSet().getSource() == SourceType.HDFS) {
+            Path filePath = new Path(inputDataPath);
+            inputDataPath = ShifuFileUtils.getFileSystemBySourceType(SourceType.HDFS, filePath)
+                    .makeQualified(filePath).toString();
+        }
+
         alg = (String) modelConfig.getParams().get(CommonConstants.TF_ALG);
         // delimiter = modelConfig.getDataSetDelimiter().charAt(0);
         delimiter = CommonUtils
@@ -187,11 +196,11 @@ public class TensorflowTrainer {
         List<String> commands = new ArrayList<String>();
 
         String actFuncStr = listToString(actFuncs);
-        
+
         String hiddenLayerNodesStr = listToString(hiddenLayerNodes);
-        
+
         String seletectedColumnNumsStr = listToString(seletectedColumnNums);
-        
+
         String delimiterStr = String.valueOf(delimiter);
         if((delimiter ^ '|') * (delimiter ^ '&') * (delimiter ^ '>') * (delimiter ^ '<') == 0) {
             delimiterStr = "\\" + delimiter;
@@ -219,7 +228,7 @@ public class TensorflowTrainer {
         commands.add(System.getenv("LD_LIBRARY_PATH"));
         commands.add(System.getenv("JAVA_HOME"));
         commands.add(pythonHome);
-        commands.add(pathFinder.getScriptPath("scripts/train.py"));
+        commands.add(pathFinder.getScriptPath("scripts/local_tf_estimator.py"));
         commands.add("-learningRate");
         commands.add(String.valueOf(learningRate));
         commands.add("-epochnums");
@@ -260,14 +269,14 @@ public class TensorflowTrainer {
     }
 
     private <T> String listToString(List<T> list) {
-        if (CollectionUtils.isEmpty(list)) {
+        if(CollectionUtils.isEmpty(list)) {
             return StringUtils.EMPTY;
         }
-        
+
         String listStr = list.toString();
         return listStr.substring(1, listStr.length() - 1).replaceAll(",", "");
     }
-    
+
     private static class StreamCollector extends Thread {
         /** Number of last lines to keep */
         private static final int LAST_LINES_COUNT = 100;

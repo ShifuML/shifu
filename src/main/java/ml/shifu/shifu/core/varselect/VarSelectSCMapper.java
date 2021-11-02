@@ -1,18 +1,24 @@
 package ml.shifu.shifu.core.varselect;
 
 import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 import ml.shifu.guagua.util.MemoryUtils;
-import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.CacheBasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.CacheFlatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
 import ml.shifu.shifu.fs.ShifuFileUtils;
-import ml.shifu.shifu.util.*;
+import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.MapReduceUtils;
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -26,9 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Copyright [2013-2018] PayPal Software Foundation
@@ -50,6 +54,12 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
     private final static Logger LOG = LoggerFactory.getLogger(VarSelectSCMapper.class);
 
     /**
+     * Default splitter used to split input record. Use one instance to prevent more news in Splitter.on.
+     */
+    @SuppressWarnings("unused")
+    private static final Splitter DEFAULT_SPLITTER = Splitter.on(CommonConstants.DEFAULT_COLUMN_SEPARATOR);
+
+    /**
      * Model Config read from HDFS, be static to shared in multiple mappers
      */
     private static ModelConfig modelConfig;
@@ -66,9 +76,15 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
     private MLRegression model;
 
     /**
-     * Basic input node count for NN model, all the variables selected in current model training.
+     * Network which will cache first layer outputs and later use minus to replace sum to save CPU time.
      */
-    private int inputNodeCount;
+    private CacheBasicFloatNetwork cacheNetwork;
+
+    /**
+     * Final results map, this map is loaded in memory for sum, and will be written by context in cleanup.
+     */
+    @SuppressWarnings("unused")
+    private Map<Long, ColumnInfo> results = new HashMap<>();
 
     /**
      * Inputs columns for each record. To save new objects in
@@ -83,15 +99,15 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
     private double[] outputs;
 
     /**
-     * Column indexes for each record. To save new objects in
-     * {@link #map(LongWritable, Text, org.apache.hadoop.mapreduce.Mapper.Context)}.
-     */
-    private long[] columnIndexes;
-
-    /**
      * Input MLData instance to save new.
      */
     private BasicMLData inputsMLData;
+
+    /**
+     * Prevent too many new objects for output key.
+     */
+    @SuppressWarnings("unused")
+    private LongWritable outputKey;
 
     /**
      * Filter by sensitivity by target(ST) or sensitivity(SE).
@@ -103,20 +119,95 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
      */
     private long recordCount;
 
+    private int featureInputLen;
+
     /**
      * Feature set used to check if column with index are in the feature set
      */
     private Set<Integer> featureSet;
 
     /**
-     * Network which will cache first layer outputs and later use minus to replace sum to save CPU time.
+     * The input values for each columns, if the input is missing
      */
-    private CacheBasicFloatNetwork cacheNetwork;
+    private Map<Integer, List<Double>> columnMissingInputValues;
+
+    /**
+     * Mapping the column id to offset of normalization data
+     */
+    private Map<Integer, Integer> columnNormDataPosMapping;
 
     /**
      * The splitter for normalization data set
      */
     private Splitter splitter;
+
+    private boolean isLinearTarget;
+
+    private boolean hasCandidates;
+
+    /**
+     * Do initialization like ModelConfig and ColumnConfig loading, model loading and others like input or output number
+     * loading.
+     */
+    @Override
+    protected void setup(Context context) throws IOException, InterruptedException {
+        loadConfigFiles(context);
+
+        loadModel();
+
+        // Copy mode to here
+        if(CommonUtils.isTensorFlowModel(modelConfig.getAlgorithm())) {
+            cacheNetwork = null;
+        } else {
+            cacheNetwork = copy((BasicFloatNetwork) model);
+        }
+
+        this.filterBy = context.getConfiguration().get(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE,
+                Constants.FILTER_BY_SE);
+        LOG.info("Filter by is {}", filterBy);
+
+        this.featureSet = DTrainUtils.generateModelFeatureSet(modelConfig, columnConfigList);
+
+        this.columnMissingInputValues = new HashMap<>();
+        this.columnNormDataPosMapping = new HashMap<>();
+        this.featureInputLen = DTrainUtils.generateFeatureInputInfo(modelConfig, columnConfigList, this.featureSet,
+                this.columnMissingInputValues, this.columnNormDataPosMapping);
+
+        int modelInputCount = model.getInputCount();
+        Set<Integer> modelFeatureSet = null;
+        if(model instanceof BasicFloatNetwork) {
+            modelFeatureSet = ((BasicFloatNetwork) model).getFeatureSet();
+        }
+
+        if (CollectionUtils.isEmpty(featureSet) || this.featureInputLen == 0) {
+            throw new IllegalArgumentException("No input columns according to ColumnConfig.json. Please check!");
+        }
+
+        if(this.featureInputLen != modelInputCount) {
+            throw new IllegalArgumentException("Model input count " + modelInputCount
+                    + " is inconsistent with input size " + this.featureInputLen + ".");
+        }
+
+        if(CollectionUtils.isNotEmpty(modelFeatureSet)
+                && (this.featureSet.size() != modelFeatureSet.size() || !this.featureSet.containsAll(modelFeatureSet))){
+            // both feature set and model feature set are not empty
+            throw new IllegalArgumentException("Model input features is inconsistent with ColumnConfig.json. "
+                    + "Please check the model spec vs. ColumnConfig.json");
+        }
+
+        this.inputs = new double[this.featureInputLen];
+        this.outputs = new double[this.model.getOutputCount()];
+
+        this.inputsMLData = new BasicMLData(this.inputs.length);
+        this.outputKey = new LongWritable();
+
+        // create Splitter
+        String delimiter = context.getConfiguration().get(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
+        this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
+
+        this.isLinearTarget = CommonUtils.isLinearTarget(modelConfig, columnConfigList);
+        this.hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
+    }
 
     /**
      * Load all configurations for modelConfig and columnConfigList from source type.
@@ -147,8 +238,7 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
                 Thread.currentThread().getName());
         long start = System.currentTimeMillis();
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.LOCAL);
-
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(SourceType.LOCAL, null);
         // load model from local d-cache model file
         if(CommonUtils.isTensorFlowModel(modelConfig.getAlgorithm())) {
             this.model = (MLRegression) (ModelSpecLoaderUtils.loadBasicModels(modelConfig, null).get(0));
@@ -196,106 +286,93 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
         return result;
     }
 
-    /**
-     * Do initialization like ModelConfig and ColumnConfig loading, model loading and others like input or output number
-     * loading.
-     */
-    @Override
-    protected void setup(Context context) throws IOException {
-        loadConfigFiles(context);
-
-        loadModel();
-
-        // Copy mode to here
-        cacheNetwork = copy((BasicFloatNetwork) model);
-
-        this.filterBy = context.getConfiguration().get(Constants.SHIFU_VARSELECT_FILTEROUT_TYPE,
-                Constants.FILTER_BY_SE);
-        int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
-                columnConfigList);
-        this.inputNodeCount = inputOutputIndex[0] == 0 ? inputOutputIndex[2] : inputOutputIndex[0];
-        if(model instanceof BasicFloatNetwork) {
-            this.inputs = new double[((BasicFloatNetwork) model).getFeatureSet().size()];
-            this.featureSet = ((BasicFloatNetwork) model).getFeatureSet();
+    @SuppressWarnings("unused")
+    private Set<Integer> generateModelFeatureSet(List<ColumnConfig> columnConfigList) {
+        Set<Integer> columnIdSet = new HashSet<>();
+        boolean hasFinalSelectedVars = DTrainUtils.hasFinalSelectedVars(columnConfigList);
+        if (hasFinalSelectedVars) {
+            columnConfigList.stream().forEach(columnConfig -> {
+                if (columnConfig.isFinalSelect()) {
+                    columnIdSet.add(columnConfig.getColumnNum());
+                }
+            });
         } else {
-            this.inputs = new double[this.inputNodeCount];
+            boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
+            columnConfigList.stream().forEach(columnConfig -> {
+                if (CommonUtils.isGoodCandidate(columnConfig, hasCandidates, modelConfig.isRegression())) {
+                    columnIdSet.add(columnConfig.getColumnNum());
+                }
+            });
         }
+        return columnIdSet;
+    }
 
-        boolean isAfterVarSelect = (inputOutputIndex[0] != 0);
-        // cache all feature list for sampling features
-        if(CollectionUtils.isEmpty(this.featureSet)) {
-            this.featureSet = new HashSet<Integer>(NormalUtils.getAllFeatureList(columnConfigList, isAfterVarSelect));
-            this.inputs = new double[this.featureSet.size()];
+    @SuppressWarnings("unused")
+    private int generateFeatureInputInfo(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Set<Integer> featureSet) {
+        int vectorLen = 0;
+        this.columnMissingInputValues = new HashMap<>();
+        this.columnNormDataPosMapping = new HashMap<>();
+        for ( ColumnConfig columnConfig : columnConfigList) {
+            if (featureSet.contains(columnConfig.getColumnNum())) {
+                this.columnNormDataPosMapping.put(columnConfig.getColumnNum(), vectorLen);
+                List<Double> normValues = Normalizer.normalize(columnConfig, null,
+                        modelConfig.getNormalizeStdDevCutOff(), modelConfig.getNormalizeType(),
+                        CategoryMissingNormType.MEAN);
+                if(CollectionUtils.isNotEmpty(normValues)) { // usually, the normValues won't be empty
+                    this.columnMissingInputValues.put(columnConfig.getColumnNum(), normValues);
+                    vectorLen += normValues.size();
+                }
+            }
         }
-
-        if(inputs.length != this.inputNodeCount) {
-            throw new IllegalArgumentException("Model input count " + model.getInputCount()
-                    + " is inconsistent with input size " + this.inputNodeCount + ".");
-        }
-
-        this.outputs = new double[inputOutputIndex[1]];
-        this.columnIndexes = new long[this.inputs.length];
-        this.inputsMLData = new BasicMLData(this.inputs.length);
-        LOG.info("Filter by is {}", filterBy);
-
-        // create Splitter
-        String delimiter = context.getConfiguration().get(Constants.SHIFU_OUTPUT_DATA_DELIMITER);
-        this.splitter = MapReduceUtils.generateShifuOutputSplitter(delimiter);
+        return vectorLen;
     }
 
     @Override
     protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
         recordCount += 1L;
-        double weight = 1.0d;
-        int index = 0, inputsIndex = 0, outputsIndex = 0;
-        for(String input: this.splitter.split(value.toString())) {
-            double doubleValue = NumberFormatUtils.getDouble(input.trim(), 0.0d);
-            if(index == columnConfigList.size()) {
-                // last column of the input, it's weight
-                weight = doubleValue;
-                break;
-            } else {
-                ColumnConfig columnConfig = columnConfigList.get(index);
-                if(columnConfig != null && columnConfig.isTarget()) {
-                    this.outputs[outputsIndex++] = doubleValue;
-                } else {
-                    if(this.featureSet != null && this.featureSet.contains(columnConfig.getColumnNum())) {
-                        inputs[inputsIndex] = doubleValue;
-                        columnIndexes[inputsIndex++] = columnConfig.getColumnNum();
-                    }
-                }
-            }
-            index++;
+
+        if(recordCount % 200 == 0) {
+            LOG.info("Count {} with Memory used by {}.", recordCount, MemoryUtils.getRuntimeMemoryStats());
         }
 
+        // load normalized data into inputs
+        double weight = DTrainUtils.loadDataIntoInputs(modelConfig, columnConfigList, this.featureSet,
+                this.isLinearTarget, this.hasCandidates, inputs, outputs,
+                Lists.newArrayList(this.splitter.split(value.toString())).toArray(new String[0]));
+
+        // set inputs into inputsMLData
         this.inputsMLData.setData(this.inputs);
         // compute candidate model score , cache first layer of sum values in such call method, cache flag here is true
-        double candidateModelScore = cacheNetwork.compute(inputsMLData, true, -1).getData()[0];
-        // output the actual score as column id -1, then user could know the actual catch rate
-        // before dropping any variables
+        double candidateModelScore;
+        if(CommonUtils.isTensorFlowModel(modelConfig.getAlgorithm())) {
+            candidateModelScore = this.model.compute(inputsMLData).getData(0);
+        } else {
+            candidateModelScore = cacheNetwork.compute(inputsMLData, true, -1).getData()[0];
+        }
+
         ColumnScore actualScore = new ColumnScore();
         actualScore.setColumnTag((int) this.outputs[0]);
         actualScore.setWeight(weight);
         actualScore.setSensitivityScore(candidateModelScore);
         context.write(new LongWritable(-1), actualScore);
 
-        for(int i = 0; i < this.inputs.length; i++) {
-            // cache flag is false to reuse cache sum of first layer of values.
-            double currentModelScore = cacheNetwork.compute(inputsMLData, false, i).getData()[0];
+        for(ColumnConfig columnConfig : columnConfigList) {
+            this.inputsMLData.setData(this.inputs);
+            double currentModelScore = cacheNetwork.compute(inputsMLData, false,
+                    this.columnNormDataPosMapping.get(columnConfig.getColumnNum())).getData()[0];
             ColumnScore columnScore = new ColumnScore();
             columnScore.setColumnTag((int) this.outputs[0]);
             columnScore.setWeight(weight);
             columnScore.setSensitivityScore(currentModelScore);
-            context.write(new LongWritable(this.columnIndexes[i]), columnScore);
+            context.write(new LongWritable(columnConfig.getColumnNum().longValue()), columnScore);
             if(this.recordCount % 1000 == 0) {
-                LOG.info("The column score for {} is {}", this.columnIndexes[i], columnScore);
+                LOG.info("The column score for {} is {}", columnConfig.getColumnNum(), columnScore);
             }
         }
 
         if(this.recordCount % 1000 == 0) {
             LOG.info("Finish to process {} records.", this.recordCount);
         }
-
     }
 
 }

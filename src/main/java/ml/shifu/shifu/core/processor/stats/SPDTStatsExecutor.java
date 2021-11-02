@@ -32,8 +32,9 @@ public class SPDTStatsExecutor extends MapReducerStatsWorker {
 
     private static Logger log = LoggerFactory.getLogger(SPDTStatsExecutor.class);
 
-    public SPDTStatsExecutor(BasicModelProcessor processor, ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
-        super(processor, modelConfig, columnConfigList);
+    public SPDTStatsExecutor(BasicModelProcessor processor, ModelConfig modelConfig,
+            List<ColumnConfig> columnConfigList, boolean isUpdateStatsOnly) {
+        super(processor, modelConfig, columnConfigList, isUpdateStatsOnly);
     }
 
     @Override

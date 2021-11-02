@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import ml.shifu.guagua.io.Bytable;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 
 /**
  * A binary tree node.
@@ -189,9 +190,9 @@ public class Node implements Bytable {
          */
         @Override
         public String toString() {
-            return "NodeStats [impurity=" + impurity + ", leftPredict=" + leftPredict + ", leftImpurity="
-                    + leftImpurity + ", rightPredict=" + rightPredict + ", rightImpurity=" + rightImpurity
-                    + ", isLeaf=" + isLeaf + ", wgtCntRatio=" + wgtCntRatio + "]";
+            return "NodeStats [impurity=" + impurity + ", leftPredict=" + leftPredict + ", leftImpurity=" + leftImpurity
+                    + ", rightPredict=" + rightPredict + ", rightImpurity=" + rightImpurity + ", isLeaf=" + isLeaf
+                    + ", wgtCntRatio=" + wgtCntRatio + "]";
         }
 
     }
@@ -581,6 +582,10 @@ public class Node implements Bytable {
 
     @Override
     public void write(DataOutput out) throws IOException {
+        this.write(out, PrecisionType.DOUBLE64);
+    }
+
+    public void write(DataOutput out, PrecisionType pt) throws IOException {
         out.writeInt(id);
 
         // cast to float to save space
@@ -593,7 +598,7 @@ public class Node implements Bytable {
             out.writeBoolean(false);
         } else {
             out.writeBoolean(true);
-            split.write(out);
+            split.write(out, pt);
         }
 
         // only store needed predict info
@@ -604,7 +609,7 @@ public class Node implements Bytable {
                 out.writeBoolean(false);
             } else {
                 out.writeBoolean(true);
-                predict.write(out);
+                predict.write(out, pt);
             }
         }
 
@@ -612,14 +617,14 @@ public class Node implements Bytable {
             out.writeBoolean(false);
         } else {
             out.writeBoolean(true);
-            left.write(out);
+            left.write(out, pt);
         }
 
         if(right == null) {
             out.writeBoolean(false);
         } else {
             out.writeBoolean(true);
-            right.write(out);
+            right.write(out, pt);
         }
     }
 
@@ -659,7 +664,7 @@ public class Node implements Bytable {
         }
     }
 
-    public void readFields(DataInput in, int version) throws IOException {
+    public void readFields(DataInput in, int version, PrecisionType pt) throws IOException {
         this.id = in.readInt();
 
         this.gain = in.readFloat();
@@ -672,27 +677,28 @@ public class Node implements Bytable {
 
         if(in.readBoolean()) {
             this.split = new Split();
-            this.split.readFields(in, version);
+            this.split.readFields(in, version, pt);
         }
 
         boolean isRealLeaf = in.readBoolean();
         if(isRealLeaf) {
             if(in.readBoolean()) {
                 this.predict = new Predict();
-                this.predict.readFields(in, version);
+                this.predict.readFields(in, version, pt);
             }
         }
 
         if(in.readBoolean()) {
             this.left = new Node();
-            this.left.readFields(in, version);
+            this.left.readFields(in, version, pt);
         }
 
         if(in.readBoolean()) {
             this.right = new Node();
-            this.right.readFields(in, version);
+            this.right.readFields(in, version, pt);
         }
     }
+
     /**
      * @return the nodeStats
      */
@@ -726,10 +732,13 @@ public class Node implements Bytable {
     @Override
     public String toString() {
         return "Node [id=" + id + ", split=" + split + ", left=" + left + ", right=" + right + ", predict=" + predict
-                + ", gain=" + gain + ", impurity=" + nodeStats == null ? null : nodeStats.impurity + ", leftPredict="
-                + nodeStats == null ? null : nodeStats.leftPredict + ", leftImpurity=" + nodeStats == null ? null
-                : nodeStats.leftImpurity + ", rightPredict=" + nodeStats == null ? null : nodeStats.rightPredict
-                        + ", rightImpurity=" + nodeStats == null ? null : nodeStats.rightImpurity + "]";
+                + ", gain=" + gain + ", impurity=" + nodeStats == null
+                        ? null
+                        : nodeStats.impurity + ", leftPredict=" + nodeStats == null ? null
+                                : nodeStats.leftPredict + ", leftImpurity=" + nodeStats == null ? null
+                                        : nodeStats.leftImpurity + ", rightPredict=" + nodeStats == null ? null
+                                                : nodeStats.rightPredict + ", rightImpurity=" + nodeStats == null ? null
+                                                        : nodeStats.rightImpurity + "]";
     }
 
     public String toTree() {

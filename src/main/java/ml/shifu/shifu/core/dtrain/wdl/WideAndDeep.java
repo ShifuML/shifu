@@ -15,7 +15,7 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
-import static ml.shifu.shifu.core.dtrain.wdl.SerializationUtil.NULL;
+import static ml.shifu.shifu.core.dtrain.layer.SerializationUtil.NULL;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -40,11 +40,25 @@ import ml.shifu.guagua.io.Bytable;
 import ml.shifu.guagua.io.Combinable;
 import ml.shifu.shifu.core.dtrain.AssertUtils;
 import ml.shifu.shifu.core.dtrain.RegulationLevel;
+import ml.shifu.shifu.core.dtrain.layer.AbstractLayer;
+import ml.shifu.shifu.core.dtrain.layer.BiasLayer;
+import ml.shifu.shifu.core.dtrain.layer.DenseInputLayer;
+import ml.shifu.shifu.core.dtrain.layer.DenseLayer;
+import ml.shifu.shifu.core.dtrain.layer.EmbedFieldLayer;
+import ml.shifu.shifu.core.dtrain.layer.EmbedLayer;
+import ml.shifu.shifu.core.dtrain.layer.Layer;
+import ml.shifu.shifu.core.dtrain.layer.SerializationType;
+import ml.shifu.shifu.core.dtrain.layer.SerializationUtil;
+import ml.shifu.shifu.core.dtrain.layer.SparseInput;
+import ml.shifu.shifu.core.dtrain.layer.WeightInitializer;
+import ml.shifu.shifu.core.dtrain.layer.WideDenseLayer;
+import ml.shifu.shifu.core.dtrain.layer.WideFieldLayer;
+import ml.shifu.shifu.core.dtrain.layer.WideLayer;
+import ml.shifu.shifu.core.dtrain.layer.activation.Activation;
+import ml.shifu.shifu.core.dtrain.layer.activation.ActivationFactory;
+import ml.shifu.shifu.core.dtrain.layer.optimization.Optimizer;
+import ml.shifu.shifu.core.dtrain.layer.optimization.PropOptimizer;
 import ml.shifu.shifu.core.dtrain.loss.LossType;
-import ml.shifu.shifu.core.dtrain.wdl.activation.Activation;
-import ml.shifu.shifu.core.dtrain.wdl.activation.ActivationFactory;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.Optimizer;
-import ml.shifu.shifu.core.dtrain.wdl.optimization.PropOptimizer;
 import ml.shifu.shifu.util.Tuple;
 
 /**
@@ -100,6 +114,11 @@ public class WideAndDeep
     private int index = 0;
 
     /**
+     * A new layer to combine both wide score and deep score with different weights if enabling both wide and deep parts
+     */
+    private DenseLayer wdLayer;
+
+    /**
      * If enable wide layer, if wideEnable=true but deepEnable=false, such WideAnDeeo is only for wide layer (LR).
      */
     boolean wideEnable = true;
@@ -153,6 +172,10 @@ public class WideAndDeep
         this.hiddenNodes = hiddenNodes;
         this.actiFuncs = actiFuncs;
         this.l2reg = l2reg;
+
+        if(this.wideEnable && this.deepEnable) {
+            this.wdLayer = new DenseLayer(1, 2, l2reg);
+        }
 
         AssertUtils.assertListNotNullAndSizeEqual(embedColumnIds, embedOutputs);
         AssertUtils.assertListNotNullAndSizeEqual(hiddenLayers, actiFuncs);
@@ -216,6 +239,10 @@ public class WideAndDeep
         }
 
         this.finalLayer = new DenseLayer(1, preHiddenInputs, l2reg);
+
+        if(this.wideEnable && this.deepEnable) {
+            this.wdLayer = new DenseLayer(1, 2, l2reg);
+        }
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
@@ -252,10 +279,7 @@ public class WideAndDeep
                 return dnnLogits;
             } else { // wide and deep
                 AssertUtils.assertDoubleArrayNotNullAndLengthEqual(wlLogits, dnnLogits);
-                double[] logits = new double[dnnLogits.length];
-                for(int i = 0; i < logits.length; i++) {
-                    logits[i] += wlLogits[i] + dnnLogits[i];
-                }
+                double[] logits = this.wdLayer.forward(new double[] { wlLogits[0], dnnLogits[0] });
                 return logits;
             }
         }
@@ -284,13 +308,13 @@ public class WideAndDeep
             }
         }
 
-        // wide layer backward, as wide layer in LR actually in backward, only gradients computation is needed.
-        if(this.wideEnable) {
-            this.wl.backward(grad2Logits);
-        }
+        if(this.wideEnable && this.deepEnable) {
+            // TODO refact me please to remove duplicated code
+            double[] backInputs = this.wdLayer.backward(grad2Logits);
 
-        if(this.deepEnable) { // deep layer backward, for gradients computation inside of each layer
-            double[] backInputs = this.finalLayer.backward(grad2Logits);
+            this.wl.backward(new double[] { backInputs[0] });
+
+            backInputs = this.finalLayer.backward(new double[] { backInputs[1] });
             for(int i = 0; i < this.hiddenLayers.size(); i++) {
                 Layer layer = this.hiddenLayers.get(this.hiddenLayers.size() - 1 - i);
                 if(layer instanceof DenseLayer) {
@@ -303,6 +327,29 @@ public class WideAndDeep
             if(this.embedEnable) { // embedding layer backward, gradients computation
                 List<double[]> backInputList = splitArray(this.dil.getOutDim(), this.ecl.getEmbedLayers(), backInputs);
                 this.ecl.backward(backInputList);
+            }
+        } else {
+            // wide layer backward, as wide layer in LR actually in backward, only gradients computation is needed.
+            if(this.wideEnable) {
+                this.wl.backward(grad2Logits);
+            }
+
+            if(this.deepEnable) { // deep layer backward, for gradients computation inside of each layer
+                double[] backInputs = this.finalLayer.backward(grad2Logits);
+                for(int i = 0; i < this.hiddenLayers.size(); i++) {
+                    Layer layer = this.hiddenLayers.get(this.hiddenLayers.size() - 1 - i);
+                    if(layer instanceof DenseLayer) {
+                        backInputs = ((DenseLayer) layer).backward(backInputs);
+                    } else if(layer instanceof Activation) {
+                        backInputs = ((Activation) layer).backward(backInputs);
+                    }
+                }
+
+                if(this.embedEnable) { // embedding layer backward, gradients computation
+                    List<double[]> backInputList = splitArray(this.dil.getOutDim(), this.ecl.getEmbedLayers(),
+                            backInputs);
+                    this.ecl.backward(backInputList);
+                }
             }
         }
 
@@ -323,6 +370,10 @@ public class WideAndDeep
         this.finalLayer.initGrads();
         this.ecl.initGrads();
         this.wl.initGrads();
+
+        if(this.wideEnable && this.deepEnable) {
+            this.wdLayer.initGrads();
+        }
     }
 
     private List<double[]> splitArray(int outDim, List<EmbedFieldLayer> embedLayers, double[] backInputs) {
@@ -647,6 +698,10 @@ public class WideAndDeep
 
         initDenserLayerWeights(finalLayer, beta);
 
+        if(this.wideEnable && this.deepEnable) {
+            initDenserLayerWeights(wdLayer, beta);
+        }
+
         // TODO init embed layers, does beta value need to be changed?
         LOG.info("Init weight be called with mode:{}", defaultMode.name());
     }
@@ -678,6 +733,10 @@ public class WideAndDeep
     @SuppressWarnings("rawtypes")
     @Override
     public void initWeight(InitMethod method) {
+        if(this.wideEnable && this.deepEnable) {
+            this.wdLayer.initWeight(method);
+        }
+
         for(Layer layer: this.hiddenLayers) {
             // There are two type of layer: DenseLayer, Activation. We only need to init DenseLayer
             if(layer instanceof DenseLayer) {
@@ -701,6 +760,9 @@ public class WideAndDeep
         this.finalLayer.initWeight(updateModel.getFinalLayer());
         this.ecl.initWeight(updateModel.getEcl());
         this.wl.initWeight(updateModel.getWl());
+        if(this.wideEnable && this.deepEnable) {
+            this.wdLayer.initWeight(updateModel.wdLayer);
+        }
     }
 
     public void write(DataOutput out, SerializationType serializationType) throws IOException {
@@ -742,6 +804,9 @@ public class WideAndDeep
         writeLayerWithNuLLCheck(out, finalLayer);
         writeLayerWithNuLLCheck(out, ecl);
         writeLayerWithNuLLCheck(out, wl);
+        if(this.wideEnable && this.deepEnable) {
+            writeLayerWithNuLLCheck(out, this.wdLayer);
+        }
 
         if(this.actiFuncs == null) {
             out.writeInt(NULL);
@@ -802,6 +867,9 @@ public class WideAndDeep
         this.finalLayer = (DenseLayer) readLayerWithNullCheck(in, new DenseLayer());
         this.ecl = (EmbedLayer) readLayerWithNullCheck(in, new EmbedLayer());
         this.wl = (WideLayer) readLayerWithNullCheck(in, new WideLayer());
+        if(this.wideEnable && this.deepEnable) {
+            this.wdLayer = (DenseLayer) readLayerWithNullCheck(in, new DenseLayer());
+        }
 
         this.actiFuncs = new ArrayList<>();
         size = in.readInt();
@@ -884,6 +952,9 @@ public class WideAndDeep
         this.finalLayer = this.finalLayer.combine(from.getFinalLayer());
         this.ecl = this.ecl.combine(from.getEcl());
         this.wl = this.wl.combine(from.getWl());
+        if(this.wideEnable && this.deepEnable) {
+            this.wdLayer = this.wdLayer.combine(from.wdLayer);
+        }
         return this;
     }
 
@@ -903,6 +974,9 @@ public class WideAndDeep
         this.finalLayer.update(gradWnd.getFinalLayer(), optimizer, "f", trainCount);
         this.ecl.update(gradWnd.getEcl(), optimizer, "e", trainCount);
         this.wl.update(gradWnd.getWl(), optimizer, "w", trainCount);
+        if(this.wideEnable && this.deepEnable) {
+            this.wdLayer.update(gradWnd.wdLayer, optimizer, "wd", trainCount);
+        }
     }
 
     /**
@@ -932,6 +1006,9 @@ public class WideAndDeep
         this.finalLayer.initOptimizer(learningRate, algorithm, reg, rl);
         this.ecl.initOptimizer(learningRate, algorithm, reg, rl);
         this.wl.initOptimizer(learningRate, algorithm, reg, rl);
+        if(this.wideEnable && this.deepEnable) {
+            this.wdLayer.initOptimizer(learningRate, algorithm, reg, rl);
+        }
     }
 
     @SuppressWarnings("rawtypes")
@@ -948,6 +1025,9 @@ public class WideAndDeep
         this.finalLayer.optimizeWeight(numTrainSize, iteration, gradWnd.getFinalLayer());
         this.ecl.optimizeWeight(numTrainSize, iteration, gradWnd.getEcl());
         this.wl.optimizeWeight(numTrainSize, iteration, gradWnd.getWl());
+        if(this.wideEnable && this.deepEnable) {
+            this.wdLayer.optimizeWeight(numTrainSize, iteration, gradWnd.wdLayer);
+        }
     }
 
     @Override

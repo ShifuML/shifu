@@ -37,6 +37,7 @@ import java.util.Map;
  */
 public class PathFinder {
 
+    private static final String MTL_FOLDER = "mtl";
     public static final String FEATURE_IMPORTANCE_FILE = "all.fi";
     private static final String CORRELATION_CSV = "correlation.csv";
     private static final String REASON_CODE_PATH = "common/ReasonCodeMapV3.json";
@@ -201,8 +202,16 @@ public class PathFinder {
         return getPathBySourceType(Constants.COLUMN_CONFIG_JSON_FILE_NAME, sourceType);
     }
 
-    public String getLocalColumnStatsPath() {
+    public String getMTLColumnConfigFolder(SourceType sourceType) {
+        return getPathBySourceType(MTL_FOLDER, sourceType);
+    }
 
+    public String getMTLColumnConfigPath(SourceType sourceType, int index) {
+        return getPathBySourceType(MTL_FOLDER + File.separator + Constants.COLUMN_CONFIG_JSON_FILE_NAME + "." + index,
+                sourceType);
+    }
+
+    public String getLocalColumnStatsPath() {
         return getPathBySourceType(
                 Constants.COLUMN_META_FOLDER_NAME + File.separator + Constants.COLUMN_STATS_CSV_FILE_NAME,
                 SourceType.LOCAL);
@@ -215,6 +224,10 @@ public class PathFinder {
      */
     public String getPreTrainingStatsPath() {
         return getPreTrainingStatsPath(modelConfig.getDataSet().getSource());
+    }
+
+    public String getPreTrainingStatsPath(int mtlIndex) {
+        return getPreTrainingStatsPath(modelConfig.getDataSet().getSource()) + "." + mtlIndex;
     }
 
     /**
@@ -233,6 +246,10 @@ public class PathFinder {
         } else {
             return new Path(preTrainingStatsPath).toString();
         }
+    }
+
+    public String getPreTrainingStatsPath(SourceType sourceType, int mtlIndex) {
+        return getPreTrainingStatsPath(sourceType) + "." + mtlIndex;
     }
 
     public String getStatsSmallBins() {
@@ -490,7 +507,11 @@ public class PathFinder {
         }
     }
 
-    public String getDailyStatInfoPath(SourceType sourceType){
+    public String getUpdatedBinningInfoPath(SourceType sourceType, int mtlIndex) {
+        return getUpdatedBinningInfoPath(SourceType.LOCAL) + "." + mtlIndex;
+    }
+
+    public String getDailyStatInfoPath(SourceType sourceType) {
         String preTrainPath = getPreferPath(modelConfig.getTrain().getCustomPaths(),
                 Constants.KEY_PRE_TRAIN_STATS_PATH);
 
@@ -499,6 +520,10 @@ public class PathFinder {
         } else {
             return new Path(preTrainPath).toString();
         }
+    }
+
+    public String getPSIInfoPath(int mtlIndex) {
+        return this.getPSIInfoPath(modelConfig.getDataSet().getSource()) + "." + mtlIndex;
     }
 
     public String getPSIInfoPath() {
@@ -513,7 +538,10 @@ public class PathFinder {
         } else {
             return new Path(preTrainPath).toString();
         }
+    }
 
+    public String getPSIInfoPath(SourceType sourceType, int mtlIndex) {
+        return getPSIInfoPath(sourceType) + "." + mtlIndex;
     }
 
     /**
@@ -554,7 +582,7 @@ public class PathFinder {
      *            - Local/HDFS
      * @return path of models
      */
-    public String getNNBinaryModelsPath(SourceType sourceType) {
+    public String getBinaryModelsPath(SourceType sourceType) {
         return getPathBySourceType(new Path("bmodels"), sourceType);
     }
 
@@ -747,7 +775,7 @@ public class PathFinder {
             scoreMetaPath = new Path(scoreMetaPath, Constants.EVAL_META_SCORE).toString();
         }
 
-        return new Path(scoreMetaPath, metaColumn).toString();
+        return new Path(scoreMetaPath, formatMetaScore(metaColumn)).toString();
     }
 
     /**
@@ -817,9 +845,9 @@ public class PathFinder {
         if(StringUtils.isBlank(evalPerformancePath)) {
             String evalMetaPerfPath = getEvalFilePath(evalConfig.getName(), Constants.EVAL_META_SCORE,
                     evalConfig.getDataSet().getSource());
-            return new Path(evalMetaPerfPath, metaColumn + Constants.EVAL_PERFORMANCE).toString();
+            return new Path(evalMetaPerfPath, formatMetaScore(metaColumn) + Constants.EVAL_PERFORMANCE).toString();
         } else {
-            return new Path(evalPerformancePath, metaColumn + Constants.EVAL_PERFORMANCE).toString();
+            return new Path(evalPerformancePath, formatMetaScore(metaColumn) + Constants.EVAL_PERFORMANCE).toString();
         }
     }
 
@@ -873,7 +901,7 @@ public class PathFinder {
      * @return path of specified file
      */
     public String getEvalFilePath(String evalName, String specifiedFileName, SourceType sourceType) {
-        return (new Path(this.getEvalSetPath(evalName, sourceType), specifiedFileName)).toString();
+        return (new Path(this.getEvalSetPath(evalName, sourceType), formatMetaScore(specifiedFileName))).toString();
     }
 
     public String getEvalLocalMultiMatrixFile(String evalName) {
@@ -930,8 +958,9 @@ public class PathFinder {
             case LOCAL:
                 return new Path(getModelSetLocalPath(), path).toString();
             case HDFS:
-                return ShifuFileUtils.getFileSystemBySourceType(sourceType)
-                        .makeQualified(new Path(getModelSetHdfsPath(), path)).toString();
+                Path filePath = new Path(getModelSetHdfsPath(), path);
+                return ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath)
+                        .makeQualified(filePath).toString();
             default:
                 // Others, maybe be we will support S3 in future
                 throw new NotImplementedException("Source type - " + sourceType.name() + " is not supported yet!");
@@ -1048,7 +1077,9 @@ public class PathFinder {
 
     /**
      * Get the backup ColumnConfig
-     * @param postTimeStamp - timestamp to back ColumnConfig file name
+     * 
+     * @param postTimeStamp
+     *            - timestamp to back ColumnConfig file name
      * @return - the ColumnConfig.json path for backup
      */
     public String getBackupColumnConfig(String postTimeStamp) {
@@ -1111,18 +1142,29 @@ public class PathFinder {
 
     /**
      * Get the columnconfig.psi path
+     * 
      * @return - columnconfig.psi path for storing unit stats
      */
     public String getColumnConfigUnitStatsPath() {
         return getPathBySourceType(new Path(Constants.TMP, Constants.CC_UNIT_STATS_PATH), SourceType.LOCAL);
     }
 
+    public String getColumnConfigUnitStatsPath(int mtlIndex) {
+        return getColumnConfigPath() + "." + mtlIndex;
+    }
+
     public String getEncodeDataPath(EvalConfig evalConfig) {
-        if ( evalConfig == null ) {
+        if(evalConfig == null) {
             return getPathBySourceType(new Path(Constants.TMP, Constants.TRAIN_DATA_ENCODE_PATH), SourceType.HDFS);
         } else {
-            return getPathBySourceType(new Path(Constants.TMP,
-                    Constants.EVAL_DATA_ENCODE_PREFIX + StringUtils.capitalize(evalConfig.getName())), SourceType.HDFS);
+            return getPathBySourceType(
+                    new Path(Constants.TMP,
+                            Constants.EVAL_DATA_ENCODE_PREFIX + StringUtils.capitalize(evalConfig.getName())),
+                    SourceType.HDFS);
         }
+    }
+
+    private String formatMetaScore(String metaColumn) {
+        return metaColumn.replaceAll("::", "_");
     }
 }

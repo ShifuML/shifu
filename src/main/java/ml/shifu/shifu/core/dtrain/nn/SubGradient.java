@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
+import ml.shifu.shifu.util.Shuffler;
 import org.encog.engine.network.activation.ActivationFunction;
 import org.encog.neural.error.ErrorFunction;
 import org.encog.neural.flat.FlatNetwork;
@@ -129,7 +130,7 @@ public class SubGradient implements Callable<double[]> {
     private long seed = System.currentTimeMillis();
 
     /**
-     * error
+     * Training error after aggregation
      */
     private double error;
 
@@ -175,9 +176,18 @@ public class SubGradient implements Callable<double[]> {
      */
     private int batchs = 1;
 
+    private int threadCount;
+
+    private long trainSize;
+    private long validationSize;
+    private double trainSum;
+    private double validationSum;
+    private final Shuffler shuffler;
+
     public SubGradient(final FloatFlatNetwork theNetwork, final FloatMLDataSet theTraining, long trainLow,
             long trainHigh, final FloatMLDataSet theTesting, long testLow, long testHigh, final double[] flatSpot,
-            boolean isCrossOver, ParallelGradient owner, int batchs, int currentInteration, Set<Integer> dropoutNodes) {
+            boolean isCrossOver, ParallelGradient owner, int batchs, int currentInteration, Set<Integer> dropoutNodes,
+            int threadCount, Shuffler shuffler) {
         this.network = theNetwork;
         this.training = theTraining;
         this.trainLow = trainLow;
@@ -195,6 +205,8 @@ public class SubGradient implements Callable<double[]> {
         this.batchs = batchs;
         this.currentIteration = currentInteration;
         this.dropoutNodes = dropoutNodes;
+        this.threadCount = threadCount;
+        this.shuffler = shuffler;
     }
 
     private void initNetworkParams() {
@@ -322,11 +334,20 @@ public class SubGradient implements Callable<double[]> {
             // reset errors and gradients firstly
             this.errorCalculation.reset();
             Arrays.fill(this.gradients, 0.0);
+            this.trainSize = 0L;
+            this.validationSize = 0L;
+            this.trainSum = 0d;
+            this.validationSum = 0d;
 
             long start = this.trainLow;
             long end = this.trainHigh;
 
             if(this.batchs > 1) {
+                long adjustBatchCnt = (this.trainHigh - this.trainLow + 1) / (this.batchs / this.threadCount);
+                if(adjustBatchCnt <= 0) {
+                    adjustBatchCnt = 1;
+                }
+                this.batchs = (int) adjustBatchCnt;
                 long currentBatch = (currentIteration - 2) % this.batchs;
                 long recordsInBatch = (this.trainHigh - this.trainLow + 1) / this.batchs;
                 if(currentBatch == this.batchs - 1) {
@@ -348,7 +369,7 @@ public class SubGradient implements Callable<double[]> {
                         // 3:1 to select testing data set, tmp hard code, TODO fix hard code issue,extract such logic to
                         // a method
                         if((i + seed) % 4 < 3) {
-                            this.training.getRecord(i, this.pair);
+                            this.training.getRecord(this.shuffler == null ? i : this.shuffler.getIndex((int) i), this.pair);
                         } else {
                             long testingSize = this.testing.getRecordCount();
                             // it's ok to take data from all testing set
@@ -359,10 +380,12 @@ public class SubGradient implements Callable<double[]> {
                             }
                         }
                     } else {
-                        this.training.getRecord(i, this.pair);
+                        this.training.getRecord(this.shuffler == null ? i : this.shuffler.getIndex((int) i), this.pair);
                     }
                 }
                 process(this.pair.getInputArray(), this.pair.getIdealArray(), pair.getSignificance());
+                this.trainSize += 1L;
+                this.trainSum += this.pair.getSignificance();
             }
             this.error = this.errorCalculation.calculate();
         } catch (final Throwable ex) {
@@ -382,6 +405,9 @@ public class SubGradient implements Callable<double[]> {
     public final double calculateError(ErrorCalculation ec) {
         final double[] actual = new double[this.getNetwork().getOutputCount()];
         final FloatMLDataPair pair = BasicFloatMLDataPair.createPair(testing.getInputSize(), testing.getIdealSize());
+
+        this.validationSize = 0L;
+        this.validationSum = 0d;
 
         for(long i = testLow; i <= testHigh; i++) {
             synchronized(this.owner) {
@@ -414,6 +440,9 @@ public class SubGradient implements Callable<double[]> {
             synchronized(ec) {
                 ec.updateError(actual, doubleIdeal, pair.getSignificance());
             }
+
+            this.validationSize += 1L;
+            this.validationSum += pair.getSignificance();
         }
         return -1;
     }
@@ -495,6 +524,66 @@ public class SubGradient implements Callable<double[]> {
 
     public void setDropoutNodes(Set<Integer> dropoutNodes) {
         this.dropoutNodes = dropoutNodes;
+    }
+
+    /**
+     * @return the trainSize
+     */
+    public long getTrainSize() {
+        return trainSize;
+    }
+
+    /**
+     * @param trainSize
+     *            the trainSize to set
+     */
+    public void setTrainSize(long trainSize) {
+        this.trainSize = trainSize;
+    }
+
+    /**
+     * @return the validationSize
+     */
+    public long getValidationSize() {
+        return validationSize;
+    }
+
+    /**
+     * @param validationSize
+     *            the validationSize to set
+     */
+    public void setValidationSize(long validationSize) {
+        this.validationSize = validationSize;
+    }
+
+    /**
+     * @return the trainSum
+     */
+    public double getTrainSum() {
+        return trainSum;
+    }
+
+    /**
+     * @param trainSum
+     *            the trainSum to set
+     */
+    public void setTrainSum(double trainSum) {
+        this.trainSum = trainSum;
+    }
+
+    /**
+     * @return the validationSum
+     */
+    public double getValidationSum() {
+        return validationSum;
+    }
+
+    /**
+     * @param validationSum
+     *            the validationSum to set
+     */
+    public void setValidationSum(double validationSum) {
+        this.validationSum = validationSum;
     }
 
 }

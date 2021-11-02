@@ -40,15 +40,15 @@ guagua.zk.embedbed.isInClient=true
 
 # if over such threshold three times, kill worker; by default is 60000, change it to 30 minutes to avoid failures
 # set worker compute time threshold to 30 minutes, if compute time of 3 iterations >= this value, worker will kill itself.
-guagua.computation.time.threshold=1800000
+# guagua.computation.time.threshold=1800000
 
 ## tuning for rf, in rf, tree models are stored in master memory, if two many models, please tune such parameters 
-mapreduce.map.memory.mb=2048
-mapreduce.map.java.opts=-Xms1700m -Xmx1700m -server -XX:MaxPermSize=64m -XX:PermSize=64m -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
+mapreduce.map.memory.mb=4096
+mapreduce.map.java.opts=-Xms1700m -Xmx3068m -server -XX:MaxPermSize=64m -XX:PermSize=64m -XX:+UseParallelGC -XX:+UseParallelOldGC -XX:ParallelGCThreads=8 -verbose:gc -XX:+PrintGC
 
 ## specified reduce memory to avoid default memory too big or too small
-mapreduce.reduce.memory.mb=2048
-mapreduce.reduce.java.opts=-Xms1700m -Xmx1700m -server -XX:MaxPermSize=64m -XX:PermSize=64m
+mapreduce.reduce.memory.mb=4096
+mapreduce.reduce.java.opts=-Xms1700m -Xmx3276m -server -XX:MaxPermSize=64m -XX:PermSize=64m
 mapreduce.reduce.shuffle.input.buffer.percent=0.2
 
 ## set io buffer in mapper to 400mb to avoid too many memory consumption in mapper heap
@@ -115,7 +115,7 @@ guagua.computation.time.threshold=3600000
 
 ## when use validation error to choose best parameters, at least to run
 #   (epochs * shifu.train.val.steps.ratio) step to avoid parameter a local minimum
-shifu.train.val.steps.ratio = 0.1
+shifu.train.val.steps.ratio = 0.01
 
 ## when enable early stop in training, stop training if no progress is made in
 #   (shifu.train.earlystop.window.size) steps / iterations

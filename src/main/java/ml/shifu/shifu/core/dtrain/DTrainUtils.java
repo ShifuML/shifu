@@ -20,16 +20,19 @@ import ml.shifu.guagua.util.NumberFormatUtils;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
+import ml.shifu.shifu.core.Normalizer;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.FloatNeuralStructure;
 import ml.shifu.shifu.core.dtrain.nn.*;
 import ml.shifu.shifu.core.dtrain.random.HeWeightRandomizer;
 import ml.shifu.shifu.core.dtrain.random.LecunWeightRandomizer;
 import ml.shifu.shifu.core.dtrain.random.XavierWeightRandomizer;
+import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HDFSUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
@@ -473,6 +476,22 @@ public final class DTrainUtils {
         return new Random();
     }
 
+    /**
+     * Get the meta column amount among the column config list.
+     *
+     * @param columnConfigList is the column config list.
+     * @return the number of meta column amount.
+     */
+    public static int getMetaInputsCnt(List<ColumnConfig> columnConfigList) {
+        int cnt = 0;
+        for (ColumnConfig config : columnConfigList) {
+            if (config.isMeta()) {
+                cnt++;
+            }
+        }
+        return cnt;
+    }
+
     public static int getFeatureInputsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Set<Integer> featureSet) {
         if(modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)) {
@@ -593,6 +612,8 @@ public final class DTrainUtils {
     }
 
     /**
+     * Bin size of all variables, categorical means number of all categories, numerical variable means number of bins.
+     * 
      * @param columnConfigList
      *            the column config list of the model
      * @return the map mapping from column Id to bin category list size
@@ -602,6 +623,8 @@ public final class DTrainUtils {
         for(ColumnConfig columnConfig: columnConfigList) {
             if(columnConfig.getBinCategory() != null) {
                 idBinCategoryMap.put(columnConfig.getColumnNum(), columnConfig.getBinCategory().size());
+            } else if(columnConfig.getBinBoundary() != null) {
+                idBinCategoryMap.put(columnConfig.getColumnNum(), columnConfig.getBinBoundary().size());
             } else {
                 idBinCategoryMap.put(columnConfig.getColumnNum(), 0);
             }
@@ -733,5 +756,103 @@ public final class DTrainUtils {
         // TODO , according to norm type
         fval = (Float.isNaN(fval) || Double.isNaN(fval)) ? defVal : fval;
         return fval;
+    }
+
+    public static double loadDataIntoInputs(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            Set<Integer> featureSet, boolean isLinearTarget, boolean hasCandidates, double[] inputs, double outputs[],
+            String[] rawInputs) {
+        int dataPos = 0, inputsIndex = 0, outputIndex = 0;
+        for(ColumnConfig columnConfig: columnConfigList) {
+            float fval = DTrainUtils.parseRawNormValue(rawInputs, dataPos, 0.0f);
+            if(columnConfig.isTarget()) { // target
+                if(isLinearTarget || modelConfig.isRegression()) {
+                    outputs[outputIndex++] = fval;
+                } else {
+                    // for multi-classification
+                }
+                dataPos++;
+            } else { // other variables
+                if(featureSet.contains(columnConfig.getColumnNum())) {
+                    if(columnConfig.isMeta() || columnConfig.isForceRemove()) {
+                        // it shouldn't happen here
+                        dataPos += 1;
+                    } else if(columnConfig != null && columnConfig.isNumerical()
+                            && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)) {
+                        for(int k = 0; k < columnConfig.getBinBoundary().size() + 1; k++) {
+                            float tval = DTrainUtils.parseRawNormValue(rawInputs, dataPos, 0.0f);
+                            inputs[inputsIndex++] = tval;
+                            dataPos++;
+                        }
+                    } else if(columnConfig != null && columnConfig.isCategorical()
+                            && (modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
+                                    || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))) {
+                        for(int k = 0; k < columnConfig.getBinCategory().size() + 1; k++) {
+                            float tval = DTrainUtils.parseRawNormValue(rawInputs, dataPos, 0.0f);
+                            inputs[inputsIndex++] = tval;
+                            dataPos++;
+                        }
+                    } else {
+                        inputs[inputsIndex++] = fval;
+                        dataPos++;
+                    }
+                } else { // just skip unused data in normalized data
+                    if(!CommonUtils.isToNormVariable(columnConfig, hasCandidates, modelConfig.isRegression())) {
+                        dataPos += 1;
+                    } else if(columnConfig.isNumerical()
+                            && modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT)
+                            && columnConfig.getBinBoundary() != null && columnConfig.getBinBoundary().size() > 0) {
+                        dataPos += (columnConfig.getBinBoundary().size() + 1);
+                    } else if(columnConfig.isCategorical()
+                            && (modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ZSCALE_ONEHOT)
+                                    || modelConfig.getNormalizeType().equals(ModelNormalizeConf.NormType.ONEHOT))
+                            && columnConfig.getBinCategory().size() > 0) {
+                        dataPos += (columnConfig.getBinCategory().size() + 1);
+                    } else {
+                        dataPos += 1;
+                    }
+                }
+            }
+        }
+
+        return DTrainUtils.parseRawNormValue(rawInputs, rawInputs.length - 1, 1.0f);
+    }
+
+    public static Set<Integer> generateModelFeatureSet(ModelConfig modelConfig, List<ColumnConfig> columnConfigList) {
+        Set<Integer> columnIdSet = new HashSet<>();
+        boolean hasFinalSelectedVars = DTrainUtils.hasFinalSelectedVars(columnConfigList);
+        if(hasFinalSelectedVars) {
+            columnConfigList.stream().forEach(columnConfig -> {
+                if(columnConfig.isFinalSelect()) {
+                    columnIdSet.add(columnConfig.getColumnNum());
+                }
+            });
+        } else {
+            boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
+            columnConfigList.stream().forEach(columnConfig -> {
+                if(CommonUtils.isGoodCandidate(columnConfig, hasCandidates, modelConfig.isRegression())) {
+                    columnIdSet.add(columnConfig.getColumnNum());
+                }
+            });
+        }
+        return columnIdSet;
+    }
+
+    public static int generateFeatureInputInfo(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            Set<Integer> featureSet, Map<Integer, List<Double>> columnMissingInputValues,
+            Map<Integer, Integer> columnNormDataPosMapping) {
+        int vectorLen = 0;
+        for(ColumnConfig columnConfig: columnConfigList) {
+            if(featureSet.contains(columnConfig.getColumnNum())) {
+                columnNormDataPosMapping.put(columnConfig.getColumnNum(), vectorLen);
+                List<Double> normValues = Normalizer.normalize(columnConfig, null,
+                        modelConfig.getNormalizeStdDevCutOff(), modelConfig.getNormalizeType(),
+                        CategoryMissingNormType.MEAN);
+                if(CollectionUtils.isNotEmpty(normValues)) { // usually, the normValues won't be empty
+                    columnMissingInputValues.put(columnConfig.getColumnNum(), normValues);
+                    vectorLen += normValues.size();
+                }
+            }
+        }
+        return vectorLen;
     }
 }

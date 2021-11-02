@@ -40,8 +40,11 @@ public class AdamUpdate implements UpdateRule {
 
     private double learningRate;
 
+    private Update update;
+
     @Override
     public void init(Update update) {
+        this.update = update;
         this.learningRate = update.getLearningRate();
         this.m = new double[update.getNumWeight()];
         this.v = new double[update.getNumWeight()];
@@ -52,15 +55,19 @@ public class AdamUpdate implements UpdateRule {
     @Override
     public void update(double[] gradients, double[] weights, int iteration, Set<Integer> fixedWeights) {
         for(int i = 0; i < weights.length; i++) {
-            if (fixedWeights.contains(i)) continue;
-            
-            m[i] = (this.beta1 * m[i]) + (1 - this.beta1) * gradients[i];
-            v[i] = (this.beta2 * v[i]) + (1 - this.beta2) * gradients[i] * gradients[i];
+            if(fixedWeights.contains(i))
+                continue;
+
+            double avgGrad = gradients[i] / this.update.getNumTrainSize();
+
+            m[i] = (this.beta1 * m[i]) + (1 - this.beta1) * avgGrad;
+            v[i] = (this.beta2 * v[i]) + (1 - this.beta2) * avgGrad * avgGrad;
 
             double mCorrect = m[i] / (1 - Math.pow(this.beta1, iteration));
             double vCorrect = v[i] / (1 - Math.pow(this.beta2, iteration));
 
-            final double delta = (this.learningRate * mCorrect) / (Math.sqrt(vCorrect) + this.eps);
+            final double delta = (this.learningRate  * mCorrect)
+                    / (Math.sqrt(vCorrect) + this.eps);
             weights[i] += delta;
         }
     }

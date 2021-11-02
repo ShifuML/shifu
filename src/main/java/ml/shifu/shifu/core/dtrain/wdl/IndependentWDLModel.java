@@ -15,16 +15,6 @@
  */
 package ml.shifu.shifu.core.dtrain.wdl;
 
-import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
-import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.StringUtils;
-import ml.shifu.shifu.core.dtrain.nn.NNColumnStats;
-import ml.shifu.shifu.exception.ShifuErrorCode;
-import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.util.BinUtils;
-import ml.shifu.shifu.util.Constants;
-
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -36,6 +26,17 @@ import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 import org.encog.mathutil.BoundMath;
+
+import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
+import ml.shifu.shifu.core.Normalizer;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.StringUtils;
+import ml.shifu.shifu.core.dtrain.layer.SparseInput;
+import ml.shifu.shifu.core.dtrain.nn.NNColumnStats;
+import ml.shifu.shifu.exception.ShifuErrorCode;
+import ml.shifu.shifu.exception.ShifuException;
+import ml.shifu.shifu.util.BinUtils;
+import ml.shifu.shifu.util.Constants;
 
 /**
  * {@link IndependentWDLModel} is a light WDL engine to predict WDL model, the only dependency is shifu, guagua.
@@ -77,16 +78,16 @@ public class IndependentWDLModel {
      */
     private Map<Integer, String> numNameMap;
     /**
-     * Mapping for (columnNum, binBoundaries) for numberical columns
+     * Mapping for (columnNum, binBoundaries) for numerical columns
      */
     private Map<Integer, List<Double>> numerBinBoundaries;
     /**
-     * Mapping for (columnNum, woes) for numberical columns; for hybrid, woe bins for both numberical and categorical
+     * Mapping for (columnNum, woes) for numerical columns; for hybrid, woe bins for both numerical and categorical
      * bins; last one in weightedWoes is for missing value bin
      */
     private Map<Integer, List<Double>> numerWoes;
     /**
-     * Mapping for (columnNum, wgtWoes) for numberical columns; for hybrid, woe bins for both numberical and categorical
+     * Mapping for (columnNum, wgtWoes) for numerical columns; for hybrid, woe bins for both numerical and categorical
      * bins; last one in weightedBinWoes is for missing value bin
      */
     private Map<Integer, List<Double>> numerWgtWoes;
@@ -119,13 +120,26 @@ public class IndependentWDLModel {
      */
     private Map<Integer, Integer> columnNumIndexMapping;
 
+    /**
+     * Mapping for (columnNum, (category, woeValue)) for categorical columns
+     */
+    private Map<Integer, Map<String, Double>> cateWoeMap;
+
+    /**
+     * Mapping for (columnNum, (category, weightedWoeValue)) for categorical columns
+     */
+    private Map<Integer, Map<String, Double>> cateWgtWoeMap;
+
+    private Map<Integer, Map<String, Double>> binPosRateMap;
+
     private IndependentWDLModel(WideAndDeep wideAndDeep, NormType normType, Map<Integer, Double> cutOffMap,
             Map<Integer, String> numNameMap, Map<Integer, Map<String, Integer>> cateIndexMap,
             Map<Integer, List<Double>> numerBinBoundaries, Map<Integer, List<Double>> numerWoes,
             Map<Integer, List<Double>> numerWgtWoes, Map<Integer, Double> numerMeanMap,
             Map<Integer, Double> numerStddevMap, Map<Integer, Double> woeMeanMap, Map<Integer, Double> woeStddevMap,
             Map<Integer, Double> wgtWoeMeanMap, Map<Integer, Double> wgtWoeStddevMap,
-            Map<Integer, Integer> columnNumIndexMapping) {
+            Map<Integer, Integer> columnNumIndexMapping, Map<Integer, Map<String, Double>> cateWoeMap,
+            Map<Integer, Map<String, Double>> cateWgtWoeMap, Map<Integer, Map<String, Double>> binPosRateMap) {
         this.wnd = wideAndDeep;
         this.normType = normType;
         this.cutOffMap = cutOffMap;
@@ -141,6 +155,9 @@ public class IndependentWDLModel {
         this.wgtWoeMeanMap = wgtWoeMeanMap;
         this.wgtWoeStddevMap = wgtWoeStddevMap;
         this.columnNumIndexMapping = columnNumIndexMapping;
+        this.cateWoeMap = cateWoeMap;
+        this.cateWgtWoeMap = cateWgtWoeMap;
+        this.binPosRateMap = binPosRateMap;
     }
 
     /**
@@ -162,7 +179,7 @@ public class IndependentWDLModel {
         }
         return score;
     }
-
+    
     public double sigmoid(double logit) {
         // return (double) (1 / (1 + Math.min(1.0E20, Math.exp(-logit))));
         return 1.0d / (1.0d + BoundMath.exp(-1 * logit));
@@ -177,7 +194,7 @@ public class IndependentWDLModel {
      * names in model.
      *
      * <p>
-     * In {@code dataMap}, numberical value can be (String, Double) format or (String, String) format, they will all be
+     * In {@code dataMap}, numerical value can be (String, Double) format or (String, String) format, they will all be
      * parsed to Double; categorical value are all converted to (String, String). If value not in our categorical list,
      * it will also be treated as missing value.
      *
@@ -188,23 +205,12 @@ public class IndependentWDLModel {
      * @param dataMap
      *            {@code dataMap} for (columnName, value), numberic value can be double/String, categorical feature can
      *            be int(index) or category value. if not set or set to null, such feature will be treated as missing
-     *            value. For numberical value, if it cannot be parsed successfully, it will also be treated as missing.
+     *            value. For numerical value, if it cannot be parsed successfully, it will also be treated as missing.
      * @return score output for wide and deep model
      */
     public double[] compute(Map<String, Object> dataMap) {
         return compute(getDenseInputs(dataMap), getEmbedInputs(dataMap), getWideInputs(dataMap));
     }
-
-    // public double[] compute(double[] data) {
-    // if(data == null) {
-    // return null;
-    // }
-    // double[] fData = new double[data.length];
-    // for(int i = 0; i < data.length; i++) {
-    // fData[i] = (double) data[i];
-    // }
-    // return compute(fData);
-    // }
 
     public double[] compute(double[] data) {
         if(data == null) {
@@ -285,12 +291,18 @@ public class IndependentWDLModel {
         Map<Integer, Double> wgtWoeStddevMap = new HashMap<>(columnSize);
         Map<Integer, Double> cutoffMap = new HashMap<>(columnSize);
         Map<Integer, Map<String, Integer>> cateIndexMapping = new HashMap<>(columnSize);
+        Map<Integer, Map<String, Double>> cateWoeMaps = new HashMap<>(columnSize);
+        Map<Integer, Map<String, Double>> cateWgtWoeMaps = new HashMap<>(columnSize);
+        Map<Integer, Map<String, Double>> binPosRateMap = new HashMap<Integer, Map<String, Double>>();
+
         for(int i = 0; i < columnSize; i++) {
             NNColumnStats cs = new NNColumnStats();
             cs.readFields(dis);
 
             List<Double> binWoes = cs.getBinCountWoes();
             List<Double> binWgtWoes = cs.getBinWeightWoes();
+            List<Double> binPosRates = cs.getBinPosRates();
+
             int columnNum = cs.getColumnNum();
 
             if(isRemoveNameSpace) {
@@ -302,6 +314,9 @@ public class IndependentWDLModel {
 
             // for categorical features
             Map<String, Integer> cateIndexMap = new HashMap<>(cs.getBinCategories().size());
+            Map<String, Double> cateWoeMap = new HashMap<>(cs.getBinCategories().size());
+            Map<String, Double> cateWgtWoeMap = new HashMap<>(cs.getBinCategories().size());
+            Map<String, Double> posRateMap = new HashMap<String, Double>();
 
             if(cs.isCategorical() || cs.isHybrid()) {
                 List<String> binCategories = cs.getBinCategories();
@@ -314,18 +329,29 @@ public class IndependentWDLModel {
                         String[] splits = StringUtils.split(currCate, Constants.CATEGORICAL_GROUP_VAL_DELIMITER);
                         for(String str: splits) {
                             cateIndexMap.put(str, j);
+                            cateWoeMap.put(str, binWoes.get(j));
+                            cateWgtWoeMap.put(str, binWgtWoes.get(j));
+                            posRateMap.put(str, binPosRates.get(j));
                         }
                     } else {
                         cateIndexMap.put(currCate, j);
+                        cateWoeMap.put(currCate, binWoes.get(j));
+                        cateWgtWoeMap.put(currCate, binWgtWoes.get(j));
+                        posRateMap.put(currCate, binPosRates.get(j));
                     }
                 }
+                // append last missing bin
+                cateWoeMap.put(Constants.EMPTY_CATEGORY, binWoes.get(binCategories.size()));
+                cateWgtWoeMap.put(Constants.EMPTY_CATEGORY, binWgtWoes.get(binCategories.size()));
+                posRateMap.put(Constants.EMPTY_CATEGORY, binPosRates.get(binCategories.size()));
             }
 
             if(cs.isNumerical() || cs.isHybrid()) {
                 numerBinBoundaries.put(columnNum, cs.getBinBoundaries());
-                numerWoes.put(columnNum, binWoes);
-                numerWgtWoes.put(columnNum, binWgtWoes);
             }
+
+            numerWoes.put(columnNum, binWoes);
+            numerWgtWoes.put(columnNum, binWgtWoes);
 
             cateIndexMapping.put(columnNum, cateIndexMap);
             numerMeanMap.put(columnNum, cs.getMean());
@@ -335,6 +361,10 @@ public class IndependentWDLModel {
             wgtWoeMeanMap.put(columnNum, cs.getWoeWgtMean());
             wgtWoeStddevMap.put(columnNum, cs.getWoeWgtStddev());
             cutoffMap.put(columnNum, cs.getCutoff());
+
+            cateWoeMaps.put(columnNum, cateWoeMap);
+            cateWgtWoeMaps.put(columnNum, cateWgtWoeMap);
+            binPosRateMap.put(columnNum, posRateMap);
         }
 
         int columnMappingSize = dis.readInt();
@@ -347,7 +377,7 @@ public class IndependentWDLModel {
         wideAndDeep.readFields(dis);
         return new IndependentWDLModel(wideAndDeep, normType, cutoffMap, numNameMap, cateIndexMapping,
                 numerBinBoundaries, numerWoes, numerWgtWoes, numerMeanMap, numerStddevMap, woeMeanMap, woeStddevMap,
-                wgtWoeMeanMap, wgtWoeStddevMap, columnMapping);
+                wgtWoeMeanMap, wgtWoeStddevMap, columnMapping, cateWoeMaps, cateWgtWoeMaps, binPosRateMap);
     }
 
     /**
@@ -380,7 +410,6 @@ public class IndependentWDLModel {
         return embedInputs;
     }
 
-    @SuppressWarnings("unused")
     private List<SparseInput> getEmbedInputs(double[] data) {
         List<SparseInput> embedInputs = new ArrayList<>();
         for(int columnId: this.wnd.getEmbedColumnIds()) {
@@ -395,7 +424,11 @@ public class IndependentWDLModel {
 
     private int getMissingTypeCategory(int columnId) {
         // TODO if this right? Current return +1 of the last index
-        return this.cateIndexMap.get(columnId).values().size();
+        if(this.cateIndexMap.get(columnId) != null) {
+            return this.cateIndexMap.get(columnId).values().size();
+        } else {
+            return this.numerBinBoundaries.get(columnId).size();
+        }
     }
 
     private double[] getDenseInputs(Map<String, Object> dataMap) {
@@ -413,7 +446,6 @@ public class IndependentWDLModel {
         return numericalValues;
     }
 
-    @SuppressWarnings("unused")
     private double[] getDenseInputs(double[] data) {
         List<Integer> denseColumnIds = this.wnd.getDenseColumnIds();
         double[] numericalValues = new double[denseColumnIds.size()];
@@ -429,7 +461,17 @@ public class IndependentWDLModel {
     }
 
     private int getValueIndex(int columnId, String value) {
-        return this.cateIndexMap.get(columnId).get(value);
+        if(this.cateIndexMap.get(columnId) != null) {
+            return this.cateIndexMap.get(columnId).get(value);
+        } else {
+            List<Double> binBoundary = this.numerBinBoundaries.get(columnId);
+            double douVal = BinUtils.parseNumber(value);
+            if(Double.isNaN(douVal)) {
+                return binBoundary.size();
+            } else {
+                return BinUtils.getBinIndex(binBoundary, douVal);
+            }
+        }
     }
 
     private List<SparseInput> getWideInputs(Map<String, Object> dataMap) {
@@ -447,7 +489,6 @@ public class IndependentWDLModel {
         return wideInputs;
     }
 
-    @SuppressWarnings("unused")
     private List<SparseInput> getWideInputs(double[] data) {
         List<SparseInput> wideInputs = new ArrayList<>();
         for(int columnId: this.wnd.getWideColumnIds()) {
@@ -462,7 +503,7 @@ public class IndependentWDLModel {
 
     private double normalize(int columnNum, Object obj, NormType normType) {
         double value;
-        // numberical column
+        // numerical column
         switch(this.normType) {
             case WOE:
                 value = getNumericalWoeValue(columnNum, obj, false);
@@ -476,7 +517,33 @@ public class IndependentWDLModel {
                 break;
             case WEIGHT_WOE_ZSCORE:
             case WEIGHT_WOE_ZSCALE:
-                value = getNumericalWoeZScoreValue(columnNum, obj, true);
+                if(this.cateIndexMap.get(columnNum) == null) {
+                    value = getNumericalWoeZScoreValue(columnNum, obj, false);
+                } else {
+                    value = getCategoricalPosRateZScoreValue(columnNum, obj, false);
+                }
+                break;
+            case ZSCORE_APPEND_INDEX:
+            case ZSCALE_APPEND_INDEX:
+                if(this.cateIndexMap.get(columnNum) == null) {
+                    value = getNumericalZScoreValue(columnNum, obj);
+                } else {
+                    value = getCategoricalWoeValue(columnNum, obj, false);
+                }
+                break;
+            case WOE_APPEND_INDEX:
+                if(this.cateIndexMap.get(columnNum) == null) {
+                    value = getNumericalWoeValue(columnNum, obj, false);
+                } else {
+                    value = getCategoricalWoeValue(columnNum, obj, false);
+                }
+                break;
+            case WOE_ZSCALE_APPEND_INDEX:
+                if(this.cateIndexMap.get(columnNum) == null) {
+                    value = getNumericalWoeZScoreValue(columnNum, obj, false);
+                } else {
+                    value = getCategoricalWoeZScoreValue(columnNum, obj, false);
+                }
                 break;
             case OLD_ZSCALE:
             case OLD_ZSCORE:
@@ -489,6 +556,56 @@ public class IndependentWDLModel {
                 break;
         }
         return value;
+    }
+
+    private double getCategoricalWoeZScoreValue(Integer columnNum, Object obj, boolean isWeighted) {
+        double woe = getCategoricalWoeValue(columnNum, obj, isWeighted);
+        Map<Integer, Double> woeMeans = isWeighted ? this.wgtWoeMeanMap : this.woeMeanMap;
+        Map<Integer, Double> woeStddevs = isWeighted ? this.wgtWoeStddevMap : this.woeStddevMap;
+        double mean = woeMeans.get(columnNum), stddev = woeStddevs.get(columnNum);
+        double cutoff = Normalizer.checkCutOff(cutOffMap.get(columnNum));
+        return Normalizer.computeZScore(woe, mean, stddev, cutoff)[0];
+    }
+
+    private double getCategoricalWoeValue(Integer columnNum, Object obj, boolean isWeighted) {
+        double value = 0d;
+        Map<Integer, Map<String, Double>> mappings = isWeighted ? this.cateWgtWoeMap : this.cateWoeMap;
+        Map<String, Double> woeMap = mappings.get(columnNum);
+        if(obj == null) {
+            value = woeMap.get(Constants.EMPTY_CATEGORY);
+        } else {
+            Double woe = woeMap.get(obj.toString());
+            if(woe == null) {
+                value = woeMap.get(Constants.EMPTY_CATEGORY);
+            } else {
+                value = woe;
+            }
+        }
+        return value;
+    }
+
+    private double getCategoricalPosRateZScoreValue(Integer columnNum, Object obj, boolean isOld) {
+        double value = 0d;
+        Map<String, Double> posRateMapping = this.binPosRateMap.get(columnNum);
+        if(obj == null) {
+            value = posRateMapping.get(Constants.EMPTY_CATEGORY);
+        } else {
+            Double posRate = posRateMapping.get(obj.toString());
+            if(posRate == null) {
+                value = posRateMapping.get(Constants.EMPTY_CATEGORY);
+            } else {
+                value = posRate;
+            }
+        }
+
+        if(isOld) {
+            return value;
+        }
+
+        double mean = this.numerMeanMap.get(columnNum);
+        double stddev = this.numerStddevMap.get(columnNum);
+        double cutoff = Normalizer.checkCutOff(this.cutOffMap.get(columnNum));
+        return Normalizer.computeZScore(value, mean, stddev, cutoff)[0];
     }
 
     private Object getValueByColumnId(int columnId, Map<String, Object> dataMap) {

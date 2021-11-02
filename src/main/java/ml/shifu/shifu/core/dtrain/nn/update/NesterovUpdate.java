@@ -39,8 +39,11 @@ public class NesterovUpdate implements UpdateRule {
 
     private double momentum;
 
+    private Update update;
+
     @Override
     public void init(Update update) {
+        this.update = update;
         this.learningRate = update.getLearningRate();
         this.lastDelta = new double[update.getNumWeight()];
         this.momentum = update.getMomentum();
@@ -49,10 +52,13 @@ public class NesterovUpdate implements UpdateRule {
     @Override
     public void update(double[] gradients, double[] weights, int iteration, Set<Integer> fixedWeights) {
         for(int i = 0; i < weights.length; i++) {
-            if (fixedWeights.contains(i)) continue;
-            
+            if(fixedWeights.contains(i))
+                continue;
+
+            double avgGrad = gradients[i] / this.update.getNumTrainSize();
+
             double prevNesterov = this.lastDelta[i];
-            this.lastDelta[i] = (this.momentum * prevNesterov) + (gradients[i] * this.learningRate);
+            this.lastDelta[i] = (this.momentum * prevNesterov) + (avgGrad * this.learningRate);
             final double delta = (this.momentum * prevNesterov) - ((1 + this.momentum) * this.lastDelta[i]);
             weights[i] += delta;
         }

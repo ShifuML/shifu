@@ -51,6 +51,8 @@ public class MetaItem implements Cloneable {
 
     private List<MetaItem> element;
 
+    private Boolean notNull;
+
     public String getName() {
         return name;
     }
@@ -131,6 +133,14 @@ public class MetaItem implements Cloneable {
         this.element = element;
     }
 
+    public Boolean getNotNull() {
+        return notNull == null ? false: notNull;
+    }
+
+    public void setNotNull(Boolean notNull) {
+        this.notNull = notNull;
+    }
+
     @Override
     public MetaItem clone() {
         MetaItem copy = null;
@@ -148,6 +158,7 @@ public class MetaItem implements Cloneable {
         copy.setMinLength(minLength);
         copy.setOptions(options);
         copy.setElementType(elementType);
+        copy.setNotNull(notNull);
 
         if(CollectionUtils.isNotEmpty(element)) {
             List<MetaItem> elementList = new ArrayList<MetaItem>();

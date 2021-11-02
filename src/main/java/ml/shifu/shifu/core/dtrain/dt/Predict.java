@@ -20,6 +20,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import ml.shifu.guagua.io.Bytable;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 
 /**
  * {@link Predict} wrappers classification and regression result in {@link #predict}, for classification
@@ -66,10 +67,26 @@ public class Predict implements Bytable {
         return classValue;
     }
 
+    public void write(DataOutput out, PrecisionType pt) throws IOException {
+        switch(pt) {
+            case FLOAT32:
+                out.writeFloat((float) predict);
+                break;
+            case FLOAT16:
+                out.writeFloat((float) PrecisionType.FLOAT16.to(predict));
+                break;
+            case DOUBLE64:
+                out.writeDouble(predict);
+                break;
+            default:
+                throw new UnsupportedOperationException("Not supported precision");
+        }
+        out.writeByte(classValue);
+    }
+
     @Override
     public void write(DataOutput out) throws IOException {
-        out.writeDouble(predict);
-        out.writeByte(classValue);
+        this.write(out, PrecisionType.DOUBLE64);
     }
 
     @Override
@@ -80,6 +97,23 @@ public class Predict implements Bytable {
 
     public void readFields(DataInput in, int version) throws IOException {
         predict = in.readDouble();
+        classValue = in.readByte();
+    }
+
+    public void readFields(DataInput in, int version, PrecisionType pt) throws IOException {
+        switch(pt) {
+            case FLOAT32:
+                predict = in.readFloat();
+                break;
+            case FLOAT16:
+                predict = in.readFloat();
+                break;
+            case DOUBLE64:
+                predict = in.readDouble();
+                break;
+            default:
+                throw new UnsupportedOperationException("Not supported precision");
+        }
         classValue = in.readByte();
     }
 

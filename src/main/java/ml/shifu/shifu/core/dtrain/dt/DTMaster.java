@@ -49,6 +49,8 @@ import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
 import ml.shifu.shifu.util.ModelSpecLoaderUtils;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -311,7 +313,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             weightedTrainCount += params.getTrainCount();
             weightedValidationCount += params.getValidationCount();
         }
-        
+
         for(Entry<Integer, NodeStats> entry: nodeStatsMap.entrySet()) {
             NodeStats nodeStats = entry.getValue();
             int treeId = nodeStats.getTreeId();
@@ -334,6 +336,8 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
             if(maxGainInfo == null) {
                 // null gain info, set to leaf and continue next stats
                 doneNode.setLeaf(true);
+                doneNode.setPredict(new Predict(0.0d)); // add zero predict, or it will cause NullPointException,
+                                                        // if user enable MinInfoGain or MinInstancesPerNode
                 continue;
             }
             populateGainInfoToNode(treeId, doneNode, maxGainInfo);
@@ -921,7 +925,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         this.allFeatures = this.getAllFeatureList(columnConfigList, isAfterVarSelect);
 
         int trainerId = Integer.valueOf(context.getProps().getProperty(CommonConstants.SHIFU_TRAINER_ID, "0"));
-        // If grid search, select valid paramters, if not parameters is what in ModelConfig.json
+        // If grid search, select valid parameters, if not parameters is what in ModelConfig.json
         GridSearch gs = new GridSearch(modelConfig.getTrain().getParams(),
                 modelConfig.getTrain().getGridConfigFileContent());
         Map<String, Object> validParams = this.modelConfig.getTrain().getParams();
@@ -1024,12 +1028,20 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
         // these two parameters is to stop tree growth parameters
         int minInstancesPerNode = Integer.valueOf(validParams.get("MinInstancesPerNode").toString());
         double minInfoGain = Double.valueOf(validParams.get("MinInfoGain").toString());
+        Object csmObj = validParams.get("CateSortMode");
+        String cateSortMode = null;
+        if(csmObj != null) {
+            cateSortMode = csmObj.toString();
+            if(StringUtils.isBlank(cateSortMode)) {
+                cateSortMode = "sort";
+            }
+        }
         if(imStr.equalsIgnoreCase("entropy")) {
-            impurity = new Entropy(numClasses, minInstancesPerNode, minInfoGain);
+            impurity = new Entropy(numClasses, minInstancesPerNode, minInfoGain, cateSortMode);
         } else if(imStr.equalsIgnoreCase("gini")) {
-            impurity = new Gini(numClasses, minInstancesPerNode, minInfoGain);
+            impurity = new Gini(numClasses, minInstancesPerNode, minInfoGain, cateSortMode);
         } else {
-            impurity = new Variance(minInstancesPerNode, minInfoGain);
+            impurity = new Variance(minInstancesPerNode, minInfoGain, cateSortMode);
         }
 
         // checkpoint folder and interval (every # iterations to do checkpoint)
@@ -1085,7 +1097,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
                     try {
                         Path modelPath = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
                         existingModel = (TreeModel) ModelSpecLoaderUtils.loadModel(modelConfig, modelPath,
-                                ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource()));
+                                ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource(), modelPath));
                         if(existingModel == null) {
                             // null means no existing model file or model file is in wrong format
                             this.trees = new CopyOnWriteArrayList<TreeNode>();
@@ -1118,7 +1130,7 @@ public class DTMaster extends AbstractMasterComputable<DTMasterParams, DTWorkerP
 
     private void recoverMasterStatus(SourceType sourceType) {
         FSDataInputStream stream = null;
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType, this.checkpointOutput);
         try {
             stream = fs.open(this.checkpointOutput);
             int treeSize = stream.readInt();

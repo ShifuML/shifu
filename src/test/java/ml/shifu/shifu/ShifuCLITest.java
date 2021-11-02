@@ -22,6 +22,7 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.fs.Path;
 import org.easymock.EasyMock;
 import org.powermock.api.easymock.PowerMock;
 import org.powermock.modules.testng.PowerMockObjectFactory;
@@ -34,6 +35,8 @@ import org.testng.annotations.Test;
 
 import java.io.*;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
 
 /**
  * ManagerTest class
@@ -201,7 +204,7 @@ public class ShifuCLITest {
         ShifuCLI.normalizeTrainData();
 
         // run train
-        ShifuCLI.trainModel(false, false, false);
+        ShifuCLI.trainModel(false);
 
         File modelFile = new File("models/model0.nn");
         Assert.assertTrue(modelFile.exists());
@@ -265,7 +268,7 @@ public class ShifuCLITest {
         FileUtils.copyDirectory(modelsDir, tmpModelsDir);
 
         // run evaluation set
-        ShifuCLI.runEvalSet(false);
+        ShifuCLI.runEvalSet(new HashMap<String, Object>());
         File evalScore = new File("evals/EvalA/EvalScore");
         Assert.assertTrue(evalScore.exists());
 
@@ -367,5 +370,26 @@ public class ShifuCLITest {
         File file = new File("model0.gbt.fi");
         Assert.assertTrue(file.exists());
         FileUtils.deleteQuietly(file);
+    }
+
+    @Test
+    public void testConvertDate() {
+        long ts = 1601103600l * 1000l;
+        Date date = new Date(ts);
+        System.out.println(date);
+
+        Assert.assertEquals("model0".replaceAll("\\..*$", ""), "model0");
+        Assert.assertEquals("model0.".replaceAll("\\..*$", ""), "model0");
+        Assert.assertEquals("model0.gbt".replaceAll("\\..*$", ""), "model0");
+        Assert.assertEquals("model0.nn.zip".replaceAll("\\..*$", ""), "model0");
+    }
+
+    @Test
+    public void testPath() {
+        Path filePath = new Path("tmp/354240.log");
+        String schema = filePath.toUri().getScheme();
+        String host = filePath.toUri().getHost();
+        System.out.println("Schema is " + schema);
+        System.out.println("Host is " + host);
     }
 }

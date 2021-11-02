@@ -30,7 +30,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf;
 import ml.shifu.shifu.core.Normalizer;
-import ml.shifu.shifu.util.NormalUtils;
+import ml.shifu.shifu.util.NormalizationUtils;
 
 /**
  * Created by zhanhu on 3/29/16.
@@ -91,7 +91,7 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
         discretize
                 .setDataType(DataType.DOUBLE)
                 .setField(
-                        FieldName.create(NormalUtils.getSimpleColumnName(config, columnConfigList, segmentExpansions,
+                        FieldName.create(NormalizationUtils.getSimpleColumnName(config, columnConfigList, segmentExpansions,
                                 datasetHeaders)))
                 .setMapMissingTo(Normalizer.normalize(config, null, cutoff, normType).get(0).toString())
                 .setDefaultValue(Normalizer.normalize(config, null, cutoff, normType).get(0).toString())
@@ -100,7 +100,7 @@ public class WoeLocalTransformCreator extends ZscoreLocalTransformCreator {
         // derived field name is consisted of FieldName and "_zscl"
         List<DerivedField> derivedFields = new ArrayList<DerivedField>();
         derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).setName(
-                FieldName.create(genPmmlColumnName(NormalUtils.getSimpleColumnName(config.getColumnName()), normType)))
+                FieldName.create(genPmmlColumnName(NormalizationUtils.getSimpleColumnName(config.getColumnName()), normType)))
                 .setExpression(discretize));
         return derivedFields;
     }

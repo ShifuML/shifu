@@ -71,7 +71,8 @@ public class ShifuFileUtils {
      *             - if any I/O exception in processing
      */
     public static boolean createFileIfNotExists(String path, SourceType sourceType) throws IOException {
-        return getFileSystemBySourceType(sourceType).createNewFile(new Path(path));
+        Path filePath = new Path(path);
+        return getFileSystemBySourceType(sourceType, filePath).createNewFile(filePath);
     }
 
     /**
@@ -101,7 +102,8 @@ public class ShifuFileUtils {
      *             any io exception
      */
     public static boolean createDirIfNotExists(String path, SourceType sourceType) throws IOException {
-        return getFileSystemBySourceType(sourceType).mkdirs(new Path(path));
+        Path filePath = new Path(path);
+        return getFileSystemBySourceType(sourceType, filePath).mkdirs(filePath);
     }
 
     /**
@@ -133,8 +135,9 @@ public class ShifuFileUtils {
      *             - if any I/O exception in processing
      */
     public static BufferedWriter getWriter(String path, SourceType sourceType) throws IOException {
-        return new BufferedWriter(new OutputStreamWriter(getFileSystemBySourceType(sourceType).create(new Path(path)),
-                Constants.DEFAULT_CHARSET));
+        Path filePath = new Path(path);
+        return new BufferedWriter(new OutputStreamWriter(getFileSystemBySourceType(sourceType, filePath)
+                .create(filePath), Constants.DEFAULT_CHARSET));
     }
 
     /**
@@ -167,8 +170,9 @@ public class ShifuFileUtils {
      */
     public static BufferedReader getReader(String path, SourceType sourceType) throws IOException {
         try {
+            Path filePath = new Path(path);
             return new BufferedReader(new InputStreamReader(getCompressInputStream(
-                    getFileSystemBySourceType(sourceType).open(new Path(path)), new Path(path)),
+                    getFileSystemBySourceType(sourceType, filePath).open(filePath), filePath),
                     Constants.DEFAULT_CHARSET));
         } catch (IOException e) {
             // To manual fix a issue that FileSystem is closed exceptionally. Here we renew a FileSystem object to make
@@ -176,7 +180,8 @@ public class ShifuFileUtils {
             if(e.getMessage() != null) {
                 if(e.getMessage().toLowerCase().indexOf("filesystem closed") >= 0) {
                     if(sourceType == SourceType.HDFS) {
-                        return new BufferedReader(new InputStreamReader(HDFSUtils.renewFS().open(new Path(path)),
+                        Path filePath = new Path(path);
+                        return new BufferedReader(new InputStreamReader(HDFSUtils.renewFS(filePath).open(filePath),
                                 Constants.DEFAULT_CHARSET));
                     }
                 }
@@ -194,14 +199,14 @@ public class ShifuFileUtils {
      */
     public static InputStream getInputStream(Path path, SourceType sourceType) throws IOException {
         try {
-            return getCompressInputStream(getFileSystemBySourceType(sourceType).open(path), path);
+            return getCompressInputStream(getFileSystemBySourceType(sourceType, path).open(path), path);
         } catch (IOException e) {
             // To manual fix a issue that FileSystem is closed exceptionally. Here we renew a FileSystem object to make
             // sure all go through such issues.
             if(e.getMessage() != null) {
                 if(e.getMessage().toLowerCase().indexOf("filesystem closed") >= 0) {
                     if(sourceType == SourceType.HDFS) {
-                        return HDFSUtils.renewFS().open(path);
+                        return HDFSUtils.renewFS(path).open(path);
                     }
                 }
             }
@@ -275,10 +280,10 @@ public class ShifuFileUtils {
     @SuppressWarnings("deprecation")
     public static List<Scanner> getDataScanners(String path, SourceType sourceType, final PathFilter pathFilter)
             throws IOException {
-        FileSystem fs = getFileSystemBySourceType(sourceType);
+        Path p = new Path(path);
+        FileSystem fs = getFileSystemBySourceType(sourceType, p);
 
         FileStatus[] listStatus;
-        Path p = new Path(path);
         if(fs.getFileStatus(p).isDir()) {
             // for folder we need filter pig header files
             listStatus = fs.listStatus(p, new PathFilter() {
@@ -349,6 +354,85 @@ public class ShifuFileUtils {
     }
 
     /**
+     * Get the BufferedReader for dath with @path and @sourceType
+     * @param path - source file
+     * @param sourceType - local / hdfs
+     * @return - the BufferedReader for that path
+     * @throws IOException - if any I/O exception in processing
+     */
+    public static List<BufferedReader> getBufferedReaders(String path, SourceType sourceType) throws IOException {
+        return getBufferedReaders(path, sourceType, null);
+    }
+
+    /**
+     * Get the BufferedReader for dath with @path and @sourceType
+     * @param path - source file
+     * @param sourceType - local / hdfs
+     * @param pathFilter - path filter to filter file under path
+     * @return - the BufferedReader for that path
+     * @throws IOException - if any I/O exception in processing
+     */
+    public static List<BufferedReader> getBufferedReaders(String path, SourceType sourceType, final PathFilter pathFilter)
+            throws IOException {
+        Path p = new Path(path);
+        FileSystem fs = getFileSystemBySourceType(sourceType, p);
+
+        FileStatus[] listStatus;
+        if(fs.getFileStatus(p).isDir()) {
+            // for folder we need filter pig header files
+            listStatus = fs.listStatus(p, new PathFilter() {
+                @Override
+                public boolean accept(Path path) {
+                    boolean hiddenOrSuccessFile = path.getName().startsWith(Constants.HIDDEN_FILES)
+                            || path.getName().equalsIgnoreCase("_SUCCESS");
+                    if(pathFilter != null) {
+                        return !hiddenOrSuccessFile && pathFilter.accept(path);
+                    } else {
+                        return !hiddenOrSuccessFile;
+                    }
+                }
+            });
+        } else {
+            listStatus = new FileStatus[] { fs.getFileStatus(p) };
+        }
+
+        if(listStatus.length > 1) {
+            Arrays.sort(listStatus, new Comparator<FileStatus>() {
+
+                @Override
+                public int compare(FileStatus f1, FileStatus f2) {
+                    return f1.getPath().getName().compareTo(f2.getPath().getName());
+                }
+
+            });
+        }
+
+        List<BufferedReader> readers = new ArrayList<BufferedReader>();
+        for(FileStatus f: listStatus) {
+            String filename = f.getPath().getName();
+
+            if(f.isDir()) {
+                log.warn("Skip - {}, since it's direcory, please check your configuration.", filename);
+                continue;
+            }
+
+            log.debug("Creating Scanner for file: {} ", filename);
+            if(filename.endsWith(Constants.GZ_SUFFIX)) {
+                readers.add(new BufferedReader(new InputStreamReader(new GZIPInputStream(fs.open(f.getPath())),
+                        Constants.DEFAULT_CHARSET)));
+            } else if(filename.endsWith(Constants.BZ2_SUFFIX)) {
+                readers.add(new BufferedReader(new InputStreamReader(new BZip2CompressorInputStream(fs.open(f.getPath())),
+                        Constants.DEFAULT_CHARSET)));
+            } else {
+                readers.add(new BufferedReader(new InputStreamReader(new BufferedInputStream(fs.open(f.getPath())),
+                        Constants.DEFAULT_CHARSET)));
+            }
+        }
+
+        return readers;
+    }
+
+    /**
      * Copy src file to dst file in the same FileSystem. Such as copy local source to local destination,
      * copy hdfs source to hdfs dest.
      * 
@@ -368,13 +452,15 @@ public class ShifuFileUtils {
                     sourceType));
         }
 
-        FileSystem fs = getFileSystemBySourceType(sourceType);
+        Path destFilePath = new Path(destPath);
+        Path srcFilePath = new Path(srcPath);
+        FileSystem fs = getFileSystemBySourceType(sourceType, destFilePath);
         // delete all files in dst firstly because of different folder if has dstDataPath
-        if(!fs.delete(new Path(destPath), true)) {
+        if(!fs.delete(destFilePath, true)) {
             // ignore delete failed, it's ok.
         }
 
-        FileUtil.copy(fs, new Path(srcPath), fs, new Path(destPath), false, new Configuration());
+        FileUtil.copy(fs, srcFilePath, fs, destFilePath, false, new Configuration());
     }
 
     /**
@@ -396,12 +482,14 @@ public class ShifuFileUtils {
                     sourceType));
         }
 
-        FileSystem fs = getFileSystemBySourceType(sourceType);
-        if(!fs.exists(new Path(destPath))) {
+        Path destFilePath = new Path(destPath);
+        Path srcFilePath = new Path(srcPath);
+        FileSystem fs = getFileSystemBySourceType(sourceType, destFilePath);
+        if(!fs.exists(destFilePath)) {
             throw new RuntimeException(destPath + " does not exist.");
         }
 
-        FileUtil.copy(fs, new Path(srcPath), fs, new Path(destPath), false, new Configuration());
+        FileUtil.copy(fs, srcFilePath, fs, destFilePath, false, new Configuration());
     }
 
     /**
@@ -430,8 +518,9 @@ public class ShifuFileUtils {
      */
     @SuppressWarnings("deprecation")
     public static boolean isDir(String path, SourceType sourceType) throws IOException {
-        FileSystem fs = getFileSystemBySourceType(sourceType);
-        FileStatus status = fs.getFileStatus(new Path(path));
+        Path filePath = new Path(path);
+        FileSystem fs = getFileSystemBySourceType(sourceType, filePath);
+        FileStatus status = fs.getFileStatus(filePath);
         return status.isDir();
     }
 
@@ -484,15 +573,17 @@ public class ShifuFileUtils {
                     sourceType));
         }
 
-        FileSystem fs = getFileSystemBySourceType(sourceType);
+        Path destFilePath = new Path(destPath);
+        Path srcFilePath = new Path(srcPath);
+        FileSystem fs = getFileSystemBySourceType(sourceType, destFilePath);
         // delete all files in dst firstly because of different folder if has dstDataPath
-        if(!fs.delete(new Path(destPath), true)) {
+        if(!fs.delete(destFilePath, true)) {
             // ignore delete failed, it's ok.
         }
 
-        if(fs.exists(new Path(srcPath))) {
+        if(fs.exists(srcFilePath)) {
             // copy file only when source file exists.
-            fs.rename(new Path(srcPath), new Path(destPath));
+            fs.rename(srcFilePath, destFilePath);
             return true;
         }
 
@@ -511,7 +602,7 @@ public class ShifuFileUtils {
      *             - if any I/O exception in processing
      */
     public static boolean isFileExists(Path path, SourceType sourceType) throws IOException {
-        FileSystem fs = getFileSystemBySourceType(sourceType);
+        FileSystem fs = getFileSystemBySourceType(sourceType, path);
         FileStatus[] fileStatusArr = fs.globStatus(path);
         return !(fileStatusArr == null || fileStatusArr.length == 0);
     }
@@ -541,8 +632,9 @@ public class ShifuFileUtils {
      *             - if any I/O exception in processing
      */
     public static boolean deleteFile(String path, SourceType sourceType) throws IOException {
-        FileSystem fs = getFileSystemBySourceType(sourceType);
-        return fs.delete(new Path(path), true);
+        Path filePath = new Path(path);
+        FileSystem fs = getFileSystemBySourceType(sourceType, filePath);
+        return fs.delete(filePath, true);
     }
 
     /**
@@ -558,8 +650,9 @@ public class ShifuFileUtils {
      *             - if any I/O exception in processing
      */
     public static List<String> expandPath(String rawPath, SourceType sourceType) throws IOException {
-        FileSystem fs = getFileSystemBySourceType(sourceType);
-        FileStatus[] fsArr = fs.globStatus(new Path(rawPath));
+        Path filePath = new Path(rawPath);
+        FileSystem fs = getFileSystemBySourceType(sourceType, filePath);
+        FileStatus[] fsArr = fs.globStatus(filePath);
 
         List<String> filePathList = new ArrayList<String>();
         if(fsArr != null) {
@@ -575,17 +668,19 @@ public class ShifuFileUtils {
      * Get the FileSystem, according the source type
      * 
      * @param sourceType
-     *            - which kind of file system
+     *          - which kind of file system
+     * @param path
+     *          - path that could specified which file system to use
      * @return - file system handler
      */
-    public static FileSystem getFileSystemBySourceType(SourceType sourceType) {
+    public static FileSystem getFileSystemBySourceType(SourceType sourceType, Path path) {
         if(sourceType == null) {
             throw new IllegalArgumentException("sourceType should not be null.");
         }
 
         switch(sourceType) {
             case HDFS:
-                return HDFSUtils.getFS();
+                return HDFSUtils.getFS(path);
             case LOCAL:
                 return HDFSUtils.getLocalFS();
             default:
@@ -598,16 +693,13 @@ public class ShifuFileUtils {
         String path = config.getModelsPath();
 
         if(StringUtils.isNotEmpty(path)) {
-
-            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(config.getDataSet().getSource());
+            Path filePath = new Path(path);
+            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(config.getDataSet().getSource(), filePath);
 
             while(path.indexOf("/") > 0) {
                 path = path.substring(0, path.lastIndexOf("/"));
-
                 Path columnConfigFile = new Path(path + "/ColumnConfig.json");
-
                 if(fs.exists(columnConfigFile)) {
-
                     log.info("Using config file in this column config : {}", columnConfigFile.toString());
                     return CommonUtils.loadColumnConfigList(columnConfigFile.toString(), config.getDataSet()
                             .getSource());
@@ -622,7 +714,8 @@ public class ShifuFileUtils {
     public static List<String> readFilePartsIntoList(String filePath, SourceType sourceType) throws IOException {
         List<String> lines = new ArrayList<String>();
 
-        FileSystem fs = getFileSystemBySourceType(sourceType);
+        Path path = new Path(filePath);
+        FileSystem fs = getFileSystemBySourceType(sourceType, path);
         FileStatus[] fileStatsArr = getFilePartStatus(filePath, sourceType);
 
         CompressionCodecFactory compressionFactory = new CompressionCodecFactory(new Configuration());
@@ -648,7 +741,8 @@ public class ShifuFileUtils {
 
     public static FileStatus[] getFilePartStatus(String filePath, SourceType sourceType, final String partFilePrefix)
             throws IOException {
-        FileSystem fs = getFileSystemBySourceType(sourceType);
+        Path path = new Path(filePath);
+        FileSystem fs = getFileSystemBySourceType(sourceType, path);
 
         PathFilter filter = new PathFilter() {
             @Override
@@ -661,7 +755,7 @@ public class ShifuFileUtils {
 
         FileStatus[] fileStatsArr;
         try {
-            fileStatsArr = fs.listStatus(new Path(filePath), filter);
+            fileStatsArr = fs.listStatus(path, filter);
         } catch (Exception e) {
             // read from glob if not found in listStatus, it usually be a regex path
             fileStatsArr = fs.globStatus(new Path(filePath), filter);
@@ -677,8 +771,9 @@ public class ShifuFileUtils {
 
     public static List<FileStatus> getFileStatus(String filePath, SourceType sourceType) throws IOException {
         List<FileStatus> fileStatusList = new ArrayList<FileStatus>();
-        FileSystem fs = getFileSystemBySourceType(sourceType);
-        FileStatus[] fileStatusArr = fs.globStatus(new Path(filePath));
+        Path path = new Path(filePath);
+        FileSystem fs = getFileSystemBySourceType(sourceType, path);
+        FileStatus[] fileStatusArr = fs.globStatus(path);
         if ( fileStatusArr != null && fileStatusArr.length > 0 ) {
             for ( FileStatus fileStatus : fileStatusArr ) {
                 fetchFileStatus(fileStatus.getPath(), sourceType, fileStatusList);
@@ -689,7 +784,7 @@ public class ShifuFileUtils {
 
     private static void fetchFileStatus(Path filePath, SourceType sourceType, List<FileStatus> fileStatusList)
             throws IOException {
-        FileSystem fs = getFileSystemBySourceType(sourceType);
+        FileSystem fs = getFileSystemBySourceType(sourceType, filePath);
         try {
             FileStatus[] fileStatsArr = fs.listStatus(filePath);
             for(FileStatus fileStatus : fileStatsArr) {

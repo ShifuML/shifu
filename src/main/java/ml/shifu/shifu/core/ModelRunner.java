@@ -15,6 +15,7 @@
  */
 package ml.shifu.shifu.core;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -22,7 +23,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 
-import ml.shifu.shifu.util.NormalUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.encog.ml.BasicML;
@@ -38,7 +38,9 @@ import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
 import ml.shifu.shifu.core.model.ModelSpec;
 import ml.shifu.shifu.executor.ExecutorManager;
 import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.NormalizationUtils;
 
 /**
  * ModelRunner class is to load the model and run the model for input data
@@ -75,21 +77,22 @@ public class ModelRunner {
      */
     private CategoryMissingNormType categoryMissingNormType = CategoryMissingNormType.POSRATE;
 
+
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
-            String dataDelimiter, List<BasicML> models) {
+            String dataDelimiter, List<BasicML> models) throws IOException {
         this(modelConfig, columnConfigList, header, dataDelimiter, models, 0);
     }
 
     // TODO: pass category missing norm type
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
-            String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex) {
+            String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex) throws IOException {
         this(modelConfig, columnConfigList, header, dataDelimiter, models, outputHiddenLayerIndex, false,
-                CategoryMissingNormType.POSRATE);
+                CategoryMissingNormType.POSRATE, null);
     }
 
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
             String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex, boolean isMultiThread,
-            CategoryMissingNormType categoryMissingNormType) {
+            CategoryMissingNormType categoryMissingNormType, PrecisionType pt) throws IOException {
         this.modelConfig = modelConfig;
         this.columnConfigList = columnConfigList;
         this.header = header;
@@ -97,7 +100,20 @@ public class ModelRunner {
         this.isMultiThread = isMultiThread;
         this.categoryMissingNormType = categoryMissingNormType;
         this.scorer = new Scorer(models, columnConfigList, modelConfig.getAlgorithm(), modelConfig,
-                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex, isMultiThread);
+                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex, isMultiThread, pt);
+        this.scorer.setCategoryMissingNormType(categoryMissingNormType);
+    }
+
+    public ModelRunner(ModelConfig modelConfig, List<List<ColumnConfig>> mtlColumnConfigList, String[] header,
+            String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex, boolean isMultiThread,
+            CategoryMissingNormType categoryMissingNormType, boolean isMultiTask, PrecisionType pt) throws IOException {
+        this.modelConfig = modelConfig;
+        this.header = header;
+        this.dataDelimiter = dataDelimiter;
+        this.isMultiThread = isMultiThread;
+        this.categoryMissingNormType = categoryMissingNormType;
+        this.scorer = new Scorer(models, mtlColumnConfigList, modelConfig.getAlgorithm(), modelConfig,
+                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex, isMultiThread, isMultiTask, pt);
         this.scorer.setCategoryMissingNormType(categoryMissingNormType);
     }
 
@@ -114,8 +130,10 @@ public class ModelRunner {
      *            - @ColumnConfig list for Model
      * @param models
      *            - models
+     * @throws IOException
+     *            - fail to load model segments
      */
-    public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, List<BasicML> models) {
+    public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, List<BasicML> models) throws IOException {
         this(modelConfig, columnConfigList, models, Normalizer.STD_DEV_CUTOFF);
     }
 
@@ -132,9 +150,11 @@ public class ModelRunner {
      *            - models
      * @param stdDevCutoff
      *            - the standard deviation cutoff to normalize data
+     * @throws IOException
+     *           - fail to load model segments
      */
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, List<BasicML> models,
-            double stdDevCutoff) {
+            double stdDevCutoff) throws IOException{
         this.columnConfigList = columnConfigList;
         this.modelConfig = modelConfig;
         this.scorer = new Scorer(models, columnConfigList, ALGORITHM.NN.name(), modelConfig, stdDevCutoff);
@@ -169,7 +189,7 @@ public class ModelRunner {
      * @return CaseScoreResult
      */
     public CaseScoreResult compute(Map<String, String> rawDataMap) {
-        return computeNsData(NormalUtils.convertRawMapToNsDataMap(rawDataMap));
+        return computeNsData(NormalizationUtils.convertRawMapToNsDataMap(rawDataMap));
     }
 
     /**
@@ -270,8 +290,10 @@ public class ModelRunner {
      *            - model spec for sub model
      * @param isMultiThread
      *            - use multi-thread to run scoring or not
+     * @throws IOException
+     *            - exception when build sub-models
      */
-    public void addSubModels(ModelSpec modelSpec, boolean isMultiThread) {
+    public void addSubModels(ModelSpec modelSpec, boolean isMultiThread) throws IOException {
         if(this.subScorers == null) {
             this.subScorers = new TreeMap<String, Scorer>();
         }
@@ -289,8 +311,10 @@ public class ModelRunner {
      * 
      * @param modelSpec
      *            - model spec for sub model
+     * @throws IOException
+     *            - exception when build sub-models
      */
-    public void addSubModels(ModelSpec modelSpec) {
+    public void addSubModels(ModelSpec modelSpec) throws IOException {
         this.addSubModels(modelSpec, false);
     }
 

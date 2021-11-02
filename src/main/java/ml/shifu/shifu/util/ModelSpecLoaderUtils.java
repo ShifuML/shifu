@@ -1,20 +1,35 @@
+/*
+ * Copyright [2013-2018] PayPal Software Foundation
+ * <p>
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
 package ml.shifu.shifu.util;
 
-import ml.shifu.shifu.container.obj.*;
-import ml.shifu.shifu.container.obj.GenericModelConfig.ComputeImplClass;
-import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.core.*;
-import ml.shifu.shifu.core.dtrain.CommonConstants;
-import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
-import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
-import ml.shifu.shifu.core.dtrain.gs.GridSearch;
-import ml.shifu.shifu.core.dtrain.lr.LogisticRegressionContants;
-import ml.shifu.shifu.core.model.ModelSpec;
-import ml.shifu.shifu.exception.ShifuErrorCode;
-import ml.shifu.shifu.exception.ShifuException;
-import ml.shifu.shifu.fs.PathFinder;
-import ml.shifu.shifu.fs.ShifuFileUtils;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.TreeMap;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
@@ -30,23 +45,31 @@ import org.encog.persist.PersistorRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.util.*;
-
-/**
- * Copyright [2013-2018] PayPal Software Foundation
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License")
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- **/
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.EvalConfig;
+import ml.shifu.shifu.container.obj.GenericModelConfig;
+import ml.shifu.shifu.container.obj.GenericModelConfig.ComputeImplClass;
+import ml.shifu.shifu.container.obj.ModelConfig;
+import ml.shifu.shifu.container.obj.ModelTrainConf;
+import ml.shifu.shifu.container.obj.ModelTrainConf.ALGORITHM;
+import ml.shifu.shifu.container.obj.RawSourceData;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.core.Computable;
+import ml.shifu.shifu.core.GenericModel;
+import ml.shifu.shifu.core.LR;
+import ml.shifu.shifu.core.NNModel;
+import ml.shifu.shifu.core.TreeModel;
+import ml.shifu.shifu.core.WDLModel;
+import ml.shifu.shifu.core.dtrain.CommonConstants;
+import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
+import ml.shifu.shifu.core.dtrain.gs.GridSearch;
+import ml.shifu.shifu.core.dtrain.mtl.MTLModel;
+import ml.shifu.shifu.core.model.ModelSpec;
+import ml.shifu.shifu.exception.ShifuErrorCode;
+import ml.shifu.shifu.fs.PathFinder;
+import ml.shifu.shifu.fs.ShifuFileUtils;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 
 public class ModelSpecLoaderUtils {
 
@@ -101,12 +124,11 @@ public class ModelSpecLoaderUtils {
      */
     public static List<BasicML> loadBasicModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
             throws IOException {
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
-
         List<BasicML> models = new ArrayList<BasicML>();
         List<Path> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
             for(Path f: modelFileStats) {
+                FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType, f);
                 models.add(loadModel(modelConfig, f, fs));
             }
         }
@@ -178,7 +200,6 @@ public class ModelSpecLoaderUtils {
     public static List<BasicML> loadBasicModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType,
             boolean gbtConvertToProb, String gbtScoreConvertStrategy) throws IOException {
         List<BasicML> models = new ArrayList<BasicML>();
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         // check if eval generic model, if so bypass the Shifu model loader procedure
         if(Constants.GENERIC.equalsIgnoreCase(modelConfig.getAlgorithm()) // generic or TensorFlow algorithm
                 || Constants.TENSORFLOW.equalsIgnoreCase(modelConfig.getAlgorithm())) {
@@ -194,6 +215,7 @@ public class ModelSpecLoaderUtils {
         List<Path> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         if(CollectionUtils.isNotEmpty(modelFileStats)) {
             for(Path fst: modelFileStats) {
+                FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType, fst);
                 models.add(loadModel(modelConfig, fst, fs, gbtConvertToProb, gbtScoreConvertStrategy));
             }
         }
@@ -224,7 +246,9 @@ public class ModelSpecLoaderUtils {
         String modelsDir = currUserDir + File.separator + Constants.MODELS;
         // check if model dir is exist
         if(!new File(modelsDir).exists()) {
-            HDFSUtils.getFS().copyToLocalFile(false, new Path(src), new Path(modelsDir), true);
+            Path srcPath = new Path(src);
+            Path modelPath = new Path(modelsDir);
+            HDFSUtils.getFS(srcPath).copyToLocalFile(false, srcPath, modelPath, true);
         }
 
         List<BasicML> results = new ArrayList<>();
@@ -269,7 +293,7 @@ public class ModelSpecLoaderUtils {
             RawSourceData.SourceType sourceType) throws IOException {
         List<Path> modelFileStats = locateBasicModels(modelConfig, evalConfig, sourceType);
         List<String> modelNames = new ArrayList<>();
-        if (CollectionUtils.isNotEmpty(modelFileStats)) {
+        if(CollectionUtils.isNotEmpty(modelFileStats)) {
             modelFileStats.stream().forEach(modelPath -> modelNames.add(formatModelScoreName(modelPath.getName())));
         }
         return modelNames;
@@ -277,11 +301,13 @@ public class ModelSpecLoaderUtils {
 
     /**
      * format file name into the model score name
-     * @param fileName - model spec file name
+     * 
+     * @param fileName
+     *            - model spec file name
      * @return standard model score name
      */
     public static String formatModelScoreName(String fileName) {
-        if (StringUtils.isBlank(fileName)) {
+        if(StringUtils.isBlank(fileName)) {
             return null;
         } else {
             String name = StringUtils.trim(fileName); // trim empty space
@@ -373,6 +399,11 @@ public class ModelSpecLoaderUtils {
             baggingModelSize = gs.getFlattenParams().size();
         }
 
+        if (baggingModelSize > listStatus.size()) {
+            LOG.warn("Expect {} models, but only found {} models. Some models may be note built in training step.",
+                    baggingModelSize, listStatus.size());
+            baggingModelSize = listStatus.size();
+        }
         listStatus = (baggingModelSize > 0) ? listStatus.subList(0, baggingModelSize) : listStatus;
         return listStatus;
     }
@@ -452,7 +483,7 @@ public class ModelSpecLoaderUtils {
         BufferedReader br = null;
         try {
             stream = fs.open(modelPath);
-            if(modelPath.getName().endsWith(LogisticRegressionContants.LR_ALG_NAME.toLowerCase())) { // LR model
+            if(modelPath.getName().endsWith(CommonConstants.LR_ALG_NAME.toLowerCase())) { // LR model
                 br = new BufferedReader(new InputStreamReader(stream));
                 try {
                     return LR.loadFromString(br.readLine());
@@ -462,21 +493,37 @@ public class ModelSpecLoaderUtils {
                     return BasicML.class.cast(EncogDirectoryPersistence.loadObject(stream));
                 }
             } else if(modelPath.getName().endsWith(CommonConstants.RF_ALG_NAME.toLowerCase()) // RF or GBT
-                    || modelPath.getName().endsWith(CommonConstants.GBT_ALG_NAME.toLowerCase())) {
-                return TreeModel.loadFromStream(stream, gbtConvertToProb, gbtScoreConvertStrategy);
-            } else if(modelPath.getName().endsWith(Constants.WDL_ALG_NAME.toLowerCase())) {
+                    || modelPath.getName().contains(CommonConstants.GBT_ALG_NAME.toLowerCase())) {
+                if(modelPath.toString().endsWith(PrecisionType.FLOAT32.toString().toLowerCase())) {
+                    return TreeModel.loadFromStream(stream, gbtConvertToProb, gbtScoreConvertStrategy,
+                            PrecisionType.FLOAT32);
+                } else if(modelPath.toString().endsWith(PrecisionType.FLOAT16.toString().toLowerCase())) {
+                    return TreeModel.loadFromStream(stream, gbtConvertToProb, gbtScoreConvertStrategy,
+                            PrecisionType.FLOAT16);
+                } else {
+                    return TreeModel.loadFromStream(stream, gbtConvertToProb, gbtScoreConvertStrategy);
+                }
+            } else if(modelPath.getName().endsWith(CommonConstants.WDL_ALG_NAME.toLowerCase())) {
                 return WDLModel.loadFromStream(stream);
+            } else if(modelPath.getName().endsWith(CommonConstants.MTL_ALG_NAME.toLowerCase())) {
+                return MTLModel.loadFromStream(stream);
             } else {
                 GzipStreamPair pair = GzipStreamPair.isGZipFormat(stream);
                 if(pair.isGzip()) {
-                    return BasicML.class.cast(NNModel.loadFromStream(pair.getInput()));
+                    if(modelPath.toString().endsWith(PrecisionType.FLOAT32.toString().toLowerCase())) {
+                        return BasicML.class.cast(NNModel.loadFromStream(pair.getInput(), PrecisionType.FLOAT32));
+                    } else if(modelPath.toString().endsWith(PrecisionType.FLOAT16.toString().toLowerCase())) {
+                        return BasicML.class.cast(NNModel.loadFromStream(pair.getInput(), PrecisionType.FLOAT16));
+                    } else {
+                        return BasicML.class.cast(NNModel.loadFromStream(pair.getInput(), PrecisionType.DOUBLE64));
+                    }
                 } else {
                     return BasicML.class.cast(EncogDirectoryPersistence.loadObject(pair.getInput()));
                 }
             }
         } catch (Exception e) {
-            String msg = "the expecting model file is: " + modelPath;
-            throw new ShifuException(ShifuErrorCode.ERROR_FAIL_TO_LOAD_MODEL_FILE, e, msg);
+            String msg = " the expecting model file is: " + modelPath;
+            throw new RuntimeException(ShifuErrorCode.ERROR_FAIL_TO_LOAD_MODEL_FILE.getDescription() + msg, e);
         } finally {
             IOUtils.closeQuietly(br);
             IOUtils.closeQuietly(stream);
@@ -501,7 +548,6 @@ public class ModelSpecLoaderUtils {
      */
     public static List<Path> findModels(ModelConfig modelConfig, EvalConfig evalConfig, SourceType sourceType)
             throws IOException {
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         PathFinder pathFinder = new PathFinder(modelConfig);
 
         // If the algorithm in ModelConfig is NN, we only load NN models
@@ -511,10 +557,13 @@ public class ModelSpecLoaderUtils {
         List<FileStatus> fileList = new ArrayList<>();
         if(null == evalConfig || StringUtils.isBlank(evalConfig.getModelsPath())) {
             Path path = new Path(pathFinder.getModelsPath(sourceType));
+            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType, path);
             fileList.addAll(Arrays.asList(fs.listStatus(path, new FileSuffixPathFilter(modelSuffix))));
         } else {
             String modelsPath = evalConfig.getModelsPath();
-            FileStatus[] expandedPaths = fs.globStatus(new Path(modelsPath));
+            Path filePath = new Path(modelsPath);
+            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath);
+            FileStatus[] expandedPaths = fs.globStatus(filePath);
             if(ArrayUtils.isNotEmpty(expandedPaths)) {
                 for(FileStatus fileStatus: expandedPaths) {
                     fileList.addAll(Arrays.asList(fs.listStatus(fileStatus.getPath(), // list all files
@@ -530,7 +579,7 @@ public class ModelSpecLoaderUtils {
 
         return paths;
     }
-
+    
     /**
      * Load the generic model config and parse it to java object.
      * Similar as {@link #findModels(ModelConfig, EvalConfig, RawSourceData.SourceType)}
@@ -547,7 +596,6 @@ public class ModelSpecLoaderUtils {
      */
     public static List<Path> findGenericModels(ModelConfig modelConfig, EvalConfig evalConfig,
             RawSourceData.SourceType sourceType) throws IOException {
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         PathFinder pathFinder = new PathFinder(modelConfig);
 
         // Find generic model config file with suffix .json
@@ -557,10 +605,13 @@ public class ModelSpecLoaderUtils {
         if(null == evalConfig || StringUtils.isBlank(evalConfig.getModelsPath())) {
             Path path = new Path(pathFinder.getModelsPath(sourceType)); // modelsPath / <ModelName>
             // + File.separator + modelConfig.getBasic().getName());
+            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType, path);
             fileList.addAll(Arrays.asList(fs.listStatus(path, new FileSuffixPathFilter(modelSuffix))));
         } else {
             String modelsPath = evalConfig.getModelsPath();
-            FileStatus[] expandedPaths = fs.globStatus(new Path(modelsPath)); // models / <ModelName>
+            Path filePath = new Path(modelsPath);
+            FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath);
+            FileStatus[] expandedPaths = fs.globStatus(filePath); // models / <ModelName>
             // + File.separator + modelConfig.getBasic().getName()));
             if(ArrayUtils.isNotEmpty(expandedPaths)) {
                 for(FileStatus epath: expandedPaths) {
@@ -574,7 +625,7 @@ public class ModelSpecLoaderUtils {
         for(FileStatus fileStatus: fileList) {
             paths.add(fileStatus.getPath());
         }
-        
+
         LOG.debug(" findGenericModels Path of tf models {}", paths);
 
         return paths;
@@ -622,7 +673,6 @@ public class ModelSpecLoaderUtils {
             EvalConfig evalConfig, RawSourceData.SourceType sourceType, Boolean gbtConvertToProb,
             String gbtScoreConvertStrategy) {
         List<ModelSpec> modelSpecs = new ArrayList<ModelSpec>();
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
 
         // we have to register PersistBasicFloatNetwork for loading such models
         PersistorRegistry.getInstance().add(new PersistBasicFloatNetwork());
@@ -635,8 +685,10 @@ public class ModelSpecLoaderUtils {
             modelsPath = evalConfig.getModelsPath();
         }
 
+        Path filePath = new Path(modelsPath);
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath);
         try {
-            FileStatus[] fsArr = fs.listStatus(new Path(modelsPath));
+            FileStatus[] fsArr = fs.listStatus(filePath);
             for(FileStatus fileStatus: fsArr) {
                 if(fileStatus.isDir()) {
                     ModelSpec modelSpec = loadSubModelSpec(modelConfig, columnConfigList, fileStatus, sourceType,
@@ -673,8 +725,6 @@ public class ModelSpecLoaderUtils {
     private static ModelSpec loadSubModelSpec(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             FileStatus fileStatus, RawSourceData.SourceType sourceType, Boolean gbtConvertToProb,
             String gbtScoreConvertStrategy) throws IOException {
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
-
         String subModelName = fileStatus.getPath().getName();
         List<FileStatus> modelFileStats = new ArrayList<FileStatus>();
         FileStatus[] subConfigs = new FileStatus[2];
@@ -690,6 +740,7 @@ public class ModelSpecLoaderUtils {
             });
             List<BasicML> models = new ArrayList<BasicML>();
             for(FileStatus f: modelFileStats) {
+                FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType, f.getPath());
                 models.add(loadModel(modelConfig, f.getPath(), fs, gbtConvertToProb, gbtScoreConvertStrategy));
             }
 
@@ -728,7 +779,7 @@ public class ModelSpecLoaderUtils {
             List<FileStatus> modelFileStats, FileStatus[] subConfigs) throws IOException {
         assert modelFileStats != null;
 
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType, fileStatus.getPath());
         ALGORITHM algorithm = null;
 
         FileStatus[] fileStatsArr = fs.listStatus(fileStatus.getPath());
@@ -738,11 +789,11 @@ public class ModelSpecLoaderUtils {
                     String fileName = fls.getPath().getName();
 
                     if(algorithm == null) {
-                        if(fileName.endsWith("." + ALGORITHM.NN.name().toLowerCase())) {
+                        if(fileName.contains("." + ALGORITHM.NN.name().toLowerCase())) {
                             algorithm = ALGORITHM.NN;
                         } else if(fileName.endsWith("." + ALGORITHM.LR.name().toLowerCase())) {
                             algorithm = ALGORITHM.LR;
-                        } else if(fileName.endsWith("." + ALGORITHM.GBT.name().toLowerCase())) {
+                        } else if(fileName.contains("." + ALGORITHM.GBT.name().toLowerCase())) {
                             algorithm = ALGORITHM.GBT;
                         }
                     }
@@ -778,7 +829,6 @@ public class ModelSpecLoaderUtils {
      */
     public static Map<String, List<String>> getSubModelScoreNames(ModelConfig modelConfig,
             List<ColumnConfig> columnConfigList, EvalConfig evalConfig, RawSourceData.SourceType sourceType) {
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         PathFinder pathFinder = new PathFinder(modelConfig);
 
         String modelsPath = null;
@@ -790,9 +840,10 @@ public class ModelSpecLoaderUtils {
         }
 
         Map<String, List<String>> subModelNames = new TreeMap<>();
-
+        Path filePath = new Path(modelsPath);
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath);
         try {
-            FileStatus[] fsArr = fs.listStatus(new Path(modelsPath));
+            FileStatus[] fsArr = fs.listStatus(filePath);
             for(FileStatus fileStatus: fsArr) {
                 if(fileStatus.isDirectory()) {
                     List<FileStatus> subModelSpecFiles = new ArrayList<>();
@@ -827,7 +878,6 @@ public class ModelSpecLoaderUtils {
     @SuppressWarnings("deprecation")
     public static Map<String, Integer> getSubModelsCnt(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             EvalConfig evalConfig, RawSourceData.SourceType sourceType) {
-        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType);
         PathFinder pathFinder = new PathFinder(modelConfig);
 
         String modelsPath = null;
@@ -839,9 +889,10 @@ public class ModelSpecLoaderUtils {
         }
 
         Map<String, Integer> subModelsCnt = new TreeMap<String, Integer>();
-
+        Path filePath = new Path(modelsPath);
+        FileSystem fs = ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath);
         try {
-            FileStatus[] fsArr = fs.listStatus(new Path(modelsPath));
+            FileStatus[] fsArr = fs.listStatus(filePath);
             for(FileStatus fileStatus: fsArr) {
                 if(fileStatus.isDir()) {
                     List<FileStatus> subModelSpecFiles = new ArrayList<FileStatus>();
@@ -931,14 +982,32 @@ public class ModelSpecLoaderUtils {
                     if(ALGORITHM.NN.equals(alg)) {
                         GzipStreamPair pair = GzipStreamPair.isGZipFormat(is);
                         if(pair.isGzip()) {
-                            models.add(BasicML.class.cast(NNModel.loadFromStream(pair.getInput())));
+                            if(nnf.toString().endsWith(PrecisionType.FLOAT32.toString().toLowerCase())) {
+                                models.add(BasicML.class
+                                        .cast(NNModel.loadFromStream(pair.getInput(), PrecisionType.FLOAT32)));
+                            } else if(nnf.toString().endsWith(PrecisionType.FLOAT16.toString().toLowerCase())) {
+                                models.add(BasicML.class
+                                        .cast(NNModel.loadFromStream(pair.getInput(), PrecisionType.FLOAT16)));
+                            } else {
+                                models.add(BasicML.class
+                                        .cast(NNModel.loadFromStream(pair.getInput(), PrecisionType.DOUBLE64)));
+                            }
                         } else {
                             models.add(BasicML.class.cast(EncogDirectoryPersistence.loadObject(pair.getInput())));
                         }
                     } else if(ALGORITHM.LR.equals(alg)) {
                         models.add(LR.loadFromStream(is));
                     } else if(ALGORITHM.GBT.equals(alg) || ALGORITHM.RF.equals(alg)) {
-                        models.add(TreeModel.loadFromStream(is, isConvertToProb, gbtScoreConvertStrategy));
+                        if(nnf.toString().endsWith(PrecisionType.FLOAT32.toString().toLowerCase())) {
+                            models.add(TreeModel.loadFromStream(is, isConvertToProb, gbtScoreConvertStrategy,
+                                    PrecisionType.FLOAT32));
+                        } else if(nnf.toString().endsWith(PrecisionType.FLOAT16.toString().toLowerCase())) {
+                            models.add(TreeModel.loadFromStream(is, isConvertToProb, gbtScoreConvertStrategy,
+                                    PrecisionType.FLOAT16));
+
+                        } else {
+                            models.add(TreeModel.loadFromStream(is, isConvertToProb, gbtScoreConvertStrategy));
+                        }
                     }
                 } finally {
                     IOUtils.closeQuietly(is);

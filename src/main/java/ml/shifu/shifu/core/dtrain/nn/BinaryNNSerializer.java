@@ -31,6 +31,7 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.DTrainUtils;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.dtrain.dataset.PersistBasicFloatNetwork;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -45,6 +46,11 @@ public class BinaryNNSerializer {
 
     public static void save(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, List<BasicML> basicNetworks,
             FileSystem fs, Path output) throws IOException {
+        save(modelConfig, columnConfigList, basicNetworks, fs, output, PrecisionType.DOUBLE64);
+    }
+
+    public static void save(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, List<BasicML> basicNetworks,
+            FileSystem fs, Path output, PrecisionType pt) throws IOException {
         DataOutputStream fos = null;
         try {
             fos = new DataOutputStream(new GZIPOutputStream(fs.create(output)));
@@ -104,7 +110,7 @@ public class BinaryNNSerializer {
             // persist network, set it as list
             fos.writeInt(basicNetworks.size());
             for(BasicML network: basicNetworks) {
-                new PersistBasicFloatNetwork().saveNetwork(fos, (BasicFloatNetwork) network);
+                new PersistBasicFloatNetwork().saveNetwork(fos, (BasicFloatNetwork) network, pt);
             }
         } finally {
             IOUtils.closeStream(fos);

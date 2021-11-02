@@ -58,7 +58,7 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
         Integer columnId = (Integer) input.get(0);
         DataBag databag = (DataBag) input.get(1);
         int corrColumnId = columnId;
-        if(corrColumnId >= super.columnConfigList.size()){
+        if(corrColumnId >= super.columnConfigList.size()) {
             corrColumnId = corrColumnId % super.columnConfigList.size();
         }
         ColumnConfig columnConfig = super.columnConfigList.get(corrColumnId);
@@ -109,16 +109,15 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
             log.info("mergeBin: " + (System.currentTimeMillis() - start) + "ms");
         }
 
-        Tuple output = TupleFactory.getInstance().newTuple(2);
+        Tuple output = TupleFactory.getInstance().newTuple(3);
         output.set(0, columnId);
         List<?> binFields = binning.getDataBin();
 
-        // Do check here. It's because if there are too many value for categorical variable,
-        // it will consume too much memory when join them together, that will cause OOM exception
         if(columnConfig.isCategorical() && binFields.size() > this.maxCategorySize) {
             log.warn(columnId + " " + columnConfig.getColumnName() + " is over maximal categorical size: "
-                    + this.maxCategorySize);
-            output.set(1, "");
+                    + this.maxCategorySize + "only keep random " + this.maxCategorySize
+                    + "category, better to use hash column or check if it is numerical variable.");
+            output.set(1, StringUtils.join(binFields, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
         } else {
             if(columnConfig.isHybrid()) {
                 String finalBinStr = StringUtils.join(binFields, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
@@ -128,6 +127,12 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
             } else {
                 output.set(1, StringUtils.join(binFields, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR));
             }
+        }
+
+        if(columnConfig.isCategorical()) {
+            output.set(2, ((CategoricalBinning) binning).cardinality());
+        } else {
+            output.set(2, -1L);
         }
 
         log.info("Finish merging bin info for columnId - " + columnId);
@@ -141,6 +146,7 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
             Schema tupleSchema = new Schema();
             tupleSchema.add(new FieldSchema("columnId", DataType.INTEGER));
             tupleSchema.add(new FieldSchema("binningDataInfo", DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema("cardinality", DataType.LONG));
 
             return new Schema(new Schema.FieldSchema("BinningDataInfo", tupleSchema, DataType.TUPLE));
         } catch (IOException e) {

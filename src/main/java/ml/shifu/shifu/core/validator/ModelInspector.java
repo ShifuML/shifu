@@ -42,7 +42,6 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.FeatureSubsetStrategy;
 import ml.shifu.shifu.core.dtrain.gs.GridSearch;
-import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.util.CommonUtils;
 
@@ -114,9 +113,11 @@ public class ModelInspector {
             // in INIT, only check if data or header are there or not
             result = ValidateResult.mergeResult(result, checkRawData(modelConfig.getDataSet(), "Train Set:"));
         } else if(ModelStep.STATS.equals(modelStep)) {
-            result = ValidateResult.mergeResult(result,
-                    checkFile("ColumnConfig.json", SourceType.LOCAL, "ColumnConfig.json : "));
-            result = ValidateResult.mergeResult(result, checkStatsConf(modelConfig));
+            if(!modelConfig.isMultiTask()) {
+                result = ValidateResult.mergeResult(result,
+                        checkFile("ColumnConfig.json", SourceType.LOCAL, "ColumnConfig.json : "));
+                result = ValidateResult.mergeResult(result, checkStatsConf(modelConfig));
+            }
             // verify categorical name file
             if(StringUtils.isNotBlank(modelConfig.getDataSet().getCategoricalColumnNameFile())) {
                 result = ValidateResult.mergeResult(result,
@@ -212,6 +213,9 @@ public class ModelInspector {
      */
     private ValidateResult checkColumnConf(ModelConfig modelConfig) throws IOException {
         ValidateResult result = new ValidateResult(true);
+        if(modelConfig.isMultiTask()) {
+            return result;
+        }
 
         if(StringUtils.isBlank(modelConfig.getTargetColumnName())) {
             result.addCause("The target column name is null or empty.");
@@ -238,13 +242,14 @@ public class ModelInspector {
             }
 
             if(Boolean.TRUE.equals(modelConfig.getVarSelect().getForceEnable())) {
-                String columnColumn = CommonUtils.containsAny(metaColumns, forceRemoveColumns);
-                if(columnColumn != null) {
-                    result.addCause(
-                            "Column - " + columnColumn + " exists both in meta column conf and force remove conf.");
-                }
+                // It's fine, if user put both variables both in metaColumns and forceRemoveColumns
+                // String columnColumn = CommonUtils.containsAny(metaColumns, forceRemoveColumns);
+                //      if(columnColumn != null) {
+                //          result.addCause(
+                //          "Column - " + columnColumn + " exists both in meta column conf and force remove conf.");
+                // }
 
-                columnColumn = CommonUtils.containsAny(metaColumns, forceSelectColumns);
+                String columnColumn = CommonUtils.containsAny(metaColumns, forceSelectColumns);
                 if(columnColumn != null) {
                     result.addCause(
                             "Column - " + columnColumn + " exists both in meta column conf and force select conf.");
@@ -285,7 +290,7 @@ public class ModelInspector {
                     new ValidateResult(false, Arrays.asList("stats#maxNumBin should be in [0, 32767].")));
         }
 
-        if(CollectionUtils.isEmpty(modelConfig.getTags())) {
+        if(!modelConfig.isMultiTask() && CollectionUtils.isEmpty(modelConfig.getTags())) {
             if(!(BinningMethod.EqualInterval.equals(modelConfig.getStats().getBinningMethod())
                     || BinningMethod.EqualTotal.equals(modelConfig.getStats().getBinningMethod()))) {
                 result = ValidateResult.mergeResult(result, new ValidateResult(false,
@@ -534,7 +539,7 @@ public class ModelInspector {
         GridSearch gs = new GridSearch(train.getParams(), train.getGridConfigFileContent());
         // such parameter validation only in regression and not grid search mode
         if(modelConfig.isRegression() && !gs.hasHyperParam()) {
-            if(train.getAlgorithm().equalsIgnoreCase("nn")) {
+            if(train.getAlgorithm().equalsIgnoreCase("nn") || train.getAlgorithm().equalsIgnoreCase("wdl")) {
                 Map<String, Object> params = train.getParams();
 
                 Object loss = params.get("Loss");
@@ -637,10 +642,10 @@ public class ModelInspector {
                 Object miniBatchsO = params.get(CommonConstants.MINI_BATCH);
                 if(miniBatchsO != null) {
                     Integer miniBatchs = Integer.valueOf(miniBatchsO.toString());
-                    if(miniBatchs != null && (miniBatchs <= 0 || miniBatchs > 1000)) {
+                    if(miniBatchs != null && (miniBatchs <= 0 || miniBatchs > 100000000)) {
                         ValidateResult tmpResult = new ValidateResult(true);
                         tmpResult.setStatus(false);
-                        tmpResult.getCauses().add("MiniBatchs should be in (0, 1000] if set.");
+                        tmpResult.getCauses().add("MiniBatchs should be in (0, 100000000] if set.");
                         result = ValidateResult.mergeResult(result, tmpResult);
                     }
                 }
@@ -681,7 +686,7 @@ public class ModelInspector {
 
             if(train.getAlgorithm().equalsIgnoreCase(CommonConstants.GBT_ALG_NAME)
                     || train.getAlgorithm().equalsIgnoreCase(CommonConstants.RF_ALG_NAME)
-                    || train.getAlgorithm().equalsIgnoreCase(NNConstants.NN_ALG_NAME)) {
+                    || train.getAlgorithm().equalsIgnoreCase(CommonConstants.NN_ALG_NAME)) {
                 Map<String, Object> params = train.getParams();
                 Object fssObj = params.get("FeatureSubsetStrategy");
 

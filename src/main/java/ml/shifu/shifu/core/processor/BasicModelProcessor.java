@@ -41,6 +41,7 @@ import ml.shifu.shifu.util.updater.ColumnConfigUpdater;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
@@ -61,6 +62,7 @@ public class BasicModelProcessor {
     protected ModelConfig modelConfig;
     protected List<ColumnConfig> columnConfigList;
     protected PathFinder pathFinder;
+    protected List<List<ColumnConfig>> mtlColumnConfigLists;
 
     /**
      * If not specified SHIFU_HOME env, some key configurations like pig path or lib path can be configured here
@@ -117,22 +119,45 @@ public class BasicModelProcessor {
             case INIT:
                 break;
             default:
-                loadColumnConfig();
-                validateColumnConfig();
+                List<List<ColumnConfig>> tmpCCList = new ArrayList<>();
+                List<String> tagColumns = null;
+                if(this.modelConfig.isMultiTask()) {
+                    tagColumns = this.modelConfig.getMultiTaskTargetColumnNames();
+                    this.mtlColumnConfigLists = new ArrayList<>();
+                    for(int i = 0; i < tagColumns.size(); i++) {
+                        String ccPath = this.pathFinder.getMTLColumnConfigPath(SourceType.LOCAL, i);
+                        this.mtlColumnConfigLists.add(this.loadColumnConfig(ccPath));
+                    }
+                    tmpCCList = this.mtlColumnConfigLists;
+                } else {
+                    this.columnConfigList = loadColumnConfig();
+                    tmpCCList.add(columnConfigList);
+                }
 
-                // if in stats but stats -c or stats -p or stats -rebin, column update should be called because of
-                // such stats steps should all be called after 'shifu stats', this is actually to call VoidUpdater
-                boolean strictCallVoidUpdate = (step == ModelStep.STATS)
-                        // && (getBooleanParam(this.params, Constants.IS_COMPUTE_CORR)
-                        && (getBooleanParam(this.params, Constants.IS_COMPUTE_PSI)
-                                || getBooleanParam(this.params, Constants.IS_REBIN));
+                for(int i = 0; i < tmpCCList.size(); i++) {
+                    List<ColumnConfig> ccs = tmpCCList.get(i);
+                    validateColumnConfig(ccs);
 
-                // update ColumnConfig and save to disk
-                ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, columnConfigList, step, strictCallVoidUpdate);
+                    // if in stats but stats -c or stats -p or stats -rebin, column update should be called because of
+                    // such stats steps should all be called after 'shifu stats', this is actually to call VoidUpdater
+                    boolean strictCallVoidUpdate = (step == ModelStep.STATS)
+                            // && (getBooleanParam(this.params, Constants.IS_COMPUTE_CORR)
+                            && (getBooleanParam(this.params, Constants.IS_COMPUTE_PSI)
+                                    || getBooleanParam(this.params, Constants.IS_REBIN));
+                    // update ColumnConfig and save to disk
+                    ColumnConfigUpdater.updateColumnConfigFlags(modelConfig, ccs, step, strictCallVoidUpdate, i);
+                    validateColumnConfigAfterSet(ccs);
+                }
 
-                validateColumnConfigAfterSet();
+                if(this.modelConfig.isMultiTask()) {
+                    for(int i = 0; i < tagColumns.size(); i++) {
+                        saveColumnConfigList(pathFinder.getMTLColumnConfigPath(SourceType.LOCAL, i),
+                                this.mtlColumnConfigLists.get(i));
+                    }
+                } else if(!ModelStep.EVAL.equals(step)) { // don't update ColumnConfig.json in Eval step
+                    saveColumnConfigList();
+                }
 
-                saveColumnConfigList();
                 break;
         }
 
@@ -154,13 +179,13 @@ public class BasicModelProcessor {
         }
     }
 
-    private void validateColumnConfigAfterSet() {
-        if(this.columnConfigList == null) {
+    private void validateColumnConfigAfterSet(List<ColumnConfig> ccList) {
+        if(ccList == null) {
             return;
         }
         NormType normType = this.modelConfig.getNormalizeType();
 
-        for(ColumnConfig config: this.columnConfigList) {
+        for(ColumnConfig config: ccList) {
             if(config.isHybrid() && !modelConfig.isRegression()) {
                 throw new IllegalArgumentException("Hybrid column " + config.getColumnName()
                         + " is found, but only supported in regression mode, not classfication mode.");
@@ -172,12 +197,12 @@ public class BasicModelProcessor {
         }
     }
 
-    private void validateColumnConfig() {
-        if(this.columnConfigList == null) {
+    private void validateColumnConfig(List<ColumnConfig> ccList) {
+        if(ccList == null) {
             return;
         }
         Set<NSColumn> names = new HashSet<NSColumn>();
-        for(ColumnConfig config: this.columnConfigList) {
+        for(ColumnConfig config: ccList) {
             if(StringUtils.isEmpty(config.getColumnName())) {
                 throw new IllegalArgumentException("Empty column name, please check your header file.");
             }
@@ -188,13 +213,13 @@ public class BasicModelProcessor {
             names.add(new NSColumn(config.getColumnName()));
         }
 
-        if(!names.contains(new NSColumn(modelConfig.getTargetColumnName()))) {
+        if(!modelConfig.isMultiTask() && !names.contains(new NSColumn(modelConfig.getTargetColumnName()))) {
             throw new IllegalArgumentException(
                     "target column " + modelConfig.getTargetColumnName() + " does not exist.");
         }
 
         if(StringUtils.isNotBlank(modelConfig.getWeightColumnName())
-                && !names.contains(new NSColumn(modelConfig.getWeightColumnName()))) {
+                && (!modelConfig.isMultiTask() && !names.contains(new NSColumn(modelConfig.getWeightColumnName())))) {
             throw new IllegalArgumentException(
                     "weight column " + modelConfig.getWeightColumnName() + " does not exist.");
         }
@@ -242,12 +267,25 @@ public class BasicModelProcessor {
     /**
      * save the Column Config
      * 
+     * @param ccList
+     *            the column config list
+     * 
+     * @throws IOException
+     *             an exception in saving column config
+     */
+    public void saveColumnConfigList(List<ColumnConfig> ccList) throws IOException {
+        LOG.info("Saving ColumnConfig...");
+        JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), ccList);
+    }
+
+    /**
+     * save the Column Config
+     * 
      * @throws IOException
      *             an exception in saving column config
      */
     public void saveColumnConfigList() throws IOException {
-        LOG.info("Saving ColumnConfig...");
-        JSONUtils.writeValue(new File(pathFinder.getColumnConfigPath(SourceType.LOCAL)), columnConfigList);
+        saveColumnConfigList(this.columnConfigList);
     }
 
     /**
@@ -266,24 +304,6 @@ public class BasicModelProcessor {
             ShifuFileUtils.createDirIfNotExists(new SourceFile(Constants.TMP, SourceType.LOCAL));
             saveColumnConfigList(backupColumnConfigPath, this.columnConfigList);
         }
-    }
-
-    public static long mappingToKey(long longValue) {
-        return longValue >>> 8;
-    }
-
-    // we get last AdaGraphStorageConstants.VERTEX_LABEL_INDEX_BIT_LENGTH_IN_INTERNALID bits to be vertex index
-    public static int mappingToVertexIndex(long longValue) {
-        return (int) (longValue & ((1 << 8) - 1));
-    }
-
-    public static long mappingToLong(int vertexIndex, long key) {
-        return (key << 8) + vertexIndex;
-    }
-
-    public static void main(String[] args) {
-        System.out.println(mappingToLong(0, 23977254002229l));
-        System.out.println(new Date(1466060400000L));
     }
 
     /**
@@ -316,16 +336,12 @@ public class BasicModelProcessor {
     }
 
     /**
-     * Close all scanners
-     * 
-     * @param scanners
-     *            the scanners
+     * Close a list of Closeable instance
+     * @param closeables - instances to close
      */
-    public void closeScanners(List<Scanner> scanners) {
-        if(CollectionUtils.isNotEmpty(scanners)) {
-            for(Scanner scanner: scanners) {
-                scanner.close();
-            }
+    public void closeClosable(List<? extends  Closeable> closeables) {
+        if(CollectionUtils.isNotEmpty(closeables)) {
+            closeables.stream().forEach(closeable -> IOUtils.closeQuietly(closeable));
         }
     }
 
@@ -423,7 +439,6 @@ public class BasicModelProcessor {
      *             modelConfig is not loaded or save ModelConfig.json file error
      */
     public void checkAlgorithmParam() throws Exception {
-
         String alg = modelConfig.getAlgorithm();
         Map<String, Object> param = modelConfig.getParams();
 
@@ -507,8 +522,10 @@ public class BasicModelProcessor {
             // do nothing
         } else if(Constants.WDL.equalsIgnoreCase(alg)) {
             // do nothing
+        } else if(CommonConstants.MTL_ALG_NAME.equalsIgnoreCase(alg)) {
+            // do nothing
         } else {
-            throw new ShifuException(ShifuErrorCode.ERROR_UNSUPPORT_ALG);
+            // do nothing
         }
 
         // log.info("Finished: check the algorithm parameter");
@@ -542,10 +559,14 @@ public class BasicModelProcessor {
      * @throws IOException
      *             in load column config
      */
-    private void loadColumnConfig() throws IOException {
-        columnConfigList = CommonUtils.loadColumnConfigList(
+    private List<ColumnConfig> loadColumnConfig() throws IOException {
+        return CommonUtils.loadColumnConfigList(
                 new Path(CommonUtils.getLocalModelSetPath(otherConfigs), Constants.LOCAL_COLUMN_CONFIG_JSON).toString(),
                 SourceType.LOCAL, false);
+    }
+
+    private List<ColumnConfig> loadColumnConfig(String ccFilePath) throws IOException {
+        return CommonUtils.loadColumnConfigList(ccFilePath, SourceType.LOCAL, false);
     }
 
     /**
@@ -602,7 +623,8 @@ public class BasicModelProcessor {
         this.otherConfigs = otherConfigs;
     }
 
-    protected void runDataClean(boolean isToShuffle, double expectPosRatio, boolean rblUpdateWeight) throws IOException {
+    protected void runDataClean(boolean isToShuffle, double expectPosRatio, boolean rblUpdateWeight)
+            throws IOException {
         SourceType sourceType = modelConfig.getDataSet().getSource();
         String cleanedDataPath = this.pathFinder.getCleanedDataPath();
 
@@ -636,7 +658,8 @@ public class BasicModelProcessor {
                 Map<String, String> confMap = new HashMap<>();
                 // validation data set is sent to UDF by MapReduce configuration
                 confMap.put(Constants.IS_VALIDATION_DATASET, "true");
-                PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap, sourceType, confMap, this.pathFinder);
+                PigExecutor.getExecutor().submitJob(modelConfig, normPigPath, paramsMap, sourceType, confMap,
+                        this.pathFinder);
             }
         } catch (IOException e) {
             throw new ShifuException(ShifuErrorCode.ERROR_RUNNING_PIG_JOB, e);
@@ -646,9 +669,9 @@ public class BasicModelProcessor {
 
         if(isToShuffle) {
             try {
-                runDataShuffle(this.modelConfig, this.columnConfigList,
-                        this.pathFinder.getCleanedDataPath(), this.pathFinder.getCleanedDataHeaderPath(),
-                        this.modelConfig.getDataSet().getSource(), expectPosRatio, rblUpdateWeight);
+                runDataShuffle(this.modelConfig, this.columnConfigList, this.pathFinder.getCleanedDataPath(),
+                        this.pathFinder.getCleanedDataHeaderPath(), this.modelConfig.getDataSet().getSource(),
+                        expectPosRatio, rblUpdateWeight);
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException("Fail to shuffle the cleaned data.", e);
             } catch (InterruptedException e) {
@@ -683,7 +706,7 @@ public class BasicModelProcessor {
      *             an exception in saving column config
      */
 
-    protected void saveColumnConfigList(String path, List<ColumnConfig> columnConfigs) throws IOException {
+    public void saveColumnConfigList(String path, List<ColumnConfig> columnConfigs) throws IOException {
         LOG.info("Saving ColumnConfig into {} ... ", path);
         JSONUtils.writeValue(new File(path), columnConfigs);
     }
@@ -783,9 +806,9 @@ public class BasicModelProcessor {
             throws IOException {
         String[] fields = CommonUtils.getHeaders(headerPath, delimiter, sourceType);
         int targetIndex = -1;
-        if (fields != null && fields.length > 0) {
-            for (int i = 0; i < fields.length; i ++) {
-                if (StringUtils.equals(targetName, fields[i])) {
+        if(fields != null && fields.length > 0) {
+            for(int i = 0; i < fields.length; i++) {
+                if(StringUtils.equals(targetName, fields[i])) {
                     targetIndex = i;
                     break;
                 }
@@ -795,11 +818,11 @@ public class BasicModelProcessor {
     }
 
     // shuffling normalized data, to make data random
-    protected void runDataShuffle(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
-            String dataPath, String headerPath, SourceType sourceType, double expectRatio, boolean rblUpdateWeight)
+    protected void runDataShuffle(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String dataPath,
+            String headerPath, SourceType sourceType, double expectRatio, boolean rblUpdateWeight)
             throws IOException, InterruptedException, ClassNotFoundException {
         MapReduceShuffle shuffler = new MapReduceShuffle(modelConfig);
-        if (modelConfig.isRegression() && expectRatio > 0) {
+        if(modelConfig.isRegression() && expectRatio > 0) {
             ColumnConfig columnConfig = CommonUtils.findTargetColumn(columnConfigList);
             double totalPosSum = columnConfig.getBinCountPos().stream().mapToDouble(a -> a.doubleValue()).sum();
             double totalNegSum = columnConfig.getBinCountNeg().stream().mapToDouble(a -> a.doubleValue()).sum();

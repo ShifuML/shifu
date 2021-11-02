@@ -1,6 +1,7 @@
 package ml.shifu.shifu.util.updater;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +26,12 @@ import org.slf4j.LoggerFactory;
  */
 public class BasicUpdater {
 
+    @SuppressWarnings("unused")
+    private final static Logger LOG = LoggerFactory.getLogger(BasicUpdater.class);
+
     protected ModelConfig modelConfig;
+    protected List<ColumnConfig> columnConfigList;
+    protected Map<String, ColumnConfig> columnConfigMap;
 
     protected String targetColumnName;
     protected String weightColumnName;
@@ -39,24 +45,29 @@ public class BasicUpdater {
     protected Set<NSColumn> setHybridColumns;
     protected Map<String, Double> hybridColumnNames;
     protected Map<String, Integer> categoricalColumnHashSeeds;
-    
-    @SuppressWarnings("unused")
-    private final static Logger LOG = LoggerFactory.getLogger(BasicUpdater.class);
 
+    private int mtlIndex = -1;
 
     protected boolean isForSegs;
     protected List<String> segs;
+    // The column amount in original data.
+    protected int originalColumnAmount;
 
-    public BasicUpdater(ModelConfig modelConfig) throws IOException {
+    public BasicUpdater(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, int mtlIndex) throws IOException {
         this.modelConfig = modelConfig;
+        this.columnConfigList = columnConfigList;
         this.segs = modelConfig.getSegmentFilterExpressions();
         this.isForSegs = (this.segs.size() > 0);
+        this.mtlIndex = mtlIndex;
+        this.modelConfig.setMtlIndex(mtlIndex);
+        initColumnConfigMapForSegs();
 
-        this.targetColumnName = modelConfig.getTargetColumnName();
+        this.targetColumnName = modelConfig.isMultiTask() ? modelConfig.getMultiTaskTargetColumnNames().get(mtlIndex)
+                : modelConfig.getTargetColumnName();
 
         this.setMeta = loadNSColumns(modelConfig.getMetaColumnNames());
         this.setCategoricalColumns = loadNSColumns(modelConfig.getCategoricalColumnNames());
-        this.categoricalColumnHashSeeds = modelConfig.getCategoricalColumnHashSeedConf();  
+        this.categoricalColumnHashSeeds = modelConfig.getCategoricalColumnHashSeedConf();
         this.setHybridColumns = new HashSet<NSColumn>();
         this.hybridColumnNames = modelConfig.getHybridColumnNames();
         if(this.hybridColumnNames != null && this.hybridColumnNames.size() > 0) {
@@ -93,11 +104,7 @@ public class BasicUpdater {
         if(CollectionUtils.isNotEmpty(columnNames)) {
             for(String column: columnNames) {
                 nsColumns.add(new NSColumn(column));
-                if(this.isForSegs) {
-                    for(int i = 0; i < segs.size(); i++) {
-                        nsColumns.add(new NSColumn(column + "_" + (i + 1)));
-                    }
-                }
+                addSegColumns(nsColumns, column);
             }
         }
         return nsColumns;
@@ -118,9 +125,10 @@ public class BasicUpdater {
         } else if(this.setForceRemove.contains(new NSColumn(varName))) {
             columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceRemove);
         } else if(this.setForceSelect.contains(new NSColumn(varName))) {
-            if(CollectionUtils.isEmpty(this.setCandidates)
-                    || (CollectionUtils.isNotEmpty(this.setCandidates) // candidates is not empty
-                        && this.setCandidates.contains(new NSColumn(varName)))) {
+            if(CollectionUtils.isEmpty(this.setCandidates) || (CollectionUtils.isNotEmpty(this.setCandidates) // candidates
+                                                                                                              // is not
+                                                                                                              // empty
+                    && this.setCandidates.contains(new NSColumn(varName)))) {
                 columnConfig.setColumnFlag(ColumnConfig.ColumnFlag.ForceSelect);
             }
         } else if(this.setCandidates.contains(new NSColumn(varName))) {
@@ -128,7 +136,9 @@ public class BasicUpdater {
         }
 
         if(NSColumnUtils.isColumnEqual(targetColumnName, varName)) {
-            if ( CollectionUtils.isEmpty(this.modelConfig.getTags()) ) {
+            List<String> tags = this.modelConfig.isMultiTask() ? this.modelConfig.getMTLTags(mtlIndex)
+                    : this.modelConfig.getTags();
+            if(CollectionUtils.isEmpty(tags)) {
                 // allow tags are empty to support linear target
                 // set columnType to N
                 columnConfig.setColumnType(ColumnType.N);
@@ -151,29 +161,90 @@ public class BasicUpdater {
             // meta and other columns are set to numerical if user not set it in categorical column configuration file
             columnConfig.setColumnType(ColumnType.N);
         }
-		if (this.categoricalColumnHashSeeds != null && this.categoricalColumnHashSeeds.containsKey(varName)) {
-			columnConfig.setHashSeed(this.categoricalColumnHashSeeds.get(varName));
-		}
+        if(this.categoricalColumnHashSeeds != null && this.categoricalColumnHashSeeds.containsKey(varName)) {
+            columnConfig.setHashSeed(this.categoricalColumnHashSeeds.get(varName));
+        }
     }
 
-    public static BasicUpdater getUpdater(ModelConfig modelConfig, ModelInspector.ModelStep step) throws IOException {
+    public static BasicUpdater getUpdater(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, ModelInspector.ModelStep step, int mtlIndex)
+            throws IOException {
         BasicUpdater updater = null;
         switch(step) {
             case INIT:
             case STATS:
             case NORMALIZE:
-                updater = new BasicUpdater(modelConfig);
+                updater = new BasicUpdater(modelConfig, columnConfigList, mtlIndex);
                 break;
             case VARSELECT:
-                updater = new VarSelUpdater(modelConfig);
+                updater = new VarSelUpdater(modelConfig, columnConfigList, mtlIndex);
                 break;
             case TRAIN:
-                updater = new TrainUpdater(modelConfig);
+                updater = new TrainUpdater(modelConfig, columnConfigList, mtlIndex);
                 break;
             default:
-                updater = new VoidUpdater(modelConfig);
+                updater = new VoidUpdater(modelConfig, columnConfigList, mtlIndex);
                 break;
         }
         return updater;
+    }
+
+    /**
+     * @return the mtlIndex
+     */
+    public int getMtlIndex() {
+        return mtlIndex;
+    }
+
+    /**
+     * @param mtlIndex
+     *            the mtlIndex to set
+     */
+    public void setMtlIndex(int mtlIndex) {
+        this.mtlIndex = mtlIndex;
+    }
+
+    /**
+     * Init the column config map if segment exists.
+     */
+    private void initColumnConfigMapForSegs() {
+        if (isForSegs) {
+            originalColumnAmount = 0;
+            columnConfigMap = new HashMap<>(columnConfigList.size());
+            for (ColumnConfig config : columnConfigList) {
+                columnConfigMap.put(config.getColumnName(), config);
+                if (config.isSegment() != null && !config.isSegment()) {
+                    originalColumnAmount++;
+                }
+            }
+            LOG.info("Init column config map in updater, totalColumnAmount={}, originalColumnAmount={}, segAmount={}.",
+                columnConfigList.size(), originalColumnAmount, segs.size());
+        }
+    }
+
+    /**
+     * Add segment column names to the set.
+     *
+     * @param segColumnSet is the set which will hold segment column names.
+     * @param columnName   is the original column name (non-segment column).
+     */
+    private void addSegColumns(Set<NSColumn> segColumnSet, String columnName) {
+        // Only do it when segment exists.
+        if (this.isForSegs) {
+            ColumnConfig originalColumnConfig = columnConfigMap.get(columnName);
+            if (originalColumnConfig == null) {
+                return;
+            }
+            for (int i = 0; i < segs.size(); i++) {
+                // Calculate the segment's column config number(index), and put it into the set.
+                int segColumnConfigNum = originalColumnConfig.getColumnNum() + (i + 1) * originalColumnAmount;
+                if (segColumnConfigNum >= columnConfigList.size()) {
+                    break;
+                }
+                ColumnConfig segColumnConfig = columnConfigList.get(segColumnConfigNum);
+                segColumnSet.add(new NSColumn(segColumnConfig.getColumnName()));
+                LOG.debug("Add {}({})'s segment {}({}).", columnName, originalColumnConfig.getColumnNum(), segColumnConfig.getColumnName(),
+                    segColumnConfigNum);
+            }
+        }
     }
 }

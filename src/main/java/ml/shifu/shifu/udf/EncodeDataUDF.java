@@ -54,8 +54,9 @@ public class EncodeDataUDF extends AbstractEvalUDF<Tuple> {
 
         // get model path
         SourceType sourceType = SourceType.valueOf(source);
-        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(sourceType);
-        Path modelPath = fileSystem.makeQualified(new Path(this.pathFinder.getModelsPath(sourceType), getModelName(0)));
+        Path filePath = new Path(this.pathFinder.getModelsPath(sourceType), getModelName(0));
+        FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath);
+        Path modelPath = fileSystem.makeQualified(filePath);
 
         // load Tree model
         InputStream inputStream = null;
@@ -86,8 +87,8 @@ public class EncodeDataUDF extends AbstractEvalUDF<Tuple> {
 
         Map<String, Object> rawInput = convertTupleToRawInput(tuple);
         //1. append the tag
-        Object obj = ((evalConfig == null) ? rawInput.get(this.modelConfig.getTargetColumnName())
-                : rawInput.get(this.modelConfig.getTargetColumnName(evalConfig)));
+        Object obj = rawInput.get(this.modelConfig.getTargetColumnName(this.evalConfig,
+                this.modelConfig.getTargetColumnName()));
         outputList.add(obj == null ? null : obj.toString());
 
         //2. append the weight
@@ -134,10 +135,8 @@ public class EncodeDataUDF extends AbstractEvalUDF<Tuple> {
     public Schema outputSchema(Schema input) {
         try {
             Schema tupleSchema = new Schema();
-            String targetColumnName = this.modelConfig.getTargetColumnName();
-            if(evalConfig != null) {
-                targetColumnName = this.modelConfig.getTargetColumnName(evalConfig);
-            }
+            String targetColumnName = this.modelConfig.getTargetColumnName(this.evalConfig,
+                    modelConfig.getTargetColumnName());
             tupleSchema.add(new FieldSchema(targetColumnName, DataType.CHARARRAY));
 
             String weightName = this.modelConfig.getWeightColumnName();

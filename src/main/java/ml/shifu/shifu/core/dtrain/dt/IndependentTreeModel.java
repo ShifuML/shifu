@@ -26,10 +26,13 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.GZIPInputStream;
@@ -37,6 +40,7 @@ import java.util.zip.GZIPOutputStream;
 
 import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.dtrain.StringUtils;
+import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.Constants;
 
 /**
@@ -167,6 +171,11 @@ public class IndependentTreeModel {
     @SuppressWarnings("unused")
     private boolean isGBTRawScore;
 
+    /**
+     * Used features
+     */
+    private List<String> usedFeatures;
+
     public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping, Map<Integer, String> numNameMapping,
             Map<Integer, List<String>> categoricalColumnNameNames,
             Map<Integer, Map<String, Integer>> columnCategoryIndexMapping, Map<Integer, Integer> columnNumIndexMapping,
@@ -232,8 +241,8 @@ public class IndependentTreeModel {
 
         if(isValidGbtScoreConvertStrategy(gbtScoreConvertStrategy)) {
             if(isGbtHalfCutOffOrMaxMinStrategy(gbtScoreConvertStrategy)) {
-                System.err
-                        .println("WARN: For HALF_CUTOFF and MAXMIN_SCALE gbt score scale strategy not supported in IndependentTreeModel and will be treated in RAW, in client side, such score can be rescaled by return score values.");
+                System.err.println(
+                        "WARN: For HALF_CUTOFF and MAXMIN_SCALE gbt score scale strategy not supported in IndependentTreeModel and will be treated in RAW, in client side, such score can be rescaled by return score values.");
                 this.gbtScoreConvertStrategy = Constants.GBT_SCORE_RAW_CONVETER;
             } else {
                 this.gbtScoreConvertStrategy = gbtScoreConvertStrategy;
@@ -255,8 +264,8 @@ public class IndependentTreeModel {
 
     private static boolean isGbtHalfCutOffOrMaxMinStrategy(String gbtScoreConvertStrategy) {
         return gbtScoreConvertStrategy != null
-                && (gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_HALF_CUTOFF_CONVETER) || gbtScoreConvertStrategy
-                        .equalsIgnoreCase(Constants.GBT_SCORE_MAXMIN_SCALE_CONVETER));
+                && (gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_HALF_CUTOFF_CONVETER)
+                        || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_MAXMIN_SCALE_CONVETER));
     }
 
     public static boolean isValidGbtScoreConvertStrategy(String gbtScoreConvertStrategy) {
@@ -265,8 +274,8 @@ public class IndependentTreeModel {
                         || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_SIGMOID_CONVETER)
                         || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_OLD_SIGMOID_CONVETER)
                         || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_CUTOFF_CONVETER)
-                        || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_HALF_CUTOFF_CONVETER) || gbtScoreConvertStrategy
-                            .equalsIgnoreCase(Constants.GBT_SCORE_MAXMIN_SCALE_CONVETER));
+                        || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_HALF_CUTOFF_CONVETER)
+                        || gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_MAXMIN_SCALE_CONVETER));
     }
 
     public final List<String> encode(int depth, Map<String, Object> dataMap) {
@@ -275,10 +284,10 @@ public class IndependentTreeModel {
 
     public List<String> encode(int depth, double[] data) {
         List<String> encodingResult = new ArrayList<String>();
-        for (int i = 0; i < this.trees.size(); i ++ ) {
+        for(int i = 0; i < this.trees.size(); i++) {
             List<TreeNode> treeBag = this.trees.get(i);
-            for (int j = 0; j < treeBag.size(); j ++ ) {
-                //use tree to encoding
+            for(int j = 0; j < treeBag.size(); j++) {
+                // use tree to encoding
                 TreeNode tree = treeBag.get(j);
                 String[] treeCodes = encodeTree(depth, tree.getNode(), data);
                 encodingResult.add(StringUtils.join(treeCodes));
@@ -564,8 +573,8 @@ public class IndependentTreeModel {
     }
 
     private int getCategoricalSize(int columnNum) {
-        return (this.isOptimizeMode ? this.categoricalValueSize[columnNum] : categoricalColumnNameNames.get(columnNum)
-                .size());
+        return (this.isOptimizeMode ? this.categoricalValueSize[columnNum]
+                : categoricalColumnNameNames.get(columnNum).size());
     }
 
     private double[] convertDataMapToDoubleArray(Map<String, Object> dataMap) {
@@ -598,8 +607,8 @@ public class IndependentTreeModel {
                 if(obj == null || ((obj instanceof String) && ((String) obj).length() == 0)) {
                     // no matter set it to null or not set it in dataMap, it will be treated as missing value, last one
                     // is missing value category
-                    value = this.numericalMeanMapping.get(columnNum) == null ? 0d : this.numericalMeanMapping
-                            .get(columnNum);
+                    value = this.numericalMeanMapping.get(columnNum) == null ? 0d
+                            : this.numericalMeanMapping.get(columnNum);
                 } else {
                     if(obj instanceof Number) {
                         value = ((Number) obj).doubleValue();
@@ -608,14 +617,14 @@ public class IndependentTreeModel {
                             value = Double.parseDouble(obj.toString());
                         } catch (NumberFormatException e) {
                             // not valid double value for numerical feature, using default value
-                            value = this.numericalMeanMapping.get(columnNum) == null ? 0d : this.numericalMeanMapping
-                                    .get(columnNum);
+                            value = this.numericalMeanMapping.get(columnNum) == null ? 0d
+                                    : this.numericalMeanMapping.get(columnNum);
                         }
                     }
                 }
                 if(Double.isNaN(value)) {
-                    value = this.numericalMeanMapping.get(columnNum) == null ? 0d : this.numericalMeanMapping
-                            .get(columnNum);
+                    value = this.numericalMeanMapping.get(columnNum) == null ? 0d
+                            : this.numericalMeanMapping.get(columnNum);
                 }
             }
             Integer index = entry.getValue();
@@ -807,6 +816,46 @@ public class IndependentTreeModel {
     }
 
     /**
+     * Get use features name
+     * 
+     * @return used features
+     */
+    public List<String> getUsedFeatures() {
+        if(this.usedFeatures != null) {
+            return this.usedFeatures;
+        }
+        Set<String> usedFeaturesSet = new HashSet<>();
+        for(List<TreeNode> treeNodes: this.trees) {
+            for(TreeNode root: treeNodes) {
+                parseTreeForFeatures(root.getNode(), usedFeaturesSet, this.numNameMapping);
+            }
+        }
+        this.usedFeatures = new ArrayList<>(usedFeaturesSet);
+        return this.usedFeatures;
+    }
+
+    private void parseTreeForFeatures(Node root, Set<String> usedFeatures, Map<Integer, String> numNameMapping) {
+        Queue<Node> queue = new LinkedList<>();
+        queue.offer(root);
+        while(!queue.isEmpty()) {
+            Node node = queue.poll();
+            if(node.getSplit() != null && !node.isRealLeaf()) {
+                int columnNum = node.getSplit().getColumnNum();
+                String columnName = numNameMapping.get(columnNum);
+                if(columnName != null) {
+                    usedFeatures.add(columnName);
+                }
+                if(node.getLeft() != null) {
+                    queue.offer(node.getLeft());
+                }
+                if(node.getRight() != null) {
+                    queue.offer(node.getRight());
+                }
+            }
+        }
+    }
+
+    /**
      * Load model instance from stream like model0.gbt or model0.rf, by default not to convert gbt score to [0, 1]
      * 
      * @param input
@@ -870,6 +919,11 @@ public class IndependentTreeModel {
         return loadFromStream(input, isConvertToProb, false, true, gbtScoreConvertStrategy);
     }
 
+    public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb,
+            String gbtScoreConvertStrategy, PrecisionType pt) throws IOException {
+        return loadFromStream(input, isConvertToProb, false, true, gbtScoreConvertStrategy, pt);
+    }
+
     /**
      * Load model instance from stream like model0.gbt or model0.rf. User can specify to use raw score or score after
      * sigmoid transform by isConvertToProb.
@@ -884,8 +938,8 @@ public class IndependentTreeModel {
      * @throws IOException
      *             any exception in load input stream
      */
-    public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb, boolean isOptimizeMode)
-            throws IOException {
+    public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb,
+            boolean isOptimizeMode) throws IOException {
         return loadFromStream(input, isConvertToProb, isOptimizeMode, true);
     }
 
@@ -933,6 +987,12 @@ public class IndependentTreeModel {
                 isConvertToProb ? Constants.GBT_SCORE_OLD_SIGMOID_CONVETER : Constants.GBT_SCORE_RAW_CONVETER);
     }
 
+    public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb,
+            boolean isOptimizeMode, boolean isRemoveNameSpace, String gbtScoreConvertStrategy) throws IOException {
+        return loadFromStream(input, isConvertToProb, isOptimizeMode, isRemoveNameSpace, gbtScoreConvertStrategy,
+                PrecisionType.DOUBLE64);
+    }
+
     /**
      * Load model instance from stream like model0.gbt or model0.rf. User can specify to use raw score or score after
      * sigmoid transform by isConvertToProb.
@@ -948,12 +1008,15 @@ public class IndependentTreeModel {
      *            name
      * @param gbtScoreConvertStrategy
      *            specify how to convert gbt raw score
+     * @param pt
+     *            precision for threshold or split if they can be in float or double in output format
      * @return the tree model instance
      * @throws IOException
      *             any exception in load input stream
      */
     public static IndependentTreeModel loadFromStream(InputStream input, boolean isConvertToProb,
-            boolean isOptimizeMode, boolean isRemoveNameSpace, String gbtScoreConvertStrategy) throws IOException {
+            boolean isOptimizeMode, boolean isRemoveNameSpace, String gbtScoreConvertStrategy, PrecisionType pt)
+            throws IOException {
         DataInputStream dis = null;
         // check if gzip or not
         try {
@@ -1001,8 +1064,8 @@ public class IndependentTreeModel {
 
         size = dis.readInt();
         Map<Integer, List<String>> categoricalColumnNameNames = new HashMap<Integer, List<String>>(size, 1f);
-        Map<Integer, Map<String, Integer>> columnCategoryIndexMapping = new HashMap<Integer, Map<String, Integer>>(
-                size, 1f);
+        Map<Integer, Map<String, Integer>> columnCategoryIndexMapping = new HashMap<Integer, Map<String, Integer>>(size,
+                1f);
         for(int i = 0; i < size; i++) {
             int columnIndex = dis.readInt();
             int categoryListSize = dis.readInt();
@@ -1048,7 +1111,7 @@ public class IndependentTreeModel {
             List<Double> weights = new ArrayList<Double>(treeNum);
             for(int i = 0; i < treeNum; i++) {
                 TreeNode treeNode = new TreeNode();
-                treeNode.readFields(dis, version);
+                treeNode.readFields(dis, version, pt);
                 trees.add(treeNode);
                 weights.add(treeNode.getLearningRate());
 
@@ -1161,7 +1224,8 @@ public class IndependentTreeModel {
                     char3 = (int) bytearr[count - 1];
                     if(((char2 & 0xC0) != 0x80) || ((char3 & 0xC0) != 0x80))
                         throw new UTFDataFormatException("malformed input around byte " + (count - 1));
-                    chararr[chararr_count++] = (char) (((c & 0x0F) << 12) | ((char2 & 0x3F) << 6) | ((char3 & 0x3F) << 0));
+                    chararr[chararr_count++] = (char) (((c & 0x0F) << 12) | ((char2 & 0x3F) << 6)
+                            | ((char3 & 0x3F) << 0));
                     break;
                 default:
                     /* 10xx xxxx, 1111 xxxx */
@@ -1206,7 +1270,7 @@ public class IndependentTreeModel {
         // for Json converter
     }
 
-    public boolean saveToInputStream(OutputStream outputStream) throws IOException{
+    public boolean saveToInputStream(OutputStream outputStream) throws IOException {
         DataOutputStream fos = new DataOutputStream(new GZIPOutputStream(outputStream));
         // version
         fos.writeInt(CommonConstants.TREE_FORMAT_VERSION);
@@ -1222,25 +1286,25 @@ public class IndependentTreeModel {
 
         // serialize numericalMeanMapping
         fos.writeInt(numericalMeanMapping.size());
-        for(Entry<Integer, Double> entry : numericalMeanMapping.entrySet()) {
+        for(Entry<Integer, Double> entry: numericalMeanMapping.entrySet()) {
             fos.writeInt(entry.getKey());
             // for some feature, it is null mean value, it is not selected, just set to 0d to avoid NPE
             fos.writeDouble(entry.getValue() == null ? 0d : entry.getValue());
         }
         // serialize columnIndexNameMapping
         fos.writeInt(columnIndexNameMapping.size());
-        for(Entry<Integer, String> entry : columnIndexNameMapping.entrySet()) {
+        for(Entry<Integer, String> entry: columnIndexNameMapping.entrySet()) {
             fos.writeInt(entry.getKey());
             fos.writeUTF(entry.getValue());
         }
         // serialize columnIndexCategoricalListMapping
         fos.writeInt(columnIndexCategoricalListMapping.size());
-        for(Entry<Integer, List<String>> entry : columnIndexCategoricalListMapping.entrySet()) {
+        for(Entry<Integer, List<String>> entry: columnIndexCategoricalListMapping.entrySet()) {
             List<String> categories = entry.getValue();
             if(categories != null) {
                 fos.writeInt(entry.getKey());
                 fos.writeInt(categories.size());
-                for(String category : categories) {
+                for(String category: categories) {
                     // There is 16k limitation when using writeUTF() function.
                     // if the category value is larger than 10k, write a marker -1 and write bytes instead of
                     // writeUTF;
@@ -1261,7 +1325,7 @@ public class IndependentTreeModel {
 
         Map<Integer, Integer> columnMapping = this.columnNumIndexMapping;
         fos.writeInt(columnMapping.size());
-        for(Entry<Integer, Integer> entry : columnMapping.entrySet()) {
+        for(Entry<Integer, Integer> entry: columnMapping.entrySet()) {
             fos.writeInt(entry.getKey());
             fos.writeInt(entry.getValue());
         }
@@ -1272,7 +1336,7 @@ public class IndependentTreeModel {
             List<TreeNode> forest = trees.get(i);
             int treeLength = forest.size();
             fos.writeInt(treeLength);
-            for(TreeNode treeNode : forest) {
+            for(TreeNode treeNode: forest) {
                 treeNode.write(fos);
             }
         }

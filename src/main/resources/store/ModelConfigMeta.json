@@ -229,6 +229,16 @@
                 "directive": "checkbox",
                 "defval" : true
             }, {
+                "name": "cateMaxNumBin",
+                "type": "integer",
+                "directive": "input",
+                "defval" : 0
+            }, {
+                "name": "cateMinCnt",
+                "type": "integer",
+                "directive": "input",
+                "defval" : 0
+            }, {
                 "name": "binningAlgorithm",
                 "type": "text",
                 "directive": "select",
@@ -281,7 +291,8 @@
             }, {
                 "name": "filterNum",
                 "type": "integer",
-                "directive": "input"
+                "directive": "input",
+                "notNull": true
             }, {
                 "name": "filterOutRatio",
                 "type": "number",
@@ -427,8 +438,14 @@
                     {"label":"Discrete numerical feature in each bin and positive rate for categorical feature", "value":"DISCRETE_ZSCORE"},
                     {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCALE_INDEX"},
                     {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCORE_INDEX"},
+                    {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"MAXMIN_INDEX"},
                     {"label":"numerical variable using woe, categorical variable, using cate index", "value":"WOE_INDEX"},
-                    {"label":"numerical variable using zscaled woe, categorical variable using cate index", "value":"WOE_ZSCALE_INDEX"}
+                    {"label":"numerical variable using zscaled woe, categorical variable using cate index", "value":"WOE_ZSCALE_INDEX"},
+                    {"label":"both numerical and categorical norm to index, numerical index is from binBoundry, categorical index is from binCategory", "value":"INDEX"},
+                    {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCALE_APPEND_INDEX"},
+                    {"label":"numerical variable using zscale, categorical variable, using cate index", "value":"ZSCORE_APPEND_INDEX"},
+                    {"label":"numerical variable using woe, categorical variable, using cate index", "value":"WOE_APPEND_INDEX"},
+                    {"label":"numerical variable using zscaled woe, categorical variable using cate index", "value":"WOE_ZSCALE_APPEND_INDEX"}
                 ]
             }, {
                 "name": "stdDevCutOff",
@@ -570,6 +587,7 @@
                     {"label": "Gradient Boost Decision Tree", "value":"GBT"},
                     {"label": "Tensorflow", "value":"Tensorflow"},
                     {"label": "Wide And Deep", "value":"WDL"},
+                    {"label": "Multi Task Model", "value":"MTL"},
                     {"label": "Generic", "value":"generic"}
                 ]
             }, {
@@ -658,26 +676,26 @@
                         "directive": "input",
                         "defval" : 0.1
                     }, {
-                        "name" : "WDLL2Reg",
+                        "name" : "L2Reg",
                         "type" : "float",
                         "directive": "input",
                         "defval" : 0.01
                     }, {
-                    	"name" : "TF.optimizer",
-                    	"type" : "text",
-                    	"directive" : "select",
-                    	"defval" : "adam",
-                    	"options": [
-                    		{"label": "Adam", "value":"adam"},
-                    		{"label": "GradientDescent", "value":"gradientDescent"},
-                    		{"label": "RMSProp ", "value":"RMSProp"}
-                    	]
+                        "name" : "TF.optimizer",
+                        "type" : "text",
+                        "directive" : "select",
+                        "defval" : "adam",
+                        "options": [
+                            {"label": "Adam", "value":"adam"},
+                            {"label": "GradientDescent", "value":"gradientDescent"},
+                            {"label": "RMSProp ", "value":"RMSProp"}
+                        ]
                     }, {
-                    	"name" : "TF.loss",
-                    	"type" : "text",
-                    	"directive" : "select",
-                    	"defval" : "squared",
-                    	"options": [
+                        "name" : "TF.loss",
+                        "type" : "text",
+                        "directive" : "select",
+                        "defval" : "squared",
+                        "options": [
                             {"label": "Squared", "value":"squared"},
                             {"label": "Absolute", "value":"absolute"},
                             {"label": "Log", "value":"log"}
@@ -766,6 +784,15 @@
                             {"label": "Gini", "value":"gini"}
                         ]
                     }, {
+                        "name" : "CateSortMode",
+                        "type" : "text",
+                        "directive": "select",
+                        "defval" : "sort",
+                        "options": [
+                            {"label": "Sort", "value":"sort"},
+                            {"label": "Shuffle", "value":"shuffle"}
+                        ]
+                    }, {
                         "name" : "FeatureSubsetStrategy",
                         "type" : "text",
                         "directive": "select",
@@ -826,6 +853,15 @@
                             {"label": "Momentum", "value":"Momentum"}
                         ]
                     }, {
+                        "name" : "TF.version",
+                        "type" : "text",
+                        "directive": "select",
+                        "defval" : "1.0",
+                        "options": [
+                            {"label": "1.0", "value":"1.0"},
+                            {"label": "2.0", "value":"2.0"}
+                        ]
+                    }, {
                         "name" : "wideEnable",
                         "type": "boolean",
                         "directive": "checkbox",
@@ -871,11 +907,11 @@
                         "directive": "input",
                         "defval" : 0.1
                     }, {
-                    	"name" : "FixedLayers",
-                    	"type" : "list",
-                    	"directive": "input",
-                    	"elementType" : "integer",
-                    	"element": [
+                        "name" : "FixedLayers",
+                        "type" : "list",
+                        "directive": "input",
+                        "elementType" : "integer",
+                        "element": [
                             {
                                 "name": "dummy",
                                 "type": "integer",
@@ -897,6 +933,27 @@
                             {"label": "ReLU", "value":"ReLU"},
                             {"label": "LeakyReLU", "value":"LeakyReLU"},
                             {"label": "Swish", "value":"Swish"}
+                        ]
+                    }, {
+                        "name" : "TF_Type",
+                        "type" : "text",
+                        "directive": "select",
+                        "defval" : "Keras",
+                        "options": [
+                            {"label": "Keras", "value":"Keras"},
+                            {"label": "Estimator", "value":"Estimator"},
+                            {"label": "Tensor", "value":"Tensor"},
+                            {"label": "Keras_to_estimator", "value":"Keras_to_estimator"}
+                        ]
+                    }, {
+                        "name" : "WeightPolicy",
+                        "type" : "text",
+                        "directive": "select",
+                        "defval" : "RAW",
+                        "options": [
+                            {"label": "Raw weight", "value":"RAW"},
+                            {"label": "Positive weight", "value":"POSITIVE"},
+                            {"label": "No weight set( weight is 1)", "value":"NO"}
                         ]
                     }
                 ]

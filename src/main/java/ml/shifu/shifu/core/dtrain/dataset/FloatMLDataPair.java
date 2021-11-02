@@ -81,4 +81,19 @@ public interface FloatMLDataPair {
      */
     void setSignificance(float s);
 
+    /**
+     * Set the significance if multiple weights, [1.0, ...] is neutral.
+     * 
+     * @param s
+     *            The significance array.
+     */
+    void setSignificances(float[] s);
+
+    /**
+     * Get the significances, [1.0, ...] is neutral.
+     * 
+     * @return The significances.
+     */
+    float[] getSignificances();
+
 }

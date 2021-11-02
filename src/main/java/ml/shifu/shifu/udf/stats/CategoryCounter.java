@@ -41,10 +41,6 @@ public class CategoryCounter extends Counter {
 
     @Override
     public void addData(Boolean isPositive, String val) {
-        if(isPositive == null) {
-            isPositive = true;
-        }
-
         long[] counter = (isPositive ? this.positiveCounter : this.negativeCounter);
 
         int pos = binLen;
@@ -55,7 +51,8 @@ public class CategoryCounter extends Counter {
             }
         }
 
-        counter[pos] = counter[pos] + 1;
+        counter[pos] += 1;
         this.unitSum += this.binPosRate.get(pos);
     }
+    
 }

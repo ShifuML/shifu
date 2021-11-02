@@ -194,7 +194,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
             }
         } finally {
             // release
-            closeScanners(scanners);
+            closeClosable(scanners);
         }
     }
 
@@ -219,7 +219,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
             }
         } finally {
             // release
-            closeScanners(scanners);
+            closeClosable(scanners);
         }
         return featureImportance;
     }
@@ -238,10 +238,12 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
-        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
-        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
+        Path modelConfigPath = new Path(super.getPathFinder().getModelConfigPath(source));
+        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source, modelConfigPath)
+                .makeQualified(modelConfigPath).toString());
+        Path columnConfigPath = new Path(super.getPathFinder().getColumnConfigPath(source));
+        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source, columnConfigPath)
+                .makeQualified(columnConfigPath).toString());
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
         // set mapreduce.job.max.split.locations to 30 to suppress warnings
@@ -271,8 +273,9 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(FeatureStatsWritable.class);
         job.setInputFormatClass(CombineInputFormat.class);
-        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.modelConfig.getDataSetRawPath())));
+        Path filePath = new Path(super.modelConfig.getDataSetRawPath());
+        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source, filePath)
+                .makeQualified(filePath));
 
         MultipleOutputs.addNamedOutput(job, Constants.POST_TRAIN_OUTPUT_SCORE, TextOutputFormat.class,
                 NullWritable.class, Text.class);
@@ -308,10 +311,12 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
 
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_MAP_TASKS_SPECULATIVE_EXECUTION, true);
         conf.setBoolean(GuaguaMapReduceConstants.MAPRED_REDUCE_TASKS_SPECULATIVE_EXECUTION, true);
-        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.getPathFinder().getModelConfigPath(source))).toString());
-        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.getPathFinder().getColumnConfigPath(source))).toString());
+        Path modelConfigPath = new Path(super.getPathFinder().getModelConfigPath(source));
+        conf.set(Constants.SHIFU_MODEL_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source, modelConfigPath)
+                .makeQualified(modelConfigPath).toString());
+        Path columnConfigPath = new Path(super.getPathFinder().getColumnConfigPath(source));
+        conf.set(Constants.SHIFU_COLUMN_CONFIG, ShifuFileUtils.getFileSystemBySourceType(source, columnConfigPath)
+                .makeQualified(columnConfigPath).toString());
         conf.set(NNConstants.MAPRED_JOB_QUEUE_NAME, Environment.getProperty(Environment.HADOOP_JOB_QUEUE, "default"));
         conf.set(Constants.SHIFU_MODELSET_SOURCE_TYPE, source.toString());
         // set mapreduce.job.max.split.locations to 30 to suppress warnings
@@ -341,8 +346,9 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(DoubleWritable.class);
         job.setInputFormatClass(CombineInputFormat.class);
-        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source)
-                .makeQualified(new Path(super.modelConfig.getDataSetRawPath())));
+        Path filePath = new Path(super.modelConfig.getDataSetRawPath());
+        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source, filePath)
+                .makeQualified(filePath));
 
         job.setReducerClass(FeatureImportanceReducer.class);
         job.setNumReduceTasks(1);
@@ -409,7 +415,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         log.info("Num of Scanners: " + scanners.size());
         AkkaSystemExecutor.getExecutor().submitPostTrainJob(modelConfig, columnConfigList, scanners);
 
-        closeScanners(scanners);
+        closeClosable(scanners);
     }
 
     /**
@@ -441,7 +447,7 @@ public class PostTrainModelProcessor extends BasicModelProcessor implements Proc
         }
 
         // release
-        closeScanners(scanners);
+        closeClosable(scanners);
 
         return columnConfigList;
     }

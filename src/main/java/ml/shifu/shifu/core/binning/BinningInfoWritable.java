@@ -53,6 +53,10 @@ public class BinningInfoWritable implements Writable {
 
     private double[] binWeightNeg;
 
+    private double[] binCountWoe;
+
+    private double[] binWeightedWoe;
+
     private double min = Double.MAX_VALUE;
 
     private double max = Double.MIN_VALUE;
@@ -70,6 +74,8 @@ public class BinningInfoWritable implements Writable {
     private long totalCount = 0L;
 
     private double[] xMultiY = null;
+
+    private int hashSeed = -1;
 
     private CountAndFrequentItemsWritable cfiw = new CountAndFrequentItemsWritable();
 
@@ -206,6 +212,36 @@ public class BinningInfoWritable implements Writable {
     }
 
     /**
+     * @return binCountWoe
+     */
+    public double[] getBinCountWoe() {
+        return binCountWoe;
+    }
+
+    /**
+     * @param binCountWoe
+     *      the binCountWoe to set
+     */
+    public void setBinCountWoe(double[] binCountWoe) {
+        this.binCountWoe = binCountWoe;
+    }
+
+    /**
+     * @return binWeightedWoe
+     */
+    public double[] getBinWeightedWoe() {
+        return binWeightedWoe;
+    }
+
+    /**
+     * @param binWeightedWoe
+     *      the binWeightedWoe to set
+     */
+    public void setBinWeightedWoe(double[] binWeightedWoe) {
+        this.binWeightedWoe = binWeightedWoe;
+    }
+
+    /**
      * @param min
      *            the min to set
      */
@@ -298,52 +334,69 @@ public class BinningInfoWritable implements Writable {
         out.writeLong(this.missingCount);
         out.writeLong(this.totalCount);
 
-        out.writeInt(this.binCountPos.length);
-        for(int i = 0; i < this.binCountPos.length; i++) {
-            out.writeLong(this.binCountPos[i]);
-        }
+        writeLongArray(out, this.binCountPos);
+        writeLongArray(out, this.binCountNeg);
 
-        out.writeInt(this.binCountNeg.length);
-        for(int i = 0; i < this.binCountNeg.length; i++) {
-            out.writeLong(this.binCountNeg[i]);
-        }
+        writeDoubleArray(out, this.binWeightPos);
+        writeDoubleArray(out, this.binWeightNeg);
 
-        out.writeInt(this.binWeightPos.length);
-        for(int i = 0; i < this.binWeightPos.length; i++) {
-            out.writeDouble(this.binWeightPos[i]);
-        }
-
-        out.writeInt(this.binWeightNeg.length);
-        for(int i = 0; i < this.binWeightNeg.length; i++) {
-            out.writeDouble(this.binWeightNeg[i]);
-        }
+        writeDoubleArray(out, this.binCountWoe);
+        writeDoubleArray(out, this.binWeightedWoe);
 
         // binBoundaries
-        if(this.binBoundaries == null) {
-            out.writeInt(0);
-        } else {
-            out.writeInt(this.binBoundaries.size());
-            for(int i = 0; i < this.binBoundaries.size(); i++) {
-                out.writeDouble(this.binBoundaries.get(i));
-            }
-        }
+        writeDoubleList(out, this.binBoundaries);
 
-        if(this.xMultiY != null) {
-            out.writeInt(this.xMultiY.length);
-            for(double d: this.xMultiY) {
-                out.writeDouble(d);
-            }
-        } else {
-            out.writeInt(0);
-        }
+        // xMultiY
+        writeDoubleArray(out, this.xMultiY);
 
         // binCategories
-        if(this.binCategories == null) {
+        writeStringList(out, this.binCategories);
+
+        this.cfiw.write(out);
+        out.writeBoolean(this.isEmpty);
+        out.writeInt(this.hashSeed);
+    }
+
+    private void writeLongArray(DataOutput out, long[] outputArray) throws IOException {
+        if (outputArray == null) {
             out.writeInt(0);
         } else {
-            out.writeInt(this.binCategories.size());
-            for(int i = 0; i < this.binCategories.size(); i++) {
-                String bin = this.binCategories.get(i);
+            out.writeInt(outputArray.length);
+            for(int i = 0; i < outputArray.length; i++) {
+                out.writeLong(outputArray[i]);
+            }
+        }
+    }
+
+    private void writeDoubleArray(DataOutput out, double[] outputArray) throws IOException {
+        if (outputArray == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(outputArray.length);
+            for(int i = 0; i < outputArray.length; i++) {
+                out.writeDouble(outputArray[i]);
+            }
+        }
+    }
+
+    private void writeDoubleList(DataOutput out, List<Double> outputList) throws IOException {
+        if (outputList == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(outputList.size());
+            for(int i = 0; i < outputList.size(); i++) {
+                out.writeDouble(outputList.get(i));
+            }
+        }
+    }
+
+    private void writeStringList(DataOutput out, List<String> outputList) throws IOException {
+        if (outputList == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(outputList.size());
+            for(int i = 0; i < outputList.size(); i++) {
+                String bin = outputList.get(i);
                 byte[] bytes = bin.getBytes(Charset.forName("UTF-8"));
                 out.writeInt(bytes.length);
                 for(int j = 0; j < bytes.length; j++) {
@@ -351,9 +404,6 @@ public class BinningInfoWritable implements Writable {
                 }
             }
         }
-
-        this.cfiw.write(out);
-        out.writeBoolean(this.isEmpty);
     }
 
     @Override
@@ -370,61 +420,69 @@ public class BinningInfoWritable implements Writable {
         this.missingCount = in.readLong();
         this.totalCount = in.readLong();
 
-        int size = in.readInt();
-        this.binCountPos = new long[size];
-        for(int i = 0; i < size; i++) {
-            this.binCountPos[i] = in.readLong();
-        }
+        this.binCountPos = readLongArray(in);
+        this.binCountNeg = readLongArray(in);
 
-        size = in.readInt();
-        this.binCountNeg = new long[size];
-        for(int i = 0; i < size; i++) {
-            this.binCountNeg[i] = in.readLong();
-        }
+        this.binWeightPos = readDoubleArray(in);
+        this.binWeightNeg = readDoubleArray(in);
 
-        size = in.readInt();
-        this.binWeightPos = new double[size];
-        for(int i = 0; i < size; i++) {
-            this.binWeightPos[i] = in.readDouble();
-        }
-
-        size = in.readInt();
-        this.binWeightNeg = new double[size];
-        for(int i = 0; i < size; i++) {
-            this.binWeightNeg[i] = in.readDouble();
-        }
+        this.binCountWoe = readDoubleArray(in);
+        this.binWeightedWoe = readDoubleArray(in);
 
         // read binBoundaries
-        size = in.readInt();
-        this.binBoundaries = new ArrayList<Double>(size);
-        for(int i = 0; i < size; i++) {
-            this.binBoundaries.add(in.readDouble());
-        }
+        this.binBoundaries = readDoubleList(in);
 
         // read xMultiY
-        int xMultiYSize = in.readInt();
-        if(xMultiYSize != 0) {
-            this.xMultiY = new double[xMultiYSize];
-            for(int i = 0; i < xMultiYSize; i++) {
-                this.xMultiY[i] = in.readDouble();
-            }
-        }
+        this.xMultiY = readDoubleArray(in);
 
         // read binCategories
-        size = in.readInt();
-        this.binCategories = new ArrayList<String>(size);
+        this.binCategories = readStringList(in);
+
+        this.cfiw = new CountAndFrequentItemsWritable();
+        this.cfiw.readFields(in);
+        this.isEmpty = in.readBoolean();
+        this.hashSeed = in.readInt();
+    }
+
+    private long[] readLongArray(DataInput in) throws IOException {
+        int size = in.readInt();
+        long[] valueArr = new long[size];
+        for(int i = 0; i < size; i++) {
+            valueArr[i] = in.readLong();
+        }
+        return valueArr;
+    }
+
+    private double[] readDoubleArray(DataInput in) throws IOException {
+        int size = in.readInt();
+        double[] valueArr = new double[size];
+        for(int i = 0; i < size; i++) {
+            valueArr[i] = in.readDouble();
+        }
+        return valueArr;
+    }
+
+    private List<Double> readDoubleList(DataInput in) throws IOException {
+        int size = in.readInt();
+        List<Double> valueList = new ArrayList<>();
+        for(int i = 0; i < size; i++) {
+            valueList.add(in.readDouble());
+        }
+        return valueList;
+    }
+
+    private List<String> readStringList(DataInput in) throws IOException {
+        int size = in.readInt();
+        List<String> valueList = new ArrayList<String>(size);
         for(int i = 0; i < size; i++) {
             int bytesSize = in.readInt();
             byte[] bytes = new byte[bytesSize];
             for(int j = 0; j < bytesSize; j++) {
                 bytes[j] = in.readByte();
             }
-            this.binCategories.add(new String(bytes, Charset.forName("UTF-8")));
+            valueList.add(new String(bytes, Charset.forName("UTF-8")));
         }
-
-        this.cfiw = new CountAndFrequentItemsWritable();
-        this.cfiw.readFields(in);
-        this.isEmpty = in.readBoolean();
+        return valueList;
     }
 
     /**
@@ -502,6 +560,21 @@ public class BinningInfoWritable implements Writable {
         this.isEmpty = isEmpty;
     }
 
+    /**
+     * @return the hashSeed
+     */
+    public int getHashSeed() {
+        return hashSeed;
+    }
+
+    /**
+     * @param hashSeed
+     *            the hashSeed to set
+     */
+    public void setHashSeed(int hashSeed) {
+        this.hashSeed = hashSeed;
+    }
+
     /*
      * (non-Javadoc)
      * 
@@ -512,7 +585,8 @@ public class BinningInfoWritable implements Writable {
         return "BinningInfoWritable [isNumeric=" + isNumeric + ", columnNum=" + columnNum + ", binBoundaries="
                 + binBoundaries + ", binCategories=" + binCategories + ", binCountPos=" + Arrays.toString(binCountPos)
                 + ", binCountNeg=" + Arrays.toString(binCountNeg) + ", binWeightPos=" + Arrays.toString(binWeightPos)
-                + ", binWeightNeg=" + Arrays.toString(binWeightNeg) + ", min=" + min + ", max=" + max + ", sum=" + sum
+                + ", binWeightNeg=" + Arrays.toString(binWeightNeg) + ", binCountWoe=" + Arrays.toString(binCountWoe)
+                + ", binWeightedWoe=" + Arrays.toString(binWeightedWoe)  + ", min=" + min + ", max=" + max + ", sum=" + sum
                 + ", squaredSum=" + squaredSum + ", tripleSum=" + tripleSum + ", quarticSum=" + quarticSum
                 + ", missingCount=" + missingCount + ", totalCount=" + totalCount + "]";
     }

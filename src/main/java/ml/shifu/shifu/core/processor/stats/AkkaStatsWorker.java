@@ -65,7 +65,7 @@ public class AkkaStatsWorker extends AbstractStatsExecutor {
         AkkaSystemExecutor.getExecutor().submitStatsCalJob(modelConfig, columnConfigList, scanners);
 
         // release
-        processor.closeScanners(scanners);
+        processor.closeClosable(scanners);
 
         return true;
     }

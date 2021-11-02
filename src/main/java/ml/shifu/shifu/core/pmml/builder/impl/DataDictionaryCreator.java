@@ -30,7 +30,7 @@ import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.core.dtrain.dataset.BasicFloatNetwork;
 import ml.shifu.shifu.core.pmml.builder.creator.AbstractPmmlElementCreator;
-import ml.shifu.shifu.util.NormalUtils;
+import ml.shifu.shifu.util.NormalizationUtils;
 
 /**
  * Created by zhanhu on 3/29/16.
@@ -118,7 +118,7 @@ public class DataDictionaryCreator extends AbstractPmmlElementCreator<DataDictio
 
     private DataField convertColumnToDataField(ColumnConfig columnConfig) {
         DataField field = new DataField();
-        field.setName(FieldName.create(NormalUtils.getSimpleColumnName(columnConfig.getColumnName())));
+        field.setName(FieldName.create(NormalizationUtils.getSimpleColumnName(columnConfig.getColumnName())));
         field.setOpType(getOptype(columnConfig));
         field.setDataType((columnConfig.isTarget() && modelConfig.isRegression())
                 ? DataType.DOUBLE : getDataType(field.getOpType()));

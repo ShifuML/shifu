@@ -73,22 +73,23 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
             switch(modelConfig.getBasic().getRunMode()) {
                 case DIST:
                 case MAPRED:
-                    runPigNormalize();
-
-                    try {
-                        autoCheckShuffleAndShuffleSize();
-                    } catch (Exception e) {
-                        log.warn("warn: exception in auto check shuffle size, can be ignored as no big impact", e);
-                    }
-
-                    if(this.isToShuffleData) {
-                        runDataShuffle(this.modelConfig, this.columnConfigList, this.pathFinder.getNormalizedDataPath(),
-                                this.pathFinder.getNormalizedDataHeaderPath(),
-                                this.modelConfig.getDataSet().getSource(), getExpectPosRatio(), getIsRblUpdateWeight());
-                    }
-
                     if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
                         runDataClean(this.isToShuffleData, getExpectPosRatio(), getIsRblUpdateWeight());
+                    } else {
+                        runPigNormalize();
+                        if(!this.modelConfig.isMultiTask()) {
+                            try {
+                                autoCheckShuffleAndShuffleSize();
+                            } catch (Exception e) {
+                                log.warn("warn: exception in auto check shuffle size, can be ignored as no big impact", e);
+                            }
+                        }
+
+                        if(this.isToShuffleData) {
+                            runDataShuffle(this.modelConfig, this.columnConfigList, this.pathFinder.getNormalizedDataPath(),
+                                    this.pathFinder.getNormalizedDataHeaderPath(),
+                                    this.modelConfig.getDataSet().getSource(), getExpectPosRatio(), getIsRblUpdateWeight());
+                        }
                     }
                     break;
                 case LOCAL:
@@ -169,7 +170,7 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         AkkaSystemExecutor.getExecutor().submitNormalizeJob(modelConfig, columnConfigList, scanners);
 
         // release
-        closeScanners(scanners);
+        closeClosable(scanners);
     }
 
     /**
@@ -191,6 +192,10 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
         paramsMap.put("delimiter", CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
         paramsMap.put("is_csv", String.valueOf(Boolean.TRUE.toString()
                 .equalsIgnoreCase(Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_CSV, Boolean.FALSE.toString()))));
+
+        // Norm UDF to specify the 1st CC.json for data filter, for NormlizeDF, this is not being used because of
+        // loading all CC.json files.
+        paramsMap.put(CommonConstants.MTL_INDEX, "0");
 
         String expressionsAsString = super.modelConfig.getSegmentFilterExpressionsAsString();
         Environment.getProperties().put("shifu.segment.expressions", expressionsAsString);

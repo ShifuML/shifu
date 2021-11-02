@@ -80,6 +80,9 @@ public class DataPurifier {
         this.columnConfigList = columnConfigList;
         String filterExpressions = (isForValidationDataSet ? modelConfig.getDataSet().getValidationFilterExpressions()
                 : modelConfig.getFilterExpressions());
+        if(modelConfig.isMultiTask()) {
+            filterExpressions = modelConfig.getMTLFilterExpression(modelConfig.getMtlIndex());
+        }
         if(StringUtils.isNotBlank(filterExpressions)) {
             filterExpressions = parseNewTagInfo(filterExpressions);
             jexl = new JexlEngine();
@@ -114,12 +117,12 @@ public class DataPurifier {
                 String[] newTags = CommonUtils.split(newTagSplits[1].trim(), NEW_TARGET_TAG_DELIMITER);
                 this.newPosTags = new HashSet<>();
                 for(String tag: newTags) {
-                    this.newPosTags.add(tag.trim());
+                    this.newPosTags.add(CommonUtils.trimTag(tag.trim()));
                 }
                 newTags = CommonUtils.split(newTagSplits[2].trim(), NEW_TARGET_TAG_DELIMITER);
                 this.newNegTags = new HashSet<>();
                 for(String tag: newTags) {
-                    this.newNegTags.add(tag.trim());
+                    this.newNegTags.add(CommonUtils.trimTag(tag.trim()));
                 }
             } catch (Exception e) {
                 throw new IllegalArgumentException(
@@ -158,6 +161,23 @@ public class DataPurifier {
     }
 
     public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, EvalConfig evalConfig) throws IOException {
+        this.columnConfigList = columnConfigList;
+        if(StringUtils.isNotBlank(evalConfig.getDataSet().getFilterExpressions())) {
+            jexl = new JexlEngine();
+            try {
+                dataFilterExpr = jexl.createExpression(evalConfig.getDataSet().getFilterExpressions());
+            } catch (JexlException e) {
+                log.error("The expression {} is invalid, please use correct expression.",
+                        evalConfig.getDataSet().getFilterExpressions());
+                dataFilterExpr = null;
+            }
+
+            headers = CommonUtils.getFinalHeaders(modelConfig, evalConfig);
+            dataDelimiter = evalConfig.getDataSet().getDataDelimiter();
+        }
+    }
+    
+    public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, EvalConfig evalConfig, int mtlIndex) throws IOException {
         this.columnConfigList = columnConfigList;
         if(StringUtils.isNotBlank(evalConfig.getDataSet().getFilterExpressions())) {
             jexl = new JexlEngine();
