@@ -907,7 +907,8 @@ public class DTWorker extends
                 "worker count is {}, error is {}, and stats size is {}. weightedTrainCount {}, weightedValidationCount {}, trainError {}, validationError {}",
                 count, trainError, statistics.size(), weightedTrainCount, weightedValidationCount, trainError,
                 validationError);
-        return new DTWorkerParams(weightedTrainCount, weightedValidationCount, trainError, validationError, statistics);
+        return new DTWorkerParams(weightedTrainCount, weightedValidationCount, trainError, validationError, statistics,
+                lastMasterResult.isSwitchToNextTree());
     }
 
     private void mergeNodeStats(NodeStats resultNodeStats, NodeStats nodeStats) {

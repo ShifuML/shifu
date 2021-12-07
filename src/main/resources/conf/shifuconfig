@@ -123,3 +123,6 @@ shifu.train.earlystop.window.size = 20
 
 # when doing PSI job, use salt to divide big key, here this 300 means divide the same key into 300 subkey
 shifu.psi.distribution.salt = 300
+
+# trim GBT tree based on best validation error
+shifu.train.gbt.auto.trim = false
