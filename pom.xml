@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ml.shifu</groupId>
 	<artifactId>shifu</artifactId>
-	<version>0.13.0-distinctCount_fix-SNAPSHOT</version>
+	<version>0.13.0-SNAPSHOT</version>
 	<name>Shifu</name>
 	<description>An open-source, end-to-end and distributed machine learning and data mining framework built on top of Hadoop.</description>
 	<properties>
