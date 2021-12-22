@@ -479,6 +479,8 @@ public class CommonUtilsTest {
         Assert.assertEquals(CommonUtils.trimTag(" "), "");
         Assert.assertEquals(CommonUtils.trimTag(null), "");
         Assert.assertEquals(CommonUtils.trimTag("1.0B"), "1.0B");
+
+        Assert.assertEquals(CommonUtils.trimTag("  0.0000  "), "0");
     }
 
     @Test

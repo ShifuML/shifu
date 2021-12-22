@@ -1846,7 +1846,7 @@ public final class CommonUtils {
     }
 
     public static String trimTag(String tag) {
-        if(NumberUtils.isNumber(tag)) {
+        if(NumberUtils.isNumber(StringUtils.trimToEmpty(tag))) {
             tag = tag.trim();
             int firstPeriodPos = -1;
             int firstDeleteZero = -1;
