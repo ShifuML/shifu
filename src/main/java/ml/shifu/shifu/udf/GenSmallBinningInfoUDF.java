@@ -43,7 +43,7 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> implements
 
     private int scaleFactor = 1024;
 
-    private Integer columnId =  null;
+    private Integer columnId = null;
     private ColumnConfig columnConfig = null;
     @SuppressWarnings("rawtypes")
     private AbstractBinning binning = null;
@@ -75,8 +75,10 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> implements
                 || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.EqualNegative) && !isPostive)
                 || modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightEqualTotal)
                 || modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightEqualInterval)
-                || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightEqualPositive) && isPostive)
-                || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightEqualNegative) && !isPostive);
+                || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightEqualPositive)
+                        && isPostive)
+                || (modelConfig.getBinningMethod().equals(ModelStatsConf.BinningMethod.WeightEqualNegative)
+                        && !isPostive);
     }
 
     @SuppressWarnings("rawtypes")
@@ -90,7 +92,7 @@ public class GenSmallBinningInfoUDF extends AbstractTrainerUDF<Tuple> implements
             }
         } else {
             binning = new CategoricalBinning(this.scaleFactor, super.modelConfig.getMissingOrInvalidValues(),
-                    this.maxCategorySize,columnConfig.getHashSeed());
+                    this.maxCategorySize, columnConfig.getHashSeed(), super.enableAutoHash);
         }
 
         return binning;

@@ -868,8 +868,8 @@ public class DTWorker extends
                                     if(Float.compare(weight, 0f) != 0) {
                                         // only compute weight is not 0
                                         short binIndex = data.inputs[DTWorker.this.inputIndexMap.get(columnNum)];
-                                        DTWorker.this.impurity.featureUpdate(featuerStatistic, binIndex, data.output,
-                                                data.significance, weight);
+                                        DTWorker.this.impurity.featureUpdate(featuerStatistic, binIndex, data.label,
+                                                data.output, data.significance, weight);
                                     }
                                 }
                             }
