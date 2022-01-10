@@ -124,7 +124,7 @@ public class EqualPopulationBinningTest {
         columnConfig.setColumnType(ColumnType.N);
 
         AbstractBinning<?> otherBinning = AbstractBinning.constructBinningFromStr(modelConfig, columnConfig, binningStr,
-                Constants.MAX_CATEGORICAL_BINC_COUNT);
+                Constants.MAX_CATEGORICAL_BINC_COUNT, false);
         String newBinningData = otherBinning.getDataBin().toString();
 
         Assert.assertEquals(originalBinningData, newBinningData);

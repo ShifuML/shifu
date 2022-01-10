@@ -265,11 +265,11 @@ public abstract class AbstractBinning<T> {
      * @return the Binning object for the ColumnConfig
      */
     public static AbstractBinning<?> constructBinningFromStr(ModelConfig modelConfig, ColumnConfig columnConfig,
-            String objValStr, int maxCateSize) {
+            String objValStr, int maxCateSize, boolean enableAutoHash) {
         AbstractBinning<?> binning;
 
         if(columnConfig.isCategorical()) {
-            binning = new CategoricalBinning(-1, maxCateSize);
+            binning = new CategoricalBinning(-1, maxCateSize, enableAutoHash);
         } else {
             if(modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)) {
                 binning = new EqualIntervalBinning();

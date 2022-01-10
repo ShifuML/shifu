@@ -17,6 +17,8 @@ package ml.shifu.shifu.udf.stats;
 
 import java.util.*;
 
+import ml.shifu.shifu.util.CommonUtils;
+
 /**
  * counter for the categorical val
  */
@@ -35,7 +37,10 @@ public class CategoryCounter extends Counter {
 
         this.categoryValIndex = new HashMap<String, Integer>();
         for(int i = 0; i < categories.size(); i++) {
-            categoryValIndex.put(categories.get(i), i);
+            List<String> catValues = CommonUtils.flattenCatValGrp(categories.get(i));
+            for(String cval: catValues) {
+                categoryValIndex.put(cval, i);
+            }
         }
     }
 
@@ -46,7 +51,7 @@ public class CategoryCounter extends Counter {
         int pos = binLen;
         if(val != null && !this.missingValSet.contains(val)) {
             Integer cidx = this.categoryValIndex.get(val);
-            if (cidx != null) {
+            if(cidx != null) {
                 pos = cidx;
             }
         }
@@ -54,5 +59,5 @@ public class CategoryCounter extends Counter {
         counter[pos] += 1;
         this.unitSum += this.binPosRate.get(pos);
     }
-    
+
 }

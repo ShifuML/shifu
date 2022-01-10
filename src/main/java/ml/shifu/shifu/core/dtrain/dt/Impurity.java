@@ -79,13 +79,15 @@ public abstract class Impurity {
      *            the bin index
      * @param label
      *            the label
+     * @param output
+     *            the output value per tree
      * @param significance
      *            the significance
      * @param weight
      *            the weight
      */
-    public abstract void featureUpdate(double[] featuerStatistic, int binIndex, float label, float significance,
-            float weight);
+    public abstract void featureUpdate(double[] featuerStatistic, int binIndex, float label, float output,
+            float significance, float weight);
 
     /**
      * @return the statsSize
@@ -246,10 +248,11 @@ class Variance extends Impurity {
     }
 
     @Override
-    public void featureUpdate(double[] featuerStatistic, int binIndex, float label, float significance, float weight) {
+    public void featureUpdate(double[] featuerStatistic, int binIndex, float label, float output, float significance,
+            float weight) {
         featuerStatistic[binIndex * super.statsSize] += (significance * weight);
-        featuerStatistic[binIndex * super.statsSize + 1] += (label * significance * weight);
-        featuerStatistic[binIndex * super.statsSize + 2] += (label * label * significance * weight);
+        featuerStatistic[binIndex * super.statsSize + 1] += (output * significance * weight);
+        featuerStatistic[binIndex * super.statsSize + 2] += (output * output * significance * weight);
     }
 
 }
@@ -550,9 +553,10 @@ class Entropy extends Impurity {
     }
 
     @Override
-    public void featureUpdate(double[] featuerStatistic, int binIndex, float label, float significance, float weight) {
+    public void featureUpdate(double[] featuerStatistic, int binIndex, float label, float output, float significance,
+            float weight) {
         // label + 0.1f to avoid 0.99999f is converted to 0
-        featuerStatistic[binIndex * super.statsSize + (int) (label + 0.000001f)] += (significance * weight);
+        featuerStatistic[binIndex * super.statsSize + (int) (label + 0.000001f)] += (output * significance * weight);
     }
 
     private double log2(double x) {
@@ -737,9 +741,10 @@ class Gini extends Impurity {
     }
 
     @Override
-    public void featureUpdate(double[] featuerStatistic, int binIndex, float label, float significance, float weight) {
+    public void featureUpdate(double[] featuerStatistic, int binIndex, float label, float output, float significance,
+            float weight) {
         // label + 0.1f to avoid 0.99999f is converted to 0
-        featuerStatistic[binIndex * super.statsSize + (int) (label + 0.000001f)] += (significance * weight);
+        featuerStatistic[binIndex * super.statsSize + (int) (label + 0.000001f)] += (output * significance * weight);
     }
 
 }

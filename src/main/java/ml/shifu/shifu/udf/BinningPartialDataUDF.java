@@ -53,8 +53,8 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
         this(source, pathModelConfig, pathColumnConfig, "100");
     }
 
-    public BinningPartialDataUDF(String source, String pathModelConfig, String pathColumnConfig, String histoScaleFactor)
-            throws IOException {
+    public BinningPartialDataUDF(String source, String pathModelConfig, String pathColumnConfig,
+            String histoScaleFactor) throws IOException {
         super(source, pathModelConfig, pathColumnConfig);
         this.histoScaleFactor = NumberFormatUtils.getInt(histoScaleFactor, 100);
         if(this.histoScaleFactor < 100) {
@@ -83,27 +83,30 @@ public class BinningPartialDataUDF extends AbstractTrainerUDF<String> {
 
             if(columnId < 0) {
                 columnId = (Integer) element.get(0);
-                if(columnId >= super.columnConfigList.size()){
+                if(columnId >= super.columnConfigList.size()) {
                     columnId = columnId % super.columnConfigList.size();
                 }
                 columnConfig = super.columnConfigList.get(columnId);
                 if(columnConfig.isCategorical()) {
-                    binning = new CategoricalBinning(-1, modelConfig.getMissingOrInvalidValues(),
-                            this.maxCategorySize, columnConfig.getHashSeed());
+                    binning = new CategoricalBinning(-1, modelConfig.getMissingOrInvalidValues(), this.maxCategorySize,
+                            columnConfig.getHashSeed(), super.enableAutoHash);
                 } else {
                     if(super.modelConfig.getBinningMethod().equals(BinningMethod.EqualInterval)) {
-                        binning = new EqualIntervalBinning(modelConfig.getStats().getMaxNumBin() > 0
-                                    ? modelConfig.getStats().getMaxNumBin() : 1024,
+                        binning = new EqualIntervalBinning(
+                                modelConfig.getStats().getMaxNumBin() > 0 ? modelConfig.getStats().getMaxNumBin()
+                                        : 1024,
                                 modelConfig.getMissingOrInvalidValues());
                     } else {
-                        binning = new EqualPopulationBinning(modelConfig.getStats().getMaxNumBin() > 0
-                                ? modelConfig.getStats().getMaxNumBin() : 1024, modelConfig.getMissingOrInvalidValues());
+                        binning = new EqualPopulationBinning(
+                                modelConfig.getStats().getMaxNumBin() > 0 ? modelConfig.getStats().getMaxNumBin()
+                                        : 1024,
+                                modelConfig.getMissingOrInvalidValues());
                     }
                 }
 
                 if(columnConfig.isHybrid()) {
                     this.backUpbinning = new CategoricalBinning(-1, modelConfig.getMissingOrInvalidValues(),
-                            this.maxCategorySize);
+                            this.maxCategorySize, super.enableAutoHash);
                 }
             }
 

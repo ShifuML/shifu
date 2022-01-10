@@ -61,6 +61,8 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
 
     protected boolean hasCandidates;
 
+    protected boolean enableAutoHash = false;
+
     /**
      * Constructor with SourceType, ModelConfig path and ColumnConfig path
      * 
@@ -75,7 +77,7 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
      */
     public AbstractTrainerUDF(String source, String pathModelConfig, String pathColumnConfig) throws IOException {
         // inject fs.defaultFS from UDFContext.getUDFContext().getJobConf()
-        if (UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
             HDFSUtils.getConf().set(FileSystem.FS_DEFAULT_NAME_KEY,
                     UDFContext.getUDFContext().getJobConf().get(FileSystem.FS_DEFAULT_NAME_KEY));
         }
@@ -119,25 +121,11 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
         }
 
         this.hasCandidates = CommonUtils.hasCandidateColumns(this.columnConfigList);
-    }
-    
-    /**
-     * Load column config list.
-     *
-     * @param pathColumnConfig is the column config file path.
-     * @param sourceType       is the source type: HDFS, LOCAL, etc.
-     * @return the column config list.
-     * @throws IOException if load column config failed.
-     */
-    private static synchronized List<ColumnConfig> loadColumnConfigList(String pathColumnConfig, SourceType sourceType) throws IOException {
-        // Return the cached column config if it exists. This action will avoid loading same column config file more times.
-        String key = pathColumnConfig + "," + sourceType;
-        List<ColumnConfig> cachedColumnConfigList = columnConfigCache.get(key);
-        if (cachedColumnConfigList == null) {
-            cachedColumnConfigList = CommonUtils.loadColumnConfigList(pathColumnConfig, sourceType);
-            columnConfigCache.put(key, cachedColumnConfigList);
+
+        if(UDFContext.getUDFContext() != null && UDFContext.getUDFContext().getJobConf() != null) {
+            this.enableAutoHash = UDFContext.getUDFContext().getJobConf().getBoolean(Constants.SHIFU_ENABLE_AUTO_HASH,
+                    false);
         }
-        return cachedColumnConfigList;
     }
 
     /**
@@ -152,6 +140,30 @@ public abstract class AbstractTrainerUDF<T> extends EvalFunc<T> {
      */
     public AbstractTrainerUDF(String source, String pathColumnConfig) throws IOException {
         this(source, null, pathColumnConfig);
+    }
+
+    /**
+     * Load column config list.
+     *
+     * @param pathColumnConfig
+     *            is the column config file path.
+     * @param sourceType
+     *            is the source type: HDFS, LOCAL, etc.
+     * @return the column config list.
+     * @throws IOException
+     *             if load column config failed.
+     */
+    private static synchronized List<ColumnConfig> loadColumnConfigList(String pathColumnConfig, SourceType sourceType)
+            throws IOException {
+        // Return the cached column config if it exists. This action will avoid loading same column config file more
+        // times.
+        String key = pathColumnConfig + "," + sourceType;
+        List<ColumnConfig> cachedColumnConfigList = columnConfigCache.get(key);
+        if(cachedColumnConfigList == null) {
+            cachedColumnConfigList = CommonUtils.loadColumnConfigList(pathColumnConfig, sourceType);
+            columnConfigCache.put(key, cachedColumnConfigList);
+        }
+        return cachedColumnConfigList;
     }
 
     /*

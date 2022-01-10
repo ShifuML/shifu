@@ -86,7 +86,7 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
                 hybridCateValStr = splits[1];
             }
             AbstractBinning<?> partialBinning = AbstractBinning.constructBinningFromStr(modelConfig, columnConfig,
-                    objValStr, this.maxCategorySize);
+                    objValStr, this.maxCategorySize, super.enableAutoHash);
             AbstractBinning<?> partialBackupBinning = null;
             if(columnConfig.isHybrid()) {
                 partialBackupBinning = new CategoricalBinning();
@@ -129,7 +129,7 @@ public class BinningDataMergeUDF extends AbstractTrainerUDF<Tuple> {
             }
         }
 
-        if(columnConfig.isCategorical()) {
+        if(columnConfig.isCategorical() && super.enableAutoHash) {
             output.set(2, ((CategoricalBinning) binning).cardinality());
         } else {
             output.set(2, -1L);

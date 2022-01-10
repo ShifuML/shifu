@@ -47,6 +47,8 @@ public class CategoricalBinning extends AbstractBinning<String> {
 
     private HyperLogLogPlus hyper = new HyperLogLogPlus(8);
 
+    private boolean enableAutoHash = false;
+
     /**
      * Empty constructor : it is just for bin merging
      */
@@ -57,22 +59,25 @@ public class CategoricalBinning extends AbstractBinning<String> {
      * Constructor with expected bin number.
      * For categorical variable, the binningNum won't be used
      */
-    public CategoricalBinning(int binningNum, int maxCategorySize) {
-        this(binningNum, null, maxCategorySize);
+    public CategoricalBinning(int binningNum, int maxCategorySize, boolean appendHLLInfo) {
+        this(binningNum, null, maxCategorySize, appendHLLInfo);
     }
 
     /*
      * Constructor with expected bin number and missing value list
      * For categorical variable, the binningNum won't be used
      */
-    public CategoricalBinning(int binningNum, List<String> missingValList, int maxCategorySize) {
+    public CategoricalBinning(int binningNum, List<String> missingValList, int maxCategorySize, boolean enableAutoHash) {
         super(binningNum, missingValList, maxCategorySize);
         this.categoricalVals = new HashSet<String>();
+        this.enableAutoHash = enableAutoHash;
     }
 
-    public CategoricalBinning(int binningNum, List<String> missingValList, int maxCategorySize, int hashSeed) {
-        this(binningNum, missingValList, maxCategorySize);
+    public CategoricalBinning(int binningNum, List<String> missingValList, int maxCategorySize, int hashSeed,
+            boolean enableAutoHash) {
+        this(binningNum, missingValList, maxCategorySize, enableAutoHash);
         this.hashSeed = hashSeed;
+        this.enableAutoHash = enableAutoHash;
     }
 
     /*
@@ -80,8 +85,8 @@ public class CategoricalBinning extends AbstractBinning<String> {
      * For categorical variable, the binningNum won't be used
      */
     public CategoricalBinning(int binningNum, List<String> missingValList, int maxCategorySize, int hashSeed,
-            boolean isPrint) {
-        this(binningNum, missingValList, maxCategorySize);
+            boolean isPrint, boolean enableAutoHash) {
+        this(binningNum, missingValList, maxCategorySize, enableAutoHash);
         this.hashSeed = hashSeed;
     }
 
@@ -190,7 +195,7 @@ public class CategoricalBinning extends AbstractBinning<String> {
             log.warn("Empty categorical bin - " + objValStr);
         }
 
-        if(objStrArr.length > 6 && StringUtils.isNotBlank(objStrArr[6])) {
+        if(this.enableAutoHash && objStrArr.length > 6 && StringUtils.isNotBlank(objStrArr[6])) {
             try {
                 this.hyper = HyperLogLogPlus.Builder.build(Base64Utils.base64DecodeToBytes((objStrArr[6])));
             } catch (Exception e) {
@@ -221,13 +226,19 @@ public class CategoricalBinning extends AbstractBinning<String> {
      * convert @CategoricalBinning to String
      */
     public String objToString() {
+        StringBuilder sb = new StringBuilder(1000);
         try {
-            return super.objToString() + Character.toString(FIELD_SEPARATOR) + Boolean.toString(isValid)
-                    + Character.toString(FIELD_SEPARATOR) + StringUtils.join(categoricalVals, SETLIST_SEPARATOR)
-                    + Character.toString(FIELD_SEPARATOR) + Base64Utils.base64EncodeFromBytes(this.hyper.getBytes());
+            sb.append(super.objToString()).append(Character.toString(FIELD_SEPARATOR)).append(Boolean.toString(isValid))
+                    .append(Character.toString(FIELD_SEPARATOR))
+                    .append(StringUtils.join(categoricalVals, SETLIST_SEPARATOR));
+            if(this.enableAutoHash) {
+                sb.append(Character.toString(FIELD_SEPARATOR))
+                        .append(Base64Utils.base64EncodeFromBytes(this.hyper.getBytes()));
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        return sb.toString();
     }
 
     /**
