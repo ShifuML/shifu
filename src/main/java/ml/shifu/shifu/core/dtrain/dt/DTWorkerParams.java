@@ -68,16 +68,22 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
      */
     private Map<Integer, NodeStats> nodeStatsMap;
 
+    /**
+     * Is used to tell whether the validation error is for last complete tree
+     */
+    private boolean switchedToNewTree = false;
+
     public DTWorkerParams() {
     }
 
     public DTWorkerParams(double trainCount, double validationCount, double trainError, double validationError,
-            Map<Integer, NodeStats> nodeStatsMap) {
+            Map<Integer, NodeStats> nodeStatsMap, boolean switchedToNewTree) {
         this.trainCount = trainCount;
         this.validationCount = validationCount;
         this.trainError = trainError;
         this.validationError = validationError;
         this.nodeStatsMap = nodeStatsMap;
+        this.switchedToNewTree = switchedToNewTree;
     }
 
     @Override
@@ -86,6 +92,7 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
         out.writeDouble(validationCount);
         out.writeDouble(trainError);
         out.writeDouble(validationError);
+        out.writeBoolean(switchedToNewTree);
         if(nodeStatsMap == null) {
             out.writeBoolean(false);
         } else {
@@ -104,6 +111,7 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
         this.validationCount = in.readDouble();
         this.trainError = in.readDouble();
         this.validationError = in.readDouble();
+        this.switchedToNewTree = in.readBoolean();
         if(in.readBoolean()) {
             this.nodeStatsMap = new HashMap<Integer, NodeStats>();
             int len = in.readInt();
@@ -366,4 +374,7 @@ public class DTWorkerParams extends HaltBytable implements Combinable<DTWorkerPa
         this.validationCount = validationCount;
     }
 
+    public boolean isSwitchedToNewTree() {
+        return switchedToNewTree;
+    }
 }

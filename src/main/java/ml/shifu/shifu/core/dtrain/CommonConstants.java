@@ -71,6 +71,8 @@ public interface CommonConstants {
 
     public static final String SHIFU_TRAIN_EARLYSTOP_WINDOW_SIZE = "shifu.train.earlystop.window.size";
 
+    public static final String SHIFU_TRAIN_GBT_AUTO_TRIM = "shifu.train.gbt.auto.trim";
+
     /* -------------- Other setting Constants ---------------------- */
     public static final String MAPREDUCE_MAP_CPU_VCORES = "mapreduce.map.cpu.vcores";
 

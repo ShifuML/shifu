@@ -201,7 +201,7 @@ public class AddColumnNumAndFilterUDF extends AddColumnNumUDF {
                     Boolean isFilter = filterResultList.get(j);
                     if(isFilter != null && isFilter) {
                         if(dataPurifier.isNewTag()) {
-                            String newTag = input.get(this.newTagIndexes.get(j)).toString();
+                            String newTag = CommonUtils.trimTag(input.get(this.newTagIndexes.get(j)).toString());
                             Set<String> newPosTags = dataPurifier.getNewPosTags();
                             Set<String> newNegTags = dataPurifier.getNewNegTags();
                             if(newTag == null || (!newPosTags.contains(newTag) && !newNegTags.contains(newTag))) {
