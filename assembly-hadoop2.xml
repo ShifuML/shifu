@@ -138,7 +138,10 @@
                 <include>*:jaxb-impl:*</include>
                 <include>*:jline:*</include>
                 <include>*:liblinear:*</include>
-                <include>*:log4j:*</include>
+                <include>*:log4j-api:*</include>
+                <include>*:log4j-core:*</include>
+                <include>*:log4j-to-slf4j:*</include>
+                <include>*:slf4j-log4j12:*</include>
                 <include>*:netty:*</include>
                 <include>*:pig:*:h2:*</include>
                 <include>*:piggybank:*</include>
