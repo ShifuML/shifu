@@ -31,6 +31,7 @@ import java.util.Scanner;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import org.antlr.runtime.RecognitionException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -47,10 +48,13 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.pig.impl.PigContext;
 import org.apache.pig.impl.util.JarManager;
 import org.encog.ml.data.MLDataSet;
+import org.joda.time.ReadableInstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xerial.snappy.Snappy;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonParser;
@@ -79,6 +83,8 @@ import ml.shifu.shifu.core.correlation.CorrelationReducer;
 import ml.shifu.shifu.core.correlation.CorrelationWritable;
 import ml.shifu.shifu.core.correlation.FastCorrelationMapper;
 import ml.shifu.shifu.core.correlation.FastCorrelationMultithreadedMapper;
+import ml.shifu.shifu.core.correlation.ParquetCorrelationMapper;
+import ml.shifu.shifu.core.correlation.ParquetCorrelationMultithreadedMapper;
 import ml.shifu.shifu.core.dtrain.nn.NNConstants;
 import ml.shifu.shifu.core.mr.input.CombineInputFormat;
 import ml.shifu.shifu.core.processor.stats.AbstractStatsExecutor;
@@ -98,6 +104,14 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.ValueVisitor;
+import parquet.ParquetRuntimeException;
+import parquet.column.ParquetProperties;
+import parquet.column.values.bitpacking.Packer;
+import parquet.encoding.Generator;
+import parquet.format.PageType;
+import parquet.hadoop.ParquetInputFormat;
+import parquet.hadoop.ParquetRecordReader;
+import parquet.org.codehaus.jackson.Base64Variant;
 
 /**
  * statistics, max/min/avg/std for each column dataset if it's numerical
@@ -305,7 +319,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
     }
 
     // OptionsParser doesn't to support *.jar currently.
-    private String addRuntimeJars() {
+    private String addRuntimeJars() throws IOException {
         List<String> jars = new ArrayList<String>(16);
         // common-codec
         jars.add(JarManager.findContainingJar(Base64.class));
@@ -333,6 +347,34 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         jars.add(JarManager.findContainingJar(JsonParser.class));
         // jackson-annotations-*.jar
         jars.add(JarManager.findContainingJar(JsonIgnore.class));
+
+        if(ShifuFileUtils.isParquet(modelConfig.getDataSetRawPath(), modelConfig.getDataSet().getSource())) {
+            // this jars are only for parquet format
+            // parquet-mr-*.jar
+            jars.add(JarManager.findContainingJar(ParquetRecordReader.class));
+            // parquet-pig-*.jar
+            jars.add(JarManager.findContainingJar(parquet.pig.ParquetLoader.class));
+            // pig-*.jar
+            jars.add(JarManager.findContainingJar(PigContext.class));
+            // parquet-common-*.jar
+            jars.add(JarManager.findContainingJar(ParquetRuntimeException.class));
+            // parquet-column-*.jar
+            jars.add(JarManager.findContainingJar(ParquetProperties.class));
+            // parquet-encoding-*.jar
+            jars.add(JarManager.findContainingJar(Packer.class));
+            // parquet-generator-*.jar
+            jars.add(JarManager.findContainingJar(Generator.class));
+            // parquet-format-*.jar
+            jars.add(JarManager.findContainingJar(PageType.class));
+            // snappy-*.jar
+            jars.add(JarManager.findContainingJar(Snappy.class));
+            // parquet-jackson-*.jar
+            jars.add(JarManager.findContainingJar(Base64Variant.class));
+            // antlr jar
+            jars.add(JarManager.findContainingJar(RecognitionException.class));
+            // joda-time jar
+            jars.add(JarManager.findContainingJar(ReadableInstant.class));
+        }
 
         return StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR);
     }
@@ -429,7 +471,14 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                     "Cannot support parquet files as input for correlation compute, please check raw data path:"
                             + modelConfig.getDataSetRawPath());
         }
-        job.setInputFormatClass(CombineInputFormat.class);
+
+        if(ShifuFileUtils.isParquet(modelConfig.getDataSetRawPath(), modelConfig.getDataSet().getSource())) {
+            job.setInputFormatClass(ParquetInputFormat.class);
+            job.setMapperClass(ParquetCorrelationMultithreadedMapper.class);
+            CorrelationMultithreadedMapper.setMapperClass(job, ParquetCorrelationMapper.class);
+        } else {
+            job.setInputFormatClass(CombineInputFormat.class);
+        }
         Path filePath = new Path(super.modelConfig.getDataSetRawPath());
         FileInputFormat.setInputPaths(job,
                 ShifuFileUtils.getFileSystemBySourceType(source, filePath).makeQualified(filePath));

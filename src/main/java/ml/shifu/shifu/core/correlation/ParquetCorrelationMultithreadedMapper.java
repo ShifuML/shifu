@@ -25,17 +25,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
-import ml.shifu.shifu.util.CommonUtils;
-import ml.shifu.shifu.util.Constants;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
@@ -48,8 +42,14 @@ import org.apache.hadoop.mapreduce.StatusReporter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.pig.data.Tuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
+import ml.shifu.shifu.util.CommonUtils;
+import ml.shifu.shifu.util.Constants;
 
 /**
  * Copy from MultithreadedMapper to do some customization. Merge mapper output results and then write to reducer.
@@ -58,13 +58,13 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class CorrelationMultithreadedMapper extends Mapper<LongWritable, Text, IntWritable, CorrelationWritable> {
+public class ParquetCorrelationMultithreadedMapper extends Mapper<LongWritable, Tuple, IntWritable, CorrelationWritable> {
 
-    private final static Logger LOG = LoggerFactory.getLogger(CorrelationMultithreadedMapper.class);
+    private final static Logger LOG = LoggerFactory.getLogger(ParquetCorrelationMultithreadedMapper.class);
     public static String NUM_THREADS = "mapreduce.mapper.multithreadedmapper.threads";
     public static String MAP_CLASS = "mapreduce.mapper.multithreadedmapper.mapclass";
 
-    private Class<? extends Mapper<LongWritable, Text, IntWritable, CorrelationWritable>> mapClass;
+    private Class<? extends Mapper<LongWritable, Tuple, IntWritable, CorrelationWritable>> mapClass;
     private Context outer;
     private List<MapRunner> runners;
 
@@ -145,7 +145,7 @@ public class CorrelationMultithreadedMapper extends Mapper<LongWritable, Text, I
      *            the class to use as the mapper
      */
     public static <K1, V1, K2, V2> void setMapperClass(Job job, Class<? extends Mapper<K1, V1, K2, V2>> cls) {
-        if(CorrelationMultithreadedMapper.class.isAssignableFrom(cls)) {
+        if(ParquetCorrelationMultithreadedMapper.class.isAssignableFrom(cls)) {
             throw new IllegalArgumentException("Can't have recursive " + "MultithreadedMapper instances.");
         }
         job.getConfiguration().setClass(MAP_CLASS, cls, Mapper.class);
@@ -172,7 +172,7 @@ public class CorrelationMultithreadedMapper extends Mapper<LongWritable, Text, I
 
         // initialize each cw instance to make it easy to be synchronized in CorrelationMapper
         for(int i = 0; i < this.columnConfigList.size(); i++) {
-            CorrelationMultithreadedMapper.finalCorrelationMap.put(this.columnConfigList.get(i).getColumnNum(),
+            ParquetCorrelationMultithreadedMapper.finalCorrelationMap.put(this.columnConfigList.get(i).getColumnNum(),
                     new CorrelationWritable());
         }
 
@@ -217,9 +217,9 @@ public class CorrelationMultithreadedMapper extends Mapper<LongWritable, Text, I
         }
     }
 
-    private class SubMapRecordReader extends RecordReader<LongWritable, Text> {
+    private class SubMapRecordReader extends RecordReader<LongWritable, Tuple> {
         private LongWritable key;
-        private Text value;
+        private Tuple value;
         private Configuration conf;
 
         @Override
@@ -253,7 +253,7 @@ public class CorrelationMultithreadedMapper extends Mapper<LongWritable, Text, I
         }
 
         @Override
-        public Text getCurrentValue() {
+        public Tuple getCurrentValue() {
             return value;
         }
     }
@@ -305,10 +305,10 @@ public class CorrelationMultithreadedMapper extends Mapper<LongWritable, Text, I
     }
 
     private class MapRunner extends Thread {
-        private Mapper<LongWritable, Text, IntWritable, CorrelationWritable> mapper;
+        private Mapper<LongWritable, Tuple, IntWritable, CorrelationWritable> mapper;
         private Context subcontext;
         private Throwable throwable;
-        private RecordReader<LongWritable, Text> reader = new SubMapRecordReader();
+        private RecordReader<LongWritable, Tuple> reader = new SubMapRecordReader();
 
         MapRunner(Context context) throws IOException, InterruptedException {
             mapper = ReflectionUtils.newInstance(mapClass, context.getConfiguration());
