@@ -452,10 +452,12 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         Map<String, String> confMap = new HashMap<String, String>();
 
         // max min score folder
-        Path path = new Path(
-                "tmp" + File.separator + "maxmin_score_" + System.currentTimeMillis() + "_" + RANDOM.nextLong());
-        String maxMinScoreFolder = ShifuFileUtils.getFileSystemBySourceType(sourceType, path).makeQualified(path)
-                .toString();
+
+        Path path = new Path(Constants.TMP + File.separator
+                + "maxmin_score_" + System.currentTimeMillis() + "_" + RANDOM.nextLong());
+        String maxMinScoreFolder = this.pathFinder.getPathBySourceType(path, sourceType);
+        // String maxMinScoreFolder = ShifuFileUtils.getFileSystemBySourceType(sourceType, path).makeQualified(path)
+        //        .toString();
         confMap.put(Constants.SHIFU_EVAL_MAXMIN_SCORE_OUTPUT, maxMinScoreFolder);
         if(modelConfig.isClassification()
                 || (isNoSort() && (EvalStep.SCORE.equals(this.evalStep) || EvalStep.AUDIT.equals(this.evalStep)))) {
@@ -485,6 +487,10 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             // mtlIndex here set to -1 since each eval pig job, output COUNTER are the same name.
             return getScoreStatus(sourceType, maxMinScoreFolder, jobStats, evalRecords, -1);
         }
+
+        // Remove maxMinScore HDFS output to save quota in HDFS
+        ShifuFileUtils.deleteFile(maxMinScoreFolder, sourceType);
+
         return null;
     }
 

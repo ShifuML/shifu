@@ -740,8 +740,10 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
                 if(raw.length >= 30) {
                     config.getColumnStats().setValidNumCount(NumberUtils.parseLong(raw[29]));
                 }
-                if(raw.length >= 31) {
-                    config.getColumnStats().setDistinctCount(NumberUtils.parseLong(raw[30]));
+                if(raw.length >= 31) { // limit the distinctCount val to be at most totalCount val
+                    if(config.getTotalCount() != null) {
+                        config.getColumnStats().setDistinctCount(Math.min(NumberUtils.parseLong(raw[30]), config.getTotalCount()));
+                    }
                 }
                 if(raw.length >= 32) {
                     if(raw[31] != null) {

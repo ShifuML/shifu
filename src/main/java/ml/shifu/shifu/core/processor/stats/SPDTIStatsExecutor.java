@@ -24,6 +24,7 @@ import ml.shifu.shifu.core.dtrain.CommonConstants;
 import ml.shifu.shifu.core.processor.BasicModelProcessor;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import ml.shifu.shifu.pig.PigExecutor;
+import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 
 import org.slf4j.Logger;
@@ -49,7 +50,7 @@ public class SPDTIStatsExecutor extends MapReducerStatsWorker {
             paramsMap.put("group_binning_parallel", Integer.toString(columnConfigList.size() / (5 * 8)));
 
             String expressionsAsString = super.modelConfig.getSegmentFilterExpressionsAsString();
-            Environment.getProperties().put("shifu.segment.expressions", expressionsAsString);
+            Environment.getProperties().put(Constants.SHIFU_SEGMENT_EXPRESSIONS, expressionsAsString);
 
             if(this.modelConfig.isMultiTask()) {
                 ShifuFileUtils.deleteFile(

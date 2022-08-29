@@ -131,6 +131,17 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
      */
     private Path bModel;
 
+    /**
+     * Record the best number of GBT trees and the corresponding validation error
+     */
+    private double miniValidationError = Double.MAX_VALUE;
+    private int bestTreeCount = 0;
+
+    /**
+     * Flag to indicate to trim the GBT tree or not
+     */
+    private boolean trimToBestModel;
+
     @Override
     public void preApplication(MasterContext<DTMasterParams, DTWorkerParams> context) {
         init(context);
@@ -299,13 +310,26 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
 
     private String buildGBDTProgressInfo(final MasterContext<DTMasterParams, DTWorkerParams> context,
             int currentIteration, double trainError, double validationError) {
-        String info;
+        String info = "";
         int treeSize = 0;
+        if (isSwitchedToNewTree(context) || context.getMasterResult().isHalt()) {
+            if (!(Double.isNaN(validationError) || validationError == 0d)
+                    && validationError < this.miniValidationError) {
+                this.miniValidationError = validationError;
+                this.bestTreeCount = context.getMasterResult().isHalt()
+                        ? (context.getMasterResult().getTmpTrees().size())
+                            : (context.getMasterResult().getTmpTrees().size() - 1);
+                info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
+                        .append(currentIteration - 1).append(" Best Tree Number: ").append(this.bestTreeCount)
+                        .append(", with Validation Error: ").append(this.miniValidationError).append("\n").toString();
+            }
+        }
+
         if(context.getMasterResult().isSwitchToNextTree() || context.getMasterResult().isHalt()) {
             treeSize = context.getMasterResult().isSwitchToNextTree()
                     ? (context.getMasterResult().getTmpTrees().size() - 1)
                     : (context.getMasterResult().getTmpTrees().size());
-            info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
+            info = info + new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
                     .append(currentIteration - 1).append(" Training Error: ")
                     .append((Double.isNaN(trainError) || trainError == 0d) ? "N/A" : String.format("%.10f", trainError))
                     .append(" Validation Error: ")
@@ -313,7 +337,7 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                     .append(treeSize).append(" is finished. \n").toString();
         } else {
             int nextDepth = context.getMasterResult().getTreeDepth().get(0);
-            info = new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
+            info = info + new StringBuilder(200).append("Trainer ").append(this.trainerId).append(" Iteration #")
                     .append(currentIteration - 1).append(" Training Error: ")
                     .append((Double.isNaN(trainError) || trainError == 0d) ? "N/A" : String.format("%.10f", trainError))
                     .append(" Validation Error: ")
@@ -321,6 +345,18 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
                     .append("; will work on depth ").append(nextDepth).append(". \n").toString();
         }
         return info;
+    }
+
+    /**
+     * Get the first DTWorkerParams and check whether the validation error is for last complete tree
+     * @param context
+     * @return - the validation error is for last complete tree
+     */
+    private boolean isSwitchedToNewTree(MasterContext<DTMasterParams, DTWorkerParams> context) {
+        for ( DTWorkerParams workerParam : context.getWorkerResults()) {
+            return workerParam.isSwitchedToNewTree();
+        }
+        return false;
     }
 
     /**
@@ -351,6 +387,8 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             trees = context.getMasterResult().getTmpTrees();
         }
         Path out = new Path(context.getProps().getProperty(CommonConstants.GUAGUA_OUTPUT));
+        // auto trim the decision tree
+        trees = (this.trimToBestModel && this.bestTreeCount > 0) ? trees.subList(0, this.bestTreeCount) : trees;
         writeModelToFileSystem(trees, out, true);
         if(this.isGsMode || this.isKFoldCV) {
             Path valErrOutput = new Path(context.getProps().getProperty(CommonConstants.GS_VALIDATION_ERROR));
@@ -456,6 +494,10 @@ public class DTOutput extends BasicMasterInterceptor<DTMasterParams, DTWorkerPar
             }
             this.bModel = new Path(context.getProps().getProperty(Constants.SHIFU_BINARY_MODEL_PATH));
             LOG.info("Model spec precision: " + this.msPt);
+
+            this.trimToBestModel = DTrainUtils.getBoolean(
+                    context.getProps(), CommonConstants.SHIFU_TRAIN_GBT_AUTO_TRIM, false);
+            LOG.info("Auto GBT tree trim enabled {}", this.trimToBestModel);
         }
     }
 

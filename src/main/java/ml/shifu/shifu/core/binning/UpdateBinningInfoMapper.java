@@ -608,7 +608,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
                     if(filter != null && filter) {
                         if(dataPurifier.isNewTag()) {
                             Integer index = this.newTagIndexes.get(j);
-                            String newTag = units[index].trim();
+                            String newTag = CommonUtils.trimTag(units[index]);
                             Set<String> newPosTags = dataPurifier.getNewPosTags();
                             Set<String> newNegTags = dataPurifier.getNewNegTags();
                             if(newTag == null || (!newPosTags.contains(newTag) && !newNegTags.contains(newTag))) {
