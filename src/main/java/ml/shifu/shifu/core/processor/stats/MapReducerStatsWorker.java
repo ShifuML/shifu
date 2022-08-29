@@ -273,8 +273,14 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
             }
 
             LOG.debug("this.pathFinder.getOtherConfigs() => " + this.pathFinder.getOtherConfigs());
-            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/StatsSpdtI.pig"),
-                    paramsMap, modelConfig.getDataSet().getSource(), this.pathFinder);
+            if(ShifuFileUtils.isParquet(modelConfig.getDataSetRawPath(), modelConfig.getDataSet().getSource())) {
+                PigExecutor.getExecutor().submitJob(modelConfig,
+                        pathFinder.getScriptPath("scripts/StatsSpdtIWithParquet.pig"), paramsMap,
+                        modelConfig.getDataSet().getSource(), this.pathFinder);
+            } else {
+                PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/StatsSpdtI.pig"),
+                        paramsMap, modelConfig.getDataSet().getSource(), this.pathFinder);
+            }
         }
         // update
         LOG.info("Updating binning info ...");
@@ -804,7 +810,12 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         paramsMap.put("value_index", "2");
         paramsMap.put(CommonConstants.MTL_INDEX, this.getMtlIndex() + "");
 
-        PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/PSI.pig"), paramsMap);
+        if(ShifuFileUtils.isParquet(modelConfig.getDataSetRawPath(), modelConfig.getDataSet().getSource())) {
+            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/PSIFromParquet.pig"),
+                    paramsMap);
+        } else {
+            PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath("scripts/PSI.pig"), paramsMap);
+        }
 
         String psiPath;
         if(this.modelConfig.isMultiTask()) {
@@ -825,7 +836,6 @@ public class MapReducerStatsWorker extends AbstractStatsExecutor {
         List<String> unitStats = new ArrayList<String>(this.columnConfigList.size());
         for(Scanner scanner: scanners) {
             while(scanner.hasNext()) {
-                // String[] output = scanner.nextLine().trim().split("\\|");
                 String line = scanner.nextLine();
                 String[] output = Lists.newArrayList(splitter.split(line)).toArray(new String[0]);
                 if(output.length == 6) { // compatible with old psi job

@@ -342,11 +342,11 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         final Configuration conf = new Configuration();
 
         Path mcPath = new Path(super.getPathFinder().getModelConfigPath(source));
-        String modelConfigPath = ShifuFileUtils.getFileSystemBySourceType(source, mcPath)
-                .makeQualified(mcPath).toString();
+        String modelConfigPath = ShifuFileUtils.getFileSystemBySourceType(source, mcPath).makeQualified(mcPath)
+                .toString();
         Path ccPath = new Path(super.getPathFinder().getColumnConfigPath(source));
-        String columnConfigPath = ShifuFileUtils.getFileSystemBySourceType(source, ccPath)
-                .makeQualified(ccPath).toString();
+        String columnConfigPath = ShifuFileUtils.getFileSystemBySourceType(source, ccPath).makeQualified(ccPath)
+                .toString();
 
         // add jars and files to hadoop mapper and reducer
         new GenericOptionsParser(conf,
@@ -423,10 +423,16 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(CorrelationWritable.class);
 
+        if(ShifuFileUtils.isParquet(modelConfig.getDataSetRawPath(), modelConfig.getDataSet().getSource())) {
+            // TODO Add parquet input format reader to support parquet file
+            throw new IllegalArgumentException(
+                    "Cannot support parquet files as input for correlation compute, please check raw data path:"
+                            + modelConfig.getDataSetRawPath());
+        }
         job.setInputFormatClass(CombineInputFormat.class);
         Path filePath = new Path(super.modelConfig.getDataSetRawPath());
-        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source, filePath)
-                .makeQualified(filePath));
+        FileInputFormat.setInputPaths(job,
+                ShifuFileUtils.getFileSystemBySourceType(source, filePath).makeQualified(filePath));
 
         job.setReducerClass(CorrelationReducer.class);
 
@@ -599,7 +605,6 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
                                 xCw.getAdjustCount()[i], xCw.getYySum()[i], xCw.getAdjustSumY()[i],
                                 xCw.getAdjustSumY()[i]);
                     }
-
                 }
 
                 // put to current map
@@ -635,8 +640,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
             throws IOException, UnsupportedEncodingException {
         SortedMap<Integer, CorrelationWritable> corrMap = new TreeMap<Integer, CorrelationWritable>();
         Path filePath = new Path(outputFilePattern);
-        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source, filePath)
-                .globStatus(filePath);
+        FileStatus[] globStatus = ShifuFileUtils.getFileSystemBySourceType(source, filePath).globStatus(filePath);
         if(globStatus == null || globStatus.length == 0) {
             throw new RuntimeException("Correlation computing output file not exist.");
         }

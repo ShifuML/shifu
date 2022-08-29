@@ -321,7 +321,7 @@ public class FastCorrelationMultithreadedMapper extends Mapper<LongWritable, Tex
             }
         }
 
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings({ "unchecked", "deprecation" })
         private Context createSubContextForHadoop2(Context context, Class<?> mapContextImplClazz)
                 throws NoSuchMethodException, InstantiationException, IllegalAccessException,
                 InvocationTargetException, ClassNotFoundException {

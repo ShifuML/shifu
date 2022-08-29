@@ -214,7 +214,11 @@ public class NormalizeModelProcessor extends BasicModelProcessor implements Proc
                     // this condition is for comment, no matter post train enabled or not, only norm results will be
                     // stored since new post train solution no need to prepare data
                 }
-                normPigPath = pathFinder.getScriptPath("scripts/Normalize.pig");
+                if(ShifuFileUtils.isParquet(modelConfig.getDataSetRawPath(), modelConfig.getDataSet().getSource())) {
+                    normPigPath = pathFinder.getScriptPath("scripts/NormalizeFromParquet.pig");
+                }else {
+                    normPigPath = pathFinder.getScriptPath("scripts/Normalize.pig");
+                }
             }
             paramsMap.put(Constants.IS_COMPRESS, "true");
             paramsMap.put(Constants.IS_NORM_FOR_CLEAN, "false");
