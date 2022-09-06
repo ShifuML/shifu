@@ -479,7 +479,18 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         } else {
             job.setInputFormatClass(CombineInputFormat.class);
         }
-        Path filePath = new Path(super.modelConfig.getDataSetRawPath());
+
+        boolean isComputeOnNorm = Environment.getProperty(Constants.SHIFU_CORRELATION_ON_NORM, "false")
+                .equalsIgnoreCase(Boolean.TRUE.toString());
+        conf.set(Constants.SHIFU_CORRELATION_ON_NORM, "" + isComputeOnNorm);
+
+        Path filePath = null;
+        if(isComputeOnNorm) {
+            filePath = new Path(this.pathFinder.getNormalizedDataPath());
+            log.info("Corrrelation compute on normed output {}.", filePath);
+        } else {
+            filePath = new Path(super.modelConfig.getDataSetRawPath());
+        }
         FileInputFormat.setInputPaths(job,
                 ShifuFileUtils.getFileSystemBySourceType(source, filePath).makeQualified(filePath));
 
