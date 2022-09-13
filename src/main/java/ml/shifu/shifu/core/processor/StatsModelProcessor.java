@@ -451,15 +451,22 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(CorrelationWritable.class);
 
-        if (ShifuFileUtils.isParquetFile(modelConfig.getDataSetRawPath(), modelConfig.getDataSet().getSource())) {
+        boolean isComputeOnNorm = Environment.getBoolean(Constants.SHIFU_CORRELATION_ON_NORM, false);
+        conf.set(Constants.SHIFU_CORRELATION_ON_NORM, Boolean.toString(isComputeOnNorm));
+
+        Path filePath = new Path(super.modelConfig.getDataSetRawPath());
+        if(isComputeOnNorm) {
+            filePath = new Path(this.pathFinder.getNormalizedDataPath());
+            log.info("Corrrelation compute on normed output {}.", filePath);
+        }
+        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source, filePath)
+                .makeQualified(filePath));
+
+        if (ShifuFileUtils.isParquetFile(filePath.toString(), modelConfig.getDataSet().getSource())) {
             job.setInputFormatClass(ExampleInputFormat.class);
         } else {
             job.setInputFormatClass(CombineInputFormat.class);
         }
-        Path filePath = new Path(super.modelConfig.getDataSetRawPath());
-        FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source, filePath)
-                .makeQualified(filePath));
-
         job.setReducerClass(CorrelationReducer.class);
 
         // 3000 features will be 30 reducers, 600 will be 6, much more reducer to avoid data all copied to one reducer
