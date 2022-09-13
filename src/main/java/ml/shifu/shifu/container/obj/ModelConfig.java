@@ -98,9 +98,11 @@ public class ModelConfig {
 
     /**
      * If MTL, check mtl index used for get real target and pos & neg tag
+     *
+     * Change default to 0 for multi-task learning
      */
     @JsonIgnore
-    private int mtlIndex = -1;
+    private int mtlIndex = 0;
 
     public ModelBasicConf getBasic() {
         return basic;

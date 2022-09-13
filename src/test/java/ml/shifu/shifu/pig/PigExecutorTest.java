@@ -27,7 +27,7 @@ import org.apache.commons.io.FileUtils;
 import org.powermock.modules.testng.PowerMockObjectFactory;
 import org.testng.IObjectFactory;
 import org.testng.annotations.ObjectFactory;
-
+import org.testng.annotations.Test;
 
 public class PigExecutorTest {
 
@@ -50,6 +50,18 @@ public class PigExecutorTest {
 
         FileUtils.deleteQuietly(new File("ModelConfig.json"));
         FileUtils.deleteDirectory(new File("ModelSets"));
+    }
+
+    @Test
+    public void testParamSub() throws IOException {
+        PigExecutor exec = PigExecutor.getExecutor();
+        ModelConfig modelConfig = CommonUtils.loadModelConfig(
+                "src/test/resources/example/cancer-judgement/ModelStore/ModelSet1/ModelConfig.json",
+                SourceType.LOCAL);
+
+        Environment.setProperty(Environment.SHIFU_HOME, ".");
+        modelConfig.getDataSet().setSource(SourceType.LOCAL);
+        exec.submitJob(modelConfig, "script/pigTest.pig");
     }
 
 }

@@ -100,6 +100,10 @@ mapreduce.map.cpu.vcores=1
 ## the delimiter for Shifu output data
 # shifu.output.data.delimiter=|
 
+## the delimiter for Shifu output data
+## the default formart is pig, while user can use parquet also
+shifu.output.data.format=pig
+
 ## enable to use multi-thread to score evaluation set
 shifu.eval.score.multithread=false
 

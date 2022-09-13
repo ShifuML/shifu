@@ -45,7 +45,8 @@ DEFINE GenSmallBinningInfo	ml.shifu.shifu.udf.GenSmallBinningInfoUDF('$source_ty
 DEFINE DynamicBinning 		ml.shifu.shifu.udf.DynamicBinningUDF('$source_type', '$path_model_config', '$path_column_config', '$path_stats_small_bins');
 
 -- load and purify data
-data = LOAD '$path_raw_data' USING PigStorage('$delimiter', '-noschema');
+-- data = LOAD '$path_raw_data' USING PigStorage('$delimiter', '-noschema');
+data = LOAD '$path_raw_data' USING $pig_data_load;
 data = FILTER data BY IsDataFilterOut(*);
 
 -- convert data into column based

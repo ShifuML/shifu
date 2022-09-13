@@ -15,27 +15,6 @@
  */
 package ml.shifu.shifu.fs;
 
-import java.io.*;
-import java.util.*;
-import java.util.zip.GZIPInputStream;
-
-import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.io.compress.CompressionCodecFactory;
-import org.apache.hadoop.io.compress.SnappyCodec;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
@@ -43,6 +22,25 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.HDFSUtils;
 import ml.shifu.shifu.util.HdfsPartFile;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionCodecFactory;
+import org.apache.hadoop.io.compress.SnappyCodec;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import parquet.hadoop.Footer;
+import parquet.hadoop.ParquetFileReader;
+
+import java.io.*;
+import java.util.*;
+import java.util.zip.GZIPInputStream;
 
 /**
  * ShifuFileUtils class encapsulate the file system interface from other components.
@@ -53,6 +51,8 @@ import ml.shifu.shifu.util.HdfsPartFile;
 public class ShifuFileUtils {
 
     private static final Logger log = LoggerFactory.getLogger(ShifuFileUtils.class);
+    private static final String PARQUET_POSTFIX = ".parquet";
+
 
     // avoid user to create instance
     private ShifuFileUtils() {
@@ -136,8 +136,8 @@ public class ShifuFileUtils {
      */
     public static BufferedWriter getWriter(String path, SourceType sourceType) throws IOException {
         Path filePath = new Path(path);
-        return new BufferedWriter(new OutputStreamWriter(
-                getFileSystemBySourceType(sourceType, filePath).create(filePath), Constants.DEFAULT_CHARSET));
+        return new BufferedWriter(new OutputStreamWriter(getFileSystemBySourceType(sourceType, filePath)
+                .create(filePath), Constants.DEFAULT_CHARSET));
     }
 
     /**
@@ -171,8 +171,8 @@ public class ShifuFileUtils {
     public static BufferedReader getReader(String path, SourceType sourceType) throws IOException {
         try {
             Path filePath = new Path(path);
-            return new BufferedReader(new InputStreamReader(
-                    getCompressInputStream(getFileSystemBySourceType(sourceType, filePath).open(filePath), filePath),
+            return new BufferedReader(new InputStreamReader(getCompressInputStream(
+                    getFileSystemBySourceType(sourceType, filePath).open(filePath), filePath),
                     Constants.DEFAULT_CHARSET));
         } catch (IOException e) {
             // To manual fix a issue that FileSystem is closed exceptionally. Here we renew a FileSystem object to make
@@ -192,14 +192,10 @@ public class ShifuFileUtils {
 
     /**
      * Get InputStream from (Path, SourceType)
-     * 
-     * @param path
-     *            - file path
-     * @param sourceType
-     *            - file type
+     * @param path - file path
+     * @param sourceType - file type
      * @return InputStream of file(Path, SourceType)
-     * @throws IOException
-     *             - if fail to open file
+     * @throws IOException - if fail to open file
      */
     public static InputStream getInputStream(Path path, SourceType sourceType) throws IOException {
         try {
@@ -330,8 +326,8 @@ public class ShifuFileUtils {
             if(filename.endsWith(Constants.GZ_SUFFIX)) {
                 scanners.add(new Scanner(new GZIPInputStream(fs.open(f.getPath())), Constants.DEFAULT_CHARSET));
             } else if(filename.endsWith(Constants.BZ2_SUFFIX)) {
-                scanners.add(
-                        new Scanner(new BZip2CompressorInputStream(fs.open(f.getPath())), Constants.DEFAULT_CHARSET));
+                scanners.add(new Scanner(new BZip2CompressorInputStream(fs.open(f.getPath())),
+                        Constants.DEFAULT_CHARSET));
             } else {
                 scanners.add(new Scanner(new BufferedInputStream(fs.open(f.getPath())), Constants.DEFAULT_CHARSET));
             }
@@ -359,14 +355,10 @@ public class ShifuFileUtils {
 
     /**
      * Get the BufferedReader for dath with @path and @sourceType
-     * 
-     * @param path
-     *            - source file
-     * @param sourceType
-     *            - local / hdfs
+     * @param path - source file
+     * @param sourceType - local / hdfs
      * @return - the BufferedReader for that path
-     * @throws IOException
-     *             - if any I/O exception in processing
+     * @throws IOException - if any I/O exception in processing
      */
     public static List<BufferedReader> getBufferedReaders(String path, SourceType sourceType) throws IOException {
         return getBufferedReaders(path, sourceType, null);
@@ -374,19 +366,14 @@ public class ShifuFileUtils {
 
     /**
      * Get the BufferedReader for dath with @path and @sourceType
-     * 
-     * @param path
-     *            - source file
-     * @param sourceType
-     *            - local / hdfs
-     * @param pathFilter
-     *            - path filter to filter file under path
+     * @param path - source file
+     * @param sourceType - local / hdfs
+     * @param pathFilter - path filter to filter file under path
      * @return - the BufferedReader for that path
-     * @throws IOException
-     *             - if any I/O exception in processing
+     * @throws IOException - if any I/O exception in processing
      */
-    public static List<BufferedReader> getBufferedReaders(String path, SourceType sourceType,
-            final PathFilter pathFilter) throws IOException {
+    public static List<BufferedReader> getBufferedReaders(String path, SourceType sourceType, final PathFilter pathFilter)
+            throws IOException {
         Path p = new Path(path);
         FileSystem fs = getFileSystemBySourceType(sourceType, p);
 
@@ -431,11 +418,11 @@ public class ShifuFileUtils {
 
             log.debug("Creating Scanner for file: {} ", filename);
             if(filename.endsWith(Constants.GZ_SUFFIX)) {
-                readers.add(new BufferedReader(
-                        new InputStreamReader(new GZIPInputStream(fs.open(f.getPath())), Constants.DEFAULT_CHARSET)));
+                readers.add(new BufferedReader(new InputStreamReader(new GZIPInputStream(fs.open(f.getPath())),
+                        Constants.DEFAULT_CHARSET)));
             } else if(filename.endsWith(Constants.BZ2_SUFFIX)) {
-                readers.add(new BufferedReader(new InputStreamReader(
-                        new BZip2CompressorInputStream(fs.open(f.getPath())), Constants.DEFAULT_CHARSET)));
+                readers.add(new BufferedReader(new InputStreamReader(new BZip2CompressorInputStream(fs.open(f.getPath())),
+                        Constants.DEFAULT_CHARSET)));
             } else {
                 readers.add(new BufferedReader(new InputStreamReader(new BufferedInputStream(fs.open(f.getPath())),
                         Constants.DEFAULT_CHARSET)));
@@ -460,9 +447,9 @@ public class ShifuFileUtils {
      */
     public static void copy(String srcPath, String destPath, SourceType sourceType) throws IOException {
         if(StringUtils.isEmpty(srcPath) || StringUtils.isEmpty(destPath) || sourceType == null) {
-            throw new IllegalArgumentException(
-                    String.format("Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", srcPath,
-                            destPath, sourceType));
+            throw new IllegalArgumentException(String.format(
+                    "Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", srcPath, destPath,
+                    sourceType));
         }
 
         Path destFilePath = new Path(destPath);
@@ -490,9 +477,9 @@ public class ShifuFileUtils {
      */
     public static void moveTo(String srcPath, String destPath, SourceType sourceType) throws IOException {
         if(StringUtils.isEmpty(srcPath) || StringUtils.isEmpty(destPath) || sourceType == null) {
-            throw new IllegalArgumentException(
-                    String.format("Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", srcPath,
-                            destPath, sourceType));
+            throw new IllegalArgumentException(String.format(
+                    "Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", srcPath, destPath,
+                    sourceType));
         }
 
         Path destFilePath = new Path(destPath);
@@ -581,9 +568,9 @@ public class ShifuFileUtils {
      */
     public static boolean move(String srcPath, String destPath, SourceType sourceType) throws IOException {
         if(StringUtils.isEmpty(srcPath) || StringUtils.isEmpty(destPath) || sourceType == null) {
-            throw new IllegalArgumentException(
-                    String.format("Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", srcPath,
-                            destPath, sourceType));
+            throw new IllegalArgumentException(String.format(
+                    "Null or empty parameters srcDataPath:%s, dstDataPath:%s, sourceType:%s", srcPath, destPath,
+                    sourceType));
         }
 
         Path destFilePath = new Path(destPath);
@@ -681,9 +668,9 @@ public class ShifuFileUtils {
      * Get the FileSystem, according the source type
      * 
      * @param sourceType
-     *            - which kind of file system
+     *          - which kind of file system
      * @param path
-     *            - path that could specified which file system to use
+     *          - path that could specified which file system to use
      * @return - file system handler
      */
     public static FileSystem getFileSystemBySourceType(SourceType sourceType, Path path) {
@@ -714,8 +701,8 @@ public class ShifuFileUtils {
                 Path columnConfigFile = new Path(path + "/ColumnConfig.json");
                 if(fs.exists(columnConfigFile)) {
                     log.info("Using config file in this column config : {}", columnConfigFile.toString());
-                    return CommonUtils.loadColumnConfigList(columnConfigFile.toString(),
-                            config.getDataSet().getSource());
+                    return CommonUtils.loadColumnConfigList(columnConfigFile.toString(), config.getDataSet()
+                            .getSource());
 
                 }
             }
@@ -749,34 +736,37 @@ public class ShifuFileUtils {
     }
 
     public static FileStatus[] getFilePartStatus(String filePath, SourceType sourceType) throws IOException {
-        return getFilePartStatus(filePath, sourceType, Constants.HADOOP_PART_PREFIX);
+        return getFilePartStatus(filePath, sourceType, new PathFilter() { // accept all files by default
+            @Override
+            public boolean accept(Path path) {
+                return true;
+            }
+        });
     }
 
     public static FileStatus[] getFilePartStatus(String filePath, SourceType sourceType, final String partFilePrefix)
             throws IOException {
+        // FIXME, should only skip _SUCCESS, .pig_header such files, not start from part, some files may not
+        // start from part.
+        return getFilePartStatus(filePath, sourceType, path -> path.getName().startsWith(partFilePrefix));
+    }
+
+    public static FileStatus[] getFilePartStatus(String filePath, SourceType sourceType, PathFilter pathFilter)
+            throws IOException {
         Path path = new Path(filePath);
         FileSystem fs = getFileSystemBySourceType(sourceType, path);
 
-        PathFilter filter = new PathFilter() {
-            @Override
-            public boolean accept(Path path) {
-                // FIXME, should only skip _SUCCESS, .pig_header such files, not start from part, some files may not
-                // start from part.
-                return path.getName().startsWith(partFilePrefix);
-            }
-        };
-
         FileStatus[] fileStatsArr;
         try {
-            fileStatsArr = fs.listStatus(path, filter);
+            fileStatsArr = fs.listStatus(path, pathFilter);
         } catch (Exception e) {
             // read from glob if not found in listStatus, it usually be a regex path
-            fileStatsArr = fs.globStatus(new Path(filePath), filter);
+            fileStatsArr = fs.globStatus(new Path(filePath), pathFilter);
         }
 
         if(fileStatsArr == null || fileStatsArr.length == 0) {
             // protected by reading glob status again
-            fileStatsArr = fs.globStatus(new Path(filePath));
+            fileStatsArr = fs.globStatus(new Path(filePath), pathFilter);
         }
 
         return fileStatsArr;
@@ -787,8 +777,8 @@ public class ShifuFileUtils {
         Path path = new Path(filePath);
         FileSystem fs = getFileSystemBySourceType(sourceType, path);
         FileStatus[] fileStatusArr = fs.globStatus(path);
-        if(fileStatusArr != null && fileStatusArr.length > 0) {
-            for(FileStatus fileStatus: fileStatusArr) {
+        if ( fileStatusArr != null && fileStatusArr.length > 0 ) {
+            for ( FileStatus fileStatus : fileStatusArr ) {
                 fetchFileStatus(fileStatus.getPath(), sourceType, fileStatusList);
             }
         }
@@ -800,7 +790,7 @@ public class ShifuFileUtils {
         FileSystem fs = getFileSystemBySourceType(sourceType, filePath);
         try {
             FileStatus[] fileStatsArr = fs.listStatus(filePath);
-            for(FileStatus fileStatus: fileStatsArr) {
+            for(FileStatus fileStatus : fileStatsArr) {
                 if(fileStatus.isDirectory()) {
                     fetchFileStatus(fileStatus.getPath(), sourceType, fileStatusList);
                 } else {
@@ -813,18 +803,6 @@ public class ShifuFileUtils {
             log.error("Fail to fetch file status for - {}", filePath.toString());
             throw e;
         }
-    }
-
-    /**
-     * Check if first file under file path is parquet or not, check first file is fine as all files under the same file
-     * path are expected to be the same format.
-     */
-    public static boolean isParquet(String filePath, SourceType sourceType) throws IOException {
-        List<FileStatus> fileStatusList = getFileStatus(filePath, sourceType);
-        for(FileStatus fs: fileStatusList) {
-            return fs.getPath().toString().toLowerCase().contains("parquet");
-        }
-        return false;
     }
 
     public static boolean isHiddenFile(String fileName) {
@@ -917,7 +895,7 @@ public class ShifuFileUtils {
             public int compare(String from, String to) {
                 String[] fromFields = CommonUtils.split(from, delimiter);
                 String[] toFields = CommonUtils.split(to, delimiter);
-                if(isNumber) {
+                if (isNumber) {
                     Double fromVal = Double.parseDouble(fromFields[fieldNum]);
                     Double toVal = Double.parseDouble(toFields[fieldNum]);
                     return Double.compare(fromVal, toVal);
@@ -928,5 +906,32 @@ public class ShifuFileUtils {
         });
         IOUtils.closeQuietly(inputStream);
         FileUtils.writeLines(new File(fileToSort), fileLines);
+    }
+
+    public static boolean isParquetFile(String dataSetRawPath, SourceType sourceType) throws IOException {
+        boolean isParquet = false;
+        if (dataSetRawPath.endsWith(PARQUET_POSTFIX)) {
+            isParquet = true;
+        } else {
+            if (isDir(dataSetRawPath, sourceType)) {
+                FileStatus[] fileStats = getFilePartStatus(dataSetRawPath,
+                        sourceType, path -> path.getName().endsWith(PARQUET_POSTFIX));
+                isParquet = (fileStats != null && fileStats.length > 0);
+            }
+        }
+        return isParquet;
+    }
+
+    public static String[] readParquetFileHeader(String dataSetRawPath, SourceType source) throws IOException {
+        Path path = new Path(dataSetRawPath);
+        FileSystem fs = getFileSystemBySourceType(source, path);
+        List<Footer> footers = ParquetFileReader.readFooters(HDFSUtils.getConf(),
+                fs.getFileLinkStatus(path), true);
+        List<String> fields = new ArrayList<>();
+        if (CollectionUtils.isNotEmpty(footers)) {
+            footers.get(0).getParquetMetadata().getFileMetaData()
+                    .getSchema().getFields().stream().forEach(x -> fields.add(x.getName()));
+        }
+        return fields.toArray(new String[0]);
     }
 }

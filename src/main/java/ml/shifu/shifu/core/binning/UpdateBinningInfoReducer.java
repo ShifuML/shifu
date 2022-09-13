@@ -284,6 +284,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
             }
             LOG.info("Coloumn num is {}, p25 value is {}, median value is {}, p75 value is {}",
                     columnConfig.getColumnNum(), p25th, median, p75th);
+
         }
 
         LOG.info("Coloumn num is {}, columnType value is {}, cateMaxNumBin is {}, binCategory size is {}",

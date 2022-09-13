@@ -104,7 +104,16 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                     ShifuFileUtils.createDirIfNotExists(pathFinder.getMTLColumnConfigFolder(SourceType.LOCAL),
                             SourceType.LOCAL);
                     saveColumnConfigList(pathFinder.getMTLColumnConfigPath(SourceType.LOCAL, i), ccList);
+                    this.columnConfigList = ccList;
                 }
+
+                // save main ColumnConfig.json
+                for (ColumnConfig config : this.columnConfigList) {
+                    if (tagColumns.contains(config.getColumnName())) {
+                        config.setColumnFlag(ColumnFlag.Target);
+                    }
+                }
+                saveColumnConfigList();
             } else {
                 List<ColumnConfig> ccList = initColumnConfigList(this.modelConfig.getTargetColumnName(), null, -1);
                 if(ccList == null) {
@@ -449,31 +458,37 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                         + ", please check you header setting and data set setting.");
             }
         } else {
-            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(),
-                    StringUtils.isBlank(modelConfig.getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter()
-                            : modelConfig.getHeaderDelimiter(),
-                    modelConfig.getDataSet().getSource());
-            if(StringUtils.join(fields, "").contains(tagColumnName)) {
-                // if first line contains target column name, we guess it is csv format and first line is header.
-                isSchemaProvided = true;
-                // first line of data meaning second line in data files excluding first header line
-                String[] dataInFirstLine = CommonUtils.takeFirstTwoLines(modelConfig.getDataSetRawPath(),
-                        StringUtils.isBlank(modelConfig.getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter()
-                                : modelConfig.getHeaderDelimiter(),
-                        modelConfig.getDataSet().getSource())[1];
-
-                if(dataInFirstLine != null && fields.length != dataInFirstLine.length) {
-                    throw new IllegalArgumentException(
-                            "Header length and data length are not consistent, please check you header setting and data set setting.");
-                }
-
-                log.warn("No header path is provided, we will try to read first line and detect schema.");
-                log.warn("Schema in ColumnConfig.json are named as first line of data set path.");
+            if (ShifuFileUtils.isParquetFile(modelConfig.getDataSetRawPath(), modelConfig.getDataSet().getSource())) {
+                fields = ShifuFileUtils.readParquetFileHeader(modelConfig.getDataSetRawPath(),
+                        modelConfig.getDataSet().getSource());
             } else {
-                isSchemaProvided = false;
-                log.warn("No header path is provided, we will try to read first line and detect schema.");
-                log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
-                log.warn("Please make sure weight column and tag column are also taking index as name.");
+                fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(),
+                        StringUtils.isBlank(modelConfig.getHeaderDelimiter()) ?
+                                modelConfig.getDataSetDelimiter() :
+                                modelConfig.getHeaderDelimiter(), modelConfig.getDataSet().getSource());
+
+                if(StringUtils.join(fields, "").contains(tagColumnName)) {
+                    // if first line contains target column name, we guess it is csv format and first line is header.
+                    isSchemaProvided = true;
+                    // first line of data meaning second line in data files excluding first header line
+                    String[] dataInFirstLine = CommonUtils.takeFirstTwoLines(modelConfig.getDataSetRawPath(),
+                            StringUtils.isBlank(modelConfig.getHeaderDelimiter()) ?
+                                    modelConfig.getDataSetDelimiter() :
+                                    modelConfig.getHeaderDelimiter(), modelConfig.getDataSet().getSource())[1];
+
+                    if(dataInFirstLine != null && fields.length != dataInFirstLine.length) {
+                        throw new IllegalArgumentException(
+                                "Header length and data length are not consistent, please check you header setting and data set setting.");
+                    }
+
+                    log.warn("No header path is provided, we will try to read first line and detect schema.");
+                    log.warn("Schema in ColumnConfig.json are named as first line of data set path.");
+                } else {
+                    isSchemaProvided = false;
+                    log.warn("No header path is provided, we will try to read first line and detect schema.");
+                    log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
+                    log.warn("Please make sure weight column and tag column are also taking index as name.");
+                }
             }
         }
 

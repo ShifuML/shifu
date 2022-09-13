@@ -127,6 +127,8 @@
                 <include>*:hadoop-core:*</include>
                 <include>*:jackson-annotations:*</include>
                 <include>*:jackson-core:*</include>
+                <include>*:jackson-core-asl:*</include>
+                <include>*:jackson-mapper-asl:*</include>
                 <include>*:jackson-databind:*</include>
                 <include>*:pmml-model:*</include>
                 <include>*:pmml-schema:*</include>
@@ -134,6 +136,10 @@
                 <include>*:jline:*</include>
                 <include>*:liblinear:*</include>
                 <include>*:log4j:*</include>
+                <include>*:log4j-api:*</include>
+                <include>*:log4j-core:*</include>
+                <include>*:log4j-to-slf4j:*</include>
+                <include>*:slf4j-log4j12:*</include>
                 <include>*:netty:*</include>
                 <include>*:pig:*</include>
                 <include>*:scala-library:*</include>

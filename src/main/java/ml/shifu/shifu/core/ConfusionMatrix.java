@@ -660,6 +660,7 @@ public class ConfusionMatrix {
         boolean isDir = ShifuFileUtils.isDir(pathFinder.getEvalScorePath(evalConfig, sourceType), sourceType);
         long count = 0;
         double mape = 0.0;
+        double rmse = 0.0;
         Splitter splitter = Splitter.on(delimiter).trimResults();
 
         for(Scanner scanner: scanners) {
@@ -678,12 +679,14 @@ public class ConfusionMatrix {
                 try {
                     double actualValue = Double.parseDouble(tagText);
                     double predictValue = Double.parseDouble(raw[2]); // get the mean value
+                    double diff = actualValue - predictValue;
 
+                    rmse += diff * diff;
                     if(Math.abs(actualValue) > 1e-3) {
-                        mape += Math.abs((actualValue - predictValue) / actualValue);
+                        mape += Math.abs(diff / actualValue);
                     }
                 } catch (Exception e) {
-                    LOG.warn("Skip! Fail to parse tag - {}, and score field - {}", tagText, raw[2]);
+                    LOG.warn("Skip! Fail to parse tag - {}, or score field - {}", tagText, raw[2]);
                 }
             }
             scanner.close();
@@ -691,11 +694,14 @@ public class ConfusionMatrix {
 
         if (count > 0) {
             mape = (mape / count) * 100;
+            rmse = Math.sqrt(rmse / count);
         }
         LOG.info("The MAPE of Linear model = {}, for {} records in evaluation set.", mape, count);
+        LOG.info("The RMSE of Linear model = {}, for {} records in evaluation set.", rmse, count);
 
         PerformanceResult result = new PerformanceResult();
         result.mape = mape;
+        result.rmse = rmse;
 
         writePerResult2File(evalPerformancePath, result);
         return result;

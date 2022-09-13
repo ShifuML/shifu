@@ -798,6 +798,13 @@
                         "directive": "select",
                         "defval" : "half",
                         "options": [
+                            {"label": "ALL", "value":"ALL"},
+                            {"label": "HALF", "value":"HALF"},
+                            {"label": "ONETHIRD", "value":"ONETHIRD"},
+                            {"label": "TWOTHIRDS", "value":"TWOTHIRDS"},
+                            {"label": "AUTO", "value":"AUTO"},
+                            {"label": "SQRT", "value":"SQRT"},
+                            {"label": "LOG2", "value":"LOG2"}
                         ]
                     }, {
                         "name" : "EnableEarlyStop",
@@ -932,6 +939,7 @@
                             {"label": "Linear", "value":"Linear"},
                             {"label": "ReLU", "value":"ReLU"},
                             {"label": "LeakyReLU", "value":"LeakyReLU"},
+                            {"label": "Sigmoid", "value":"Sigmoid"},
                             {"label": "Swish", "value":"Swish"}
                         ]
                     }, {

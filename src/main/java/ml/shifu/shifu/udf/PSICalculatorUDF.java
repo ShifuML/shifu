@@ -99,6 +99,7 @@ public class PSICalculatorUDF extends AbstractTrainerUDF<Tuple> {
         while(iter.hasNext()) {
             Tuple tuple = iter.next();
             if(tuple != null && tuple.size() != 0) {
+                double psiByPsiColumn = 0d;
                 String subBinStr = (String) tuple.get(1);
                 String[] subBinArr = StringUtils.split(subBinStr, CalculateStatsUDF.CATEGORY_VAL_SEPARATOR);
                 List<Double> subCounter = new ArrayList<Double>();
@@ -110,18 +111,16 @@ public class PSICalculatorUDF extends AbstractTrainerUDF<Tuple> {
                 }
 
                 int i = 0;
-                for(Double sub: subCounter) {
-                    if(total == 0) {
-                        continue;
-                    } else if(expected.get(i) == 0) {
-                        continue;
-                    } else {
+                for (Double sub : subCounter) {
+                    if (total != 0 && expected.get(i) != 0) {
                         double logNum = (sub / total) / expected.get(i);
-                        if(logNum <= 0) {
+                        if (logNum <= 0) {
+                            i++;
                             continue;
                         } else {
                             double unitPsi = ((sub / total - expected.get(i)) * Math.log(logNum));
                             psi = psi + unitPsi;
+                            psiByPsiColumn += unitPsi;
                             psiStats.addValue(unitPsi);
                         }
                     }
@@ -131,8 +130,7 @@ public class PSICalculatorUDF extends AbstractTrainerUDF<Tuple> {
                 double unitCosine = calculateCosine(expected, subCounter);
                 cosine = cosine + unitCosine;
                 cosStats.addValue(unitCosine);
-
-                unitStats.add((String) tuple.get(2));
+                unitStats.add((String) tuple.get(2) + "^" + psiByPsiColumn);
             }
         }
 

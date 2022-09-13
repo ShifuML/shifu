@@ -48,5 +48,7 @@ public class PerformanceResult {
     
     public List<PerformanceObject> modelScoreList;
 
-    public double mape; // for linear model
+    // for linear model
+    public double mape;
+    public double rmse;
 }

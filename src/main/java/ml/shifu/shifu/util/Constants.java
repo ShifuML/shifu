@@ -71,6 +71,9 @@ public interface Constants {
     public static final String IS_VALIDATION_DATASET = "is_validation_dataset";
     public static final String IS_NORM_FOR_CLEAN = "is_norm_for_clean";
 
+    public static final String PIG_DATA_LOADER = "pig_data_load";
+    public static final String PIG_DATA_STORE = "pig_data_store";
+
     public static final String STATS_SAMPLE_RATE = "statsSampleRate";
     public static final String WITH_SCORE = "with_score";
     public static final String SOURCE_TYPE = "source_type";
@@ -105,6 +108,8 @@ public interface Constants {
     public static final String COMMA = ",";
     public static final String PIG_COLUMN_SEPARATOR = "::";
     public static final String PIG_FULL_COLUMN_SEPARATOR = "_";
+    public static final String SHIFU_OUTPUT_DEFAULT_FORMAT = "pig";
+    public static final String SHIFU_OUTPUT_PARQUET_FORMAT = "parquet";
 
     public static final String LOCAL_MODEL_CONFIG_JSON = "./ModelConfig.json";
     public static final String LOCAL_COLUMN_CONFIG_JSON = "./ColumnConfig.json";
@@ -366,6 +371,7 @@ public interface Constants {
     public static final String SHIFU_NORM_ONLY_SELECTED = "shifu.norm.only.selected";
 
     public static final String SHIFU_OUTPUT_DATA_DELIMITER = "shifu.output.data.delimiter";
+    public static final String SHIFU_OUTPUT_DATA_FORMAT = "shifu.output.data.format";
     public static final String SHIFU_OUTPUT_DATA_CSV = "shifu.output.data.csv";
 
     public static final String SHIFU_NORM_PRECISION_TYPE = "shifu.norm.precision.type";

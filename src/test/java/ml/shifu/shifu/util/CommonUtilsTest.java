@@ -503,4 +503,10 @@ public class CommonUtilsTest {
         FileUtils.deleteDirectory(new File(Constants.COLUMN_META_FOLDER_NAME));
     }
 
+    @Test
+    public void testFormat() {
+        System.out.println(String.format("data = LOAD '%s' USING PigStorage('%s', '-noschema');",
+                "train.data", "|"));
+    }
+
 }

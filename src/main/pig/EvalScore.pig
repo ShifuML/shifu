@@ -30,10 +30,11 @@ SET mapreduce.reduce.speculative true;
 DEFINE IsDataFilterOut  ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name');
 DEFINE EvalScore        ml.shifu.shifu.udf.EvalScoreUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name', '$scale');
 
-raw = LOAD '$pathEvalRawData' USING PigStorage('$delimiter', '-noschema');
+-- raw = LOAD '$pathEvalRawData' USING PigStorage('$delimiter', '-noschema');
+raw = LOAD '$pathEvalRawData' USING $pig_data_load;
 raw = FILTER raw BY IsDataFilterOut(*);
 
 evalScore = FOREACH raw GENERATE FLATTEN(EvalScore(*));
 evalScore = FILTER evalScore BY $0 IS NOT NULL;
 
-STORE evalScore INTO '$pathEvalScore' USING PigStorage('$output_delimiter', '-schema');
+STORE evalScore INTO '$pathEvalScore' USING $pig_data_store;

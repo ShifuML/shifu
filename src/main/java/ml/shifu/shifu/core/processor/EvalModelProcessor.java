@@ -781,30 +781,36 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             evalColumnNames = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), delimiter,
                     evalConfig.getDataSet().getSource());
         } else {
-            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) // get header delimiter
-                    ? evalConfig.getDataSet().getDataDelimiter()
-                    : evalConfig.getDataSet().getHeaderDelimiter();
-            String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter,
-                    evalConfig.getDataSet().getSource());
-            // first line of data meaning second line in data files excluding first header line
-            String[] dataInFirstLine = CommonUtils.takeFirstTwoLines(evalConfig.getDataSet().getDataPath(), delimiter,
-                    evalConfig.getDataSet().getSource())[1];
-            if(dataInFirstLine != null && fields.length != dataInFirstLine.length) {
-                throw new IllegalArgumentException(
-                        "Eval header length and eval data length are not consistent, please check you header setting and data set setting in eval.");
-            }
+            if (ShifuFileUtils.isParquetFile(evalConfig.getDataSet().getDataPath(),
+                    evalConfig.getDataSet().getSource())) {
+                evalColumnNames = ShifuFileUtils.readParquetFileHeader(evalConfig.getDataSet().getDataPath(),
+                        evalConfig.getDataSet().getSource());
+            } else {
+                String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter())
+                        // get header delimiter
+                        ? evalConfig.getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
+                String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter,
+                        evalConfig.getDataSet().getSource());
+                // first line of data meaning second line in data files excluding first header line
+                String[] dataInFirstLine = CommonUtils.takeFirstTwoLines(evalConfig.getDataSet().getDataPath(),
+                        delimiter, evalConfig.getDataSet().getSource())[1];
+                if(dataInFirstLine != null && fields.length != dataInFirstLine.length) {
+                    throw new IllegalArgumentException(
+                            "Eval header length and eval data length are not consistent, please check you header setting and data set setting in eval.");
+                }
 
-            // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
-            // char or / in its name in shifu will be replaced;
-            for(int i = 0; i < fields.length; i++) {
-                fields[i] = CommonUtils.normColumnName(fields[i]);
+                // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
+                // char or / in its name in shifu will be replaced;
+                for(int i = 0; i < fields.length; i++) {
+                    fields[i] = CommonUtils.normColumnName(fields[i]);
+                }
+                evalColumnNames = fields;
+                // for(int i = 0; i < fields.length; i++) {
+                // evalColumnNames[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
+                // }
+                LOG.warn("No header path is provided, we will try to read first line and detect schema.");
+                LOG.warn("Schema in ColumnConfig.json are named as first line of data set path.");
             }
-            evalColumnNames = fields;
-            // for(int i = 0; i < fields.length; i++) {
-            // evalColumnNames[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
-            // }
-            LOG.warn("No header path is provided, we will try to read first line and detect schema.");
-            LOG.warn("Schema in ColumnConfig.json are named as first line of data set path.");
         }
 
         Set<NSColumn> names = new HashSet<NSColumn>();
@@ -829,12 +835,20 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             return;
         }
 
+        List<String> evalTargetNameList = new ArrayList<>();
         String evalTargetName = modelConfig.getTargetColumnName(evalConfig, null);
-        NSColumn targetColumn = new NSColumn(evalTargetName);
-        if(StringUtils.isNotBlank(evalTargetName) && !names.contains(targetColumn)
-                && !names.contains(new NSColumn(targetColumn.getSimpleName()))) {
-            throw new IllegalArgumentException("Target column " + evalTargetName + " does not exist in - "
-                    + evalConfig.getDataSet().getHeaderPath());
+        if (modelConfig.isMultiTask()) {
+            evalTargetNameList.addAll(CommonUtils.splitAndReturnList(evalTargetName, CommonConstants.MTL_DELIMITER));
+        } else {
+            evalTargetNameList.add(evalTargetName);
+        }
+        for (String tempTarget: evalTargetNameList) {
+            NSColumn targetColumn = new NSColumn(tempTarget);
+            if(StringUtils.isNotBlank(tempTarget) && !names.contains(targetColumn)
+                    && !names.contains(new NSColumn(targetColumn.getSimpleName()))) {
+                throw new IllegalArgumentException(
+                        "Target column " + tempTarget + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
+            }
         }
 
         NSColumn weightColumn = new NSColumn(evalConfig.getDataSet().getWeightColumnName());

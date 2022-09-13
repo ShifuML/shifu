@@ -15,11 +15,7 @@
  */
 package ml.shifu.shifu.util;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.io.Reader;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -33,7 +29,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+import ml.shifu.shifu.core.dtrain.dt.Node;
+import ml.shifu.shifu.core.dtrain.dt.Split;
+import ml.shifu.shifu.core.dtrain.dt.TreeNode;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.io.IOUtils;
@@ -70,6 +70,8 @@ import ml.shifu.shifu.exception.ShifuErrorCode;
 import ml.shifu.shifu.exception.ShifuException;
 import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
+import parquet.example.data.Group;
+import parquet.schema.Type;
 import scala.annotation.meta.param;
 
 /**
@@ -121,14 +123,14 @@ public final class CommonUtils {
         }
 
         // Copy ColumnConfig
+        Path srcColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.LOCAL));
+        Path dstColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.HDFS));
+        if(ShifuFileUtils.isFileExists(srcColumnConfig.toString(), SourceType.LOCAL)) {
+            hdfs.copyFromLocalFile(srcColumnConfig, dstColumnConfig);
+        }
+
         if(modelConfig.isMultiTask()) {
             copyMTLColumnConfigs(modelConfig, hdfs, hdfsMSPath);
-        } else {
-            Path srcColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.LOCAL));
-            Path dstColumnConfig = new Path(pathFinder.getColumnConfigPath(SourceType.HDFS));
-            if(ShifuFileUtils.isFileExists(srcColumnConfig.toString(), SourceType.LOCAL)) {
-                hdfs.copyFromLocalFile(srcColumnConfig, dstColumnConfig);
-            }
         }
 
         // Copy column related config files
@@ -507,20 +509,24 @@ public final class CommonUtils {
             fields = CommonUtils.getHeaders(modelConfig.getHeaderPath(), modelConfig.getHeaderDelimiter(),
                     modelConfig.getDataSet().getSource());
         } else {
-            fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(),
-                    StringUtils.isBlank(modelConfig.getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter()
-                            : modelConfig.getHeaderDelimiter(),
-                    modelConfig.getDataSet().getSource());
-            if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
-                // if first line contains target column name, we guess it is csv format and first line is header.
-                isSchemaProvided = true;
-                log.warn("No header path is provided, we will try to read first line and detect schema.");
-                log.warn("Schema in ColumnConfig.json are named as first line of data set path.");
+            if (ShifuFileUtils.isParquetFile(modelConfig.getDataSetRawPath(), modelConfig.getDataSet().getSource())) {
+                fields = ShifuFileUtils.readParquetFileHeader(modelConfig.getDataSetRawPath(),
+                        modelConfig.getDataSet().getSource());
             } else {
-                isSchemaProvided = false;
-                log.warn("No header path is provided, we will try to read first line and detect schema.");
-                log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
-                log.warn("Please make sure weight column and tag column are also taking index as name.");
+                fields = CommonUtils.takeFirstLine(modelConfig.getDataSetRawPath(),
+                        StringUtils.isBlank(modelConfig.getHeaderDelimiter()) ? modelConfig.getDataSetDelimiter() :
+                        modelConfig.getHeaderDelimiter(), modelConfig.getDataSet().getSource());
+                if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName())) {
+                    // if first line contains target column name, we guess it is csv format and first line is header.
+                    isSchemaProvided = true;
+                    log.warn("No header path is provided, we will try to read first line and detect schema.");
+                    log.warn("Schema in ColumnConfig.json are named as first line of data set path.");
+                } else {
+                    isSchemaProvided = false;
+                    log.warn("No header path is provided, we will try to read first line and detect schema.");
+                    log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
+                    log.warn("Please make sure weight column and tag column are also taking index as name.");
+                }
             }
         }
 
@@ -545,31 +551,36 @@ public final class CommonUtils {
             fields = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), delimiter,
                     evalConfig.getDataSet().getSource());
         } else {
-            fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(),
-                    StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter())
-                            ? evalConfig.getDataSet().getDataDelimiter()
-                            : evalConfig.getDataSet().getHeaderDelimiter(),
-                    evalConfig.getDataSet().getSource());
-            if(evalConfig.isMultiTask()) {
-                List<String> tarColumns = evalConfig.getMultiTaskTargetColumnNames();
-                if(CollectionUtils.isNotEmpty(tarColumns)) {
-                    for(String column: tarColumns) {
-                        if(!StringUtils.join(fields, "").contains(column)) {
-                            isSchemaProvided = false;
-                            break;
+            if (ShifuFileUtils.isParquetFile(evalConfig.getDataSet().getDataPath(),
+                    evalConfig.getDataSet().getSource())) {
+                fields = ShifuFileUtils.readParquetFileHeader(evalConfig.getDataSet().getDataPath(),
+                        evalConfig.getDataSet().getSource());
+            } else {
+                fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(),
+                        StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) ?
+                                evalConfig.getDataSet().getDataDelimiter() :
+                                evalConfig.getDataSet().getHeaderDelimiter(), evalConfig.getDataSet().getSource());
+                if(evalConfig.isMultiTask()) {
+                    List<String> tarColumns = evalConfig.getMultiTaskTargetColumnNames();
+                    if(CollectionUtils.isNotEmpty(tarColumns)) {
+                        for(String column : tarColumns) {
+                            if(!StringUtils.join(fields, "").contains(column)) {
+                                isSchemaProvided = false;
+                                break;
+                            }
                         }
                     }
+                } else if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName(evalConfig, ""))) {
+                    // if first line contains target column name, we guess it is csv format and first line is header.
+                    isSchemaProvided = true;
+                    log.warn("No header path is provided, we will try to read first line and detect schema.");
+                    log.warn("Schema in ColumnConfig.json are named as first line of data set path.");
+                } else {
+                    isSchemaProvided = false;
+                    log.warn("No header path is provided, we will try to read first line and detect schema.");
+                    log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
+                    log.warn("Please make sure weight column and tag column are also taking index as name.");
                 }
-            } else if(StringUtils.join(fields, "").contains(modelConfig.getTargetColumnName(evalConfig, ""))) {
-                // if first line contains target column name, we guess it is csv format and first line is header.
-                isSchemaProvided = true;
-                log.warn("No header path is provided, we will try to read first line and detect schema.");
-                log.warn("Schema in ColumnConfig.json are named as first line of data set path.");
-            } else {
-                isSchemaProvided = false;
-                log.warn("No header path is provided, we will try to read first line and detect schema.");
-                log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
-                log.warn("Please make sure weight column and tag column are also taking index as name.");
             }
         }
 
@@ -1013,7 +1024,10 @@ public final class CommonUtils {
         log.info("jar path is {}", pathFinder.getJarPath());
         pigParamMap.put(Constants.PATH_JAR, pathFinder.getJarPath());
 
+
         pigParamMap.put(Constants.PATH_RAW_DATA, modelConfig.getDataSetRawPath());
+        pigParamMap.put(Constants.PIG_DATA_LOADER, buildTrainDataInject(modelConfig));
+        pigParamMap.put(Constants.PIG_DATA_STORE, buildShifuOutputInject());
         pigParamMap.put(Constants.PATH_NORMALIZED_DATA, pathFinder.getNormalizedDataPath(sourceType));
 
         if(modelConfig.isMultiTask()) {
@@ -1048,6 +1062,27 @@ public final class CommonUtils {
                 Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER)));
 
         return pigParamMap;
+    }
+
+    private static String buildShifuOutputInject() {
+        String format = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_FORMAT,
+                Constants.SHIFU_OUTPUT_DEFAULT_FORMAT);
+        if (format.equalsIgnoreCase(Constants.SHIFU_OUTPUT_PARQUET_FORMAT)) {
+            return String.format("parquet.pig.ParquetStorer()");
+        } else {
+            return String.format("PigStorage('%s','-schema')",
+                    escapePigString(Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER,
+                            Constants.DEFAULT_DELIMITER)));
+        }
+    }
+
+    private static String buildTrainDataInject(ModelConfig modelConfig) throws IOException {
+        if (ShifuFileUtils.isParquetFile(modelConfig.getDataSetRawPath(), modelConfig.getDataSet().getSource())) {
+            return String.format("parquet.pig.ParquetLoader()");
+        } else {
+            return String.format("PigStorage('%s','-noschema')",
+                    CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
+        }
     }
 
     /**
@@ -2102,5 +2137,114 @@ public final class CommonUtils {
             fields.add(str);
         }
         return fields.toArray(new String[0]);
+    }
+
+    /**
+     * Generate model visualization and save it in file
+     * @param modelPath
+     *          model file path
+     * @param outputFile
+     *          output file
+     * @return
+     *          0 - if generate output successfully
+     *          1 - if fail
+     */
+    public static int visualizeModelSpec(String modelPath, String outputFile) {
+        File modelFile = new File(modelPath);
+        if (!modelFile.exists() || !(modelPath.toUpperCase().endsWith("." + CommonConstants.GBT_ALG_NAME)
+                || modelPath.toUpperCase().endsWith("." + CommonConstants.RF_ALG_NAME))) {
+            log.error("The model {} doesn't exist or it isn't GBT/RF model. Only GBT/RF model is supported now", modelPath);
+            return 1;
+        }
+
+        FileInputStream inputStream = null;
+        BufferedWriter writer= null;
+
+        try {
+            inputStream = new FileInputStream(modelFile);
+            TreeModel treeModel = TreeModel.loadFromStream(inputStream);
+            writer = new BufferedWriter(StringUtils.isBlank(outputFile) ? new OutputStreamWriter(System.out)
+                    : new OutputStreamWriter(new FileOutputStream(new File(outputFile))));
+            List<List<Double>> weights = treeModel.getIndependentTreeModel().getWeights();
+            writer.write("Tree Weights:");
+            writer.newLine();
+            for (List<Double> weightList : weights) {
+                writer.write(weightList.toString());
+                writer.newLine();
+            }
+
+            writer.newLine();
+
+            List<TreeNode> trees = treeModel.getTrees();
+            int i = 0;
+            for (TreeNode treeNode : trees) {
+                writer.write("Tree " + (i ++) + ":");
+                writer.newLine();
+                printTree(treeModel.getIndependentTreeModel().getNumNameMapping(),
+                        treeModel.getIndependentTreeModel().getCategoricalColumnNameNames(),
+                        treeNode.getNode(), "", writer);
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            log.error("Fail to analysis model FI for {}", modelPath);
+            return 1;
+        } finally {
+            IOUtils.closeQuietly(inputStream);
+            IOUtils.closeQuietly(writer);
+        }
+
+        return 0;
+    }
+
+    private static void printTree(Map<Integer, String> columnNumNameMapping,
+            Map<Integer, List<String>> categoricalValueMapping, Node treeNode, String indent, BufferedWriter writer)
+            throws IOException {
+        if (treeNode != null) {
+            Split split = treeNode.getSplit();
+            if (split == null) {
+                writer.write(indent + "+ " + treeNode.getPredict().getPredict());
+                writer.newLine();
+            } else {
+                writer.write(indent + "+ " + genSplitCondition(columnNumNameMapping, categoricalValueMapping, split));
+                writer.newLine();
+                if (treeNode.getLeft() != null) {
+                    printTree(columnNumNameMapping, categoricalValueMapping, treeNode.getLeft(), "\t" + indent, writer);
+                }
+                if (treeNode.getRight() != null) {
+                    printTree(columnNumNameMapping, categoricalValueMapping, treeNode.getRight(), "\t" + indent, writer);
+                }
+            }
+        }
+    }
+
+    private static String genSplitCondition(Map<Integer, String> columnNumNameMapping,
+            Map<Integer, List<String>> categoricalValueMapping, Split split) {
+        String columnName = columnNumNameMapping.get(split.getColumnNum());
+        return  (split.getFeatureType() == 1) ? (columnName + " < " + split.getThreshold()) :
+                (columnName + "in [" + genCategoricalValueList(categoricalValueMapping.get(split.getColumnNum()), split.getLeftOrRightCategories()) + "]");
+    }
+
+    private static String genCategoricalValueList(List<String> catVals, Set<Short> leftOrRightCategories) {
+        List<String> vals = new ArrayList<>();
+        for (Short pos : leftOrRightCategories) {
+            if (pos < catVals.size()) {
+                vals.addAll(Arrays.asList(StringUtils.split(catVals.get(pos), Constants.CATEGORICAL_GROUP_VAL_DELIMITER)));
+            } else {
+                vals.add("MISSING");
+            }
+        }
+        return StringUtils.join(vals, ",");
+    }
+
+    /**
+     * Context Parquet Group into String array
+     * @param value
+     * @return
+     */
+    public static String[] convertGroupToArr(Group value) {
+        return value.getType().getFields().stream()
+                .map(Type::getName)
+                .map(name -> (value.getFieldRepetitionCount(name) > 0 ? value.getString(name, 0) : null))
+                .collect(Collectors.toList()).toArray(new String[0]);
     }
 }
