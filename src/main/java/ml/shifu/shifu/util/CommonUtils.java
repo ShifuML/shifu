@@ -72,7 +72,6 @@ import ml.shifu.shifu.fs.PathFinder;
 import ml.shifu.shifu.fs.ShifuFileUtils;
 import parquet.example.data.Group;
 import parquet.schema.Type;
-import scala.annotation.meta.param;
 
 /**
  * {@link CommonUtils} is used to for almost all kinds of utility function in this framework.

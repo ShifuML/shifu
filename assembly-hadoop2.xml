@@ -52,6 +52,14 @@
             </includes>
         </fileSet>
         <fileSet>
+            <directory>${project.basedir}/src/main/resources/gshifu-conf</directory>
+            <!-- cannot set it to conf, as in conf mapred-site will override system configurations -->
+            <outputDirectory>/gshifu-log4jconf</outputDirectory>
+            <includes>
+                <include>log4j.*</include>
+            </includes>
+        </fileSet>
+        <fileSet>
             <directory>${project.basedir}/src/test/resources/example</directory>
             <includes>
                 <include>cancer-judgement/*/*/*</include>
