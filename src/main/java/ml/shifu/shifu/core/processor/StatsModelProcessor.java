@@ -462,6 +462,7 @@ public class StatsModelProcessor extends BasicModelProcessor implements Processo
         FileInputFormat.setInputPaths(job, ShifuFileUtils.getFileSystemBySourceType(source, filePath)
                 .makeQualified(filePath));
 
+        // normalization dataset should have same SourceType as training dataset
         if (ShifuFileUtils.isParquetFile(filePath.toString(), modelConfig.getDataSet().getSource())) {
             job.setInputFormatClass(ExampleInputFormat.class);
         } else {

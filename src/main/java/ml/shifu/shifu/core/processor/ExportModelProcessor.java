@@ -250,7 +250,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 Map<String, Object> exportParams = new HashMap<>();
                 exportParams.put("baggingMode", type.equalsIgnoreCase(BAGGING_UME));
                 exportParams.put("normAsUme", type.equalsIgnoreCase(NORM_UME));
-                exportParams.put("normUmePostfix", String.valueOf(params.get(EXPORT_NORMUME_POSTFIX)));
+                exportParams.put("normUmePostfix", params.get(EXPORT_NORMUME_POSTFIX));
                 exportParams.put("assembleStrategy", params.get(EXPORT_ASSEMBLE_STRATEGY));
                 exportParams.put("variableMappingConf", params.get(EXPORT_MAPPING));
 
