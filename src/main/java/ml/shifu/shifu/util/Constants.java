@@ -74,6 +74,8 @@ public interface Constants {
     public static final String PIG_DATA_LOADER = "pig_data_load";
     public static final String PIG_DATA_STORE = "pig_data_store";
 
+    public static final String SCORE_DATA_LOADER = "score_data_load";
+
     public static final String STATS_SAMPLE_RATE = "statsSampleRate";
     public static final String WITH_SCORE = "with_score";
     public static final String SOURCE_TYPE = "source_type";

@@ -1075,12 +1075,17 @@ public final class CommonUtils {
         }
     }
 
-    private static String buildTrainDataInject(ModelConfig modelConfig) throws IOException {
-        if (ShifuFileUtils.isParquetFile(modelConfig.getDataSetRawPath(), modelConfig.getDataSet().getSource())) {
+    public static String buildTrainDataInject(ModelConfig modelConfig) throws IOException {
+        return buildLoadDataInject(modelConfig.getDataSetRawPath(), modelConfig.getDataSet().getSource(),
+                modelConfig.getDataSetDelimiter());
+    }
+
+    public static String buildLoadDataInject(String dataPath, SourceType sourceType,
+                                              String delimiter) throws IOException {
+        if (ShifuFileUtils.isParquetFile(dataPath, sourceType)) {
             return String.format("parquet.pig.ParquetLoader()");
         } else {
-            return String.format("PigStorage('%s','-noschema')",
-                    CommonUtils.escapePigString(modelConfig.getDataSetDelimiter()));
+            return String.format("PigStorage('%s','-noschema')", CommonUtils.escapePigString(delimiter));
         }
     }
 

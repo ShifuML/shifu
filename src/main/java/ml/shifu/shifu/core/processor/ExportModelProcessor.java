@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
-import com.google.common.base.Splitter;
 import ml.shifu.shifu.util.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -103,7 +102,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     public static final String EXPORT_ASSEMBLE_STRATEGY = "EXPORT_ASSEMBLE_STRATEGY";
     public static final String EXPORT_MAPPING = "EXPORT_MAPPING";
 
-    private String type;
+    protected String type;
     private Map<String, Object> params;
 
     /**

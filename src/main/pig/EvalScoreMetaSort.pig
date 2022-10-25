@@ -30,7 +30,7 @@ SET mapreduce.reduce.speculative true;
 DEFINE ColumnProject  ml.shifu.shifu.udf.ColumnProjector('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name', '$column_name');
 
 -- raw = LOAD '$pathEvalScoreData' USING PigStorage('$delimiter', '-schema');
-raw = LOAD '$pathEvalRawData' USING $pig_data_load;
+raw = LOAD '$pathEvalScoreData' USING $score_data_load;
 raw = FOREACH raw GENERATE FLATTEN(ColumnProject(*)); -- Target, Weight, Score_META => target, weight, meta_score
 evalScore = ORDER raw BY $column_name DESC;
 

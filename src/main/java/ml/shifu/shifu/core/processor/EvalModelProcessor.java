@@ -1104,6 +1104,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
         paramsMap.put(Constants.SOURCE_TYPE, sourceType.toString());
         paramsMap.put("pathEvalScoreData", pathFinder.getEvalScorePath(evalConfig));
+        paramsMap.put(Constants.SCORE_DATA_LOADER,
+                CommonUtils.buildLoadDataInject(pathFinder.getEvalScorePath(evalConfig), sourceType,
+                        Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER)));
         paramsMap.put("pathSortScoreData", pathFinder.getEvalMetaScorePath(evalConfig, metaScore));
         paramsMap.put("eval_set_name", evalConfig.getName());
         paramsMap.put("delimiter",
