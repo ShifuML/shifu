@@ -268,11 +268,11 @@ public class ModelDataEncodeProcessor extends BasicModelProcessor {
         return status;
     }
 
-    private String getEncodeDataSet() {
+    protected String getEncodeDataSet() {
         return getStringParam(this.params, ENCODE_DATA_SET);
     }
 
-    private String getEncodeRefModel() {
+    protected String getEncodeRefModel() {
         return getStringParam(this.params, ENCODE_REF_MODEL);
     }
 

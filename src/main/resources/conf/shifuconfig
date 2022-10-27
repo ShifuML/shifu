@@ -119,7 +119,7 @@ guagua.computation.time.threshold=3600000
 
 ## when use validation error to choose best parameters, at least to run
 #   (epochs * shifu.train.val.steps.ratio) step to avoid parameter a local minimum
-shifu.train.val.steps.ratio = 0.01
+shifu.train.val.steps.ratio = 0.1
 
 ## when enable early stop in training, stop training if no progress is made in
 #   (shifu.train.earlystop.window.size) steps / iterations

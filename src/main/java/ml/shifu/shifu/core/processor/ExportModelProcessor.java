@@ -101,6 +101,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     public static final String EXPORT_NORMUME_POSTFIX = "EXPORT_NORMUME_POSTFIX";
     public static final String EXPORT_ASSEMBLE_STRATEGY = "EXPORT_ASSEMBLE_STRATEGY";
     public static final String EXPORT_MAPPING = "EXPORT_MAPPING";
+    public static final String EXPORT_NOSCALE = "noscale";
 
     protected String type;
     private Map<String, Object> params;
@@ -252,6 +253,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 exportParams.put("normUmePostfix", params.get(EXPORT_NORMUME_POSTFIX));
                 exportParams.put("assembleStrategy", params.get(EXPORT_ASSEMBLE_STRATEGY));
                 exportParams.put("variableMappingConf", params.get(EXPORT_MAPPING));
+                exportParams.put(EXPORT_NOSCALE, params.get(EXPORT_NOSCALE));
 
                 cls.getMethod("translate", String.class, Map.class)
                         .invoke(umeExporter, getExportModelName(), exportParams);

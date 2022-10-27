@@ -92,9 +92,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     public static final String VAR_MAPPING_CONF = "VAR_MAPPING_CONF";
     public static final String REF_MODEL = "REF_MODEL";
 
-    private String evalName = null;
+    protected String evalName = null;
 
-    private EvalStep evalStep;
+    protected EvalStep evalStep;
 
     private long evalRecords = 0l;
 
@@ -209,7 +209,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         return 0;
     }
 
-    private void deleteEvalSet(String evalSetName) {
+    protected void deleteEvalSet(String evalSetName) {
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(evalSetName);
         if(evalConfig == null) {
             LOG.error("{} eval set doesn't exist.", evalSetName);
@@ -224,7 +224,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
     }
 
-    private void listEvalSet() {
+    protected void listEvalSet() {
         List<EvalConfig> evals = modelConfig.getEvals();
         if(CollectionUtils.isNotEmpty(evals)) {
             LOG.info("There are {} eval sets.", evals.size());
@@ -234,7 +234,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
     }
 
-    private List<EvalConfig> getEvalConfigListFromInput() {
+    protected List<EvalConfig> getEvalConfigListFromInput() {
         List<EvalConfig> evalSetList = new ArrayList<EvalConfig>();
 
         if(StringUtils.isNotBlank(evalName)) {
@@ -642,7 +642,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * @throws IOException
      *             any io exception
      */
-    private void createNewEval(String name) throws IOException {
+    protected void createNewEval(String name) throws IOException {
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(name);
         if(evalConfig != null) {
             throw new ShifuException(ShifuErrorCode.ERROR_MODEL_EVALSET_ALREADY_EXIST,
