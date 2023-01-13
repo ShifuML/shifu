@@ -65,7 +65,8 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
         super(modelConfig, columnConfigList);
     }
 
-    public ZscoreLocalTransformCreator(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, boolean isConcise) {
+    public ZscoreLocalTransformCreator(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            boolean isConcise) {
         super(modelConfig, columnConfigList, isConcise);
     }
 
@@ -80,21 +81,23 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
                 if(config.isFinalSelect()
                         && (CollectionUtils.isEmpty(featureSet) || featureSet.contains(config.getColumnNum()))) {
                     double cutoff = modelConfig.getNormalizeStdDevCutOff();
-                    List<DerivedField> deriviedFields = config.isCategorical() ? createCategoricalDerivedField(
-                            config, cutoff, modelConfig.getNormalizeType()) : createNumericalDerivedField(config,
-                            cutoff, modelConfig.getNormalizeType());
-                    localTransformations.addDerivedFields(deriviedFields.toArray(new DerivedField[deriviedFields.size()]));
+                    List<DerivedField> deriviedFields = config.isCategorical()
+                            ? createCategoricalDerivedField(config, cutoff, modelConfig.getNormalizeType())
+                            : createNumericalDerivedField(config, cutoff, modelConfig.getNormalizeType());
+                    localTransformations
+                            .addDerivedFields(deriviedFields.toArray(new DerivedField[deriviedFields.size()]));
                 }
             }
         } else {
             for(ColumnConfig config: columnConfigList) {
                 if(config.isFinalSelect()) {
                     double cutoff = modelConfig.getNormalizeStdDevCutOff();
-                    List<DerivedField> deriviedFields = config.isCategorical() ? createCategoricalDerivedField(
-                            config, cutoff, modelConfig.getNormalizeType()) : createNumericalDerivedField(config,
-                            cutoff, modelConfig.getNormalizeType());
-                    
-                    localTransformations.addDerivedFields(deriviedFields.toArray(new DerivedField[deriviedFields.size()]));
+                    List<DerivedField> deriviedFields = config.isCategorical()
+                            ? createCategoricalDerivedField(config, cutoff, modelConfig.getNormalizeType())
+                            : createNumericalDerivedField(config, cutoff, modelConfig.getNormalizeType());
+
+                    localTransformations
+                            .addDerivedFields(deriviedFields.toArray(new DerivedField[deriviedFields.size()]));
                 }
             }
         }
@@ -122,15 +125,15 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
             throw new RuntimeException("Fail to create document node.", e);
         }
 
-        String defaultValue = Normalizer.normalize(config, "doesn't exist at all...by paypal", cutoff, normType).get(0)
-                .toString();
-        String missingValue = Normalizer.normalize(config, null, cutoff, normType).get(0).toString();
+        String defaultValue = Normalizer
+                .normalize(config, "doesn't exist at all...by paypal", cutoff, normType, false, null).get(0).toString();
+        String missingValue = Normalizer.normalize(config, null, cutoff, normType, false, null).get(0).toString();
 
         InlineTable inlineTable = new InlineTable();
         for(int i = 0; i < config.getBinCategory().size(); i++) {
             List<String> catVals = CommonUtils.flattenCatValGrp(config.getBinCategory().get(i));
             for(String cval: catVals) {
-                String dval = Normalizer.normalize(config, cval, cutoff, normType).get(0).toString();
+                String dval = Normalizer.normalize(config, cval, cutoff, normType, false, null).get(0).toString();
 
                 Element out = document.createElementNS(NAME_SPACE_URI, ELEMENT_OUT);
                 out.setTextContent(dval);
@@ -142,16 +145,14 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
             }
         }
 
-        MapValues mapValues = new MapValues("out")
-                .setDataType(DataType.DOUBLE)
-                .setDefaultValue(defaultValue)
-                .addFieldColumnPairs(
-                        new FieldColumnPair(new FieldName(NormalizationUtils.getSimpleColumnName(config, columnConfigList,
-                                segmentExpansions, datasetHeaders)), ELEMENT_ORIGIN)).setInlineTable(inlineTable)
-                .setMapMissingTo(missingValue);
+        MapValues mapValues = new MapValues("out").setDataType(DataType.DOUBLE).setDefaultValue(defaultValue)
+                .addFieldColumnPairs(new FieldColumnPair(new FieldName(NormalizationUtils.getSimpleColumnName(config,
+                        columnConfigList, segmentExpansions, datasetHeaders)), ELEMENT_ORIGIN))
+                .setInlineTable(inlineTable).setMapMissingTo(missingValue);
         List<DerivedField> derivedFields = new ArrayList<DerivedField>();
-        derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).setName(
-                FieldName.create(genPmmlColumnName(NormalizationUtils.getSimpleColumnName(config.getColumnName()), normType)))
+        derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE)
+                .setName(FieldName.create(
+                        genPmmlColumnName(NormalizationUtils.getSimpleColumnName(config.getColumnName()), normType)))
                 .setExpression(mapValues));
         return derivedFields;
     }
@@ -174,15 +175,16 @@ public class ZscoreLocalTransformCreator extends AbstractPmmlElementCreator<Loca
         LinearNorm to = new LinearNorm().setOrig(config.getMean() + config.getStdDev() * cutoff).setNorm(cutoff);
 
         NormContinuous normContinuous = new NormContinuous();
-        normContinuous.setField(FieldName.create(NormalizationUtils.getSimpleColumnName(config,
-                columnConfigList, segmentExpansions, datasetHeaders)));
+        normContinuous.setField(FieldName.create(
+                NormalizationUtils.getSimpleColumnName(config, columnConfigList, segmentExpansions, datasetHeaders)));
         normContinuous.addLinearNorms(from, to);
         normContinuous.setMapMissingTo(0.0);
         normContinuous.setOutliers(OutlierTreatmentMethod.AS_EXTREME_VALUES);
         // derived field name is consisted of FieldName and "_zscl"
         List<DerivedField> derivedFields = new ArrayList<DerivedField>();
-        derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE).setName(
-                FieldName.create(genPmmlColumnName(NormalizationUtils.getSimpleColumnName(config.getColumnName()), normType)))
+        derivedFields.add(new DerivedField(OpType.CONTINUOUS, DataType.DOUBLE)
+                .setName(FieldName.create(
+                        genPmmlColumnName(NormalizationUtils.getSimpleColumnName(config.getColumnName()), normType)))
                 .setExpression(normContinuous));
         return derivedFields;
     }

@@ -179,7 +179,7 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
             modelFeatureSet = ((BasicFloatNetwork) model).getFeatureSet();
         }
 
-        if (CollectionUtils.isEmpty(featureSet) || this.featureInputLen == 0) {
+        if(CollectionUtils.isEmpty(featureSet) || this.featureInputLen == 0) {
             throw new IllegalArgumentException("No input columns according to ColumnConfig.json. Please check!");
         }
 
@@ -188,8 +188,8 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
                     + " is inconsistent with input size " + this.featureInputLen + ".");
         }
 
-        if(CollectionUtils.isNotEmpty(modelFeatureSet)
-                && (this.featureSet.size() != modelFeatureSet.size() || !this.featureSet.containsAll(modelFeatureSet))){
+        if(CollectionUtils.isNotEmpty(modelFeatureSet) && (this.featureSet.size() != modelFeatureSet.size()
+                || !this.featureSet.containsAll(modelFeatureSet))) {
             // both feature set and model feature set are not empty
             throw new IllegalArgumentException("Model input features is inconsistent with ColumnConfig.json. "
                     + "Please check the model spec vs. ColumnConfig.json");
@@ -290,16 +290,16 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
     private Set<Integer> generateModelFeatureSet(List<ColumnConfig> columnConfigList) {
         Set<Integer> columnIdSet = new HashSet<>();
         boolean hasFinalSelectedVars = DTrainUtils.hasFinalSelectedVars(columnConfigList);
-        if (hasFinalSelectedVars) {
+        if(hasFinalSelectedVars) {
             columnConfigList.stream().forEach(columnConfig -> {
-                if (columnConfig.isFinalSelect()) {
+                if(columnConfig.isFinalSelect()) {
                     columnIdSet.add(columnConfig.getColumnNum());
                 }
             });
         } else {
             boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
             columnConfigList.stream().forEach(columnConfig -> {
-                if (CommonUtils.isGoodCandidate(columnConfig, hasCandidates, modelConfig.isRegression())) {
+                if(CommonUtils.isGoodCandidate(columnConfig, hasCandidates, modelConfig.isRegression())) {
                     columnIdSet.add(columnConfig.getColumnNum());
                 }
             });
@@ -308,16 +308,17 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
     }
 
     @SuppressWarnings("unused")
-    private int generateFeatureInputInfo(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Set<Integer> featureSet) {
+    private int generateFeatureInputInfo(ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
+            Set<Integer> featureSet) {
         int vectorLen = 0;
         this.columnMissingInputValues = new HashMap<>();
         this.columnNormDataPosMapping = new HashMap<>();
-        for ( ColumnConfig columnConfig : columnConfigList) {
-            if (featureSet.contains(columnConfig.getColumnNum())) {
+        for(ColumnConfig columnConfig: columnConfigList) {
+            if(featureSet.contains(columnConfig.getColumnNum())) {
                 this.columnNormDataPosMapping.put(columnConfig.getColumnNum(), vectorLen);
                 List<Double> normValues = Normalizer.normalize(columnConfig, null,
                         modelConfig.getNormalizeStdDevCutOff(), modelConfig.getNormalizeType(),
-                        CategoryMissingNormType.MEAN);
+                        CategoryMissingNormType.MEAN, false, null);
                 if(CollectionUtils.isNotEmpty(normValues)) { // usually, the normValues won't be empty
                     this.columnMissingInputValues.put(columnConfig.getColumnNum(), normValues);
                     vectorLen += normValues.size();
@@ -356,10 +357,11 @@ public class VarSelectSCMapper extends Mapper<LongWritable, Text, LongWritable, 
         actualScore.setSensitivityScore(candidateModelScore);
         context.write(new LongWritable(-1), actualScore);
 
-        for(ColumnConfig columnConfig : columnConfigList) {
+        for(ColumnConfig columnConfig: columnConfigList) {
             this.inputsMLData.setData(this.inputs);
-            double currentModelScore = cacheNetwork.compute(inputsMLData, false,
-                    this.columnNormDataPosMapping.get(columnConfig.getColumnNum())).getData()[0];
+            double currentModelScore = cacheNetwork
+                    .compute(inputsMLData, false, this.columnNormDataPosMapping.get(columnConfig.getColumnNum()))
+                    .getData()[0];
             ColumnScore columnScore = new ColumnScore();
             columnScore.setColumnTag((int) this.outputs[0]);
             columnScore.setWeight(weight);

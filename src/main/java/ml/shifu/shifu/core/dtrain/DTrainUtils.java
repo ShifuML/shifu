@@ -846,7 +846,7 @@ public final class DTrainUtils {
                 columnNormDataPosMapping.put(columnConfig.getColumnNum(), vectorLen);
                 List<Double> normValues = Normalizer.normalize(columnConfig, null,
                         modelConfig.getNormalizeStdDevCutOff(), modelConfig.getNormalizeType(),
-                        CategoryMissingNormType.MEAN);
+                        CategoryMissingNormType.MEAN, false, null);
                 if(CollectionUtils.isNotEmpty(normValues)) { // usually, the normValues won't be empty
                     columnMissingInputValues.put(columnConfig.getColumnNum(), normValues);
                     vectorLen += normValues.size();

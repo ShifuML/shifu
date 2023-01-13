@@ -125,7 +125,9 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
      */
     private Map<String, Type> outputCompactColumns;
 
-    private enum Type { Meta, Target, FinalSelect, Weight }
+    private enum Type {
+        Meta, Target, FinalSelect, Weight
+    }
 
     private int[] mtlTagColumnNums;
     @SuppressWarnings("rawtypes")
@@ -142,11 +144,13 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private List<DataPurifier> mtlDataPurifiers;
     private boolean enablePrecision; // enable precision or not
     private PrecisionType inputPrecisionType;
+    private boolean normUnseenValue;
+    private Set<String> missingVals;
 
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig) throws Exception {
         this(source, pathModelConfig, pathColumnConfig, "false");
     }
-
+    
     public NormalizeUDF(String source, String pathModelConfig, String pathColumnConfig, String isForClean)
             throws Exception {
         super(source, pathModelConfig, pathColumnConfig);
@@ -188,6 +192,17 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         this.tags = super.modelConfig.getSetTags();
 
         boolean hasColumnSelected = false;
+
+        normUnseenValue = "true".equalsIgnoreCase(getUdfProperty(Constants.SHIFU_NORM_UNSEEN_VALUE));
+
+        this.missingVals = new HashSet<String>();
+        this.missingVals.add("");
+        this.missingVals.add("NaN");
+        if(CollectionUtils.isNotEmpty(modelConfig.getMissingOrInvalidValues())) {
+            for(String missingVal: modelConfig.getMissingOrInvalidValues()) {
+                missingVals.add(StringUtils.trimToEmpty(missingVal));
+            }
+        }
 
         if(this.isMultiTask) {
             // if multiple filters, filter should be also set here as union norm for all filters.
@@ -256,45 +271,46 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             if(this.modelConfig.isMultiTask()) {
                 // The multi task with compact normalization is complex. I just throw exception now.
                 throw new UnsupportedOperationException("Compact normalization cannot work for multi-task job.");
-                // I also comment the below logic. Although we can run compact norm with mtl before, we don't implement it in Train step.
+                // I also comment the below logic. Although we can run compact norm with mtl before, we don't implement
+                // it in Train step.
                 // That is the reason I comment it and just throw exception.
                 /*
-                this.mtlTMIndexSet = new HashSet<>();
-                for(int i = 0; i < this.mtlColumnConfigLists.size(); i++) {
-                    List<ColumnConfig> ccList = this.mtlColumnConfigLists.get(i);
-                    this.mtlTMIndexSet.add(outputCompactColumns.size());
-                    this.outputCompactColumns.put( // add Target
-                            getColumnName(
-                                    CommonUtils.normColumnName(CommonUtils.findTargetColumn(ccList).getColumnName()),
-                                    isMultiTask, i), Type.Target);
-                    for(ColumnConfig config: ccList) {
-                        if(config.isMeta() && !config.isTarget()) { // add metas
-                            this.mtlTMIndexSet.add(outputCompactColumns.size());
-                            this.outputCompactColumns.put(
-                                    getColumnName(CommonUtils.normColumnName(config.getColumnName()), isMultiTask, i), Type.Meta);
-                        }
-                    }
-                    // set cnt for output schema reference
-                    for(ColumnConfig config: ccList) {
-                        if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
-                            List<String> normVarNames = genMTLNormColumnNames(config, normType, i);
-                            for (String name : normVarNames) {
-                                this.outputCompactColumns.put(name, Type.FinalSelect);
-                            }
-                            this.normVarNamesMapping.put(config.getColumnName() + "_" + i, normVarNames);
-                        }
-                    }
-                }
-                */
+                 * this.mtlTMIndexSet = new HashSet<>();
+                 * for(int i = 0; i < this.mtlColumnConfigLists.size(); i++) {
+                 * List<ColumnConfig> ccList = this.mtlColumnConfigLists.get(i);
+                 * this.mtlTMIndexSet.add(outputCompactColumns.size());
+                 * this.outputCompactColumns.put( // add Target
+                 * getColumnName(
+                 * CommonUtils.normColumnName(CommonUtils.findTargetColumn(ccList).getColumnName()),
+                 * isMultiTask, i), Type.Target);
+                 * for(ColumnConfig config: ccList) {
+                 * if(config.isMeta() && !config.isTarget()) { // add metas
+                 * this.mtlTMIndexSet.add(outputCompactColumns.size());
+                 * this.outputCompactColumns.put(
+                 * getColumnName(CommonUtils.normColumnName(config.getColumnName()), isMultiTask, i), Type.Meta);
+                 * }
+                 * }
+                 * // set cnt for output schema reference
+                 * for(ColumnConfig config: ccList) {
+                 * if(config.isFinalSelect() && !config.isTarget() && !config.isMeta()) {
+                 * List<String> normVarNames = genMTLNormColumnNames(config, normType, i);
+                 * for (String name : normVarNames) {
+                 * this.outputCompactColumns.put(name, Type.FinalSelect);
+                 * }
+                 * this.normVarNamesMapping.put(config.getColumnName() + "_" + i, normVarNames);
+                 * }
+                 * }
+                 * }
+                 */
             } else {
-                for (ColumnConfig config : columnConfigList) {
-                    if (config.isTarget()) {
+                for(ColumnConfig config: columnConfigList) {
+                    if(config.isTarget()) {
                         this.outputCompactColumns.put(CommonUtils.normColumnName(config.getColumnName()), Type.Target);
-                    } else if (config.isMeta()) {
+                    } else if(config.isMeta()) {
                         this.outputCompactColumns.put(CommonUtils.normColumnName(config.getColumnName()), Type.Meta);
-                    } else if (config.isFinalSelect()) {
+                    } else if(config.isFinalSelect()) {
                         List<String> normVarNames = genNormColumnNames(config, normType);
-                        for (String name : normVarNames) {
+                        for(String name: normVarNames) {
                             this.outputCompactColumns.put(name, Type.FinalSelect);
                         }
                         this.normVarNamesMapping.put(config.getColumnName(), normVarNames);
@@ -431,10 +447,10 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
 
         // for compact norm mode, output to tuple at here
         if(this.isCompactNorm) {
-            for(Entry<String, Type> entry : this.outputCompactColumns.entrySet()) {
+            for(Entry<String, Type> entry: this.outputCompactColumns.entrySet()) {
                 String columnName = entry.getKey();
                 Object normVal = compactVarMap.get(columnName);
-                if ("weight".equals(columnName) && normVal == null) {
+                if("weight".equals(columnName) && normVal == null) {
                     // If the weight value is empty, we append weight.
                     tuple.append(buildAndAppendWeight(input, this.weightColumnId));
                 } else {
@@ -461,7 +477,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                     }
                 }
             }
-        } else if (!this.isCompactNorm) {
+        } else if(!this.isCompactNorm) {
             tuple.append(buildAndAppendWeight(input, this.weightColumnId));
         }
 
@@ -471,7 +487,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
     private double buildAndAppendWeight(Tuple input, int weightColumnId) throws ExecException {
         double weight = 1.0d;
         if(weightColumnId > 0) {
-            String weightRaw = input.get(weightColumnId) == null ? null: input.get(weightColumnId).toString();
+            String weightRaw = input.get(weightColumnId) == null ? null : input.get(weightColumnId).toString();
             try {
                 weight = Double.parseDouble(weightRaw);
             } catch (Exception e) {
@@ -596,7 +612,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                         }
 
                         List<Double> normVals = Normalizer.fullNormalize(config, val, cutoff, normType,
-                                this.categoryMissingNormType, categoricalIndexMap.get(config.getColumnNum()));
+                                this.categoryMissingNormType, categoricalIndexMap.get(config.getColumnNum()),
+                                this.normUnseenValue, this.missingVals);
                         List<String> formatNormVals = new ArrayList<>();
                         for(Double normVal: normVals) {
                             String formatVal = getOutputValue(normVal, true);
@@ -631,7 +648,8 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                             val = this.inputPrecisionType.to(dVal).toString();
                         }
                         List<Double> normVals = Normalizer.fullNormalize(config, val, cutoff, normType,
-                                this.categoryMissingNormType, categoricalIndexMap.get(config.getColumnNum()));
+                                this.categoryMissingNormType, categoricalIndexMap.get(config.getColumnNum()),
+                                this.normUnseenValue, this.missingVals);
                         for(Double normVal: normVals) {
                             appendOutputValue(tuple, normVal, this.enablePrecision);
                         }
@@ -743,7 +761,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
         val = (fbits & 0x7fffffff) >>> 23; // tmp exp for subnormal calc
         return sign | ((fbits & 0x7fffff | 0x800000) // add subnormal bit
                 + (0x800000 >>> val - 102) // round depending on cut off
-        >>> 126 - val); // div by 2^(1-(exp-127+15)) and >> 13 | exp=0
+                >>> 126 - val); // div by 2^(1-(exp-127+15)) and >> 13 | exp=0
     }
 
     // ignores the higher 16 bits
@@ -783,7 +801,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
             if(this.isCompactNorm) {
                 int i = 0;
                 // compact norm mode, schema is tag, meta columns, feature columns and weight
-                for(Entry<String, Type> entry : outputCompactColumns.entrySet()) {
+                for(Entry<String, Type> entry: outputCompactColumns.entrySet()) {
                     String normName = CommonUtils.normColumnName(entry.getKey());
                     Type type = entry.getValue();
                     if(this.isMultiTask) {
@@ -805,7 +823,7 @@ public class NormalizeUDF extends AbstractTrainerUDF<Tuple> {
                             }
                         }
                     } else {
-                        switch (type) {
+                        switch(type) {
                             case Target:
                                 tupleSchema.add(new Schema.FieldSchema(normName, DataType.DOUBLE));
                                 break;

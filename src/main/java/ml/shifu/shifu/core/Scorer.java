@@ -105,30 +105,33 @@ public class Scorer {
     private List<List<ColumnConfig>> mtlSelectedColumnConfigList;
     private PrecisionType precisionType;
 
-    public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm,
-            ModelConfig modelConfig) throws IOException {
+    private boolean normUnseenValue;
+    private Set<String> missingVals;
+
+    public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig)
+            throws IOException {
         this(models, columnConfigList, algorithm, modelConfig, 4.0d);
     }
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
             boolean multiThread) throws IOException {
-        this(models, columnConfigList, algorithm, modelConfig, 4.0d, 0, multiThread, null);
+        this(models, columnConfigList, algorithm, modelConfig, 4.0d, 0, multiThread, null, false, null);
     }
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
             Double cutoff, boolean multiThread) throws IOException {
-        this(models, columnConfigList, algorithm, modelConfig, cutoff, 0, multiThread, null);
+        this(models, columnConfigList, algorithm, modelConfig, cutoff, 0, multiThread, null, false, null);
     }
 
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
             Double cutoff) throws IOException {
-        this(models, columnConfigList, algorithm, modelConfig, cutoff, 0, false, null);
+        this(models, columnConfigList, algorithm, modelConfig, cutoff, 0, false, null, false, null);
     }
 
     @SuppressWarnings("unused")
     public Scorer(List<BasicML> models, List<List<ColumnConfig>> mtlColumnConfigLists, String algorithm,
             ModelConfig modelConfig, Double cutoff, int outputHiddenLayerIndex, boolean multiThread, boolean isMTL,
-            PrecisionType pt) throws IOException {
+            PrecisionType pt, boolean normUnseenValue, Set<String> missingVals) throws IOException {
         if(modelConfig == null) {
             throw new IllegalArgumentException("modelConfig should not be null");
         }
@@ -214,11 +217,15 @@ public class Scorer {
             mtlSelectedColumnConfigList.add(selectedColumnConfigList);
         }
         this.precisionType = pt;
+
+        this.normUnseenValue = normUnseenValue;
+        this.missingVals = missingVals;
     }
 
     @SuppressWarnings("unused")
     public Scorer(List<BasicML> models, List<ColumnConfig> columnConfigList, String algorithm, ModelConfig modelConfig,
-            Double cutoff, int outputHiddenLayerIndex, boolean multiThread, PrecisionType pt) throws IOException {
+            Double cutoff, int outputHiddenLayerIndex, boolean multiThread, PrecisionType pt, boolean normUnseenValue,
+            Set<String> missingVals) throws IOException {
         if(modelConfig == null) {
             throw new IllegalArgumentException("modelConfig should not be null");
         }
@@ -294,6 +301,9 @@ public class Scorer {
         }
 
         this.precisionType = pt;
+
+        this.normUnseenValue = normUnseenValue;
+        this.missingVals = missingVals;
     }
 
     public void setCategoryMissingNormType(CategoryMissingNormType categoryMissingNormType) {
@@ -332,10 +342,12 @@ public class Scorer {
         if(inputPair == null && !this.alg.equalsIgnoreCase(CommonConstants.NN_ALG_NAME)) {
             if(modelConfig.isMultiTask()) {
                 inputPair = NormalizationUtils.assembleNsDataPair(mtlBinCategoryMaps, noVarSelect, modelConfig,
-                        mtlSelectedColumnConfigList, rawNsDataMap, cutoff, alg, categoryMissingNormType);
+                        mtlSelectedColumnConfigList, rawNsDataMap, cutoff, alg, categoryMissingNormType,
+                        normUnseenValue, missingVals);
             } else {
                 inputPair = NormalizationUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
-                        selectedColumnConfigList, rawNsDataMap, cutoff, alg, categoryMissingNormType);
+                        selectedColumnConfigList, rawNsDataMap, cutoff, alg, categoryMissingNormType, normUnseenValue,
+                        missingVals);
             }
         }
 
@@ -361,7 +373,7 @@ public class Scorer {
                 if(dataPair == null) {
                     dataPair = NormalizationUtils.assembleNsDataPair(binCategoryMap, noVarSelect, modelConfig,
                             selectedColumnConfigList, rawNsDataMap, cutoff, alg, network.getFeatureSet(),
-                            this.precisionType);
+                            this.precisionType, normUnseenValue, missingVals);
                     cachedNormDataPair.put(cacheKey, dataPair);
                 }
                 final MLDataPair networkPair = dataPair;
@@ -404,7 +416,7 @@ public class Scorer {
             } else if(model instanceof BasicNetwork) {
                 final BasicNetwork network = (BasicNetwork) model;
                 final MLDataPair networkPair = NormalizationUtils.assembleNsDataPair(binCategoryMap, noVarSelect,
-                        modelConfig, columnConfigList, rawNsDataMap, cutoff, alg);
+                        modelConfig, columnConfigList, rawNsDataMap, cutoff, alg, normUnseenValue, missingVals);
 
                 Callable<MLData> callable = new Callable<MLData>() {
                     @Override

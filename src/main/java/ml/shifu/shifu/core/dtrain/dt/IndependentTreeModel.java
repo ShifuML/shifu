@@ -176,6 +176,11 @@ public class IndependentTreeModel {
      */
     private List<String> usedFeatures;
 
+    /**
+     * Missing values for numerical features
+     */
+    private Set<String> missingValues;
+
     public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping, Map<Integer, String> numNameMapping,
             Map<Integer, List<String>> categoricalColumnNameNames,
             Map<Integer, Map<String, Integer>> columnCategoryIndexMapping, Map<Integer, Integer> columnNumIndexMapping,
@@ -227,6 +232,18 @@ public class IndependentTreeModel {
                 && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_CUTOFF_CONVETER);
         isGBTRawScore = this.gbtScoreConvertStrategy != null
                 && this.gbtScoreConvertStrategy.equalsIgnoreCase(Constants.GBT_SCORE_RAW_CONVETER);
+    }
+
+    public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping, Map<Integer, String> numNameMapping,
+            Map<Integer, List<String>> categoricalColumnNameNames,
+            Map<Integer, Map<String, Integer>> columnCategoryIndexMapping, Map<Integer, Integer> columnNumIndexMapping,
+            boolean isOptimizeMode, List<List<TreeNode>> trees, List<List<Double>> weights, boolean isGBDT,
+            boolean isClassification, boolean isConvertToProb, String lossStr, String algorithm, int inputNode,
+            int version, String gbtScoreConvertStrategy, Set<String> missingValues) {
+        this(numericalMeanMapping, numNameMapping, categoricalColumnNameNames, columnCategoryIndexMapping,
+                columnNumIndexMapping, isOptimizeMode, trees, weights, isGBDT, isClassification, isConvertToProb,
+                lossStr, algorithm, inputNode, version, gbtScoreConvertStrategy);
+        this.missingValues = missingValues;
     }
 
     public IndependentTreeModel(Map<Integer, Double> numericalMeanMapping, Map<Integer, String> numNameMapping,
@@ -588,7 +605,7 @@ public class IndependentTreeModel {
                 // categorical column
                 double indexValue = -1d;
                 int categoricalSize = categoricalColumnNameNames.get(columnNum).size();
-                if(obj == null) {
+                if(obj == null || (this.missingValues != null && this.missingValues.contains(obj.toString().trim()))) {
                     // no matter set it to null or not set it in dataMap, it will be treated as missing value, last one
                     // is missing value category
                     indexValue = categoricalSize;
@@ -604,7 +621,8 @@ public class IndependentTreeModel {
                 value = indexValue;
             } else {
                 // numerical column
-                if(obj == null || ((obj instanceof String) && ((String) obj).length() == 0)) {
+                if(obj == null || ((obj instanceof String) && ((String) obj).length() == 0)
+                        || (this.missingValues != null && this.missingValues.contains(obj.toString().trim()))) {
                     // no matter set it to null or not set it in dataMap, it will be treated as missing value, last one
                     // is missing value category
                     value = this.numericalMeanMapping.get(columnNum) == null ? 0d
@@ -1124,11 +1142,22 @@ public class IndependentTreeModel {
             bagWgts.add(weights);
         }
 
+        // after model version >=5, support customized missing or invalid values
+        Set<String> missingValues = new HashSet<String>();
+        if(version >= 5) {
+            int missingSize = dis.readInt();
+            if(missingSize > 0) {
+                for(int i = 0; i < missingSize; i++) {
+                    missingValues.add(dis.readUTF());
+                }
+            }
+        }
+
         // if one vs all, even multiple classification, treated as regression
         return new IndependentTreeModel(numericalMeanMapping, columnIndexNameMapping, categoricalColumnNameNames,
                 columnCategoryIndexMapping, columnMapping, isOptimizeMode, bagTrees, bagWgts,
                 CommonConstants.GBT_ALG_NAME.equalsIgnoreCase(algorithm), isClassification && !isOneVsAll,
-                isConvertToProb, lossStr, algorithm, inputNode, version, gbtScoreConvertStrategy);
+                isConvertToProb, lossStr, algorithm, inputNode, version, gbtScoreConvertStrategy, missingValues);
     }
 
     /**

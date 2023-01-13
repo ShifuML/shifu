@@ -36,8 +36,10 @@ import org.apache.pig.tools.pigstats.PigStatusReporter;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * For parquet format, only double type data will be saved. Not string like in {@link NormalizeUDF}. TODO, should merge
@@ -52,6 +54,8 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
     private Expression weightExpr;
     private JexlContext weightContext;
     private String alg;
+    private boolean normUnseenValue;
+    private Set<String> missingVals;
 
     // private DecimalFormat df = new DecimalFormat("#.######");
 
@@ -75,6 +79,17 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
         weightExpr = createExpression(modelConfig.getWeightColumnName());
         if(weightExpr != null) {
             weightContext = new MapContext();
+        }
+
+        normUnseenValue = "true".equalsIgnoreCase(getUdfProperty(Constants.SHIFU_NORM_UNSEEN_VALUE));
+
+        this.missingVals = new HashSet<String>();
+        this.missingVals.add("");
+        this.missingVals.add("NaN");
+        if(CollectionUtils.isNotEmpty(modelConfig.getMissingOrInvalidValues())) {
+            for(String missingVal: modelConfig.getMissingOrInvalidValues()) {
+                missingVals.add(StringUtils.trimToEmpty(missingVal));
+            }
         }
 
         log.debug("NormalizeUDF Initialized");
@@ -146,7 +161,8 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
                     }
                     tuple.append(normVal);
                 } else {
-                    List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType);
+                    List<Double> normVals = Normalizer.normalize(config, val, cutoff, normType, this.normUnseenValue,
+                            this.missingVals);
                     for(Double normVal: normVals) {
                         tuple.append(normVal);
                     }
@@ -165,9 +181,11 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
      * Evaluate weight expression based on the variables context.
      * 
      * @param expr
-     *            - weight evaluation expression
+     * - weight evaluation expression
+     * 
      * @param jc
-     *            - A JexlContext containing variables for weight expression.
+     * - A JexlContext containing variables for weight expression.
+     * 
      * @return The result of this evaluation
      */
     public double evaluateWeight(Expression expr, JexlContext jc) {
@@ -198,11 +216,14 @@ public class NormalizeParquetUDF extends AbstractTrainerUDF<Tuple> {
      * Check tag type.
      * 
      * @param posTags
-     *            - positive tag list.
+     * - positive tag list.
+     * 
      * @param negTags
-     *            - negtive tag list.
+     * - negtive tag list.
+     * 
      * @param rawTag
-     *            - raw tag string
+     * - raw tag string
+     * 
      * @return tag type String. Return "1" for positive tag. Return "0" for negtive tag. Return null for invalid tag.
      */
     public String tagTypeCheck(List<String> posTags, List<String> negTags, String rawTag) {

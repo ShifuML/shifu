@@ -108,6 +108,8 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
 
     private PrecisionType precisionType;
 
+    private boolean isComputeOnNorm = false;
+
     private synchronized static void loadConfigFiles(final Context context) {
         if(modelConfig == null) {
             LOG.info("Before loading config with memory {} in thread {}.", MemoryUtils.getRuntimeMemoryStats(),
@@ -127,7 +129,6 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
         }
     }
 
-    @SuppressWarnings("static-access")
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
         loadConfigFiles(context);
@@ -140,7 +141,16 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
 
         this.dataSetDelimiter = modelConfig.getDataSetDelimiter();
 
-        this.dataPurifier = new DataPurifier(modelConfig, this.columnConfigList, false);
+        this.isComputeOnNorm = Boolean
+                .valueOf(context.getConfiguration().get(Constants.SHIFU_CORRELATION_ON_NORM, "false"));
+
+        this.dataPurifier = new DataPurifier(modelConfig, columnConfigList, false);
+        if(this.isComputeOnNorm) {
+            String normDelimiter = CommonUtils.escapePigString(
+                    context.getConfiguration().get(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER));
+            this.dataPurifier.setDataDelimiter(normDelimiter);
+            this.dataSetDelimiter = normDelimiter;
+        }
 
         this.isComputeAll = Boolean
                 .valueOf(context.getConfiguration().get(Constants.SHIFU_CORRELATION_COMPUTE_ALL, "false"));
@@ -187,14 +197,14 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
         }
         double[] dValues = null;
 
-        if(!this.dataPurifier.isFilter(valueStr)) {
+        if(!this.isComputeOnNorm && !this.dataPurifier.isFilter(valueStr)) {
             return;
         }
 
         context.getCounter(Constants.SHIFU_GROUP_COUNTER, "CNT_AFTER_FILTER").increment(1L);
 
         // make sampling work in correlation
-        if(Math.random() >= modelConfig.getStats().getSampleRate()) {
+        if(!this.isComputeOnNorm && Math.random() >= modelConfig.getStats().getSampleRate()) {
             return;
         }
 
@@ -295,7 +305,7 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
             if(columnConfig.getColumnFlag() == ColumnFlag.Meta) {
                 // only meta columns not in correlation
                 dValues[i] = 0d;
-            } else if(columnConfig.getColumnFlag() == ColumnFlag.Target) {
+            } else if(!this.isComputeOnNorm && columnConfig.getColumnFlag() == ColumnFlag.Target) {
                 if(this.tagSet.contains(units[i])) {
                     if(modelConfig.isRegression()) {
                         if(this.posTagSet.contains(units[i])) {
@@ -320,7 +330,7 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
                     dValues[i] = Double.MIN_VALUE;
                 }
             } else {
-                if(columnConfig.isNumerical()) {
+                if(this.isComputeOnNorm || columnConfig.isNumerical()) {
                     // if missing it is set to MIN_VALUE, then try to skip rows with invalid value
                     if(units[i] == null || units[i].length() == 0) {
                         // some null values, set it to min value to avoid parsing String to improve performance
@@ -333,7 +343,7 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
                         dValues[i] = ((Number) this.precisionType.to(dValues[i])).doubleValue();
                     }
                 }
-                if(columnConfig.isCategorical()) {
+                if(!this.isComputeOnNorm && columnConfig.isCategorical()) {
                     if(columnConfig.getBinCategory() == null) {
                         if(System.currentTimeMillis() % 100L == 0) {
                             LOG.warn(

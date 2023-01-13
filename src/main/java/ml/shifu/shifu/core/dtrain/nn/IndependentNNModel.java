@@ -21,9 +21,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.zip.GZIPInputStream;
 
 import org.encog.ml.data.basic.BasicMLData;
@@ -162,14 +164,20 @@ public class IndependentNNModel {
     private Map<Integer, Double> wgtWoeStddevMap;
 
     /**
+     * Woe of each column: (columnNum, woe)
+     */
+    private Map<Integer, Double> woeMap;
+
+    /**
      * Model version
      */
     private static int version = CommonConstants.NN_FORMAT_VERSION;
 
     /**
-     * Set it to private, {@link IndependentNNModel} can only be loaded by {@link #loadFromStream(InputStream)} and
-     * {@link #loadFromStream(InputStream, boolean)}.
+     * Missing values set in ModelConfig.json, added when version >=2
      */
+    private Set<String> missingValues;
+
     private IndependentNNModel(List<BasicFloatNetwork> basicNetworks, NormType normType,
             Map<Integer, String> numNameMappings, Map<Integer, List<String>> cateColumnNameNames,
             Map<Integer, Integer> columnNumIndexMap, Map<Integer, Map<String, Double>> cateWoeMap,
@@ -199,6 +207,44 @@ public class IndependentNNModel {
         this.wgtWoeStddevMap = wgtWoeStddevMap;
         this.columnTypeMap = columnTypeMap;
         this.cateIndexMap = columnCateIndexMap;
+    }
+
+    /**
+     * Set it to private, {@link IndependentNNModel} can only be loaded by {@link #loadFromStream(InputStream)} and
+     * {@link #loadFromStream(InputStream, boolean)}.
+     */
+    private IndependentNNModel(List<BasicFloatNetwork> basicNetworks, NormType normType,
+            Map<Integer, String> numNameMappings, Map<Integer, List<String>> cateColumnNameNames,
+            Map<Integer, Integer> columnNumIndexMap, Map<Integer, Map<String, Double>> cateWoeMap,
+            Map<Integer, Map<String, Double>> wgtCateWoeMap, Map<Integer, Map<String, Double>> binPosRateMap,
+            Map<Integer, List<Double>> numerBinBoundaries, Map<Integer, List<Double>> numerWgtWoes,
+            Map<Integer, List<Double>> numerWoes, Map<Integer, Double> cutOffMap, Map<Integer, Double> numerMeanMap,
+            Map<Integer, Double> numerStddevMap, Map<Integer, Double> woeMeanMap, Map<Integer, Double> woeStddevMap,
+            Map<Integer, Double> wgtWoeMeanMap, Map<Integer, Double> wgtWoeStddevMap,
+            Map<Integer, ColumnType> columnTypeMap, Map<Integer, Map<String, Integer>> columnCateIndexMap,
+            Set<String> missingValues, Map<Integer, Double> woeMap) {
+        this.basicNetworks = basicNetworks;
+        this.normType = normType;
+        this.numNameMap = numNameMappings;
+        this.cateCateMap = cateColumnNameNames;
+        this.columnNumIndexMap = columnNumIndexMap;
+        this.cateWoeMap = cateWoeMap;
+        this.cateWgtWoeMap = wgtCateWoeMap;
+        this.binPosRateMap = binPosRateMap;
+        this.numerBinBoundaries = numerBinBoundaries;
+        this.numerWgtWoes = numerWgtWoes;
+        this.numerWoes = numerWoes;
+        this.cutOffMap = cutOffMap;
+        this.numerMeanMap = numerMeanMap;
+        this.numerStddevMap = numerStddevMap;
+        this.woeMeanMap = woeMeanMap;
+        this.woeStddevMap = woeStddevMap;
+        this.wgtWoeMeanMap = wgtWoeMeanMap;
+        this.wgtWoeStddevMap = wgtWoeStddevMap;
+        this.columnTypeMap = columnTypeMap;
+        this.cateIndexMap = columnCateIndexMap;
+        this.missingValues = missingValues;
+        this.woeMap = woeMap;
     }
 
     /**
@@ -485,13 +531,18 @@ public class IndependentNNModel {
     private double getCategoricalWoeValue(Integer columnNum, Object obj, boolean isWeighted) {
         double value = 0d;
         Map<Integer, Map<String, Double>> mappings = isWeighted ? this.cateWgtWoeMap : cateWoeMap;
-        Map<String, Double> woeMap = mappings.get(columnNum);
+        Map<String, Double> columnWoeMap = mappings.get(columnNum);
         if(obj == null) {
-            value = woeMap.get(Constants.EMPTY_CATEGORY);
+            value = columnWoeMap.get(Constants.EMPTY_CATEGORY);
         } else {
-            Double woe = woeMap.get(obj.toString());
+            Double woe = columnWoeMap.get(obj.toString());
             if(woe == null) {
-                value = woeMap.get(Constants.EMPTY_CATEGORY);
+                if(this.missingValues != null && this.missingValues.contains(obj.toString())) { // missing
+                    value = columnWoeMap.get(Constants.EMPTY_CATEGORY);
+                } else { // unseen
+                    value = this.woeMap != null ? this.woeMap.get(columnNum)
+                            : columnWoeMap.get(Constants.EMPTY_CATEGORY);
+                }
             } else {
                 value = woe;
             }
@@ -566,6 +617,18 @@ public class IndependentNNModel {
 
         int version = dis.readInt();
         IndependentNNModel.setVersion(version);
+
+        Set<String> missingValues = null;
+        if(version >= 2) { // only added after version 2
+            missingValues = new HashSet<String>();
+            int missingSize = dis.readInt();
+            for(int i = 0; i < missingSize; i++) {
+                missingValues.add(dis.readUTF());
+            }
+            missingValues.add("");
+            missingValues.add("NaN");
+        }
+
         String normStr = ml.shifu.shifu.core.dtrain.StringUtils.readString(dis);
         NormType normType = NormType.valueOf(normStr.toUpperCase());
 
@@ -588,6 +651,8 @@ public class IndependentNNModel {
         Map<Integer, Double> wgtWoeMeanMap = new HashMap<Integer, Double>();
         Map<Integer, Double> wgtWoeStddevMap = new HashMap<Integer, Double>();
         Map<Integer, Double> cutoffMap = new HashMap<Integer, Double>();
+        Map<Integer, Double> woeOuterMap = new HashMap<Integer, Double>();
+
         Map<Integer, ColumnType> columnTypeMap = new HashMap<Integer, ColumnType>();
         Map<Integer, Map<String, Integer>> cateIndexMapping = new HashMap<Integer, Map<String, Integer>>();
 
@@ -664,6 +729,7 @@ public class IndependentNNModel {
             wgtWoeMeanMap.put(columnNum, cs.getWoeWgtMean());
             wgtWoeStddevMap.put(columnNum, cs.getWoeWgtStddev());
             cutoffMap.put(columnNum, cs.getCutoff());
+            woeOuterMap.put(columnNum, cs.getWoe());
         }
 
         Map<Integer, Integer> columnMap = new HashMap<Integer, Integer>();
@@ -681,7 +747,7 @@ public class IndependentNNModel {
         return new IndependentNNModel(networks, normType, numNameMap, cateColumnNameNames, columnMap, cateWoeMap,
                 cateWgtWoeMap, binPosRateMap, numerBinBoundaries, numerWgtWoes, numerWoes, cutoffMap, numerMeanMap,
                 numerStddevMap, woeMeanMap, woeStddevMap, wgtWoeMeanMap, wgtWoeStddevMap, columnTypeMap,
-                cateIndexMapping);
+                cateIndexMapping, missingValues, woeOuterMap);
     }
 
     @SuppressWarnings("unused")
@@ -989,5 +1055,13 @@ public class IndependentNNModel {
      */
     public void setCutOffMap(Map<Integer, Double> cutOffMap) {
         this.cutOffMap = cutOffMap;
+    }
+
+    public Set<String> getMissingValues() {
+        return missingValues;
+    }
+
+    public void setMissingValues(Set<String> missingValues) {
+        this.missingValues = missingValues;
     }
 }

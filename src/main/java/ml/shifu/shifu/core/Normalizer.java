@@ -15,17 +15,19 @@
  */
 package ml.shifu.shifu.core;
 
-import ml.shifu.shifu.container.obj.ColumnConfig;
-import ml.shifu.shifu.container.obj.ModelNormalizeConf;
-import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
-import ml.shifu.shifu.util.BinUtils;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import ml.shifu.shifu.container.obj.ColumnConfig;
+import ml.shifu.shifu.container.obj.ModelNormalizeConf;
+import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
+import ml.shifu.shifu.util.BinUtils;
 
 /**
  * Util normalization class which is used for any kind of transformation.
@@ -231,26 +233,27 @@ public class Normalizer {
      * @return normalized value. If normType parameter is invalid, then the ZSCALE will be used as default.
      */
     public static List<Double> normalize(ColumnConfig config, Object raw, Double cutoff,
-            ModelNormalizeConf.NormType type, CategoryMissingNormType categoryMissingNormType) {
+            ModelNormalizeConf.NormType type, CategoryMissingNormType categoryMissingNormType, boolean unseenEnabled,
+            Set<String> missingVals) {
         switch(type) {
             case ASIS_WOE:
                 return asIsNormalize(config, raw, true);
             case ASIS_PR:
                 return asIsNormalize(config, raw, false);
             case WOE:
-                return woeNormalize(config, raw, false);
+                return woeNormalize(config, raw, false, unseenEnabled, missingVals);
             case WEIGHT_WOE:
-                return woeNormalize(config, raw, true);
+                return woeNormalize(config, raw, true, unseenEnabled, missingVals);
             case HYBRID:
-                return hybridNormalize(config, raw, cutoff, false);
+                return hybridNormalize(config, raw, cutoff, false, unseenEnabled, missingVals);
             case WEIGHT_HYBRID:
-                return hybridNormalize(config, raw, cutoff, true);
+                return hybridNormalize(config, raw, cutoff, true, unseenEnabled, missingVals);
             case WOE_ZSCORE:
             case WOE_ZSCALE:
-                return woeZScoreNormalize(config, raw, cutoff, false);
+                return woeZScoreNormalize(config, raw, cutoff, false, unseenEnabled, missingVals);
             case WEIGHT_WOE_ZSCORE:
             case WEIGHT_WOE_ZSCALE:
-                return woeZScoreNormalize(config, raw, cutoff, true);
+                return woeZScoreNormalize(config, raw, cutoff, true, unseenEnabled, missingVals);
             case ONEHOT:
                 return OneHotNormalize(config, raw);
             case ZSCALE_ONEHOT:
@@ -291,14 +294,14 @@ public class Normalizer {
      */
     public static List<Double> fullNormalize(ColumnConfig config, Object raw, Double cutoff,
             ModelNormalizeConf.NormType type, CategoryMissingNormType categoryMissingNormType,
-            Map<String, Integer> cateIndexMap) {
+            Map<String, Integer> cateIndexMap, boolean unseenEnabled, Set<String> missingVals) {
         switch(type) {
             case ZSCORE_INDEX:
             case ZSCALE_INDEX:
                 return numZScoreAndCateIndexNorm(config, raw, cutoff, cateIndexMap);
             case WOE_INDEX:
                 if(config.isNumerical()) {
-                    return woeNormalize(config, raw, false);
+                    return woeNormalize(config, raw, false, unseenEnabled, missingVals);
                 } else if(config.isCategorical()) {
                     Integer index = cateIndexMap == null ? null : cateIndexMap.get(raw == null ? "" : raw.toString());
                     if(index == null || index == -1) {
@@ -309,7 +312,7 @@ public class Normalizer {
                 }
             case WOE_ZSCALE_INDEX:
                 if(config.isNumerical()) {
-                    return woeZScoreNormalize(config, raw, cutoff, false);
+                    return woeZScoreNormalize(config, raw, cutoff, false, unseenEnabled, missingVals);
                 } else if(config.isCategorical()) {
                     Integer index = cateIndexMap == null ? null : cateIndexMap.get(raw == null ? "" : raw.toString());
                     if(index == null || index == -1) {
@@ -351,7 +354,7 @@ public class Normalizer {
                     return Arrays.asList(zscores.get(0), (double) index);
                 }
             case WOE_APPEND_INDEX:
-                List<Double> zWoeScores = woeNormalize(config, raw, false);
+                List<Double> zWoeScores = woeNormalize(config, raw, false, unseenEnabled, missingVals);
                 if(config.isNumerical()) {
                     int binIndex = BinUtils.getBinNum(config, raw);
                     if(binIndex < 0 || binIndex > config.getBinBoundary().size()) {
@@ -367,7 +370,7 @@ public class Normalizer {
                     return Arrays.asList(zWoeScores.get(0), (double) index);
                 }
             case WOE_ZSCALE_APPEND_INDEX:
-                List<Double> zWoeZScores = woeZScoreNormalize(config, raw, cutoff, false);
+                List<Double> zWoeZScores = woeZScoreNormalize(config, raw, cutoff, false, unseenEnabled, missingVals);
                 if(config.isNumerical()) {
                     int binIndex = BinUtils.getBinNum(config, raw);
                     if(binIndex < 0 || binIndex > config.getBinBoundary().size()) {
@@ -384,7 +387,7 @@ public class Normalizer {
                 }
             default:
                 // others use old normalize API to reuse code
-                return normalize(config, raw, cutoff, type, categoryMissingNormType);
+                return normalize(config, raw, cutoff, type, categoryMissingNormType, unseenEnabled, missingVals);
         }
     }
 
@@ -521,8 +524,8 @@ public class Normalizer {
      * @return normalized value. If normType parameter is invalid, then the ZSCALE will be used as default.
      */
     public static List<Double> normalize(ColumnConfig config, Object raw, Double cutoff,
-            ModelNormalizeConf.NormType type) {
-        return normalize(config, raw, cutoff, type, CategoryMissingNormType.POSRATE);
+            ModelNormalizeConf.NormType type, boolean unseenEnabled, Set<String> missingVals) {
+        return normalize(config, raw, cutoff, type, CategoryMissingNormType.POSRATE, unseenEnabled, missingVals);
     }
 
     /**
@@ -552,24 +555,23 @@ public class Normalizer {
      * Compute the normalized data for @NormalizeMethod.MAXMIN_INDEX
      *
      * @param config
-     *          ColumnConfig info
+     *            ColumnConfig info
      * @param raw
-     *          input column value
+     *            input column value
      * @param categoryMissingNormType
-     *          missing categorical value norm type
+     *            missing categorical value norm type
      * @return normalized value for MAXMIN method.
      */
     private static List<Double> maxMinNormalize(ColumnConfig config, Object raw,
             CategoryMissingNormType categoryMissingNormType) {
         double value = parseRawValue(config, raw, categoryMissingNormType);
         double normalizedValue = 0.0;
-        if (config.getColumnStats().getMax() != null
-                && config.getColumnStats().getMin() != null
+        if(config.getColumnStats().getMax() != null && config.getColumnStats().getMin() != null
                 && (config.getColumnStats().getMax() - config.getColumnStats().getMin()) > 1e-7) {
             normalizedValue = (value - config.getColumnStats().getMin())
                     / (config.getColumnStats().getMax() - config.getColumnStats().getMin());
         }
-        return Arrays.asList(new Double[]{normalizedValue});
+        return Arrays.asList(new Double[] { normalizedValue });
     }
 
     /**
@@ -737,14 +739,15 @@ public class Normalizer {
      * @return normalized value for Woe method. For missing value, we return the value in last bin. Since the last
      *         bin refers to the missing value bin.
      */
-    private static List<Double> woeNormalize(ColumnConfig config, Object raw, boolean isWeightedNorm) {
+    private static List<Double> woeNormalize(ColumnConfig config, Object raw, boolean isWeightedNorm,
+            boolean unseenEnabled, Set<String> missingVals) {
         List<Double> woeBins = isWeightedNorm ? config.getBinWeightedWoe() : config.getBinCountWoe();
         int binIndex = 0;
         if(config.isHybrid()) {
             if(raw == null) {
                 binIndex = -1;
             } else {
-                binIndex = BinUtils.getCategoicalBinIndex(config, raw.toString());
+                binIndex = BinUtils.getCategoricalBinIndex(config, raw.toString());
             }
 
             if(binIndex != -1) {
@@ -758,11 +761,14 @@ public class Normalizer {
                 }
             }
         } else {
-            binIndex = BinUtils.getBinNum(config, raw);
+            binIndex = BinUtils.getBinNum(config, raw, unseenEnabled ? missingVals : null);
         }
         if(binIndex == -1) {
             // The last bin in woeBins is the miss value bin.
             return Arrays.asList(new Double[] { woeBins.get(woeBins.size() - 1) });
+        } else if(binIndex == -2) {
+            // unseen values take overall woe value as default values
+            return Arrays.asList(new Double[] { config.getColumnStats().getWoe() });
         } else {
             return Arrays.asList(new Double[] { woeBins.get(binIndex) });
         }
@@ -783,9 +789,9 @@ public class Normalizer {
      * @return normalized value for woe zscore method.
      */
     private static List<Double> woeZScoreNormalize(ColumnConfig config, Object raw, Double cutoff,
-            boolean isWeightedNorm) {
+            boolean isWeightedNorm, boolean unseenEnabled, Set<String> missingVals) {
         double stdDevCutOff = checkCutOff(cutoff);
-        double woe = woeNormalize(config, raw, isWeightedNorm).get(0);
+        double woe = woeNormalize(config, raw, isWeightedNorm, unseenEnabled, missingVals).get(0);
         // TODO cache such computing to avoid computing each time
         double[] meanAndStdDev = calculateWoeMeanAndStdDev(config, isWeightedNorm);
         return Arrays.asList(computeZScore(woe, meanAndStdDev[0], meanAndStdDev[1], stdDevCutOff));
@@ -805,15 +811,15 @@ public class Normalizer {
      *            if use weighted woe
      * @return normalized value for hybrid method.
      */
-    private static List<Double> hybridNormalize(ColumnConfig config, Object raw, Double cutoff,
-            boolean isWeightedNorm) {
+    private static List<Double> hybridNormalize(ColumnConfig config, Object raw, Double cutoff, boolean isWeightedNorm,
+            boolean unseenEnabled, Set<String> missingVals) {
         List<Double> normValue;
         if(config.isNumerical()) {
             // For numerical data, use zscore.
             normValue = zScoreNormalize(config, raw, cutoff);
         } else {
             // For categorical data, use woe.
-            normValue = woeNormalize(config, raw, isWeightedNorm);
+            normValue = woeNormalize(config, raw, isWeightedNorm, unseenEnabled, missingVals);
         }
 
         return normValue;
