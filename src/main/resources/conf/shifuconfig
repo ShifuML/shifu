@@ -100,6 +100,10 @@ mapreduce.map.cpu.vcores=1
 ## the delimiter for Shifu output data
 # shifu.output.data.delimiter=|
 
+## the delimiter for Shifu output data
+## the default formart is pig, while user can use parquet also
+shifu.output.data.format=pig
+
 ## enable to use multi-thread to score evaluation set
 shifu.eval.score.multithread=false
 
@@ -115,7 +119,7 @@ guagua.computation.time.threshold=3600000
 
 ## when use validation error to choose best parameters, at least to run
 #   (epochs * shifu.train.val.steps.ratio) step to avoid parameter a local minimum
-shifu.train.val.steps.ratio = 0.01
+shifu.train.val.steps.ratio = 0.1
 
 ## when enable early stop in training, stop training if no progress is made in
 #   (shifu.train.earlystop.window.size) steps / iterations

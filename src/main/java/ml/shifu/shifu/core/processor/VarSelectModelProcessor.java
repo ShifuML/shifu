@@ -202,20 +202,17 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
             } else if(getVarSelFile() != null) {
                 String varselFile = getVarSelFile();
                 Set<String> toSelectColumnSet = guessSelectColumnSet(varselFile);
-                int selectVarsCnt = 0;
                 if(CollectionUtils.isNotEmpty(toSelectColumnSet)) {
-                    for(ColumnConfig columnConfig: this.columnConfigList) {
-                        // reset firstly
-                        columnConfig.setFinalSelect(false);
-
-                        // select if specified
-                        if(toSelectColumnSet.contains(columnConfig.getColumnName())) {
-                            LOG.info("variable {} is selected.", columnConfig.getColumnName());
-                            columnConfig.setFinalSelect(true);
-                            selectVarsCnt++;
+                    if (modelConfig.isMultiTask()) {
+                        for (int i = 0; i < this.mtlColumnConfigLists.size(); i ++) {
+                            selectVarsInColumnConfig(this.mtlColumnConfigLists.get(i), toSelectColumnSet, varselFile);
+                            String ccPath = this.pathFinder.getMTLColumnConfigPath(SourceType.LOCAL, i);
+                            LOG.info("Save ColumnConfig to {}", ccPath);
+                            this.saveColumnConfigList(ccPath, this.mtlColumnConfigLists.get(i));
                         }
+                    } else {
+                        selectVarsInColumnConfig(this.columnConfigList, toSelectColumnSet, varselFile);
                     }
-                    LOG.info("Totally, there are {} variables are selected based on {}", selectVarsCnt, varselFile);
                 } else {
                     LOG.warn("Illegal file  - {}, or there is no variables in it.", varselFile);
                 }
@@ -369,6 +366,23 @@ public class VarSelectModelProcessor extends BasicModelProcessor implements Proc
         }
         LOG.info("Step Finished: varselect with {} ms", (System.currentTimeMillis() - start));
         return 0;
+    }
+
+    private void selectVarsInColumnConfig(List<ColumnConfig> columnConfigList, Set<String> toSelectColumnSet,
+            String varselFile) {
+        int selectVarsCnt = 0;
+        for(ColumnConfig columnConfig: columnConfigList) {
+            // reset firstly
+            columnConfig.setFinalSelect(false);
+
+            // select if specified
+            if(toSelectColumnSet.contains(columnConfig.getColumnName())) {
+                LOG.info("variable {} is selected.", columnConfig.getColumnName());
+                columnConfig.setFinalSelect(true);
+                selectVarsCnt++;
+            }
+        }
+        LOG.info("Totally, there are {} variables are selected based on {}", selectVarsCnt, varselFile);
     }
 
     private boolean isLinearSEorST() {

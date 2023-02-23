@@ -30,7 +30,8 @@ DEFINE PopulationCounterSum ml.shifu.shifu.udf.PopulationCounterSaltSumUDF('$sou
 DEFINE IsDataFilterOut   ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config');
 DEFINE GenPsiDataSchema  ml.shifu.shifu.udf.GenerateDataSchema('$source_type', '$path_model_config', '$path_column_config');
 
-data = LOAD '$path_raw_data' USING PigStorage('$delimiter', '-noschema');
+-- data = LOAD '$path_raw_data' USING PigStorage('$delimiter', '-noschema');
+data = LOAD '$path_raw_data' USING $pig_data_load;
 data = FILTER data BY IsDataFilterOut(*);
 
 -- not need to filtering

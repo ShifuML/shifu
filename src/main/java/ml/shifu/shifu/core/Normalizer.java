@@ -680,6 +680,9 @@ public class Normalizer {
                 value = ((Integer) raw).doubleValue();
             } else if(raw instanceof Float) {
                 value = ((Float) raw).doubleValue();
+            } else if(raw == null || StringUtils.isBlank(raw.toString())
+                    || StringUtils.equalsIgnoreCase("null", raw.toString())) {
+                value = defaultMissingValue(config);
             } else {
                 try {
                     // if raw is NaN, it won't throw Exception. The value will be Double.NaN

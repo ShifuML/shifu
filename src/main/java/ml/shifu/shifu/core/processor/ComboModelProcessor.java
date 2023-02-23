@@ -54,15 +54,15 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
     public static final String SCORE_MEAN_FIELD = "mean";
     public static final String TRAIN_EVAL_NAME = "EvalTrain";
 
-    private ComboStep comboStep;
+    protected ComboStep comboStep;
     private String algorithms;
-    private boolean isToShuffleData;
+    protected boolean isToShuffleData;
     @SuppressWarnings("unused")
-    private boolean isToResume;
+    protected boolean isToResume;
     private int comboMaxRetryTimes = 3;
 
     private List<ModelTrainConf.ALGORITHM> comboAlgs;
-    private ComboModelTrain comboModelTrain;
+    protected ComboModelTrain comboModelTrain;
 
     private ExecutorManager<Integer> excutorManager = new ExecutorManager<Integer>();
 
@@ -130,7 +130,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      *
      * @return if create new combo successful
      */
-    private int createNewCombo() {
+    protected int createNewCombo() {
         ComboModelTrain comboModelTrain = new ComboModelTrain();
         List<SubTrainConf> subTrainConfList = new ArrayList<SubTrainConf>(this.comboAlgs.size());
         for (int i = 0; i < this.comboAlgs.size(); i++) {
@@ -459,7 +459,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      * @return 0 - success
      * other - fail
      */
-    private int validate() {
+    protected int validate() {
         if (ComboStep.NEW.equals(this.comboStep)) {
             return validate(this.algorithms);
         } else {
@@ -663,7 +663,7 @@ public class ComboModelProcessor extends BasicModelProcessor implements Processo
      *
      * @return combo model train instance, null if exception
      */
-    private ComboModelTrain loadComboTrain() {
+    protected ComboModelTrain loadComboTrain() {
         try {
             return JSONUtils.readValue(new File(Constants.COMBO_CONFIG_JSON_FILE_NAME), ComboModelTrain.class);
         } catch (Exception e) {

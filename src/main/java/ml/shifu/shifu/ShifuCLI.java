@@ -15,17 +15,16 @@
  */
 package ml.shifu.shifu;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.*;
+import java.util.*;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
+import java.util.stream.Collectors;
 
+import ml.shifu.shifu.core.binning.CategoricalBinning;
+import ml.shifu.shifu.core.dtrain.dt.Node;
+import ml.shifu.shifu.core.dtrain.dt.Split;
+import ml.shifu.shifu.core.dtrain.dt.TreeNode;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -150,6 +149,8 @@ public class ShifuCLI {
     private static final String TO_TREEB = "totreeb";
     // for model spec analysis
     private static final String FI = "fi";
+    private static final String PRINT = "print";
+    private static final String OUTPUT = "o";
     // for model name
     private static final String NAME = "name";
     // postfix option for normume type export
@@ -448,6 +449,9 @@ public class ShifuCLI {
                     if (cmd.hasOption(FI)) {
                         String modelPath = cmd.getOptionValue(FI);
                         analysisModelFi(modelPath);
+                    } else if (cmd.hasOption(PRINT)) {
+                        String modelPath = cmd.getOptionValue(PRINT);
+                        CommonUtils.visualizeModelSpec(modelPath, cmd.getOptionValue(OUTPUT));
                     }
                 } else {
                     log.error("Invalid command, please check help message.");
@@ -812,6 +816,8 @@ public class ShifuCLI {
         Option opt_totreeb = OptionBuilder.hasArg(false).create(TO_TREEB);
 
         Option opt_fi = OptionBuilder.hasArg(true).create(FI);
+        Option opt_print = OptionBuilder.hasArg(true).create(PRINT);
+        Option opt_output = OptionBuilder.hasArg(true).create(OUTPUT);
 
         Option opt_name = OptionBuilder.hasArg(true).withDescription("New model name for model spec.").create(NAME);
 
@@ -872,6 +878,8 @@ public class ShifuCLI {
         opts.addOption(opt_totreeb);
 
         opts.addOption(opt_fi);
+        opts.addOption(opt_print);
+        opts.addOption(opt_output);
         opts.addOption(opt_name);
 
         opts.addOption(opt_postfix);
@@ -937,6 +945,8 @@ public class ShifuCLI {
         System.out.println(
                 "\t                                        Run encode on training or evaluation datasets and set them to encode_ref_model.");
         System.out.println("\ttest [-filter [EvalSetNames]] [-n]      Run testing for Shifu to detect error early.");
+        System.out.println("\tanalysis [-f | -print] <treeModel> [-o <outputFile>]");
+        System.out.println("\t                                        Generate feature importance or visualize tree model.");
         System.out.println("\tversion|v|-v|-version                   Print version of current package.");
         System.out.println("\thelp|h|-h|-help                         Help message.");
     }

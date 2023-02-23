@@ -15,12 +15,18 @@
  */
 package ml.shifu.shifu.util;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
+import java.io.Writer;
+
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.io.*;
 
 /**
  * {@link JSONUtils} is a unified entry for all json format serialization and de-serialization.
@@ -73,6 +79,21 @@ public class JSONUtils {
         return getObjectMapperInstance().readValue(src, valueType);
     }
 
+    /**
+     * 
+     * @param <T>
+     * @param src
+     * @param typeRef
+     * @return
+     * @throws JsonParseException
+     * @throws JsonMappingException
+     * @throws IOException
+     */
+    public static <T> T readValue(File src, TypeReference<T> typeRef) throws JsonParseException, JsonMappingException,
+            IOException {
+        return getObjectMapperInstance().readValue(src, typeRef);
+    }
+
     /*
      * @see ObjectWriter#writeValue(Writer, Object);
      */
@@ -87,6 +108,16 @@ public class JSONUtils {
     public static void writeValue(File src, Object value) throws JsonGenerationException, JsonMappingException,
             IOException {
         getObjectMapperInstance().writerWithDefaultPrettyPrinter().writeValue(src, value);
+    }
+
+    /**
+     * @see ObjectMapper#writeValueAsString(Object)
+     * @param value
+     * @return
+     * @throws JsonProcessingException
+     */
+    public static String writeValueAsString(Object value) throws JsonProcessingException{
+        return getObjectMapperInstance().writeValueAsString(value);
     }
 
 }

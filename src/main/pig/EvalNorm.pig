@@ -32,10 +32,11 @@ SET pig.maxCombinedSplitSize 134217728;
 DEFINE IsDataFilterOut          ml.shifu.shifu.udf.PurifyDataUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name');
 DEFINE EvalNormalize            ml.shifu.shifu.udf.EvalNormUDF('$source_type', '$path_model_config', '$path_column_config', '$eval_set_name', '$scale');
 
-raw = LOAD '$pathEvalRawData' USING PigStorage('$delimiter', '-noschema');
+-- raw = LOAD '$pathEvalRawData' USING PigStorage('$delimiter', '-noschema');
+raw = LOAD '$pathEvalRawData' USING $pig_data_load;
 raw = FILTER raw BY IsDataFilterOut(*);
 
 evalNormalize = FOREACH raw GENERATE FLATTEN(EvalNormalize(*));
 evalNormalize = FILTER evalNormalize BY $0 IS NOT NULL;
 
-STORE evalNormalize INTO '$pathEvalNormalized' USING PigStorage('$output_delimiter', '-schema');
+STORE evalNormalize INTO '$pathEvalNormalized' USING $pig_data_store;

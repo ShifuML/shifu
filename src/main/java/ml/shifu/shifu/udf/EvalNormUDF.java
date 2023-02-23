@@ -451,18 +451,18 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
     /**
      * FLOAT7 is old with DecimalFormat, new one with FLOAT16, FLOAT32, DOUBLE64
      */
-    private String getOutputValue(double value, boolean enablePrecision) {
+    private Object getOutputValue(double value, boolean enablePrecision) {
         if(enablePrecision) {
             switch(this.precisionType) {
                 case FLOAT7:
-                    return NormalizeUDF.DECIMAL_FORMAT.format(value);
+                    return Float.parseFloat(NormalizeUDF.DECIMAL_FORMAT.format(value));
                 case FLOAT16:
-                    return "" + NormalizeUDF.toFloat(NormalizeUDF.fromFloat((float) value));
+                    return NormalizeUDF.fromFloat((float) value);
                 case DOUBLE64:
-                    return value + "";
+                    return value;
                 case FLOAT32:
                 default:
-                    return ((float) value) + "";
+                    return ((float) value);
             }
         } else {
             return ((float) value) + "";

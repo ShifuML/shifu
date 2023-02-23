@@ -381,7 +381,7 @@ public class ModelSpecLoaderUtils {
         // Update in shifu 0.13.0: set baggingModelSize = 0
         // eval all models under models/ directory, user don't need to change bagging size
         // in order to evaluate other more models
-        int baggingModelSize = 0;
+        int baggingModelSize = modelConfig.getBaggingNum();
         if(modelConfig.isClassification() && modelConfig.getTrain().isOneVsAll()) {
             baggingModelSize = modelConfig.getTags().size();
         }

@@ -53,13 +53,13 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class FastCorrelationMultithreadedMapper extends Mapper<LongWritable, Text, IntWritable, CorrelationWritable> {
+public class FastCorrelationMultithreadedMapper extends Mapper<LongWritable, Object, IntWritable, CorrelationWritable> {
 
     private final static Logger LOG = LoggerFactory.getLogger(FastCorrelationMultithreadedMapper.class);
     public static String NUM_THREADS = "mapreduce.mapper.multithreadedmapper.threads";
     public static String MAP_CLASS = "mapreduce.mapper.multithreadedmapper.mapclass";
 
-    private Class<? extends Mapper<LongWritable, Text, IntWritable, CorrelationWritable>> mapClass;
+    private Class<? extends Mapper<LongWritable, Object, IntWritable, CorrelationWritable>> mapClass;
     private Context outer;
     private List<MapRunner> runners;
 
@@ -187,9 +187,9 @@ public class FastCorrelationMultithreadedMapper extends Mapper<LongWritable, Tex
         }
     }
 
-    private class SubMapRecordReader extends RecordReader<LongWritable, Text> {
+    private class SubMapRecordReader extends RecordReader<LongWritable, Object> {
         private LongWritable key;
-        private Text value;
+        private Object value;
         private Configuration conf;
 
         @Override
@@ -212,8 +212,19 @@ public class FastCorrelationMultithreadedMapper extends Mapper<LongWritable, Tex
                 if(!outer.nextKeyValue()) {
                     return false;
                 }
-                key = ReflectionUtils.copy(outer.getConfiguration(), outer.getCurrentKey(), key);
-                value = ReflectionUtils.copy(conf, outer.getCurrentValue(), value);
+
+                key = (outer.getCurrentKey() != null) ?
+                        ReflectionUtils.copy(outer.getConfiguration(), outer.getCurrentKey(), key) : null;
+                Object cv = outer.getCurrentValue();
+                if (cv instanceof Text) {
+                    value = ((value == null) ? new Text() : value);
+                    ReflectionUtils.copy(conf, cv, value);
+                } else {
+                    value = cv;
+                }
+
+                // key = ReflectionUtils.copy(outer.getConfiguration(), outer.getCurrentKey(), key);
+                // value = ReflectionUtils.copy(conf, outer.getCurrentValue(), value);
                 return true;
             }
         }
@@ -223,7 +234,7 @@ public class FastCorrelationMultithreadedMapper extends Mapper<LongWritable, Tex
         }
 
         @Override
-        public Text getCurrentValue() {
+        public Object getCurrentValue() {
             return value;
         }
     }
@@ -285,10 +296,10 @@ public class FastCorrelationMultithreadedMapper extends Mapper<LongWritable, Tex
     }
 
     private class MapRunner extends Thread {
-        private Mapper<LongWritable, Text, IntWritable, CorrelationWritable> mapper;
+        private Mapper<LongWritable, Object, IntWritable, CorrelationWritable> mapper;
         private Context subcontext;
         private Throwable throwable;
-        private RecordReader<LongWritable, Text> reader = new SubMapRecordReader();
+        private RecordReader<LongWritable, Object> reader = new SubMapRecordReader();
 
         MapRunner(Context context) throws IOException, InterruptedException {
             mapper = ReflectionUtils.newInstance(mapClass, context.getConfiguration());

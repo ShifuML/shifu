@@ -37,9 +37,12 @@ import java.util.Map;
  */
 public class PathFinder {
 
-    private static final String MTL_FOLDER = "mtl";
+    public static final String MTL_FOLDER = "mtl";
     public static final String FEATURE_IMPORTANCE_FILE = "all.fi";
     private static final String CORRELATION_CSV = "correlation.csv";
+    private static final String SHIFU_LOG_FILE = "shifu.log";
+    private static final String WOE_MAPPING_FILE = "woemapping.txt";
+    private static final String VAR_WOE_INFO_FILE = "varwoe_info.txt";
     private static final String REASON_CODE_PATH = "common/ReasonCodeMapV3.json";
     private static final String SHIFU_JAR_PATH = "lib/*.jar";
 
@@ -926,7 +929,7 @@ public class PathFinder {
      *
      * @return - the Path of local home directory
      */
-    private Path getModelSetLocalPath() {
+    public Path getModelSetLocalPath() {
         return (otherConfigs != null && otherConfigs.get(Constants.SHIFU_CURRENT_WORKING_DIR) != null)
                 ? new Path(otherConfigs.get(Constants.SHIFU_CURRENT_WORKING_DIR).toString())
                 : new Path(".");

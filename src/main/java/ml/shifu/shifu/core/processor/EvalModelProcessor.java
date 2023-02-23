@@ -92,9 +92,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
     public static final String VAR_MAPPING_CONF = "VAR_MAPPING_CONF";
     public static final String REF_MODEL = "REF_MODEL";
 
-    private String evalName = null;
+    protected String evalName = null;
 
-    private EvalStep evalStep;
+    protected EvalStep evalStep;
 
     private long evalRecords = 0l;
 
@@ -209,7 +209,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         return 0;
     }
 
-    private void deleteEvalSet(String evalSetName) {
+    protected void deleteEvalSet(String evalSetName) {
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(evalSetName);
         if(evalConfig == null) {
             LOG.error("{} eval set doesn't exist.", evalSetName);
@@ -224,7 +224,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
     }
 
-    private void listEvalSet() {
+    protected void listEvalSet() {
         List<EvalConfig> evals = modelConfig.getEvals();
         if(CollectionUtils.isNotEmpty(evals)) {
             LOG.info("There are {} eval sets.", evals.size());
@@ -234,7 +234,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
         }
     }
 
-    private List<EvalConfig> getEvalConfigListFromInput() {
+    protected List<EvalConfig> getEvalConfigListFromInput() {
         List<EvalConfig> evalSetList = new ArrayList<EvalConfig>();
 
         if(StringUtils.isNotBlank(evalName)) {
@@ -642,7 +642,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * @throws IOException
      *             any io exception
      */
-    private void createNewEval(String name) throws IOException {
+    protected void createNewEval(String name) throws IOException {
         EvalConfig evalConfig = modelConfig.getEvalConfigByName(name);
         if(evalConfig != null) {
             throw new ShifuException(ShifuErrorCode.ERROR_MODEL_EVALSET_ALREADY_EXIST,
@@ -781,30 +781,36 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             evalColumnNames = CommonUtils.getHeaders(evalConfig.getDataSet().getHeaderPath(), delimiter,
                     evalConfig.getDataSet().getSource());
         } else {
-            String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter()) // get header delimiter
-                    ? evalConfig.getDataSet().getDataDelimiter()
-                    : evalConfig.getDataSet().getHeaderDelimiter();
-            String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter,
-                    evalConfig.getDataSet().getSource());
-            // first line of data meaning second line in data files excluding first header line
-            String[] dataInFirstLine = CommonUtils.takeFirstTwoLines(evalConfig.getDataSet().getDataPath(), delimiter,
-                    evalConfig.getDataSet().getSource())[1];
-            if(dataInFirstLine != null && fields.length != dataInFirstLine.length) {
-                throw new IllegalArgumentException(
-                        "Eval header length and eval data length are not consistent, please check you header setting and data set setting in eval.");
-            }
+            if (ShifuFileUtils.isParquetFile(evalConfig.getDataSet().getDataPath(),
+                    evalConfig.getDataSet().getSource())) {
+                evalColumnNames = ShifuFileUtils.readParquetFileHeader(evalConfig.getDataSet().getDataPath(),
+                        evalConfig.getDataSet().getSource());
+            } else {
+                String delimiter = StringUtils.isBlank(evalConfig.getDataSet().getHeaderDelimiter())
+                        // get header delimiter
+                        ? evalConfig.getDataSet().getDataDelimiter() : evalConfig.getDataSet().getHeaderDelimiter();
+                String[] fields = CommonUtils.takeFirstLine(evalConfig.getDataSet().getDataPath(), delimiter,
+                        evalConfig.getDataSet().getSource());
+                // first line of data meaning second line in data files excluding first header line
+                String[] dataInFirstLine = CommonUtils.takeFirstTwoLines(evalConfig.getDataSet().getDataPath(),
+                        delimiter, evalConfig.getDataSet().getSource())[1];
+                if(dataInFirstLine != null && fields.length != dataInFirstLine.length) {
+                    throw new IllegalArgumentException(
+                            "Eval header length and eval data length are not consistent, please check you header setting and data set setting in eval.");
+                }
 
-            // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
-            // char or / in its name in shifu will be replaced;
-            for(int i = 0; i < fields.length; i++) {
-                fields[i] = CommonUtils.normColumnName(fields[i]);
+                // replace empty and / to _ to avoid pig column schema parsing issue, all columns with empty
+                // char or / in its name in shifu will be replaced;
+                for(int i = 0; i < fields.length; i++) {
+                    fields[i] = CommonUtils.normColumnName(fields[i]);
+                }
+                evalColumnNames = fields;
+                // for(int i = 0; i < fields.length; i++) {
+                // evalColumnNames[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
+                // }
+                LOG.warn("No header path is provided, we will try to read first line and detect schema.");
+                LOG.warn("Schema in ColumnConfig.json are named as first line of data set path.");
             }
-            evalColumnNames = fields;
-            // for(int i = 0; i < fields.length; i++) {
-            // evalColumnNames[i] = CommonUtils.getRelativePigHeaderColumnName(fields[i]);
-            // }
-            LOG.warn("No header path is provided, we will try to read first line and detect schema.");
-            LOG.warn("Schema in ColumnConfig.json are named as first line of data set path.");
         }
 
         Set<NSColumn> names = new HashSet<NSColumn>();
@@ -829,12 +835,20 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
             return;
         }
 
+        List<String> evalTargetNameList = new ArrayList<>();
         String evalTargetName = modelConfig.getTargetColumnName(evalConfig, null);
-        NSColumn targetColumn = new NSColumn(evalTargetName);
-        if(StringUtils.isNotBlank(evalTargetName) && !names.contains(targetColumn)
-                && !names.contains(new NSColumn(targetColumn.getSimpleName()))) {
-            throw new IllegalArgumentException("Target column " + evalTargetName + " does not exist in - "
-                    + evalConfig.getDataSet().getHeaderPath());
+        if (modelConfig.isMultiTask()) {
+            evalTargetNameList.addAll(CommonUtils.splitAndReturnList(evalTargetName, CommonConstants.MTL_DELIMITER));
+        } else {
+            evalTargetNameList.add(evalTargetName);
+        }
+        for (String tempTarget: evalTargetNameList) {
+            NSColumn targetColumn = new NSColumn(tempTarget);
+            if(StringUtils.isNotBlank(tempTarget) && !names.contains(targetColumn)
+                    && !names.contains(new NSColumn(targetColumn.getSimpleName()))) {
+                throw new IllegalArgumentException(
+                        "Target column " + tempTarget + " does not exist in - " + evalConfig.getDataSet().getHeaderPath());
+            }
         }
 
         NSColumn weightColumn = new NSColumn(evalConfig.getDataSet().getWeightColumnName());
@@ -1090,6 +1104,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
 
         paramsMap.put(Constants.SOURCE_TYPE, sourceType.toString());
         paramsMap.put("pathEvalScoreData", pathFinder.getEvalScorePath(evalConfig));
+        paramsMap.put(Constants.SCORE_DATA_LOADER,
+                CommonUtils.buildLoadDataInject(pathFinder.getEvalScorePath(evalConfig), sourceType,
+                        Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER)));
         paramsMap.put("pathSortScoreData", pathFinder.getEvalMetaScorePath(evalConfig, metaScore));
         paramsMap.put("eval_set_name", evalConfig.getName());
         paramsMap.put("delimiter",

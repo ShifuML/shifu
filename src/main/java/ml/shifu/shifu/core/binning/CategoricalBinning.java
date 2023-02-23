@@ -17,11 +17,10 @@
  */
 package ml.shifu.shifu.core.binning;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import ml.shifu.shifu.util.Constants;
 import org.apache.commons.lang.StringUtils;
@@ -189,7 +188,11 @@ public class CategoricalBinning extends AbstractBinning<String> {
         if(objStrArr.length > 5 && StringUtils.isNotBlank(objStrArr[5])) {
             String[] elements = CommonUtils.split(objStrArr[5], Character.toString(SETLIST_SEPARATOR));
             for(String element: elements) {
-                categoricalVals.add(element);
+                try {
+                    categoricalVals.add(Base64Utils.base64Decode(element));
+                } catch (Exception e) {
+                    log.error("Decode error! Skip field - {}", element);
+                }
             }
         } else {
             log.warn("Empty categorical bin - " + objValStr);
@@ -228,9 +231,12 @@ public class CategoricalBinning extends AbstractBinning<String> {
     public String objToString() {
         StringBuilder sb = new StringBuilder(1000);
         try {
+            List<String> encodeCatVals = categoricalVals.stream()
+                    .map(x -> Base64Utils.base64Encode(x))
+                    .collect(Collectors.toList());
             sb.append(super.objToString()).append(Character.toString(FIELD_SEPARATOR)).append(Boolean.toString(isValid))
                     .append(Character.toString(FIELD_SEPARATOR))
-                    .append(StringUtils.join(categoricalVals, SETLIST_SEPARATOR));
+                    .append(StringUtils.join(encodeCatVals, SETLIST_SEPARATOR));
             if(this.enableAutoHash) {
                 sb.append(Character.toString(FIELD_SEPARATOR))
                         .append(Base64Utils.base64EncodeFromBytes(this.hyper.getBytes()));

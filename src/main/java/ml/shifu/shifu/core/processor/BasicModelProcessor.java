@@ -129,6 +129,7 @@ public class BasicModelProcessor {
                         this.mtlColumnConfigLists.add(this.loadColumnConfig(ccPath));
                     }
                     tmpCCList = this.mtlColumnConfigLists;
+                    this.columnConfigList = loadColumnConfig();
                 } else {
                     this.columnConfigList = loadColumnConfig();
                     tmpCCList.add(columnConfigList);

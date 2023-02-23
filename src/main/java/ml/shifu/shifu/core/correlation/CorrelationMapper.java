@@ -40,6 +40,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import parquet.example.data.Group;
 
 /**
  * {@link CorrelationMapper} is used to compute {@link CorrelationWritable} per column per mapper.
@@ -49,7 +50,7 @@ import org.slf4j.LoggerFactory;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, CorrelationWritable> {
+public class CorrelationMapper extends Mapper<LongWritable, Object, IntWritable, CorrelationWritable> {
 
     private final static Logger LOG = LoggerFactory.getLogger(CorrelationMapper.class);
 
@@ -138,7 +139,6 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
         if(this.isComputeOnNorm) {
             String normDelimiter = CommonUtils.escapePigString(
                     context.getConfiguration().get(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER));
-            this.dataPurifier.setDataDelimiter(normDelimiter);
             this.dataSetDelimiter = normDelimiter;
         }
 
@@ -175,14 +175,25 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
     }
 
     @Override
-    protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-        String valueStr = value.toString();
-        if(valueStr == null || valueStr.length() == 0 || valueStr.trim().length() == 0) {
-            LOG.warn("Empty input.");
+    protected void map(LongWritable key, Object value, Context context) throws IOException, InterruptedException {
+        String[] units = null;
+
+        if (value instanceof Text) {
+            String valueStr = value.toString();
+            if(valueStr == null || valueStr.length() == 0 || valueStr.trim().length() == 0) {
+                LOG.warn("Empty input.");
+                return;
+            }
+            units = CommonUtils.split(valueStr, this.dataSetDelimiter);
+        } else if (value instanceof Group) {
+            units = CommonUtils.convertGroupToArr((Group) value);
+        } else {
+            LOG.error("Unsupported value type {}.", ((value !=  null) ? value.getClass().getName() : null));
             return;
         }
+
         double[] dValues = null;
-        if(!this.isComputeOnNorm && !this.dataPurifier.isFilter(valueStr)) {
+        if(!this.isComputeOnNorm && !this.dataPurifier.isFilter(units)) {
             // if compute on norm, no need filter function here.
             return;
         }
@@ -192,13 +203,13 @@ public class CorrelationMapper extends Mapper<LongWritable, Text, IntWritable, C
         context.getCounter(Constants.SHIFU_GROUP_COUNTER, "CNT_AFTER_FILTER").increment(1L);
 
         // make sampling work in correlation
-        if(!this.isComputeOnNorm && Math.random() >= modelConfig.getStats().getSampleRate()) {
+        if(Math.random() >= modelConfig.getStats().getSampleRate()) {
             return;
         }
 
         context.getCounter(Constants.SHIFU_GROUP_COUNTER, "CORRELATION_CNT").increment(1L);
 
-        dValues = getDoubleArrayByRawArray(CommonUtils.split(valueStr, this.dataSetDelimiter));
+        dValues = getDoubleArrayByRawArray(units);
 
         count += 1L;
         if(count % 2000L == 0) {
