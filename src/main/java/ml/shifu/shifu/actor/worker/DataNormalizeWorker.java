@@ -79,6 +79,7 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
      * Normalize the list training data from List<String> to List<Double>
      * 
      * @param rawDataList
+     * 
      * @return the data after normalization
      */
     private List<List<Double>> normalizeData(List<String> rawDataList) {
@@ -139,7 +140,8 @@ public class DataNormalizeWorker extends AbstractWorkerActor {
                 retDouList.add(null);
             } else {
                 String val = (rfs[i] == null) ? "" : rfs[i];
-                retDouList.addAll(Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType()));
+                retDouList
+                        .addAll(Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType(), false, null));
             }
         }
 

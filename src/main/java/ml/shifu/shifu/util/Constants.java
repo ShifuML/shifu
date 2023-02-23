@@ -391,5 +391,7 @@ public interface Constants {
     public static final String SHIFU_EVAL_NORM_SKIP_CHECK = "shifu.eval.norm.skip.check";
 
     public static final String SHIFU_CORRELATION_ON_NORM = "shifu.correlation.on.norm";
+    
+    public static final String SHIFU_NORM_UNSEEN_VALUE = "shifu.norm.unseen.value";
 
 }

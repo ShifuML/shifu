@@ -18,6 +18,7 @@ package ml.shifu.shifu.util;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 
@@ -36,6 +37,10 @@ public final class BinUtils {
     private BinUtils() {
     }
 
+    public static int getBinNum(ColumnConfig columnConfig, Object columnVal) {
+        return getBinNum(columnConfig, columnVal, null);
+    }
+
     /**
      * Given a column value, return bin list index. Return 0 for Category because of index 0 is started from
      * NEGATIVE_INFINITY.
@@ -51,12 +56,12 @@ public final class BinUtils {
      * @throws NumberFormatException
      *             if columnVal does not contain a parsable number.
      */
-    public static int getBinNum(ColumnConfig columnConfig, Object columnVal) {
+    public static int getBinNum(ColumnConfig columnConfig, Object columnVal, Set<String> missingValues) {
         if(columnConfig.isCategorical()) {
             if(columnVal == null) {
                 return -1;
             } else {
-                return getCategoicalBinIndex(columnConfig, columnVal.toString());
+                return getCategoricalBinIndex(columnConfig, columnVal.toString(), missingValues);
             }
         } else {
             return getNumericalBinIndex(columnConfig.getBinBoundary(), columnVal);
@@ -93,6 +98,10 @@ public final class BinUtils {
         return getBinIndex(binBoundaries, dval);
     }
 
+    public static int getCategoricalBinIndex(ColumnConfig columnConfig, String columnVal) {
+        return getCategoricalBinIndex(columnConfig, columnVal, null);
+    }
+
     /**
      * Get categorical bin index according to string column value.
      * 
@@ -100,9 +109,9 @@ public final class BinUtils {
      *            the column config
      * @param columnVal
      *            the column value
-     * @return bin index, -1 if invalid values
+     * @return bin index, -1 if invalid values, -2 if unseen but valid values
      */
-    public static int getCategoicalBinIndex(ColumnConfig columnConfig, String columnVal) {
+    public static int getCategoricalBinIndex(ColumnConfig columnConfig, String columnVal, Set<String> missingValues) {
         if(StringUtils.isBlank(columnVal)) {
             return -1;
         }
@@ -113,18 +122,25 @@ public final class BinUtils {
             Map<String, Integer> binCateMap = columnConfig.getColumnBinning().getBinCateMap();
             Integer intIndex = binCateMap.get(columnVal);
             if(intIndex == null || intIndex < 0) {
-                intIndex = -1;
+                if(missingValues == null || missingValues.contains(columnVal)) { // missing or missingValues not set
+                    intIndex = -1;
+                } else { // unseen but valid values
+                    intIndex = -2;
+                }
             }
             return intIndex;
         } else {
             List<String> binCategories = columnConfig.getColumnBinning().getBinCategory();
+            if(missingValues == null || missingValues.contains(columnVal)) { // missing or missingValues not set
+                return -1;
+            }
             for(int i = 0; i < binCategories.size(); i++) {
                 if(isCategoricalBinValue(binCategories.get(i), columnVal)) {
                     return i;
                 }
             }
+            return -2; // unseen but valid values
         }
-        return -1;
     }
 
     /**

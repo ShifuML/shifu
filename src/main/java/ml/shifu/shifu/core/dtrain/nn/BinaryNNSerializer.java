@@ -58,13 +58,21 @@ public class BinaryNNSerializer {
             // version
             fos.writeInt(CommonConstants.NN_FORMAT_VERSION);
 
+            // write missing values, added when version >=2
+            List<String> missingValues = modelConfig.getMissingOrInvalidValues();
+            assert missingValues != null;
+            fos.writeInt(missingValues.size());
+            for(String missing: missingValues) {
+                fos.writeUTF(missing);
+            }
+
             // write normStr
             String normStr = modelConfig.getNormalize().getNormType().toString();
             ml.shifu.shifu.core.dtrain.StringUtils.writeString(fos, normStr);
 
             // compute columns needed
             Map<Integer, String> columnIndexNameMapping = getIndexNameMapping(columnConfigList);
-
+            
             // write column stats to output
             List<NNColumnStats> csList = new ArrayList<NNColumnStats>();
             for(ColumnConfig cc: columnConfigList) {
@@ -81,6 +89,7 @@ public class BinaryNNSerializer {
                     cs.setBinPosRates(cc.getBinPosRate());
                     cs.setBinCountWoes(cc.getBinCountWoe());
                     cs.setBinWeightWoes(cc.getBinWeightedWoe());
+                    cs.setWoe(cc.getColumnStats().getWoe()); // added when version >=2
 
                     // TODO cache such computation
                     double[] meanAndStdDev = Normalizer.calculateWoeMeanAndStdDev(cc, false);

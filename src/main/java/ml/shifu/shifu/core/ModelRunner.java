@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 
@@ -77,7 +78,6 @@ public class ModelRunner {
      */
     private CategoryMissingNormType categoryMissingNormType = CategoryMissingNormType.POSRATE;
 
-
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
             String dataDelimiter, List<BasicML> models) throws IOException {
         this(modelConfig, columnConfigList, header, dataDelimiter, models, 0);
@@ -87,12 +87,13 @@ public class ModelRunner {
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
             String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex) throws IOException {
         this(modelConfig, columnConfigList, header, dataDelimiter, models, outputHiddenLayerIndex, false,
-                CategoryMissingNormType.POSRATE, null);
+                CategoryMissingNormType.POSRATE, null, false, null);
     }
 
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String[] header,
             String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex, boolean isMultiThread,
-            CategoryMissingNormType categoryMissingNormType, PrecisionType pt) throws IOException {
+            CategoryMissingNormType categoryMissingNormType, PrecisionType pt, boolean normUnseenValue,
+            Set<String> missingVals) throws IOException {
         this.modelConfig = modelConfig;
         this.columnConfigList = columnConfigList;
         this.header = header;
@@ -100,20 +101,23 @@ public class ModelRunner {
         this.isMultiThread = isMultiThread;
         this.categoryMissingNormType = categoryMissingNormType;
         this.scorer = new Scorer(models, columnConfigList, modelConfig.getAlgorithm(), modelConfig,
-                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex, isMultiThread, pt);
+                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex, isMultiThread, pt, normUnseenValue,
+                missingVals);
         this.scorer.setCategoryMissingNormType(categoryMissingNormType);
     }
 
     public ModelRunner(ModelConfig modelConfig, List<List<ColumnConfig>> mtlColumnConfigList, String[] header,
             String dataDelimiter, List<BasicML> models, int outputHiddenLayerIndex, boolean isMultiThread,
-            CategoryMissingNormType categoryMissingNormType, boolean isMultiTask, PrecisionType pt) throws IOException {
+            CategoryMissingNormType categoryMissingNormType, boolean isMultiTask, PrecisionType pt,
+            boolean normUnseenValue, Set<String> missingVals) throws IOException {
         this.modelConfig = modelConfig;
         this.header = header;
         this.dataDelimiter = dataDelimiter;
         this.isMultiThread = isMultiThread;
         this.categoryMissingNormType = categoryMissingNormType;
         this.scorer = new Scorer(models, mtlColumnConfigList, modelConfig.getAlgorithm(), modelConfig,
-                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex, isMultiThread, isMultiTask, pt);
+                modelConfig.getNormalizeStdDevCutOff(), outputHiddenLayerIndex, isMultiThread, isMultiTask, pt,
+                normUnseenValue, missingVals);
         this.scorer.setCategoryMissingNormType(categoryMissingNormType);
     }
 
@@ -131,9 +135,10 @@ public class ModelRunner {
      * @param models
      *            - models
      * @throws IOException
-     *            - fail to load model segments
+     *             - fail to load model segments
      */
-    public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, List<BasicML> models) throws IOException {
+    public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, List<BasicML> models)
+            throws IOException {
         this(modelConfig, columnConfigList, models, Normalizer.STD_DEV_CUTOFF);
     }
 
@@ -151,10 +156,10 @@ public class ModelRunner {
      * @param stdDevCutoff
      *            - the standard deviation cutoff to normalize data
      * @throws IOException
-     *           - fail to load model segments
+     *             - fail to load model segments
      */
     public ModelRunner(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, List<BasicML> models,
-            double stdDevCutoff) throws IOException{
+            double stdDevCutoff) throws IOException {
         this.columnConfigList = columnConfigList;
         this.modelConfig = modelConfig;
         this.scorer = new Scorer(models, columnConfigList, ALGORITHM.NN.name(), modelConfig, stdDevCutoff);
@@ -291,7 +296,7 @@ public class ModelRunner {
      * @param isMultiThread
      *            - use multi-thread to run scoring or not
      * @throws IOException
-     *            - exception when build sub-models
+     *             - exception when build sub-models
      */
     public void addSubModels(ModelSpec modelSpec, boolean isMultiThread) throws IOException {
         if(this.subScorers == null) {
@@ -312,7 +317,7 @@ public class ModelRunner {
      * @param modelSpec
      *            - model spec for sub model
      * @throws IOException
-     *            - exception when build sub-models
+     *             - exception when build sub-models
      */
     public void addSubModels(ModelSpec modelSpec) throws IOException {
         this.addSubModels(modelSpec, false);

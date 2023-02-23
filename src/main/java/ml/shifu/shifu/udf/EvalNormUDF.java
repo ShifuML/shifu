@@ -27,6 +27,8 @@ import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.ModelSpecLoaderUtils;
+
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.pig.data.DataType;
@@ -103,6 +105,8 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
     private PrecisionType precisionType;
 
     private boolean skipColumnCheck = false;
+    private boolean normUnseenValue;
+    private Set<String> missingVals;
 
     public EvalNormUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName, String scale)
             throws IOException {
@@ -163,6 +167,17 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
             outputNames.add(evalConfig.getDataSet().getWeightColumnName());
         } else {
             outputNames.add("weight");
+        }
+
+        normUnseenValue = "true".equalsIgnoreCase(getUdfProperty(Constants.SHIFU_NORM_UNSEEN_VALUE));
+
+        this.missingVals = new HashSet<String>();
+        this.missingVals.add("");
+        this.missingVals.add("NaN");
+        if(CollectionUtils.isNotEmpty(modelConfig.getMissingOrInvalidValues())) {
+            for(String missingVal: modelConfig.getMissingOrInvalidValues()) {
+                missingVals.add(StringUtils.trimToEmpty(missingVal));
+            }
         }
 
         // 3. add meta columns
@@ -361,7 +376,8 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
                 ColumnConfig columnConfig = this.columnConfigMap.get(name);
                 List<Double> normVals = Normalizer.fullNormalize(columnConfig, raw,
                         this.modelConfig.getNormalizeStdDevCutOff(), this.modelConfig.getNormalizeType(),
-                        this.categoryMissingNormType, this.categoricalIndexMap.get(columnConfig.getColumnNum()));
+                        this.categoryMissingNormType, this.categoricalIndexMap.get(columnConfig.getColumnNum()),
+                        this.normUnseenValue, this.missingVals);
                 if(this.isOutputRaw) { // add to raw list
                     outputRawList.add(raw);
                 }

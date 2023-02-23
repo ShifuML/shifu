@@ -88,7 +88,7 @@ public interface CommonConstants {
     public static final String NUM_HIDDEN_LAYERS = "NumHiddenLayers";
 
     public static final String L2_REG = "L2Reg";
-    
+
     public static final String CHECKPOINT_INTERVAL = "CheckpointInterval";
 
     public static final String ACTIVATION_FUNC = "ActivationFunc";
@@ -147,10 +147,14 @@ public interface CommonConstants {
      * Version 2: support final selected columns
      * Version 3: in Node to change wgtCnt float to double
      * Version 4: change trees in IndependentTreeModel to support bagging of RF and GBDT
+     * Version 5: support missing values in tree model inference
      */
-    public static final int TREE_FORMAT_VERSION = 4;
+    public static final int TREE_FORMAT_VERSION = 5;
 
-    public static final int NN_FORMAT_VERSION = 1;
+    /**
+     * Version 2: add missing values into nn binary model
+     */
+    public static final int NN_FORMAT_VERSION = 2;
 
     public static final int WDL_FORMAT_VERSION = 1;
 

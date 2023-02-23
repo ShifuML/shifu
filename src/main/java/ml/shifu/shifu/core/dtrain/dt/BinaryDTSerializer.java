@@ -166,6 +166,18 @@ public class BinaryDTSerializer {
                     treeNode.write(fos, pt);
                 }
             }
+
+            // after model version >=5, support customized missing or invalid values 
+            List<String> missingOrInvalidValues = modelConfig.getMissingOrInvalidValues();
+            if(missingOrInvalidValues == null) {
+                fos.writeInt(0);
+            } else {
+                fos.writeInt(missingOrInvalidValues.size());
+                for(String value: missingOrInvalidValues) {
+                    // only support 16k max size for UTF here
+                    fos.writeUTF(value);
+                }
+            }
         } catch (IOException e) {
             LOG.error("Error in writing output.", e);
         } finally {

@@ -147,6 +147,9 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
 
     private PrecisionType precisionType;
 
+    private boolean normUnseenValue;
+    private Set<String> missingVals;
+
     public EvalScoreUDF(String source, String pathModelConfig, String pathColumnConfig, String evalSetName)
             throws IOException {
         this(source, pathModelConfig, pathColumnConfig, evalSetName, Integer.toString(Scorer.DEFAULT_SCORE_SCALE));
@@ -285,6 +288,17 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
             }
             initMultTaskConfigs();
         }
+
+        this.normUnseenValue = "true".equalsIgnoreCase(getUdfProperty(Constants.SHIFU_NORM_UNSEEN_VALUE));
+
+        this.missingVals = new HashSet<String>();
+        this.missingVals.add("");
+        this.missingVals.add("NaN");
+        if(CollectionUtils.isNotEmpty(modelConfig.getMissingOrInvalidValues())) {
+            for(String missingVal: modelConfig.getMissingOrInvalidValues()) {
+                missingVals.add(StringUtils.trimToEmpty(missingVal));
+            }
+        }
     }
 
     private void initMultTaskConfigs() throws IOException {
@@ -352,11 +366,12 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
                 this.modelRunner = new ModelRunner(modelConfig, mtlColumnConfigLists, this.headers,
                         evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,
                         this.isMultiThreadScoring, this.getCategoryMissingNormType(), this.isMultiTask,
-                        this.precisionType);
+                        this.precisionType, this.normUnseenValue, this.missingVals);
             } else {
                 this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,
                         evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,
-                        this.isMultiThreadScoring, this.getCategoryMissingNormType(), this.precisionType);
+                        this.isMultiThreadScoring, this.getCategoryMissingNormType(), this.precisionType,
+                        this.normUnseenValue, this.missingVals);
             }
 
             // FIXME MTL not supported in sub models
@@ -391,7 +406,8 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
                 }
                 this.modelRunner = new ModelRunner(modelConfig, columnConfigList, this.headers,
                         evalConfig.getDataSet().getDataDelimiter(), models, this.outputHiddenLayerIndex,
-                        this.isMultiThreadScoring, this.getCategoryMissingNormType(), this.precisionType);
+                        this.isMultiThreadScoring, this.getCategoryMissingNormType(), this.precisionType,
+                        this.normUnseenValue, this.missingVals);
             }
             this.modelRunner.setScoreScale(Integer.parseInt(this.scale));
             log.info("DEBUG: model cnt " + this.modelScoreNames.size() + " sub models cnt "
@@ -403,8 +419,8 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
             return null;
         }
 
-        String tag = CommonUtils.trimTag(rawDataNsMap.get(
-                new NSColumn(modelConfig.getTargetColumnName(evalConfig, modelConfig.getTargetColumnName()))));
+        String tag = CommonUtils.trimTag(rawDataNsMap
+                .get(new NSColumn(modelConfig.getTargetColumnName(evalConfig, modelConfig.getTargetColumnName()))));
 
         // run model scoring
         long startTime = System.nanoTime();
@@ -665,8 +681,9 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
     public Schema outputSchema(Schema input) {
         try {
             Schema tupleSchema = new Schema();
-            tupleSchema.add(new FieldSchema(SCHEMA_PREFIX + modelConfig.getTargetColumnName(evalConfig,
-                            modelConfig.getTargetColumnName()), DataType.CHARARRAY));
+            tupleSchema.add(new FieldSchema(
+                    SCHEMA_PREFIX + modelConfig.getTargetColumnName(evalConfig, modelConfig.getTargetColumnName()),
+                    DataType.CHARARRAY));
 
             String weightName = StringUtils.isBlank(evalConfig.getDataSet().getWeightColumnName()) ? "weight"
                     : evalConfig.getDataSet().getWeightColumnName();
@@ -827,7 +844,8 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
      * @return - tuple name with namespace
      */
     private String addModelNameToField(String modelName, String field) {
-        return (StringUtils.isBlank(modelName) ? field : CommonUtils.normColumnName(modelName) + "::" + formatScoreField(field));
+        return (StringUtils.isBlank(modelName) ? field
+                : CommonUtils.normColumnName(modelName) + "::" + formatScoreField(field));
     }
 
     private String formatScoreField(String field) {

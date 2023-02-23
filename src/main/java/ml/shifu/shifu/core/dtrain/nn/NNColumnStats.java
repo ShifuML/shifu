@@ -34,7 +34,8 @@ public class NNColumnStats implements Bytable {
 
     public NNColumnStats(int columnNum, String columnName, ColumnType columnType, double mean, double stddev,
             double woeMean, double woeStddev, double woeWgtMean, double woeWgtStddev, List<Double> binBoundaries,
-            List<String> binCategories, List<Double> binPosRates, List<Double> binCountWoes, List<Double> binWeightWoes) {
+            List<String> binCategories, List<Double> binPosRates, List<Double> binCountWoes, List<Double> binWeightWoes,
+            double woe) {
         this.columnNum = columnNum;
         this.columnName = columnName;
         this.columnType = columnType;
@@ -49,6 +50,7 @@ public class NNColumnStats implements Bytable {
         this.binPosRates = binPosRates;
         this.binCountWoes = binCountWoes;
         this.binWeightWoes = binWeightWoes;
+        this.woe = woe;
     }
 
     private int columnNum;
@@ -71,6 +73,8 @@ public class NNColumnStats implements Bytable {
 
     private double woeWgtStddev;
 
+    private double woe;
+
     private List<Double> binBoundaries;
 
     private List<String> binCategories;
@@ -84,7 +88,7 @@ public class NNColumnStats implements Bytable {
     public boolean isCategorical() {
         return this.columnType == ColumnType.C;
     }
-    
+
     public boolean isHybrid() {
         return this.columnType == ColumnType.H;
     }
@@ -121,6 +125,10 @@ public class NNColumnStats implements Bytable {
         writeDoubleList(out, this.binPosRates);
         writeDoubleList(out, this.binCountWoes);
         writeDoubleList(out, this.binWeightWoes);
+
+        if(IndependentNNModel.getVersion() >= 2) {
+            out.writeDouble(this.woe);
+        }
     }
 
     @Override
@@ -148,6 +156,10 @@ public class NNColumnStats implements Bytable {
         this.binPosRates = readDoubleList(in);
         this.binCountWoes = readDoubleList(in);
         this.binWeightWoes = readDoubleList(in);
+
+        if(IndependentNNModel.getVersion() >= 2) {
+            this.woe = in.readDouble();
+        }
     }
 
     private List<Double> readDoubleList(DataInput in) throws IOException {
@@ -393,6 +405,14 @@ public class NNColumnStats implements Bytable {
      */
     public void setCutoff(double cutoff) {
         this.cutoff = cutoff;
+    }
+
+    public double getWoe() {
+        return woe;
+    }
+
+    public void setWoe(double woe) {
+        this.woe = woe;
     }
 
 }

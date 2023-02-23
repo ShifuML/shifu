@@ -38,16 +38,17 @@ public class NormalizationUtils {
 
     public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
-            double cutoff, String alg) {
+            double cutoff, String alg, boolean normUnseenValue, Set<String> missingVals) {
         return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff, alg,
-                CategoryMissingNormType.POSRATE);
+                CategoryMissingNormType.POSRATE, normUnseenValue, missingVals);
     }
 
     public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
-            double cutoff, String alg, CategoryMissingNormType categoryMissingNormType) {
+            double cutoff, String alg, CategoryMissingNormType categoryMissingNormType, boolean normUnseenValue,
+            Set<String> missingVals) {
         return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff, alg,
-                categoryMissingNormType, null);
+                categoryMissingNormType, null, normUnseenValue, missingVals);
     }
 
     /**
@@ -80,11 +81,12 @@ public class NormalizationUtils {
      */
     public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
-            double cutoff, String alg, CategoryMissingNormType categoryMissingNormType, PrecisionType pt) {
+            double cutoff, String alg, CategoryMissingNormType categoryMissingNormType, PrecisionType pt,
+            boolean normUnseenValue, Set<String> missingVals) {
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
 
         List<Double> inputList = assembleNormDataIntoList(binCategoryMap, noVarSel, modelConfig, columnConfigList,
-                rawNsDataMap, cutoff, alg, categoryMissingNormType, pt);
+                rawNsDataMap, cutoff, alg, categoryMissingNormType, pt, normUnseenValue, missingVals);
 
         // god, Double [] cannot be casted to double[], toArray doesn't work
         int size = inputList.size();
@@ -99,7 +101,8 @@ public class NormalizationUtils {
     private static List<Double> assembleNormDataIntoList(Map<Integer, Map<String, Integer>> binCategoryMap,
             boolean noVarSel, ModelConfig modelConfig, List<ColumnConfig> columnConfigList,
             Map<NSColumn, String> rawNsDataMap, double cutoff, String alg,
-            CategoryMissingNormType categoryMissingNormType, PrecisionType pt) {
+            CategoryMissingNormType categoryMissingNormType, PrecisionType pt, boolean normUnseenValue,
+            Set<String> missingVals) {
         List<Double> inputList = new ArrayList<Double>();
         boolean hasCandidates = CommonUtils.hasCandidateColumns(columnConfigList);
         for(ColumnConfig config: columnConfigList) {
@@ -132,10 +135,11 @@ public class NormalizationUtils {
                         } else if(CommonUtils.isWDLModel(alg)) {
                             List<Double> normalizeValue = Normalizer.fullNormalize(config, val, cutoff,
                                     modelConfig.getNormalizeType(), categoryMissingNormType,
-                                    binCategoryMap.get(config.getColumnNum()));
+                                    binCategoryMap.get(config.getColumnNum()), normUnseenValue, missingVals);
                             inputList.addAll(normalizeValue);
                         } else {
-                            inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val, pt));
+                            inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val, pt,
+                                    normUnseenValue, missingVals));
                         }
                     }
                 } else {
@@ -153,10 +157,11 @@ public class NormalizationUtils {
                         } else if(CommonUtils.isWDLModel(alg)) {
                             List<Double> normalizeValue = Normalizer.fullNormalize(config, val, cutoff,
                                     modelConfig.getNormalizeType(), categoryMissingNormType,
-                                    binCategoryMap.get(config.getColumnNum()));
+                                    binCategoryMap.get(config.getColumnNum()), normUnseenValue, missingVals);
                             inputList.addAll(normalizeValue);
                         } else {
-                            inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val, pt));
+                            inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val, pt,
+                                    normUnseenValue, missingVals));
                         }
                     }
                 }
@@ -224,16 +229,17 @@ public class NormalizationUtils {
 
     public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
-            double cutoff, String alg, Set<Integer> featureSet, PrecisionType precisionType) {
+            double cutoff, String alg, Set<Integer> featureSet, PrecisionType precisionType, boolean normUnseenValue,
+            Set<String> missingVals) {
         return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff, alg,
-                featureSet, CategoryMissingNormType.POSRATE, precisionType);
+                featureSet, CategoryMissingNormType.POSRATE, precisionType, normUnseenValue, missingVals);
     }
 
     public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
             double cutoff, String alg, Set<Integer> featureSet, CategoryMissingNormType categoryMissingNormType) {
         return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff, alg,
-                featureSet, categoryMissingNormType, null);
+                featureSet, categoryMissingNormType, null, false, null);
     }
 
     /**
@@ -269,10 +275,10 @@ public class NormalizationUtils {
     public static MLDataPair assembleNsDataPair(Map<Integer, Map<String, Integer>> binCategoryMap, boolean noVarSel,
             ModelConfig modelConfig, List<ColumnConfig> columnConfigList, Map<NSColumn, String> rawNsDataMap,
             double cutoff, String alg, Set<Integer> featureSet, CategoryMissingNormType categoryMissingNormType,
-            PrecisionType precisionType) {
+            PrecisionType precisionType, boolean normUnseenValue, Set<String> missingVals) {
         if(CollectionUtils.isEmpty(featureSet)) {
             return assembleNsDataPair(binCategoryMap, noVarSel, modelConfig, columnConfigList, rawNsDataMap, cutoff,
-                    alg, categoryMissingNormType, precisionType);
+                    alg, categoryMissingNormType, precisionType, normUnseenValue, missingVals);
         }
         double[] ideal = { Constants.DEFAULT_IDEAL_VALUE };
 
@@ -304,10 +310,11 @@ public class NormalizationUtils {
                     } else if(CommonUtils.isWDLModel(alg) && config.isCategorical()) {
                         List<Double> normalizeValue = Normalizer.fullNormalize(config, val, cutoff,
                                 modelConfig.getNormalizeType(), categoryMissingNormType,
-                                binCategoryMap.get(config.getColumnNum()));
+                                binCategoryMap.get(config.getColumnNum()), normUnseenValue, missingVals);
                         inputList.addAll(normalizeValue);
                     } else {
-                        inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val, precisionType));
+                        inputList.addAll(computeNumericNormResult(modelConfig, cutoff, config, val, precisionType,
+                                normUnseenValue, missingVals));
                     }
                 }
             }
@@ -416,7 +423,7 @@ public class NormalizationUtils {
      *         but OneHot will will return multi-elements double list
      */
     private static List<Double> computeNumericNormResult(ModelConfig modelConfig, double cutoff, ColumnConfig config,
-            String val, PrecisionType pt) {
+            String val, PrecisionType pt, boolean normUnseenValue, Set<String> missingVals) {
         List<Double> normalizeValue = null;
         if(CommonUtils.isTreeModel(modelConfig.getAlgorithm())) {
             try {
@@ -432,7 +439,8 @@ public class NormalizationUtils {
                     val = pt.to(Normalizer.defaultMissingValue(config)).toString();
                 }
             }
-            normalizeValue = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType());
+            normalizeValue = Normalizer.normalize(config, val, cutoff, modelConfig.getNormalizeType(), normUnseenValue,
+                    missingVals);
         }
 
         if(CollectionUtils.isNotEmpty(normalizeValue)) {
@@ -504,11 +512,12 @@ public class NormalizationUtils {
     public static MLDataPair assembleNsDataPair(List<Map<Integer, Map<String, Integer>>> mtlBinCategoryMaps,
             boolean noVarSelect, ModelConfig modelConfig, List<List<ColumnConfig>> mtlSelectedColumnConfigList,
             Map<NSColumn, String> rawNsDataMap, double cutoff, String alg,
-            CategoryMissingNormType categoryMissingNormType) {
+            CategoryMissingNormType categoryMissingNormType, boolean normUnseenValue, Set<String> missingVals) {
         List<Double> finalList = new ArrayList<>();
         for(int i = 0; i < mtlBinCategoryMaps.size(); i++) {
             finalList.addAll(assembleNormDataIntoList(mtlBinCategoryMaps.get(i), noVarSelect, modelConfig,
-                    mtlSelectedColumnConfigList.get(i), rawNsDataMap, cutoff, alg, categoryMissingNormType, null));
+                    mtlSelectedColumnConfigList.get(i), rawNsDataMap, cutoff, alg, categoryMissingNormType, null,
+                    normUnseenValue, missingVals));
         }
 
         // god, Double [] cannot be casted to double[], toArray doesn't work
