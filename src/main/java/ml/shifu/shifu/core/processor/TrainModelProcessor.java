@@ -1027,7 +1027,6 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             baggingNum = gs.getFlattenParams().size();
             LOG.warn("'train:baggingNum' is set to {} because of grid search enabled by settings in 'train#params'.",
                     gs.getFlattenParams().size());
-
         } else {
             parallelGroups = baggingNum % parallelNum == 0 ? baggingNum / parallelNum : baggingNum / parallelNum + 1;
         }

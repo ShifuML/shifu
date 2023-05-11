@@ -468,11 +468,11 @@ public class InitModelProcessor extends BasicModelProcessor implements Processor
                 }
 
                 log.warn("No header path is provided, we will try to read first line and detect schema.");
-                log.warn("Schema in ColumnConfig.json are named as first line of data set path.");
+                log.warn("Schema in ColumnConfig.json is named as first line of data set path.");
             } else {
                 isSchemaProvided = false;
                 log.warn("No header path is provided, we will try to read first line and detect schema.");
-                log.warn("Schema in ColumnConfig.json are named as  index 0, 1, 2, 3 ...");
+                log.warn("Schema in ColumnConfig.json is named as index 0, 1, 2, 3 ...");
                 log.warn("Please make sure weight column and tag column are also taking index as name.");
             }
         }

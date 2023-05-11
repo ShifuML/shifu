@@ -268,7 +268,7 @@ public class ShifuCLI {
                                 "Do model set normalization successfully. Please continue next step by using 'shifu varselect or shifu varsel'.");
                     } else {
                         log.warn(
-                                "Error in model set stats computation, please report issue on http:/github.com/shifuml/shifu/issues.");
+                                "Error in model set norm computation, please report issue on http:/github.com/shifuml/shifu/issues.");
                     }
                 } else if (cleanedArgs[0].equals(VARSELECT_CMD) || cleanedArgs[0].equals(VARSEL_CMD)) {
                     Map<String, Object> params = new HashMap<String, Object>();

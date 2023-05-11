@@ -250,12 +250,12 @@ public class EvalNormUDF extends AbstractEvalUDF<Tuple> {
     private void appendModelFeatures(List<ColumnConfig> columnConfigList, Set<Integer> modelFeatureSet,
             Set<String> evalNamesSet, List<String> featureNames, List<String> outputNames, String varDesc,
             int segFilterSize) {
-        boolean isSeg = segFilterSize > 0; // if appeneding segment expression variables
+        boolean isSeg = segFilterSize > 0; // if appending segment expression variables
         int rawCCSize = columnConfigList.size() / (segFilterSize + 1);
         for(ColumnConfig columnConfig: columnConfigList) {
             if(modelFeatureSet.contains(columnConfig.getColumnNum())) {
                 if(isSeg) {
-                    if(columnConfig.getColumnNum() < rawCCSize) { // raw varaibles
+                    if(columnConfig.getColumnNum() < rawCCSize) { // raw variables
                         if(evalNamesSet.contains(columnConfig.getColumnName())) {
                             featureNames.add(columnConfig.getColumnName());
                             outputNames.addAll(

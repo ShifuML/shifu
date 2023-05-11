@@ -286,26 +286,6 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                     columnConfig.getColumnNum(), p25th, median, p75th);
         }
 
-        LOG.info("Coloumn num is {}, columnType value is {}, cateMaxNumBin is {}, binCategory size is {}",
-                columnConfig.getColumnNum(), columnConfig.getColumnType(), modelConfig.getStats().getCateMaxNumBin(),
-                (CollectionUtils.isNotEmpty(columnConfig.getBinCategory()) ? columnConfig.getBinCategory().size() : 0));
-        // To merge categorical binning
-        if(columnConfig.isCategorical() && modelConfig.getStats().getCateMaxNumBin() > 0
-                && CollectionUtils.isNotEmpty(binCategories)
-                && binCategories.size() > modelConfig.getStats().getCateMaxNumBin()) {
-            // only category size large then expected max bin number
-            CateBinningStats cateBinningStats = rebinCategoricalValues(
-                    new CateBinningStats(binCategories, binCountPos, binCountNeg, binWeightPos, binWeightNeg));
-            LOG.info("For variable - {}, {} bins is rebined to {} bins", columnConfig.getColumnName(),
-                    binCategories.size(), cateBinningStats.binCategories.size());
-
-            binCategories = cateBinningStats.binCategories;
-            binCountPos = cateBinningStats.binCountPos;
-            binCountNeg = cateBinningStats.binCountNeg;
-            binWeightPos = cateBinningStats.binWeightPos;
-            binWeightNeg = cateBinningStats.binWeightNeg;
-        }
-
         double[] binPosRate;
         if(modelConfig.isRegression()) {
             binPosRate = computePosRate(binCountPos, binCountNeg);
@@ -369,8 +349,11 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 quarticSum += squaredVal * squaredVal * binCount;
             }
             if(smallCategories.size() > 0) {
-                for(int i = 0; i < smallCategories.size(); i++) {
-                    binCategories.remove((int) smallCategories.get(i));
+                List<String> oldBinCategories = binCategories;
+                binCategories =  new ArrayList<String>(oldBinCategories.size());
+                // construct new binCategories (removing small categories)
+                for(int i = 0; i < oldBinCategories.size() - smallCategories.size(); i++) {
+                    binCategories.add(oldBinCategories.get(indexMap.get(i)));
                 }
 
                 long[] newBinCountPos = new long[binCountPos.length - smallCategories.size()];
@@ -384,10 +367,9 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                     newBinWeightNeg[i] = binWeightNeg[indexMap.get(i)];
                 }
 
-                // apend removed ones to missing column (last one)
+                // append removed ones to missing column (last one)
                 for(int i = 0; i < smallCategories.size(); i++) {
                     int oldIndex = (int) smallCategories.get(i);
-                    binCategories.remove(oldIndex);
                     newBinCountPos[newBinCountPos.length - 1] += binCountPos[oldIndex];
                     newBinCountNeg[newBinCountPos.length - 1] += binCountNeg[oldIndex];
                     newBinWeightPos[newBinCountPos.length - 1] += binWeightPos[oldIndex];
@@ -430,6 +412,28 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                     quarticSum += squaredVal * squaredVal * binCount;
                 }
             }
+
+            LOG.info("Coloumn num is {}, columnType value is {}, cateMaxNumBin is {}, binCategory size is {}",
+                    columnConfig.getColumnNum(), columnConfig.getColumnType(),
+                    modelConfig.getStats().getCateMaxNumBin(),
+                    (CollectionUtils.isNotEmpty(columnConfig.getBinCategory()) ? columnConfig.getBinCategory().size()
+                            : 0));
+            // To merge categorical binning
+            if(columnConfig.isCategorical() && modelConfig.getStats().getCateMaxNumBin() > 0
+                    && CollectionUtils.isNotEmpty(binCategories)
+                    && binCategories.size() > modelConfig.getStats().getCateMaxNumBin()) {
+                // only category size large then expected max bin number
+                CateBinningStats cateBinningStats = rebinCategoricalValues(
+                        new CateBinningStats(binCategories, binCountPos, binCountNeg, binWeightPos, binWeightNeg));
+                LOG.info("For variable - {}, {} bins is rebined to {} bins", columnConfig.getColumnName(),
+                        binCategories.size(), cateBinningStats.binCategories.size());
+
+                binCategories = cateBinningStats.binCategories;
+                binCountPos = cateBinningStats.binCountPos;
+                binCountNeg = cateBinningStats.binCountNeg;
+                binWeightPos = cateBinningStats.binWeightPos;
+                binWeightNeg = cateBinningStats.binWeightNeg;
+            }
         } else {
             if(binBoundaryList.size() == 0) {
                 LOG.warn("Column {} {} with invalid bin boundary size.", key.get(), columnConfig.getColumnName(),
@@ -444,7 +448,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
         if(modelConfig.isRegression()) {
             columnCountMetrics = ColumnStatsCalculator.calculateColumnMetrics(binCountNeg, binCountPos);
             columnWeightMetrics = ColumnStatsCalculator.calculateColumnMetrics(binWeightNeg, binWeightPos);
-        } else if (modelConfig.isLinearRegression()) {
+        } else if(modelConfig.isLinearRegression()) {
             columnCountMetrics = ColumnStatsCalculator.calculateColumnMetricsWoe(binCountPos, binCountWoe);
             columnWeightMetrics = ColumnStatsCalculator.calculateColumnMetricsWoe(binWeightPos, binWeightedWoe);
         }
