@@ -1,5 +1,12 @@
 package ml.shifu.shifu.core.processor;
 
+import java.io.IOException;
+import java.util.Map;
+
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ml.shifu.shifu.container.obj.EvalConfig;
 import ml.shifu.shifu.container.obj.ModelConfig;
 import ml.shifu.shifu.container.obj.ModelSourceDataConf;
@@ -8,12 +15,6 @@ import ml.shifu.shifu.container.obj.RawSourceData.SourceType;
 import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.core.validator.ModelInspector;
 import ml.shifu.shifu.util.HdfsGlobalFile;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.Map;
 
 /**
  * Copyright [2013-2018] PayPal Software Foundation
@@ -63,7 +64,7 @@ public class ShifuTestProcessor extends BasicModelProcessor {
                     for(String evalName: evalNames) {
                         EvalConfig evalConfig = this.modelConfig.getEvalConfigByName(StringUtils.trimToEmpty(evalName));
                         if(evalConfig == null) {
-                            LOG.error("Eval - {} doesn't exist!");
+                            LOG.error("Eval - {} doesn't exist!", evalName);
                             status = 1;
                             break;
                         }
@@ -143,15 +144,15 @@ public class ShifuTestProcessor extends BasicModelProcessor {
         return 0;
     }
 
-    private boolean isToTestFilter() {
+    protected boolean isToTestFilter() {
         return getBooleanParam(this.params, IS_TO_TEST_FILTER);
     }
 
-    private String getTestTarget() {
+    protected String getTestTarget() {
         return getStringParam(this.params, TEST_TARGET);
     }
 
-    private int getTestRecordCnt() {
+    protected int getTestRecordCnt() {
         return getIntParam(this.params, TEST_RECORD_CNT, 100);
     }
 }

@@ -40,6 +40,7 @@ import ml.shifu.shifu.core.DataPurifier;
 import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import parquet.example.data.Group;
 
 /**
  * {@link FastCorrelationMapper} is used to compute {@link CorrelationWritable} per column per mapper.
@@ -49,7 +50,7 @@ import ml.shifu.shifu.util.Constants;
  * 
  * @author Zhang David (pengzhang@paypal.com)
  */
-public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritable, CorrelationWritable> {
+public class FastCorrelationMapper extends Mapper<LongWritable, Object, IntWritable, CorrelationWritable> {
 
     private final static Logger LOG = LoggerFactory.getLogger(FastCorrelationMapper.class);
 
@@ -189,12 +190,23 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
     }
 
     @Override
-    protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-        String valueStr = value.toString();
-        if(valueStr == null || valueStr.length() == 0 || valueStr.trim().length() == 0) {
-            LOG.warn("Empty input.");
+    protected void map(LongWritable key, Object value, Context context) throws IOException, InterruptedException {
+        String[] units = null;
+
+        if (value instanceof Text) {
+            String valueStr = value.toString();
+            if(valueStr == null || valueStr.length() == 0 || valueStr.trim().length() == 0) {
+                LOG.warn("Empty input.");
+                return;
+            }
+            units = CommonUtils.split(valueStr, this.dataSetDelimiter);
+        }  else if (value instanceof Group) {
+            units = CommonUtils.convertGroupToArr((Group) value);
+        } else {
+            LOG.error("Unsupported value type or class {}.", ((value != null) ? value.getClass().getName() : null));
             return;
         }
+
         double[] dValues = null;
 
         if(!this.isComputeOnNorm && !this.dataPurifier.isFilter(valueStr)) {
@@ -210,7 +222,7 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Text, IntWritabl
 
         context.getCounter(Constants.SHIFU_GROUP_COUNTER, "CORRELATION_CNT").increment(1L);
 
-        dValues = getDoubleArrayByRawArray(CommonUtils.split(valueStr, this.dataSetDelimiter));
+        dValues = getDoubleArrayByRawArray(units);
 
         count += 1L;
         if(count % 2000L == 0) {

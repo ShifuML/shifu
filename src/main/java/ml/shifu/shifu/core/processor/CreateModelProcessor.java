@@ -41,9 +41,9 @@ public class CreateModelProcessor extends BasicModelProcessor implements Process
     /**
      * model name and description
      */
-    private String name;
-    private ALGORITHM alg;
-    private String description;
+    protected String name;
+    protected ALGORITHM alg;
+    protected String description;
 
     /**
      * Constructor, giving a model and a model description to initialize a model configuration

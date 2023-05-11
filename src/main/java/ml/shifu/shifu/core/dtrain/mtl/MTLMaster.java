@@ -110,7 +110,8 @@ public class MTLMaster extends AbstractMasterComputable<MTLParams, MTLParams> {
         // Build multiple task model architecture
         List<String> actiFuncs = (List<String>) this.validParams.get(CommonConstants.ACTIVATION_FUNC);
         List<Integer> hiddenNodes = (List<Integer>) this.validParams.get(CommonConstants.NUM_HIDDEN_NODES);
-        double l2reg = NumberUtils.toDouble(this.validParams.get(CommonConstants.L2_REG).toString(), 0d);
+        double l2reg = NumberUtils.toDouble(
+                this.validParams.getOrDefault(CommonConstants.L2_REG, "").toString(), 0d);
         List<Integer> finalOutputs = new ArrayList<>();
         int tasks = this.modelConfig.getMultiTaskTargetColumnNames().size();
         for(int i = 0; i < tasks; i++) {

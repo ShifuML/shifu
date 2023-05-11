@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import ml.shifu.shifu.util.*;
 import org.apache.commons.collections.CollectionUtils;
@@ -55,6 +56,8 @@ import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.MapReduceUtils;
+import parquet.example.data.Group;
+import parquet.schema.Type;
 
 /**
  * {@link UpdateBinningInfoMapper} is a mapper to update local data statistics given bin boundary list.
@@ -73,7 +76,7 @@ import ml.shifu.shifu.util.MapReduceUtils;
  * <p>
  * 'median' can not be computed through such distributed solution.
  */
-public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWritable, BinningInfoWritable> {
+public class UpdateBinningInfoMapper extends Mapper<LongWritable, Object, IntWritable, BinningInfoWritable> {
 
     private final static Logger LOG = LoggerFactory.getLogger(UpdateBinningInfoMapper.class);
 
@@ -534,21 +537,31 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
      * Mapper implementation includes: 1. Invalid data purifier 2. Column statistics update.
      */
     @Override
-    protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-        String valueStr = value.toString();
-        if(valueStr == null || valueStr.length() == 0 || valueStr.trim().length() == 0) {
-            LOG.warn("Empty input.");
+    protected void map(LongWritable key, Object value, Context context) throws IOException, InterruptedException {
+        String[] units = null;
+
+        if (value instanceof Text) {
+            String valueStr = value.toString();
+            if(valueStr == null || valueStr.length() == 0 || valueStr.trim().length() == 0) {
+                LOG.warn("Empty input.");
+                return;
+            }
+            context.getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1L);
+
+            units = CommonUtils.split(valueStr, this.dataSetDelimiter);
+        } else if (value instanceof Group) {
+            units = CommonUtils.convertGroupToArr((Group) value);
+        } else {
+            LOG.error("Unsupported value type or class {}.", ((value != null) ? value.getClass().getName() : null));
             return;
         }
 
-        context.getCounter(Constants.SHIFU_GROUP_COUNTER, "TOTAL_VALID_COUNT").increment(1L);
-
-        if(!this.dataPurifier.isFilter(valueStr)) {
+        if(!this.dataPurifier.isFilter(units)) {
             context.getCounter(Constants.SHIFU_GROUP_COUNTER, "FILTER_OUT_COUNT").increment(1L);
             return;
         }
 
-        String[] units = CommonUtils.split(valueStr, this.dataSetDelimiter);
+
         // tagColumnNum should be in units array, if not IndexOutofBoundException
         if(units.length != this.columnConfigList.size()) {
             LOG.error("Data column length doesn't match with ColumnConfig size. Just skip.");
@@ -594,7 +607,7 @@ public class UpdateBinningInfoMapper extends Mapper<LongWritable, Text, IntWrita
             filterResults = new ArrayList<Boolean>();
             for(int j = 0; j < this.expressionDataPurifiers.size(); j++) {
                 DataPurifier dp = this.expressionDataPurifiers.get(j);
-                filterResults.add(dp.isFilter(valueStr));
+                filterResults.add(dp.isFilter(units));
             }
         }
 

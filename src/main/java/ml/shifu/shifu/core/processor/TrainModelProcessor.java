@@ -1567,16 +1567,27 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             args.add(zkServers);
         }
 
-        if(CommonConstants.LR_ALG_NAME.equalsIgnoreCase(alg)) {
-            this.prepareLRParams(args, sourceType);
-        } else if(CommonConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
-            this.prepareNNParams(args, sourceType);
-        } else if(CommonUtils.isTreeModel(alg)) {
-            this.prepareDTParams(args, sourceType);
-        } else if(CommonConstants.WDL_ALG_NAME.equalsIgnoreCase(alg)) {
-            this.prepareWDLParams(args, sourceType);
-        } else if(CommonConstants.MTL_ALG_NAME.equalsIgnoreCase(alg)) {
-            this.prepareMTLParams(args, sourceType);
+        if (this.modelConfig.isMultiTask()) {
+            // may be multi task for GBT
+            if(CommonConstants.MTL_ALG_NAME.equalsIgnoreCase(alg)
+                    || CommonConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
+                this.prepareMTLParams(args, sourceType);
+            } else {
+                throw new ShifuException(ShifuErrorCode.ERROR_SHIFU_CONFIG,
+                        "Unsupported algorithm for multi-tasks : " + alg);
+            }
+        } else {
+            if(CommonConstants.LR_ALG_NAME.equalsIgnoreCase(alg)) {
+                this.prepareLRParams(args, sourceType);
+            } else if(CommonConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
+                this.prepareNNParams(args, sourceType);
+            } else if(CommonUtils.isTreeModel(alg)) {
+                this.prepareDTParams(args, sourceType);
+            } else if(CommonConstants.WDL_ALG_NAME.equalsIgnoreCase(alg)) {
+                this.prepareWDLParams(args, sourceType);
+            } else if(CommonConstants.MTL_ALG_NAME.equalsIgnoreCase(alg)) {
+                this.prepareMTLParams(args, sourceType);
+            }
         }
 
         args.add("-c");
@@ -1924,6 +1935,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add(StringUtils.join(jars, NNConstants.LIB_JAR_SEPARATOR));
     }
 
+    protected void checkAndNormDataForModels(boolean isToShuffle) throws IOException {
+        if (modelConfig.isMultiTask()) {
+            for (int i = 0; i < this.mtlColumnConfigLists.size(); i ++) {
+                checkAndNormDataForModels(this.mtlColumnConfigLists.get(i), isToShuffle);
+            }
+        } else {
+            checkAndNormDataForModels(this.columnConfigList, isToShuffle);
+        }
+    }
     /**
      * For RF/GBT model, no need do normalizing, but clean and filter data is needed. Before real training, we have to
      * clean and filter data.
@@ -1934,9 +1954,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
      *             the io exception
      */
     @SuppressWarnings({ "unchecked", "unused" })
-    protected void checkAndNormDataForModels(boolean isToShuffle) throws IOException {
+    protected void checkAndNormDataForModels(List<ColumnConfig> ccList, boolean isToShuffle) throws IOException {
         // check if binBoundaries and binCategories are good and log error
-        for(ColumnConfig columnConfig: columnConfigList) {
+        for(ColumnConfig columnConfig: ccList) {
             if(columnConfig.isFinalSelect() && !columnConfig.isTarget() && !columnConfig.isMeta()) {
                 if(columnConfig.isNumerical() && columnConfig.getBinBoundary() == null) {
                     throw new IllegalArgumentException("Final select " + columnConfig.getColumnName()

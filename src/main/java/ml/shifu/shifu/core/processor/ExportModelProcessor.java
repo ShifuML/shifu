@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
-import com.google.common.base.Splitter;
 import ml.shifu.shifu.util.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -102,8 +101,9 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     public static final String EXPORT_NORMUME_POSTFIX = "EXPORT_NORMUME_POSTFIX";
     public static final String EXPORT_ASSEMBLE_STRATEGY = "EXPORT_ASSEMBLE_STRATEGY";
     public static final String EXPORT_MAPPING = "EXPORT_MAPPING";
+    public static final String EXPORT_NOSCALE = "noscale";
 
-    private String type;
+    protected String type;
     private Map<String, Object> params;
 
     /**
@@ -250,9 +250,10 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
                 Map<String, Object> exportParams = new HashMap<>();
                 exportParams.put("baggingMode", type.equalsIgnoreCase(BAGGING_UME));
                 exportParams.put("normAsUme", type.equalsIgnoreCase(NORM_UME));
-                exportParams.put("normUmePostfix", String.valueOf(params.get(EXPORT_NORMUME_POSTFIX)));
+                exportParams.put("normUmePostfix", params.get(EXPORT_NORMUME_POSTFIX));
                 exportParams.put("assembleStrategy", params.get(EXPORT_ASSEMBLE_STRATEGY));
                 exportParams.put("variableMappingConf", params.get(EXPORT_MAPPING));
+                exportParams.put(EXPORT_NOSCALE, params.get(EXPORT_NOSCALE));
 
                 cls.getMethod("translate", String.class, Map.class)
                         .invoke(umeExporter, getExportModelName(), exportParams);
@@ -480,13 +481,13 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         Map<Integer, ColumnAdditionalInfo> columnConfigUnitStats = new HashMap<>();
         String unitStatsFilePath = this.pathFinder.getColumnConfigUnitStatsPath();
         if (ShifuFileUtils.isFileExists(unitStatsFilePath, SourceType.LOCAL)) {
-            String delimiter = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER);
-            Splitter splitter = Splitter.on(delimiter).trimResults();
+            // String delimiter = Environment.getProperty(Constants.SHIFU_OUTPUT_DATA_DELIMITER, Constants.DEFAULT_DELIMITER);
+            // Splitter splitter = Splitter.on(delimiter).trimResults();
             List<String> unitStatsLines = FileUtils.readLines(new File(unitStatsFilePath));
             if (CollectionUtils.isNotEmpty(unitStatsLines)) {
                 for (String line : unitStatsLines) {
-                    // String[] fields = line.trim().split("\\|");
-                    String[] fields = CommonUtils.splitAndReturnList(line.trim(), splitter).toArray(new String[0]);
+                    String[] fields = line.trim().split("\\|");
+                    // String[] fields = CommonUtils.splitAndReturnList(line.trim(), splitter).toArray(new String[0]);
                     int columnNum = Integer.parseInt(fields[0]);
                     double psiStd = Double.parseDouble(fields[1]);
                     double cosine = Double.parseDouble(fields[2]);
@@ -508,7 +509,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     }
 
     private String splitUnitStatsToColumn(List<String> unitStats, int size) {
-        List<String> unitHeaders = new ArrayList<String>(size * 5);
+        List<String> unitHeaders = new ArrayList<String>(size * 6);
         if ( CollectionUtils.isEmpty(unitStats) || unitStats.size() != size ) {
             Collections.fill(unitHeaders, "");
         } else {
@@ -517,17 +518,19 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
             unitHeaders.addAll(unitStatsFields(unitStats, 3, ""));
             unitHeaders.addAll(unitStatsFields(unitStats, 4, ""));
             unitHeaders.addAll(unitStatsFields(unitStats, 5, ""));
+            unitHeaders.addAll(unitStatsFields(unitStats, 6, ""));
         }
         return StringUtils.join(unitHeaders, ",");
     }
 
     private String unitsToHeader(List<String> unitStats) {
-        List<String> unitHeaders = new ArrayList<String>(unitStats.size() * 5);
+        List<String> unitHeaders = new ArrayList<String>(unitStats.size() * 6);
         unitHeaders.addAll(unitStatsFields(unitStats, 0, "_mean"));
         unitHeaders.addAll(unitStatsFields(unitStats, 0, "_missing_rate"));
         unitHeaders.addAll(unitStatsFields(unitStats, 0, "_inst_cnt"));
         unitHeaders.addAll(unitStatsFields(unitStats, 0, "_ks"));
         unitHeaders.addAll(unitStatsFields(unitStats, 0, "_iv"));
+        unitHeaders.addAll(unitStatsFields(unitStats, 0, "_psi"));
         return StringUtils.join(unitHeaders, ",");
     }
 
@@ -653,14 +656,14 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         return corr;
     }
 
-    private boolean isConcise() {
+    protected boolean isConcise() {
         if(MapUtils.isNotEmpty(this.params) && this.params.get(IS_CONCISE) instanceof Boolean) {
             return (Boolean) this.params.get(IS_CONCISE);
         }
         return false;
     }
 
-    private List<String> getRequestVars() {
+    protected List<String> getRequestVars() {
         if(MapUtils.isNotEmpty(this.params) && this.params.get(REQUEST_VARS) instanceof String) {
             String requestVars = (String) this.params.get(REQUEST_VARS);
             if(StringUtils.isNotBlank(requestVars)) {
@@ -670,7 +673,7 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
         return null;
     }
 
-    private int getExpectBinNum() {
+    protected int getExpectBinNum() {
         if(MapUtils.isNotEmpty(this.params) && this.params.get(EXPECTED_BIN_NUM) instanceof String) {
             String expectBinNum = (String) this.params.get(EXPECTED_BIN_NUM);
             try {
@@ -709,6 +712,13 @@ public class ExportModelProcessor extends BasicModelProcessor implements Process
     public String getExportModelName() {
         if (MapUtils.isNotEmpty(this.params) && this.params.get(EXPORT_MODEL_NAME) instanceof String) {
             return (String) this.params.get(EXPORT_MODEL_NAME);
+        }
+        return null;
+    }
+
+    public String getNormUMEPostfix() {
+        if (MapUtils.isNotEmpty(this.params) && this.params.get(EXPORT_NORMUME_POSTFIX) instanceof String) {
+            return (String) this.params.get(EXPORT_NORMUME_POSTFIX);
         }
         return null;
     }

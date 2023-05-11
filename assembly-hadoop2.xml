@@ -52,6 +52,14 @@
             </includes>
         </fileSet>
         <fileSet>
+            <directory>${project.basedir}/src/main/resources/gshifu-conf</directory>
+            <!-- cannot set it to conf, as in conf mapred-site will override system configurations -->
+            <outputDirectory>/gshifu-log4jconf</outputDirectory>
+            <includes>
+                <include>log4j.*</include>
+            </includes>
+        </fileSet>
+        <fileSet>
             <directory>${project.basedir}/src/test/resources/example</directory>
             <includes>
                 <include>cancer-judgement/*/*/*</include>
@@ -133,12 +141,18 @@
                 <include>*:jackson-annotations:*</include>
                 <include>*:jackson-core:*</include>
                 <include>*:jackson-databind:*</include>
+                <include>*:jackson-core-asl:*</include>
+                <include>*:jackson-mapper-asl:*</include>
                 <include>*:pmml-model:*</include>
                 <include>*:pmml-schema:*</include>
                 <include>*:jaxb-impl:*</include>
                 <include>*:jline:*</include>
                 <include>*:liblinear:*</include>
                 <include>*:log4j:*</include>
+                <include>*:log4j-api:*</include>
+                <include>*:log4j-core:*</include>
+                <include>*:log4j-to-slf4j:*</include>
+                <include>*:slf4j-log4j12:*</include>
                 <include>*:netty:*</include>
                 <include>*:pig:*:h2:*</include>
                 <include>*:piggybank:*</include>

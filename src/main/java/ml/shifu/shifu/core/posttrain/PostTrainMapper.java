@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import ml.shifu.shifu.util.ModelSpecLoaderUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -46,6 +46,8 @@ import ml.shifu.shifu.core.posttrain.FeatureStatsWritable.BinStats;
 import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
+import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 
 /**
  * {@link PostTrainMapper} is mapper to improve original post train efficiency.

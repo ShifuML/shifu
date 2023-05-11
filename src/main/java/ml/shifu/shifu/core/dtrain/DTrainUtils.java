@@ -395,6 +395,8 @@ public final class DTrainUtils {
                 network.addLayer(new BasicLayer(new ActivationLeakyReLU(), true, out));
             } else if(NNConstants.NN_SWISH.equalsIgnoreCase(outputActivationFunc)) {
                 network.addLayer(new BasicLayer(new ActivationSwish(), true, out));
+            } else if(NNConstants.NN_SIGMOID.equalsIgnoreCase(outputActivationFunc)) {
+                network.addLayer(new BasicLayer(new ActivationSigmoid(), true, out));
             } else {
                 network.addLayer(new BasicLayer(new ActivationLinear(), true, out));
             }

@@ -16,6 +16,7 @@
 package ml.shifu.shifu.core;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -94,7 +95,68 @@ public class DataPurifier {
                 dataFilterExpr = null;
             }
             this.headers = CommonUtils.getFinalHeaders(modelConfig);
-            setDataDelimiter(modelConfig.getDataSetDelimiter());
+            dataDelimiter = modelConfig.getDataSetDelimiter();
+        }
+    }
+
+    public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String filterExpressions,
+            boolean strict) throws IOException {
+        this.columnConfigList = columnConfigList;
+        if(StringUtils.isNotBlank(filterExpressions)) {
+            filterExpressions = parseNewTagInfo(filterExpressions);
+            jexl = new JexlEngine();
+            jexl.setStrict(strict);
+            try {
+                dataFilterExpr = jexl.createExpression(filterExpressions);
+            } catch (JexlException e) {
+                if(strict) {
+                    throw new RuntimeException(e);
+                } else {
+                    log.error("The expression " + filterExpressions + "is invalid, please use correct expression.", e);
+                }
+                dataFilterExpr = null;
+            }
+            this.headers = CommonUtils.getFinalHeaders(modelConfig);
+            dataDelimiter = modelConfig.getDataSetDelimiter();
+        }
+    }
+
+    public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String filterExpressions)
+            throws IOException {
+        this(modelConfig, columnConfigList, filterExpressions, false);
+    }
+
+    public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, EvalConfig evalConfig) throws IOException {
+        this.columnConfigList = columnConfigList;
+        if(StringUtils.isNotBlank(evalConfig.getDataSet().getFilterExpressions())) {
+            jexl = new JexlEngine();
+            try {
+                dataFilterExpr = jexl.createExpression(evalConfig.getDataSet().getFilterExpressions());
+            } catch (JexlException e) {
+                log.error("The expression {} is invalid, please use correct expression.",
+                        evalConfig.getDataSet().getFilterExpressions());
+                dataFilterExpr = null;
+            }
+
+            headers = CommonUtils.getFinalHeaders(modelConfig, evalConfig);
+            dataDelimiter = evalConfig.getDataSet().getDataDelimiter();
+        }
+    }
+    
+    public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, EvalConfig evalConfig, int mtlIndex) throws IOException {
+        this.columnConfigList = columnConfigList;
+        if(StringUtils.isNotBlank(evalConfig.getDataSet().getFilterExpressions())) {
+            jexl = new JexlEngine();
+            try {
+                dataFilterExpr = jexl.createExpression(evalConfig.getDataSet().getFilterExpressions());
+            } catch (JexlException e) {
+                log.error("The expression {} is invalid, please use correct expression.",
+                        evalConfig.getDataSet().getFilterExpressions());
+                dataFilterExpr = null;
+            }
+
+            headers = CommonUtils.getFinalHeaders(modelConfig, evalConfig);
+            dataDelimiter = evalConfig.getDataSet().getDataDelimiter();
         }
     }
 
@@ -133,78 +195,25 @@ public class DataPurifier {
         return filterExpressions;
     }
 
-    public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String filterExpressions,
-            boolean strict) throws IOException {
-        this.columnConfigList = columnConfigList;
-        if(StringUtils.isNotBlank(filterExpressions)) {
-            filterExpressions = parseNewTagInfo(filterExpressions);
-            jexl = new JexlEngine();
-            jexl.setStrict(strict);
-            try {
-                dataFilterExpr = jexl.createExpression(filterExpressions);
-            } catch (JexlException e) {
-                if(strict) {
-                    throw new RuntimeException(e);
-                } else {
-                    log.error("The expression " + filterExpressions + "is invalid, please use correct expression.", e);
-                }
-                dataFilterExpr = null;
-            }
-            this.headers = CommonUtils.getFinalHeaders(modelConfig);
-            setDataDelimiter(modelConfig.getDataSetDelimiter());
-        }
-    }
-
-    public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, String filterExpressions)
-            throws IOException {
-        this(modelConfig, columnConfigList, filterExpressions, false);
-    }
-
-    public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, EvalConfig evalConfig) throws IOException {
-        this.columnConfigList = columnConfigList;
-        if(StringUtils.isNotBlank(evalConfig.getDataSet().getFilterExpressions())) {
-            jexl = new JexlEngine();
-            try {
-                dataFilterExpr = jexl.createExpression(evalConfig.getDataSet().getFilterExpressions());
-            } catch (JexlException e) {
-                log.error("The expression {} is invalid, please use correct expression.",
-                        evalConfig.getDataSet().getFilterExpressions());
-                dataFilterExpr = null;
-            }
-
-            headers = CommonUtils.getFinalHeaders(modelConfig, evalConfig);
-            setDataDelimiter(evalConfig.getDataSet().getDataDelimiter());
-        }
-    }
-    
-    public DataPurifier(ModelConfig modelConfig, List<ColumnConfig> columnConfigList, EvalConfig evalConfig, int mtlIndex) throws IOException {
-        this.columnConfigList = columnConfigList;
-        if(StringUtils.isNotBlank(evalConfig.getDataSet().getFilterExpressions())) {
-            jexl = new JexlEngine();
-            try {
-                dataFilterExpr = jexl.createExpression(evalConfig.getDataSet().getFilterExpressions());
-            } catch (JexlException e) {
-                log.error("The expression {} is invalid, please use correct expression.",
-                        evalConfig.getDataSet().getFilterExpressions());
-                dataFilterExpr = null;
-            }
-
-            headers = CommonUtils.getFinalHeaders(modelConfig, evalConfig);
-            setDataDelimiter(evalConfig.getDataSet().getDataDelimiter());
-        }
-    }
-
     public Boolean isFilter(String record) {
         if(dataFilterExpr == null) {
             return true;
         }
 
-        String[] fields = CommonUtils.split(record, getDataDelimiter());
+        String[] fields = CommonUtils.split(record, dataDelimiter);
+        return isFilter(fields);
+    }
+
+    public Boolean isFilter(String[] fields) {
+        if(dataFilterExpr == null) {
+            return true;
+        }
+
         if(fields == null || fields.length != headers.length) {
             // illegal format data, just skip
             return false;
         }
-
+        
         jc.clear();
 
         for(int i = 0; i < fields.length; i++) {
@@ -369,14 +378,6 @@ public class DataPurifier {
      */
     public Set<String> getNewNegTags() {
         return newNegTags;
-    }
-
-    public String getDataDelimiter() {
-        return dataDelimiter;
-    }
-
-    public void setDataDelimiter(String dataDelimiter) {
-        this.dataDelimiter = dataDelimiter;
     }
 
 }

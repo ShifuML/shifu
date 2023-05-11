@@ -60,6 +60,7 @@ import ml.shifu.shifu.udf.norm.PrecisionType;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
 import ml.shifu.shifu.util.Environment;
+import ml.shifu.shifu.util.HDFSUtils;
 import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 import ml.shifu.shifu.util.MultiClsTagPredictor;
 
@@ -578,8 +579,9 @@ public class EvalScoreUDF extends AbstractEvalUDF<Tuple> {
                 + jobConf.get("mapreduce.task.partition") + " " + jobConf.get("mapreduce.task.attempt.id"));
 
         try {
-            FileSystem fileSystem = FileSystem.get(jobConf);
-            fileSystem.mkdirs(new Path(scoreOutput));
+            Path scoreOutputPath = new Path(scoreOutput);
+            FileSystem fileSystem = HDFSUtils.getFS(scoreOutputPath);
+            fileSystem.mkdirs(scoreOutputPath);
             String taskMaxMinScoreFile = scoreOutput + File.separator + "part-"
                     + jobConf.get("mapreduce.task.attempt.id");
             writer = ShifuFileUtils.getWriter(taskMaxMinScoreFile, SourceType.HDFS);
