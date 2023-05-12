@@ -179,7 +179,7 @@ public class IndependentWDLModel {
         }
         return score;
     }
-    
+
     public double sigmoid(double logit) {
         // return (double) (1 / (1 + Math.min(1.0E20, Math.exp(-logit))));
         return 1.0d / (1.0d + BoundMath.exp(-1 * logit));
@@ -624,7 +624,7 @@ public class IndependentWDLModel {
     private double getNumericalWoeValue(Integer columnNum, Object obj, boolean isWeighted) {
         int binIndex = -1;
         if(obj != null) {
-            binIndex = BinUtils.getNumericalBinIndex(this.numerBinBoundaries.get(columnNum), obj.toString());
+            binIndex = BinUtils.getNumericalBinIndex(this.numerBinBoundaries.get(columnNum), obj.toString(), null);
         }
         List<Double> binWoes = isWeighted ? this.numerWgtWoes.get(columnNum) : this.numerWoes.get(columnNum);
 

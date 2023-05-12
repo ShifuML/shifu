@@ -37,7 +37,7 @@ public class CalculateBinAvgScoreUDF extends AbstractTrainerUDF<Tuple> {
     public Tuple exec(Tuple input) throws IOException {
         TupleFactory tupleFactory = TupleFactory.getInstance();
 
-        if (input == null || input.size() == 0) {
+        if(input == null || input.size() == 0) {
             return null;
         }
 
@@ -49,20 +49,19 @@ public class CalculateBinAvgScoreUDF extends AbstractTrainerUDF<Tuple> {
         Double[] binScore = new Double[config.getBinLength()];
         Integer[] binCount = new Integer[config.getBinLength()];
 
-        for (int i = 0; i < binScore.length; i++) {
+        for(int i = 0; i < binScore.length; i++) {
             binScore[i] = 0.0;
             binCount[i] = 0;
         }
 
-        for (Tuple t : bag) {
-            if ( t.get(1) == null || StringUtils.isBlank(t.get(1).toString()) ) {
+        for(Tuple t: bag) {
+            if(t.get(1) == null || StringUtils.isBlank(t.get(1).toString())) {
                 continue;
             }
-            
-            int binNum = BinUtils.getBinNum(config, t.get(1).toString());
-            // int binNum = CommonUtils.getBinNum(config.getBinBoundary(), Double.valueOf(t.get(1).toString()));
+
+            int binNum = BinUtils.getBinNum(config, t.get(1).toString(), false, null);
             Object scoreStr = t.get(2);
-            if (scoreStr == null) {
+            if(scoreStr == null) {
                 log.error(t.get(1).toString() + " has null value!");
                 continue;
             }
@@ -71,13 +70,13 @@ public class CalculateBinAvgScoreUDF extends AbstractTrainerUDF<Tuple> {
             binCount[binNum]++;
         }
 
-        for (int i = 0; i < binScore.length; i++) {
+        for(int i = 0; i < binScore.length; i++) {
             binScore[i] /= binCount[i];
         }
 
         Tuple tuple = tupleFactory.newTuple();
         tuple.append(columnNum);
-        for (Double score : binScore) {
+        for(Double score: binScore) {
             tuple.append((int) Math.round(score));
         }
         return tuple;

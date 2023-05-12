@@ -95,7 +95,7 @@ public class DataPurifier {
                 dataFilterExpr = null;
             }
             this.headers = CommonUtils.getFinalHeaders(modelConfig);
-            dataDelimiter = modelConfig.getDataSetDelimiter();
+            setDataDelimiter(modelConfig.getDataSetDelimiter());
         }
     }
 
@@ -117,7 +117,7 @@ public class DataPurifier {
                 dataFilterExpr = null;
             }
             this.headers = CommonUtils.getFinalHeaders(modelConfig);
-            dataDelimiter = modelConfig.getDataSetDelimiter();
+            setDataDelimiter(modelConfig.getDataSetDelimiter());
         }
     }
 
@@ -139,7 +139,7 @@ public class DataPurifier {
             }
 
             headers = CommonUtils.getFinalHeaders(modelConfig, evalConfig);
-            dataDelimiter = evalConfig.getDataSet().getDataDelimiter();
+            setDataDelimiter(evalConfig.getDataSet().getDataDelimiter());
         }
     }
     
@@ -156,7 +156,7 @@ public class DataPurifier {
             }
 
             headers = CommonUtils.getFinalHeaders(modelConfig, evalConfig);
-            dataDelimiter = evalConfig.getDataSet().getDataDelimiter();
+            setDataDelimiter(evalConfig.getDataSet().getDataDelimiter());
         }
     }
 
@@ -200,7 +200,7 @@ public class DataPurifier {
             return true;
         }
 
-        String[] fields = CommonUtils.split(record, dataDelimiter);
+        String[] fields = CommonUtils.split(record, getDataDelimiter());
         return isFilter(fields);
     }
 
@@ -378,6 +378,14 @@ public class DataPurifier {
      */
     public Set<String> getNewNegTags() {
         return newNegTags;
+    }
+
+    public String getDataDelimiter() {
+        return dataDelimiter;
+    }
+
+    public void setDataDelimiter(String dataDelimiter) {
+        this.dataDelimiter = dataDelimiter;
     }
 
 }

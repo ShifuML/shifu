@@ -16,15 +16,17 @@
 package ml.shifu.shifu.core;
 
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
 import ml.shifu.shifu.container.obj.ColumnBinning;
 import ml.shifu.shifu.container.obj.ColumnConfig;
 import ml.shifu.shifu.container.obj.ColumnType;
 import ml.shifu.shifu.container.obj.ModelNormalizeConf.NormType;
 import ml.shifu.shifu.udf.norm.CategoryMissingNormType;
-
-import org.testng.Assert;
-import org.testng.annotations.Test;
 
 public class NormalizerTest {
 
@@ -97,6 +99,17 @@ public class NormalizerTest {
         cbin.setBinCountPos(Arrays.asList(5, 4, 3, 2, 1));
         config.setColumnBinning(cbin);
 
+        Set<String> missing = new HashSet<>();
+        missing.add("3");
+        missing.add("3.0");
+        Assert.assertEquals(Normalizer.normalize(config, "3", 4d, NormType.WOE, true, missing).get(0), 6.5);
+
+        Assert.assertEquals(Normalizer.normalize(config, "3", 4d, NormType.ZSCALE, true, missing).get(0), 0.0);
+        Assert.assertEquals(Normalizer.normalize(config, "3", 4d, NormType.WOE_ZSCORE, true, missing).get(0),
+                -1.7587874611030558);
+        Assert.assertEquals(Normalizer.normalize(config, "3", 4d, NormType.WOE_ZSCALE, true, missing).get(0),
+                -1.7587874611030558);
+
         // Test zscore normalization
         Assert.assertEquals(Normalizer.normalize(config, "5.0", 4.0, NormType.ZSCALE, false, null).get(0), 3.0);
         Assert.assertEquals(Normalizer.normalize(config, "5.0", null, NormType.ZSCALE, false, null).get(0), 3.0);
@@ -134,15 +147,6 @@ public class NormalizerTest {
         Assert.assertEquals(
                 Normalizer.normalize(config, "wrong_format", 4.0, NormType.WEIGHT_HYBRID, false, null).get(0), 0.0);
         Assert.assertEquals(Normalizer.normalize(config, null, 4.0, NormType.WEIGHT_HYBRID, false, null).get(0), 0.0);
-
-        // Test woe zscore normalization
-        // Assert.assertEquals(Normalizer.normalize(config, "3.0", 10.0, NormType.WOE_ZSCORE), 0.2);
-        // Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 12.0, NormType.WOE_ZSCORE), -1.6);
-        // Assert.assertEquals(Normalizer.normalize(config, null, 12.0, NormType.WOE_ZSCORE), -1.6);
-        //
-        // Assert.assertEquals(Normalizer.normalize(config, "3.0", 20.0, NormType.WEIGHT_WOE_ZSCORE), 0.2);
-        // Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 22.0, NormType.WEIGHT_WOE_ZSCORE), -1.6);
-        // Assert.assertEquals(Normalizer.normalize(config, null, 22.0, NormType.WEIGHT_WOE_ZSCORE), -1.6);
     }
 
     @Test
@@ -202,14 +206,9 @@ public class NormalizerTest {
                 Normalizer.normalize(config, "wrong_format", null, NormType.WEIGHT_HYBRID, false, null).get(0), 16.5);
         Assert.assertEquals(Normalizer.normalize(config, null, null, NormType.WEIGHT_HYBRID, false, null).get(0), 16.5);
 
-        // Test woe zscore normalization
-        // Assert.assertEquals(Normalizer.normalize(config, "b", 12.0, NormType.WOE_ZSCORE), 0.2);
-        // Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 13.0, NormType.WOE_ZSCORE), -1.6);
-        // Assert.assertEquals(Normalizer.normalize(config, null, 13.0, NormType.WOE_ZSCORE), -1.6);
-        //
-        // Assert.assertEquals(Normalizer.normalize(config, "b", 22.0, NormType.WEIGHT_WOE_ZSCORE), 0.2);
-        // Assert.assertEquals(Normalizer.normalize(config, "wrong_format", 23.0, NormType.WEIGHT_WOE_ZSCORE), -1.6);
-        // Assert.assertEquals(Normalizer.normalize(config, null, 23.0, NormType.WEIGHT_WOE_ZSCORE), -1.6);
+        Set<String> missing = new HashSet<>();
+        missing.add("c");
+        Assert.assertEquals(Normalizer.normalize(config, "e", 0d, NormType.WOE, false, missing).get(0), 6.5);
     }
 
     @Test
@@ -242,6 +241,7 @@ public class NormalizerTest {
                 4.0);
         Assert.assertEquals(Normalizer.normalize(config, "e", cutoff, NormType.ZSCALE_ORDINAL, false, null).get(0),
                 4.0);
+
     }
 
     @Test

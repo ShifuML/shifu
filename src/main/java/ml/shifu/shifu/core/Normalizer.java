@@ -177,7 +177,7 @@ public class Normalizer {
 
         switch(method) {
             case ZScore:
-                return zScoreNormalize(config, raw, stdDevCutoff);
+                return zScoreNormalize(config, raw, stdDevCutoff, false, null);
             case MaxMin:
                 return Arrays.asList(getMaxMinScore(config, raw));
             default:
@@ -257,21 +257,22 @@ public class Normalizer {
             case ONEHOT:
                 return OneHotNormalize(config, raw);
             case ZSCALE_ONEHOT:
-                return zscaleOneHotNormalize(config, raw, cutoff, categoryMissingNormType);
+                return zscaleOneHotNormalize(config, raw, cutoff, categoryMissingNormType, unseenEnabled, missingVals);
             case ZSCALE_ORDINAL:
-                return zscaleOrdinalNormalize(config, raw, cutoff, categoryMissingNormType);
+                return zscaleOrdinalNormalize(config, raw, cutoff, categoryMissingNormType, unseenEnabled, missingVals);
             case MAXMIN_INDEX:
-                return maxMinOrdinalNormalize(config, raw, categoryMissingNormType);
+                return maxMinOrdinalNormalize(config, raw, categoryMissingNormType, unseenEnabled, missingVals);
             case DISCRETE_ZSCORE:
             case DISCRETE_ZSCALE:
-                return discreteZScoreNormalize(config, raw, cutoff, categoryMissingNormType);
+                return discreteZScoreNormalize(config, raw, cutoff, categoryMissingNormType, unseenEnabled,
+                        missingVals);
             case OLD_ZSCALE:
             case OLD_ZSCORE:
-                return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, true);
+                return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, true, unseenEnabled, missingVals);
             case ZSCALE:
             case ZSCORE:
             default:
-                return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, false);
+                return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, false, unseenEnabled, missingVals);
         }
     }
 
@@ -298,7 +299,7 @@ public class Normalizer {
         switch(type) {
             case ZSCORE_INDEX:
             case ZSCALE_INDEX:
-                return numZScoreAndCateIndexNorm(config, raw, cutoff, cateIndexMap);
+                return numZScoreAndCateIndexNorm(config, raw, cutoff, cateIndexMap, unseenEnabled, missingVals);
             case WOE_INDEX:
                 if(config.isNumerical()) {
                     return woeNormalize(config, raw, false, unseenEnabled, missingVals);
@@ -323,7 +324,7 @@ public class Normalizer {
                 }
             case INDEX:
                 if(config.isNumerical()) {
-                    int binIndex = BinUtils.getBinNum(config, raw);
+                    int binIndex = BinUtils.getBinNum(config, raw, unseenEnabled, missingVals);
                     if(binIndex < 0 || binIndex > config.getBinBoundary().size()) {
                         binIndex = config.getBinBoundary().size();
                     }
@@ -338,9 +339,10 @@ public class Normalizer {
                 }
             case ZSCORE_APPEND_INDEX:
             case ZSCALE_APPEND_INDEX:
-                List<Double> zscores = numZScoreAndCateIndexNorm(config, raw, cutoff, cateIndexMap);
+                List<Double> zscores = numZScoreAndCateIndexNorm(config, raw, cutoff, cateIndexMap, unseenEnabled,
+                        missingVals);
                 if(config.isNumerical()) {
-                    int binIndex = BinUtils.getBinNum(config, raw);
+                    int binIndex = BinUtils.getBinNum(config, raw, unseenEnabled, missingVals);
                     if(binIndex < 0 || binIndex > config.getBinBoundary().size()) {
                         binIndex = config.getBinBoundary().size();
                     }
@@ -356,7 +358,7 @@ public class Normalizer {
             case WOE_APPEND_INDEX:
                 List<Double> zWoeScores = woeNormalize(config, raw, false, unseenEnabled, missingVals);
                 if(config.isNumerical()) {
-                    int binIndex = BinUtils.getBinNum(config, raw);
+                    int binIndex = BinUtils.getBinNum(config, raw, unseenEnabled, missingVals);
                     if(binIndex < 0 || binIndex > config.getBinBoundary().size()) {
                         binIndex = config.getBinBoundary().size();
                     }
@@ -372,7 +374,7 @@ public class Normalizer {
             case WOE_ZSCALE_APPEND_INDEX:
                 List<Double> zWoeZScores = woeZScoreNormalize(config, raw, cutoff, false, unseenEnabled, missingVals);
                 if(config.isNumerical()) {
-                    int binIndex = BinUtils.getBinNum(config, raw);
+                    int binIndex = BinUtils.getBinNum(config, raw, unseenEnabled, missingVals);
                     if(binIndex < 0 || binIndex > config.getBinBoundary().size()) {
                         binIndex = config.getBinBoundary().size();
                     }
@@ -405,10 +407,10 @@ public class Normalizer {
      * @return normalized value for ZScore method.
      */
     private static List<Double> numZScoreAndCateIndexNorm(ColumnConfig config, Object raw, Double cutoff,
-            Map<String, Integer> cateIndexMap) {
+            Map<String, Integer> cateIndexMap, boolean unseenEnabled, Set<String> missingVals) {
         if(config.isNumerical()) {
             double stdDevCutOff = checkCutOff(cutoff);
-            double value = parseRawValue(config, raw, null);
+            double value = parseRawValue(config, raw, null, unseenEnabled, missingVals);
             return Arrays.asList(computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff));
         } else if(config.isCategorical()) {
             Integer index = cateIndexMap == null ? null : cateIndexMap.get(raw == null ? "" : raw.toString());
@@ -442,7 +444,7 @@ public class Normalizer {
         } else {
             // categorical variables
             List<Double> normVals = (toUseWoe ? config.getBinCountWoe() : config.getBinPosRate());
-            int binIndex = BinUtils.getBinNum(config, raw);
+            int binIndex = BinUtils.getBinNum(config, raw, false, null);
             return ((binIndex == -1) ? Arrays.asList(new Double[] { normVals.get(normVals.size() - 1) })
                     : Arrays.asList(new Double[] { normVals.get(binIndex) }));
         }
@@ -452,7 +454,7 @@ public class Normalizer {
         Double[] normData = (config.isNumerical() ? new Double[config.getBinBoundary().size() + 1]
                 : new Double[config.getBinCategory().size() + 1]);
         Arrays.fill(normData, 0.0d);
-        int binNum = BinUtils.getBinNum(config, raw);
+        int binNum = BinUtils.getBinNum(config, raw, false, null);
         if(binNum < 0) {
             binNum = normData.length - 1;
         }
@@ -461,11 +463,11 @@ public class Normalizer {
     }
 
     private static List<Double> zscaleOrdinalNormalize(ColumnConfig config, Object raw, Double cutoff,
-            CategoryMissingNormType categoryMissingNormType) {
+            CategoryMissingNormType categoryMissingNormType, boolean unseenEnabled, Set<String> missingVals) {
         if(config.isNumerical()) {
-            return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, false);
+            return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, false, unseenEnabled, missingVals);
         } else {
-            int binNum = BinUtils.getBinNum(config, raw);
+            int binNum = BinUtils.getBinNum(config, raw, false, null);
             if(binNum < 0) {
                 binNum = config.getBinCategory().size();
             }
@@ -475,11 +477,11 @@ public class Normalizer {
     }
 
     private static List<Double> maxMinOrdinalNormalize(ColumnConfig config, Object raw,
-            CategoryMissingNormType categoryMissingNormType) {
+            CategoryMissingNormType categoryMissingNormType, boolean unseenEnabled, Set<String> missingVals) {
         if(config.isNumerical()) {
-            return maxMinNormalize(config, raw, categoryMissingNormType);
+            return maxMinNormalize(config, raw, categoryMissingNormType, unseenEnabled, missingVals);
         } else {
-            int binNum = BinUtils.getBinNum(config, raw);
+            int binNum = BinUtils.getBinNum(config, raw, false, null);
             if(binNum < 0) {
                 binNum = config.getBinCategory().size();
             }
@@ -489,14 +491,14 @@ public class Normalizer {
     }
 
     private static List<Double> zscaleOneHotNormalize(ColumnConfig config, Object raw, Double cutoff,
-            CategoryMissingNormType categoryMissingNormType) {
+            CategoryMissingNormType categoryMissingNormType, boolean unseenEnabled, Set<String> missingVals) {
         if(config.isNumerical()) {
-            return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, false);
+            return zScoreNormalize(config, raw, cutoff, categoryMissingNormType, false, unseenEnabled, missingVals);
         } else {
             Double[] normData = new Double[config.getBinCategory().size() + 1];
             Arrays.fill(normData, 0.0d);
 
-            int binNum = BinUtils.getBinNum(config, raw);
+            int binNum = BinUtils.getBinNum(config, raw, false, null);
             if(binNum < 0) {
                 binNum = config.getBinCategory().size();
             }
@@ -542,9 +544,10 @@ public class Normalizer {
      * @return normalized value for ZScore method.
      */
     private static List<Double> zScoreNormalize(ColumnConfig config, Object raw, Double cutoff,
-            CategoryMissingNormType categoryMissingNormType, boolean isOld) {
+            CategoryMissingNormType categoryMissingNormType, boolean isOld, boolean unseenEnabled,
+            Set<String> missingVals) {
         double stdDevCutOff = checkCutOff(cutoff);
-        double value = parseRawValue(config, raw, categoryMissingNormType);
+        double value = parseRawValue(config, raw, categoryMissingNormType, unseenEnabled, missingVals);
         if(isOld && config.isCategorical()) {
             return Arrays.asList(value);
         }
@@ -563,8 +566,8 @@ public class Normalizer {
      * @return normalized value for MAXMIN method.
      */
     private static List<Double> maxMinNormalize(ColumnConfig config, Object raw,
-            CategoryMissingNormType categoryMissingNormType) {
-        double value = parseRawValue(config, raw, categoryMissingNormType);
+            CategoryMissingNormType categoryMissingNormType, boolean unseenEnabled, Set<String> missingVals) {
+        double value = parseRawValue(config, raw, categoryMissingNormType, unseenEnabled, missingVals);
         double normalizedValue = 0.0;
         if(config.getColumnStats().getMax() != null && config.getColumnStats().getMin() != null
                 && (config.getColumnStats().getMax() - config.getColumnStats().getMin()) > 1e-7) {
@@ -589,13 +592,13 @@ public class Normalizer {
      * @return normalized value for ZScore method.
      */
     private static List<Double> discreteZScoreNormalize(ColumnConfig config, Object raw, Double cutoff,
-            CategoryMissingNormType categoryMissingNormType) {
+            CategoryMissingNormType categoryMissingNormType, boolean unseenEnabled, Set<String> missingValues) {
         double stdDevCutOff = checkCutOff(cutoff);
         double value = 0;
         if(config.isCategorical()) {
-            value = parseRawValue(config, raw, categoryMissingNormType);
+            value = parseRawValue(config, raw, categoryMissingNormType, unseenEnabled, missingValues);
         } else {
-            int binIndex = BinUtils.getBinNum(config, raw);
+            int binIndex = BinUtils.getBinNum(config, raw, unseenEnabled, missingValues);
             if(binIndex < 0 || binIndex >= config.getBinBoundary().size()) {
                 // missing value, use mean value, after zscore, it is 0
                 value = config.getMean();
@@ -623,9 +626,10 @@ public class Normalizer {
      *            standard deviation cut off
      * @return normalized value for ZScore method.
      */
-    private static List<Double> zScoreNormalize(ColumnConfig config, Object raw, Double cutoff) {
+    private static List<Double> zScoreNormalize(ColumnConfig config, Object raw, Double cutoff, boolean unseenEnabled,
+            Set<String> missingVals) {
         double stdDevCutOff = checkCutOff(cutoff);
-        double value = parseRawValue(config, raw, CategoryMissingNormType.POSRATE);
+        double value = parseRawValue(config, raw, CategoryMissingNormType.POSRATE, unseenEnabled, missingVals);
         return Arrays.asList(computeZScore(value, config.getMean(), config.getStdDev(), stdDevCutOff));
     }
 
@@ -643,7 +647,7 @@ public class Normalizer {
      *         {@link Normalizer#defaultMissingValue}.
      */
     private static double parseRawValue(ColumnConfig config, Object raw,
-            CategoryMissingNormType categoryMissingNormType) {
+            CategoryMissingNormType categoryMissingNormType, boolean unseenEnabled, Set<String> missingVals) {
         if(categoryMissingNormType == null) {
             categoryMissingNormType = CategoryMissingNormType.POSRATE;
         }
@@ -661,8 +665,8 @@ public class Normalizer {
         if(config.isCategorical()) {
             // for categorical variable, no need convert to double but double should be in treated as String in
             // categorical variables
-            int index = BinUtils.getBinNum(config, raw);
-            if(index == -1) {
+            int index = BinUtils.getBinNum(config, raw, unseenEnabled, missingVals);
+            if(index < 0) {
                 value = fillDefaultValue(config, categoryMissingNormType);
             } else {
                 Double binPosRate = config.getBinPosRate().get(index);
@@ -674,6 +678,10 @@ public class Normalizer {
             }
         } else {
             // for numerical value, if double or int, no need parse again.
+            if(missingVals != null && missingVals.contains(raw.toString())) {
+                return defaultMissingValue(config);
+            }
+
             if(raw instanceof Double) {
                 value = (Double) raw;
             } else if(raw instanceof Integer) {
@@ -753,7 +761,11 @@ public class Normalizer {
                 binIndex = BinUtils.getCategoricalBinIndex(config, raw.toString());
             }
 
-            if(binIndex != -1) {
+            if(missingVals != null && missingVals.contains(raw.toString())) {
+                binIndex = -1;
+            }
+
+            if(binIndex >= 0) {
                 binIndex = binIndex + config.getBinBoundary().size(); // append the first numerical bins
             } else {
                 double douVal = BinUtils.parseNumber(raw);
@@ -764,7 +776,7 @@ public class Normalizer {
                 }
             }
         } else {
-            binIndex = BinUtils.getBinNum(config, raw, unseenEnabled ? missingVals : null);
+            binIndex = BinUtils.getBinNum(config, raw, unseenEnabled, missingVals);
         }
         if(binIndex == -1) {
             // The last bin in woeBins is the miss value bin.
@@ -819,7 +831,7 @@ public class Normalizer {
         List<Double> normValue;
         if(config.isNumerical()) {
             // For numerical data, use zscore.
-            normValue = zScoreNormalize(config, raw, cutoff);
+            normValue = zScoreNormalize(config, raw, cutoff, unseenEnabled, missingVals);
         } else {
             // For categorical data, use woe.
             normValue = woeNormalize(config, raw, isWeightedNorm, unseenEnabled, missingVals);

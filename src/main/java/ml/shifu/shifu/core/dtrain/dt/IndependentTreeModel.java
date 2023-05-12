@@ -1142,9 +1142,9 @@ public class IndependentTreeModel {
             bagWgts.add(weights);
         }
 
-        // after model version >=5, support customized missing or invalid values
+        // after model version >=6, support customized missing or invalid values
         Set<String> missingValues = new HashSet<String>();
-        if(version >= 5) {
+        if(version >= 6) {
             int missingSize = dis.readInt();
             if(missingSize > 0) {
                 for(int i = 0; i < missingSize; i++) {

@@ -601,7 +601,7 @@ public class IndependentMTLModel {
         int binIndex = -1;
         if(obj != null) {
             binIndex = BinUtils.getNumericalBinIndex(this.numerBinBoundaryMapList.get(mtlIndex).get(columnNum),
-                    obj.toString());
+                    obj.toString(), null);
         }
         List<Double> binWoes = isWeighted ? this.numerWgtWoeMapList.get(mtlIndex).get(columnNum)
                 : this.numerWoeMapList.get(mtlIndex).get(columnNum);

@@ -91,8 +91,8 @@ public class CommonUtilsTest {
         file = new File("models/model1.nn");
         if(!file.exists()) {
             if(file.createNewFile()) {
-                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file),
-                        Constants.DEFAULT_CHARSET));
+                BufferedWriter writer = new BufferedWriter(
+                        new OutputStreamWriter(new FileOutputStream(file), Constants.DEFAULT_CHARSET));
                 writer.write("test string");
                 writer.close();
             } else {
@@ -107,8 +107,8 @@ public class CommonUtilsTest {
 
         file = new File("EvalSets/test/EvalConfig.json");
         if(!file.exists()) {
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file),
-                    Constants.DEFAULT_CHARSET));
+            BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(new FileOutputStream(file), Constants.DEFAULT_CHARSET));
             writer.write("test string");
             writer.close();
         }
@@ -212,7 +212,7 @@ public class CommonUtilsTest {
         Assert.assertTrue(configList.size() == 1);
 
     }
-
+    
     @Test
     public void getBinNumTest() {
 
@@ -221,7 +221,7 @@ public class CommonUtilsTest {
         config.setColumnType(ColumnType.C);
         config.setBinCategory(Arrays.asList(new String[] { "2", "1", "3" }));
 
-        int rt = BinUtils.getBinNum(config, "2");
+        int rt = BinUtils.getBinNum(config, "2", false, null);
 
         Assert.assertTrue(rt == 0);
 
@@ -257,7 +257,7 @@ public class CommonUtilsTest {
     // }
 
     @Test
-    public void hasCandidateTest(){
+    public void hasCandidateTest() {
         List<ColumnConfig> configList = new ArrayList<ColumnConfig>();
 
         ColumnConfig config = new ColumnConfig();
@@ -268,8 +268,9 @@ public class CommonUtilsTest {
         configList.add(config);
         Assert.assertTrue(CommonUtils.hasCandidateColumns(configList));
     }
+
     @Test
-    public void hasNoCandidateTest(){
+    public void hasNoCandidateTest() {
         List<ColumnConfig> configList = new ArrayList<ColumnConfig>();
 
         ColumnConfig config = new ColumnConfig();
@@ -308,8 +309,8 @@ public class CommonUtilsTest {
     @Test
     public void getRawDataMapTest() {
 
-        Map<String, String> map = CommonUtils.getRawDataMap(new String[] { "input1", "input2" }, new String[] { "1",
-                "2" });
+        Map<String, String> map = CommonUtils.getRawDataMap(new String[] { "input1", "input2" },
+                new String[] { "1", "2" });
 
         Assert.assertTrue(map.containsKey("input2"));
         Assert.assertTrue(map.keySet().size() == 2);
@@ -396,15 +397,13 @@ public class CommonUtilsTest {
         FileUtils.deleteDirectory(new File("common-utils"));
     }
 
-
     @Test
     public void testStringToArray() {
         String input = "[-37.075125208681136, 0.5043788517677587, 1.2588712402838798, 2.543219666931007, 4.896511355654414, 8.986345381526105, 17.06859410430839, 33.557046979865774, 73.27777777777777, 231.63698630136986, 100000.0]";
 
         List<Double> output = CommonUtils.stringToDoubleList(input);
 
-        Assert.assertEquals(
-                output,
+        Assert.assertEquals(output,
                 Arrays.asList(new Double[] { -37.075125208681136, 0.5043788517677587, 1.2588712402838798,
                         2.543219666931007, 4.896511355654414, 8.986345381526105, 17.06859410430839, 33.557046979865774,
                         73.27777777777777, 231.63698630136986, 100000.0 }));
@@ -494,8 +493,10 @@ public class CommonUtilsTest {
 
     @Test
     public void testCalculateHeaders() {
-        Assert.assertEquals(new String[]{"a", "a_dup1", "a_dup2", "a_dup3"}, CommonUtils.calculateHeaders("a,a,a,a", ",", false));
-        Assert.assertEquals(new String[]{"a_dup2", "a", "a_dup2_1", "a_dup3"}, CommonUtils.calculateHeaders("a_dup2,a,a,a", ",", false));
+        Assert.assertEquals(new String[] { "a", "a_dup1", "a_dup2", "a_dup3" },
+                CommonUtils.calculateHeaders("a,a,a,a", ",", false));
+        Assert.assertEquals(new String[] { "a_dup2", "a", "a_dup2_1", "a_dup3" },
+                CommonUtils.calculateHeaders("a_dup2,a,a,a", ",", false));
     }
 
     @AfterClass
@@ -505,8 +506,7 @@ public class CommonUtilsTest {
 
     @Test
     public void testFormat() {
-        System.out.println(String.format("data = LOAD '%s' USING PigStorage('%s', '-noschema');",
-                "train.data", "|"));
+        System.out.println(String.format("data = LOAD '%s' USING PigStorage('%s', '-noschema');", "train.data", "|"));
     }
 
 }

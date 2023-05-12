@@ -193,8 +193,9 @@ public class FastCorrelationMapper extends Mapper<LongWritable, Object, IntWrita
     protected void map(LongWritable key, Object value, Context context) throws IOException, InterruptedException {
         String[] units = null;
 
+        String valueStr = null;
         if (value instanceof Text) {
-            String valueStr = value.toString();
+            valueStr = value.toString();
             if(valueStr == null || valueStr.length() == 0 || valueStr.trim().length() == 0) {
                 LOG.warn("Empty input.");
                 return;

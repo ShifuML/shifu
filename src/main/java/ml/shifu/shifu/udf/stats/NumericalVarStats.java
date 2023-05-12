@@ -127,8 +127,7 @@ public class NumericalVarStats extends AbstractVarStats {
                 }
             } else {
                 streamStatsCalculator.addData(colVal);
-                // binning.addData(colVal);
-                int binNum = BinUtils.getBinNum(columnConfig, str);
+                int binNum = BinUtils.getBinNum(columnConfig, str, false, null);
                 if(binNum == -1) {
                     throw new RuntimeException("binNum should not be -1 to this step.");
                 }

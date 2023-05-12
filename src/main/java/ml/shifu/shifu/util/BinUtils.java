@@ -37,9 +37,9 @@ public final class BinUtils {
     private BinUtils() {
     }
 
-    public static int getBinNum(ColumnConfig columnConfig, Object columnVal) {
-        return getBinNum(columnConfig, columnVal, null);
-    }
+    // public static int getBinNum(ColumnConfig columnConfig, Object columnVal) {
+    // return getBinNum(columnConfig, columnVal, null);
+    // }
 
     /**
      * Given a column value, return bin list index. Return 0 for Category because of index 0 is started from
@@ -49,6 +49,10 @@ public final class BinUtils {
      *            column config
      * @param columnVal
      *            value of the column
+     * @param unseenEnabled
+     *            if unseen feature enabled or not
+     * @param missingValues
+     *            set of missing values
      * @return bin index of than value
      * @throws IllegalArgumentException
      *             if input is null or empty.
@@ -56,15 +60,16 @@ public final class BinUtils {
      * @throws NumberFormatException
      *             if columnVal does not contain a parsable number.
      */
-    public static int getBinNum(ColumnConfig columnConfig, Object columnVal, Set<String> missingValues) {
+    public static int getBinNum(ColumnConfig columnConfig, Object columnVal, boolean unseenEnabled,
+            Set<String> missingValues) {
         if(columnConfig.isCategorical()) {
             if(columnVal == null) {
                 return -1;
             } else {
-                return getCategoricalBinIndex(columnConfig, columnVal.toString(), missingValues);
+                return getCategoricalBinIndex(columnConfig, columnVal.toString(), unseenEnabled ? missingValues : null);
             }
         } else {
-            return getNumericalBinIndex(columnConfig.getBinBoundary(), columnVal);
+            return getNumericalBinIndex(columnConfig.getBinBoundary(), columnVal, missingValues);
         }
     }
 
@@ -77,8 +82,8 @@ public final class BinUtils {
      *            the column value
      * @return bin index, -1 if invalid values
      */
-    public static int getNumericalBinIndex(List<Double> binBoundaries, Object columnVal) {
-        if(columnVal == null) {
+    public static int getNumericalBinIndex(List<Double> binBoundaries, Object columnVal, Set<String> missingValues) {
+        if(columnVal == null || (missingValues != null && missingValues.contains(columnVal.toString()))) {
             return -1;
         }
 
@@ -131,15 +136,17 @@ public final class BinUtils {
             return intIndex;
         } else {
             List<String> binCategories = columnConfig.getColumnBinning().getBinCategory();
-            if(missingValues == null || missingValues.contains(columnVal)) { // missing or missingValues not set
-                return -1;
-            }
             for(int i = 0; i < binCategories.size(); i++) {
                 if(isCategoricalBinValue(binCategories.get(i), columnVal)) {
                     return i;
                 }
             }
-            return -2; // unseen but valid values
+            
+            if(missingValues == null || missingValues.contains(columnVal)) { // missing or missingValues not set
+                return -1;
+            } else { // unseen but valid values
+                return -2;
+            }
         }
     }
 

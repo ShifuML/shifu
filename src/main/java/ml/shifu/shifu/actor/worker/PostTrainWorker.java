@@ -75,7 +75,7 @@ public class PostTrainWorker extends AbstractWorkerActor {
                 }
 
                 for(ColumnScoreObject colScore: colScoreList) {
-                    int binNum = BinUtils.getBinNum(config, colScore.getColumnVal());
+                    int binNum = BinUtils.getBinNum(config, colScore.getColumnVal(), false, null);
                     binScore[binNum] += Double.valueOf(colScore.getAvgScore());
                     binCount[binNum]++;
                 }

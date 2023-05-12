@@ -167,7 +167,7 @@ public class BinaryDTSerializer {
                 }
             }
 
-            // after model version >=5, support customized missing or invalid values 
+            // after model version >=6, support customized missing or invalid values 
             List<String> missingOrInvalidValues = modelConfig.getMissingOrInvalidValues();
             if(missingOrInvalidValues == null) {
                 fos.writeInt(0);

@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -46,7 +45,6 @@ import ml.shifu.shifu.core.posttrain.FeatureStatsWritable.BinStats;
 import ml.shifu.shifu.util.BinUtils;
 import ml.shifu.shifu.util.CommonUtils;
 import ml.shifu.shifu.util.Constants;
-import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 
 /**
@@ -227,7 +225,7 @@ public class PostTrainMapper extends Mapper<LongWritable, Text, IntWritable, Fea
         for(int i = 0; i < headers.length; i++) {
             ColumnConfig config = this.columnConfigList.get(i);
             if(!config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
-                int binNum = BinUtils.getBinNum(config, units[i]);
+                int binNum = BinUtils.getBinNum(config, units[i], false, null);
                 List<BinStats> feaureStatistics = this.variableStatsMap.get(config.getColumnNum());
                 BinStats bs = null;
                 if(binNum == -1) {

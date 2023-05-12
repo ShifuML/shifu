@@ -147,7 +147,7 @@ public interface CommonConstants {
      * Version 2: support final selected columns
      * Version 3: in Node to change wgtCnt float to double
      * Version 4: change trees in IndependentTreeModel to support bagging of RF and GBDT
-     * Version 5: support missing values in tree model inference
+     * Version 6: support missing values in tree model inference
      */
     public static final int TREE_FORMAT_VERSION = 5;
 

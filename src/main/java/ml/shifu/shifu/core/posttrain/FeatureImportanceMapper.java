@@ -188,7 +188,7 @@ public class FeatureImportanceMapper extends Mapper<LongWritable, Text, IntWrita
         for(int i = 0; i < headers.length; i++) {
             ColumnConfig config = this.columnConfigList.get(i);
             if(!config.isMeta() && !config.isTarget() && config.isFinalSelect()) {
-                int binNum = BinUtils.getBinNum(config, units[i]);
+                int binNum = BinUtils.getBinNum(config, units[i], false, null);
                 List<Integer> binAvgScores = config.getBinAvgScore();
                 int binScore = 0;
                 if(binNum == -1) {

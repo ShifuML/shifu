@@ -446,7 +446,8 @@ public class IndependentNNModel {
     private double getNumericalWoeValue(Integer columnNum, Object obj, boolean isWeighted) {
         int binIndex = -1;
         if(obj != null) {
-            binIndex = BinUtils.getNumericalBinIndex(this.numerBinBoundaries.get(columnNum), obj.toString());
+            binIndex = BinUtils.getNumericalBinIndex(this.numerBinBoundaries.get(columnNum), obj.toString(),
+                    this.missingValues);
         }
         List<Double> binWoes = isWeighted ? this.numerWgtWoes.get(columnNum) : this.numerWoes.get(columnNum);
 

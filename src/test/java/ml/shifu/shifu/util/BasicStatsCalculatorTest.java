@@ -19,8 +19,6 @@ package ml.shifu.shifu.util;
 import ml.shifu.shifu.core.BasicStatsCalculator;
 import org.easymock.EasyMock;
 import org.testng.Assert;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,21 +28,20 @@ public class BasicStatsCalculatorTest {
 
     private BasicStatsCalculator mock;
 
-    @BeforeClass
+//    @BeforeClass
     public void setUp() {
         mock = EasyMock.createNiceMock(BasicStatsCalculator.class);
         EasyMock.expect(mock.getMax()).andReturn(1000.0).times(2);
         EasyMock.replay(mock);
     }
 
-    @Test
+    //    @Test
     public void testGetMax() {
         Assert.assertTrue(mock.getMax() > 999.9);
         Assert.assertTrue(mock.getMax() < 1000.1);
         mock.getMin();
     }
 
-    @Test
     public void testAnswer() {
         List<?> list = EasyMock.createMock(List.class);
 

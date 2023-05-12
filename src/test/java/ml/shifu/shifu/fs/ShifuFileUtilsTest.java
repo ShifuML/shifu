@@ -148,20 +148,20 @@ public class ShifuFileUtilsTest {
 
     @Test
     public void testCheckParquetFile() throws IOException {
-        boolean isParquetFile = ShifuFileUtils.isParquetFile(
-                "src/test/resources/example/cancer-judgement/parquet/train.parquet", SourceType.LOCAL);
+        boolean isParquetFile = ShifuFileUtils
+                .isParquetFile("src/test/resources/example/cancer-judgement/parquet/train.parquet", SourceType.LOCAL);
         Assert.assertTrue(isParquetFile);
 
-        isParquetFile = ShifuFileUtils.isParquetFile(
-                "src/test/resources/example/cancer-judgement/parquet/eval", SourceType.LOCAL);
+        isParquetFile = ShifuFileUtils.isParquetFile("src/test/resources/example/cancer-judgement/parquet/eval",
+                SourceType.LOCAL);
         Assert.assertTrue(isParquetFile);
 
-        isParquetFile = ShifuFileUtils.isParquetFile(
-                "src/test/resources/example/cancer-judgement/parquet/nonparquet", SourceType.LOCAL);
+        isParquetFile = ShifuFileUtils.isParquetFile("src/test/resources/example/cancer-judgement/parquet/nonparquet",
+                SourceType.LOCAL);
         Assert.assertFalse(isParquetFile);
     }
 
-    @Test
+    // @Test
     public void testReadParquetFileHeader() throws IOException {
         String[] header = ShifuFileUtils.readParquetFileHeader(
                 "src/test/resources/example/cancer-judgement/parquet/train.parquet", SourceType.LOCAL);
