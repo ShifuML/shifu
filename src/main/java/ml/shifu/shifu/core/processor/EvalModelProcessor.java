@@ -20,18 +20,11 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Scanner;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
 
+import ml.shifu.shifu.core.stability.ChaosType;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FileUtils;
@@ -70,6 +63,9 @@ import ml.shifu.shifu.util.Environment;
 import ml.shifu.shifu.util.HdfsPartFile;
 import ml.shifu.shifu.util.ModelSpecLoaderUtils;
 
+import static ml.shifu.shifu.util.Constants.CHAOS_COLUMNS;
+import static ml.shifu.shifu.util.Constants.CHAOS_TYPE;
+
 /**
  * EvalModelProcessor class
  */
@@ -84,7 +80,7 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
      * Step for evaluation
      */
     public enum EvalStep {
-        LIST, NEW, DELETE, RUN, PERF, SCORE, AUDIT, CONFMAT, NORM, GAINCHART;
+        LIST, NEW, DELETE, RUN, PERF, STAB, SCORE, AUDIT, CONFMAT, NORM, GAINCHART;
     }
 
     public static final String NOSORT = "NOSORT";
@@ -183,6 +179,9 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                     break;
                 case SCORE:
                     runScore(getEvalConfigListFromInput());
+                    break;
+                case STAB:
+                    runStability(getEvalConfigListFromInput());
                     break;
                 case AUDIT:
                     runGenAudit(getEvalConfigListFromInput());
@@ -463,6 +462,13 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 || (isNoSort() && (EvalStep.SCORE.equals(this.evalStep) || EvalStep.AUDIT.equals(this.evalStep)))) {
             pigScript = "scripts/EvalScore.pig";
         }
+        if(EvalStep.STAB.equals(this.evalStep) && this.params.containsKey(CHAOS_TYPE) && this.params.containsKey(CHAOS_COLUMNS)) {
+            paramsMap.put(CHAOS_TYPE, this.params.get(CHAOS_TYPE).toString());
+            paramsMap.put(CHAOS_COLUMNS, this.params.get(CHAOS_COLUMNS).toString());
+            pigScript = "scripts/EvalChaosScore.pig";
+        }
+        LOG.info("run dist score with pigScript {}, parameters: {}", pigScript, paramsMap.toString());
+
         try {
             PigExecutor.getExecutor().submitJob(modelConfig, pathFinder.getScriptPath(pigScript), paramsMap,
                     evalConfig.getDataSet().getSource(), confMap, super.pathFinder);
@@ -764,6 +770,123 @@ public class EvalModelProcessor extends BasicModelProcessor implements Processor
                 runEval(evalConfig);
             }
         }
+    }
+
+    private void runStability(List<EvalConfig> evalSetList) throws IOException {
+        // validate the stability config
+        validateStabilityConfig(this.params);
+
+        // do it only once
+        syncDataToHdfs(evalSetList);
+
+        // validation for score column
+        for(EvalConfig evalConfig: evalSetList) {
+            List<String> scoreMetaColumns = evalConfig.getScoreMetaColumns(modelConfig);
+            if(scoreMetaColumns.size() > 5) {
+                LOG.error(
+                        "Starting from 0.10.x, 'scoreMetaColumns' is used for benchmark score columns and limited to at most 5.");
+                LOG.error(
+                        "If meta columns are set in file of 'scoreMetaColumns', please move meta column config to 'eval#dataSet#metaColumnNameFile' part.");
+                LOG.error(
+                        "If 'eval#dataSet#metaColumnNameFile' is duplicated with training 'metaColumnNameFile', you can rename it to another file with different name.");
+                return;
+            }
+        }
+
+        if(Environment.getBoolean(Constants.SHIFU_EVAL_PARALLEL, true) && modelConfig.isMapReduceRunMode()
+                && evalSetList.size() > 1) {
+            // run in parallel
+            int parallelNum = Environment.getInt(Constants.SHIFU_EVAL_PARALLEL_NUM, 5);
+            if(parallelNum <= 0 || parallelNum > 100) {
+                throw new IllegalArgumentException(Constants.SHIFU_EVAL_PARALLEL_NUM
+                        + " in shifuconfig should be in (0, 100], by default it is 5.");
+            }
+
+            int evalSize = evalSetList.size();
+            int mod = evalSize % parallelNum;
+            int batch = evalSize / parallelNum;
+            batch = (mod == 0 ? batch : (batch + 1));
+
+            for(int i = 0; i < batch; i++) {
+                int batchSize = (mod != 0 && i == (batch - 1)) ? mod : parallelNum;
+                // lunch current batch size
+                LOG.info("Starting to run eval score in {}/{} round", (i + 1), batch);
+                final CountDownLatch cdl = new CountDownLatch(batchSize);
+                for(int j = 0; j < batchSize; j++) {
+                    int currentIndex = i * parallelNum + j;
+                    final EvalConfig config = evalSetList.get(currentIndex);
+                    // save tmp models
+                    Thread evalRunThread = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                runEval(config);
+                            } catch (IOException e) {
+                                LOG.error("Exception in eval:", e);
+                            } catch (Exception e) {
+                                LOG.error("Exception in eval:", e);
+                            }
+                            cdl.countDown();
+                        }
+                    }, config.getName());
+                    // print eval name to log4j console to make each one is easy to be get from logs
+                    evalRunThread.start();
+
+                    // each one sleep 3s to avoid conflict in initialization
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+
+                LOG.info("Starting to wait eval in {}/{} round", (i + 1), batch);
+                // await all threads done
+                try {
+                    cdl.await();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                LOG.info("Finish eval in {}/{} round", (i + 1), batch);
+            }
+            LOG.info("Finish all eval parallel running with eval size {}.", evalSize);
+        } else {
+            // for old sequential runs
+            for(EvalConfig evalConfig: evalSetList) {
+                runEval(evalConfig);
+            }
+        }
+    }
+
+    private void validateStabilityConfig(Map<String, Object> params) {
+        if(!params.containsKey(CHAOS_TYPE) || !params.containsKey(CHAOS_COLUMNS)) {
+            LOG.error("chaos tpe (-type) and chaos columns(-col) are required");
+            throw new IllegalArgumentException("chaos tpe (-type) and chaos columns(-col) are required");
+        }
+        if(Objects.isNull(ChaosType.fromName(params.get(CHAOS_TYPE).toString()))) {
+            LOG.error("Chaos type {} not supported yet", params.get(CHAOS_TYPE));
+            throw new IllegalArgumentException("Chaos type " + params.get(CHAOS_TYPE) + " does not support yet");
+        }
+        String validColumnNames = getValidColumnNames(params.get(CHAOS_COLUMNS).toString());
+        if(validColumnNames.isEmpty()) {
+            LOG.error("Chaos column {} do not has a valid column name", params.get(CHAOS_COLUMNS));
+            throw new IllegalArgumentException("Chaos column " + params.get(CHAOS_COLUMNS) + " do not has a valid column name");
+        } else {
+            // update the params with the valid columnNames in lower case
+            this.params.put(CHAOS_COLUMNS, validColumnNames);
+        }
+    }
+
+    private String getValidColumnNames(String columnNamesSeparateByComma) {
+        return Arrays.stream(columnNamesSeparateByComma.split(",")).map(String::trim).filter(name -> {
+            for(ColumnConfig columnConfig: this.columnConfigList) {
+                if(columnConfig.getColumnName().equalsIgnoreCase(name)) {
+                    return true;
+                }
+            }
+            LOG.warn("Chaos column value {} is not a valid column name, will be ignored", name);
+            return false;
+        }).map(String::toLowerCase).collect(Collectors.joining(","));
     }
 
     @SuppressWarnings("deprecation")
