@@ -416,8 +416,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 && this.modelConfig.getNormalize().getNormType() != NormType.ZSCALE_APPEND_INDEX
                 && this.modelConfig.getNormalize().getNormType() != NormType.ZSCORE_APPEND_INDEX
                 && this.modelConfig.getNormalize().getNormType() != NormType.WOE_APPEND_INDEX
-                && this.modelConfig.getNormalize().getNormType() != NormType.WOE_ZSCALE_APPEND_INDEX
-                ) {
+                && this.modelConfig.getNormalize().getNormType() != NormType.WOE_ZSCALE_APPEND_INDEX) {
             throw new IllegalArgumentException(
                     "WDL only supports normalize#normType with ZSCALE_INDEX/ZSCORE_INDEX/WOE_INDEX/WOE_ZSCALE_INDEX, please reset and run 'shifu norm' again.");
         }
@@ -532,8 +531,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
                 Path tmpPath = new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER);
                 FileSystem fs = HDFSUtils.getFS(tmpPath);
                 // delete all old models if not continuous
-                Path srcTmpModelPath = fs.makeQualified(new Path(super.getPathFinder().getPathBySourceType(tmpPath,
-                        SourceType.HDFS)));
+                Path srcTmpModelPath = fs
+                        .makeQualified(new Path(super.getPathFinder().getPathBySourceType(tmpPath, SourceType.HDFS)));
                 Path mvTmpModelPath = new Path(srcTmpModelPath.toString() + "_" + System.currentTimeMillis());
                 LOG.info("Tmp tensorflow model path has been moved to folder: {}.", mvTmpModelPath);
                 fs.rename(srcTmpModelPath, mvTmpModelPath);
@@ -563,9 +562,9 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             ColumnConfig cc = columnConfigList.get(i);
             if(cc.isTarget()) {
                 targetColumnNum = i;
-            } else if (cc.isMeta()) {
+            } else if(cc.isMeta()) {
                 metaColumnNums.add(i);
-            } else if (cc.isFinalSelect()) {
+            } else if(cc.isFinalSelect()) {
                 selectedColumnNums.add(i);
             }
 
@@ -779,8 +778,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         SourceType sourceType = super.getModelConfig().getDataSet().getSource();
         Path filePath = new Path(Constants.TMP, Constants.DEFAULT_MODELS_TMP_FOLDER);
         FileSystem fileSystem = ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath);
-        Path tmpModelsPath = fileSystem.makeQualified(new Path(super.getPathFinder()
-                .getPathBySourceType(filePath, sourceType)));
+        Path tmpModelsPath = fileSystem
+                .makeQualified(new Path(super.getPathFinder().getPathBySourceType(filePath, sourceType)));
 
         if(!this.modelConfig.getTrain().getIsContinuous()) {
             cleanOldModels(conf, sourceType, fileSystem, tmpModelsPath);
@@ -1096,8 +1095,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
                 localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.GUAGUA_OUTPUT,
                         modelPath.toString()));
-                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT,
-                        Constants.SHIFU_BINARY_MODEL_PATH, bModelPath.toString()));
+                localArgs.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, Constants.SHIFU_BINARY_MODEL_PATH,
+                        bModelPath.toString()));
 
                 if(gs.hasHyperParam() || isKFoldCV) {
                     // k-fold cv need val error
@@ -1161,8 +1160,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         Set<Integer> subFeatures = null;
         if(isContinuous) {
             BasicFloatNetwork existingModel = (BasicFloatNetwork) ModelSpecLoaderUtils
-                    .getBasicNetwork(ModelSpecLoaderUtils.loadModel(modelConfig, modelPath,
-                            ShifuFileUtils.getFileSystemBySourceType(this.modelConfig.getDataSet().getSource(), modelPath)));
+                    .getBasicNetwork(ModelSpecLoaderUtils.loadModel(modelConfig, modelPath, ShifuFileUtils
+                            .getFileSystemBySourceType(this.modelConfig.getDataSet().getSource(), modelPath)));
             if(existingModel == null) {
                 subFeatures = new HashSet<Integer>(
                         getSubsamplingFeatures(allFeatures, featureSubsetStrategy, featureSubsetRate, inputNodeCount));
@@ -1484,8 +1483,8 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             Path localTmpModelsFolder = new Path(Constants.MODELS_TMP);
             HDFSUtils.getLocalFS().delete(localTmpModelsFolder, true);
             HDFSUtils.getLocalFS().mkdirs(localTmpModelsFolder);
-            ShifuFileUtils.getFileSystemBySourceType(sourceType, tmpModelsDir)
-                    .copyToLocalFile(tmpModelsDir, localTmpModelsFolder);
+            ShifuFileUtils.getFileSystemBySourceType(sourceType, tmpModelsDir).copyToLocalFile(tmpModelsDir,
+                    localTmpModelsFolder);
         }
     }
 
@@ -1545,12 +1544,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         args.add("-i");
         if(CommonUtils.isTreeModel(alg)) {
             Path filePath = new Path(super.getPathFinder().getCleanedDataPath());
-            args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath)
-                    .makeQualified(filePath).toString());
+            args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath).makeQualified(filePath).toString());
         } else {
             Path filePath = new Path(super.getPathFinder().getNormalizedDataPath());
-            args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath)
-                    .makeQualified(filePath).toString());
+            args.add(ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath).makeQualified(filePath).toString());
         }
 
         if(StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())) {
@@ -1567,7 +1564,7 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             args.add(zkServers);
         }
 
-        if (this.modelConfig.isMultiTask()) {
+        if(this.modelConfig.isMultiTask()) {
             // may be multi task for GBT
             if(CommonConstants.MTL_ALG_NAME.equalsIgnoreCase(alg)
                     || CommonConstants.NN_ALG_NAME.equalsIgnoreCase(alg)) {
@@ -1622,13 +1619,11 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
             // for tree models, using cleaned validation data path
             Path filePath = new Path(super.getPathFinder().getCleanedValidationDataPath(sourceType));
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.CROSS_VALIDATION_DIR,
-                    ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath)
-                            .makeQualified(filePath).toString()));
+                    ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath).makeQualified(filePath).toString()));
         } else {
             Path filePath = new Path(super.getPathFinder().getNormalizedValidationDataPath(sourceType));
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, CommonConstants.CROSS_VALIDATION_DIR,
-                    ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath)
-                            .makeQualified(filePath).toString()));
+                    ShifuFileUtils.getFileSystemBySourceType(sourceType, filePath).makeQualified(filePath).toString()));
         }
         args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, NNConstants.MAPRED_JOB_QUEUE_NAME,
                 Environment.getProperty(Environment.HADOOP_JOB_QUEUE, Constants.DEFAULT_JOB_QUEUE)));
@@ -1780,7 +1775,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         } else {
             args.add(String.format(CommonConstants.MAPREDUCE_PARAM_FORMAT, GuaguaConstants.GUAGUA_SPLIT_COMBINABLE,
                     Environment.getProperty(GuaguaConstants.GUAGUA_SPLIT_COMBINABLE, "true")));
-            long maxCombineSize = computeDynamicCombineSize();
+            long maxCombineSize = 209715200L;
+            try {
+                maxCombineSize = computeDynamicCombineSize();
+            } catch (Exception e) {
+                maxCombineSize = 209715200L;
+                LOG.warn(
+                        "Is trainning input empty or training input with all empty files, skip this exception by setting default maxCombineSize = "
+                                + maxCombineSize + "; current exception is: " + e.getCause());
+            }
             LOG.info(
                     "Dynamic worker size is tuned to {}. If not good for # of workers, configure it in SHIFU_HOME/conf/shifuconfig::guagua.split.maxCombinedSplitSize",
                     maxCombineSize);
@@ -1824,10 +1827,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // this number should be 400m ?
 
         // int[] inputOutputIndex = DTrainUtils.getInputOutputCandidateCounts(modelConfig.getNormalizeType(),
-        //        this.columnConfigList);
-        //int candidateCount = (inputOutputIndex[2] == 0 ? inputOutputIndex[0] : inputOutputIndex[2]);
-        int candidateCount = (modelConfig.isMultiTask() ?
-                DTrainUtils.generateModelFeatureSet(modelConfig, this.mtlColumnConfigLists.get(0)).size()
+        // this.columnConfigList);
+        // int candidateCount = (inputOutputIndex[2] == 0 ? inputOutputIndex[0] : inputOutputIndex[2]);
+        int candidateCount = (modelConfig.isMultiTask()
+                ? DTrainUtils.generateModelFeatureSet(modelConfig, this.mtlColumnConfigLists.get(0)).size()
                 : DTrainUtils.generateModelFeatureSet(modelConfig, columnConfigList).size());
 
         // 1. set benchmark
@@ -1936,14 +1939,15 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
     }
 
     protected void checkAndNormDataForModels(boolean isToShuffle) throws IOException {
-        if (modelConfig.isMultiTask()) {
-            for (int i = 0; i < this.mtlColumnConfigLists.size(); i ++) {
+        if(modelConfig.isMultiTask()) {
+            for(int i = 0; i < this.mtlColumnConfigLists.size(); i++) {
                 checkAndNormDataForModels(this.mtlColumnConfigLists.get(i), isToShuffle);
             }
         } else {
             checkAndNormDataForModels(this.columnConfigList, isToShuffle);
         }
     }
+
     /**
      * For RF/GBT model, no need do normalizing, but clean and filter data is needed. Before real training, we have to
      * clean and filter data.
@@ -1987,10 +1991,10 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
         // only for tree models
         if(!CommonUtils.isTreeModel(alg)) {
             String normalDataPath = this.pathFinder.getNormalizedDataPath();
-            if (Boolean.TRUE.toString().equalsIgnoreCase(needReGen)
+            if(Boolean.TRUE.toString().equalsIgnoreCase(needReGen)
                     || !ShifuFileUtils.isFileExists(normalDataPath, sourceType)
-                    || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())
-                        && !ShifuFileUtils.isFileExists(pathFinder.getNormalizedValidationDataPath(), sourceType))) {
+                    || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath()) && !ShifuFileUtils
+                            .isFileExists(pathFinder.getNormalizedValidationDataPath(), sourceType))) {
                 LOG.info("The normalized data path {} doesn't exist. Generate it before training.", normalDataPath);
                 Map<String, Object> params = new HashedMap();
                 params.put(Constants.IS_TO_SHUFFLE_DATA, isToShuffle);
@@ -2001,12 +2005,13 @@ public class TrainModelProcessor extends BasicModelProcessor implements Processo
 
             // 1. shifu.tree.regeninput = true, no matter what, will regen;
             // 2. if cleanedDataPath does not exist, generate clean data for tree ensemble model training
-            // 3. if validationDataPath is not blank and cleanedValidationDataPath does not exist, generate clean data for
+            // 3. if validationDataPath is not blank and cleanedValidationDataPath does not exist, generate clean data
+            // for
             // tree ensemble model training
             if(Boolean.TRUE.toString().equalsIgnoreCase(needReGen)
                     || !ShifuFileUtils.isFileExists(cleanedDataPath, sourceType)
                     || (StringUtils.isNotBlank(modelConfig.getValidationDataSetRawPath())
-                        && !ShifuFileUtils.isFileExists(pathFinder.getCleanedValidationDataPath(), sourceType))) {
+                            && !ShifuFileUtils.isFileExists(pathFinder.getCleanedValidationDataPath(), sourceType))) {
                 runDataClean(isToShuffle, -1.0, false); // -1.0 means no re-balance
             } else {
                 // no need regen data
