@@ -394,4 +394,9 @@ public interface Constants {
     
     public static final String SHIFU_NORM_UNSEEN_VALUE = "shifu.norm.unseen.value";
 
+    /**
+     * For chaos config
+     */
+    public static final String CHAOS_TYPE = "type";
+    public static final String CHAOS_COLUMNS = "cols";
 }
