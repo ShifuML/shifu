@@ -382,7 +382,7 @@ public class UpdateBinningInfoReducer extends Reducer<IntWritable, BinningInfoWr
                 binWeightPos = newBinWeightPos;
                 binWeightNeg = newBinWeightNeg;
 
-                double[] newBinPosRate = new double[binCountPos.length - smallCategories.size()];
+                double[] newBinPosRate = new double[newBinCountPos.length];
                 for(int i = 0; i < newBinCountPos.length; i++) {
                     long newCount = newBinCountPos[i] + newBinCountNeg[i];
                     if(newCount > 0) {

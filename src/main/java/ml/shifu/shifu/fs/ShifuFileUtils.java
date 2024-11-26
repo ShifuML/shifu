@@ -328,6 +328,8 @@ public class ShifuFileUtils {
             } else if(filename.endsWith(Constants.BZ2_SUFFIX)) {
                 scanners.add(new Scanner(new BZip2CompressorInputStream(fs.open(f.getPath())),
                         Constants.DEFAULT_CHARSET));
+            } else if(filename.endsWith(Constants.SHIFU_OUTPUT_PARQUET_FORMAT)) {
+                scanners.add(new Scanner(new ParquetInputStream(f.getPath(), Constants.DEFAULT_CHARSET), Constants.DEFAULT_CHARSET));
             } else {
                 scanners.add(new Scanner(new BufferedInputStream(fs.open(f.getPath())), Constants.DEFAULT_CHARSET));
             }

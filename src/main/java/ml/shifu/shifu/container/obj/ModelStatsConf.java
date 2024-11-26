@@ -202,7 +202,6 @@ public class ModelStatsConf {
     /**
      * @return the cateMinCnt
      */
-    @JsonIgnore
     public Integer getCateMinCnt() {
         return cateMinCnt;
     }
@@ -223,6 +222,7 @@ public class ModelStatsConf {
         other.setBinningAutoTypeThreshold(binningAutoTypeThreshold);
         other.setBinningMergeEnable(binningMergeEnable);
         other.setBinningMethod(binningMethod);
+        other.setCateMinCnt(cateMinCnt);
         other.setMaxNumBin(maxNumBin);
         other.setNumericalValueThreshold(numericalValueThreshold);
         other.setPsiColumnName(psiColumnName);
